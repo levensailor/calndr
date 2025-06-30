@@ -4,6 +4,7 @@ import Combine
 class AuthenticationManager: ObservableObject {
     @Published var isAuthenticated: Bool = false
     @Published var username: String?
+    @Published var userID: String?
     
     private var cancellables = Set<AnyCancellable>()
 
@@ -14,10 +15,13 @@ class AuthenticationManager: ObservableObject {
     func checkAuthentication() {
         if let token = KeychainManager.shared.loadToken(for: "currentUser") {
             self.isAuthenticated = true
-            self.username = decode(jwtToken: token)["name"] as? String
+            let decodedToken = decode(jwtToken: token)
+            self.username = decodedToken["name"] as? String
+            self.userID = decodedToken["sub"] as? String
         } else {
             self.isAuthenticated = false
             self.username = nil
+            self.userID = nil
         }
     }
     
@@ -29,7 +33,9 @@ class AuthenticationManager: ObservableObject {
                     let saved = KeychainManager.shared.save(token: token, for: "currentUser")
                     if saved {
                         self?.isAuthenticated = true
-                        self?.username = self?.decode(jwtToken: token)["name"] as? String
+                        let decodedToken = self?.decode(jwtToken: token) ?? [:]
+                        self?.username = decodedToken["name"] as? String
+                        self?.userID = decodedToken["sub"] as? String
                         completion(true)
                     } else {
                         print("Error: Could not save token to keychain.")
@@ -50,6 +56,7 @@ class AuthenticationManager: ObservableObject {
         DispatchQueue.main.async {
             self.isAuthenticated = false
             self.username = nil
+            self.userID = nil
         }
     }
 

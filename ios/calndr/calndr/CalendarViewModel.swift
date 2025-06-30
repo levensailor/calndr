@@ -9,6 +9,8 @@ class CalendarViewModel: ObservableObject {
     @Published var showWeather: Bool = false
     @Published var currentDate: Date = Date()
     @Published var custodyStreak: Int = 0
+    @Published var custodianOne: Custodian?
+    @Published var custodianTwo: Custodian?
     @Published var custodianOneName: String = "Parent 1"
     @Published var custodianTwoName: String = "Parent 2"
     @Published var custodianOnePercentage: Double = 0.0
@@ -26,6 +28,9 @@ class CalendarViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private let networkMonitor = NetworkMonitor()
     private var authManager: AuthenticationManager
+    var currentUserID: String? {
+        authManager.userID
+    }
 
     init(authManager: AuthenticationManager) {
         self.authManager = authManager
@@ -76,11 +81,14 @@ class CalendarViewModel: ObservableObject {
         APIService.shared.fetchCustodianNames { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let names):
-                    self?.custodianOneName = names.custodian_one
-                    self?.custodianTwoName = names.custodian_two
+                case .success(let response):
+                    self?.custodianOne = response.custodian_one
+                    self?.custodianTwo = response.custodian_two
+                    self?.custodianOneName = response.custodian_one.first_name
+                    self?.custodianTwoName = response.custodian_two.first_name
                     // After fetching names, we might need to recalculate percentages
                     self?.updateCustodyPercentages()
+                    self?.updateCustodyStreak()
                 case .failure(let error):
                     print("Error fetching custodian names: \(error.localizedDescription)")
                     // Keep default names
@@ -139,17 +147,17 @@ class CalendarViewModel: ObservableObject {
         // Check for a manual override
         if let custodyEvent = events.first(where: { $0.event_date == dateString && $0.position == 4 }) {
             if custodyEvent.content == "jeff" {
-                return (custodyEvent.content, self.custodianOneName)
+                return (self.custodianOne?.id ?? "", self.custodianOneName)
             } else if custodyEvent.content == "deanna" {
-                return (custodyEvent.content, self.custodianTwoName)
+                return (self.custodianTwo?.id ?? "", self.custodianTwoName)
             }
         }
         
         // Default logic: Jeff (custodian one) has Sun (1), Mon (2), Sat (7)
         let isCustodianOneDay = [1, 2, 7].contains(dayOfWeek)
-        let owner = isCustodianOneDay ? "jeff" : "deanna"
+        let ownerID = isCustodianOneDay ? self.custodianOne?.id ?? "" : self.custodianTwo?.id ?? ""
         let ownerName = isCustodianOneDay ? self.custodianOneName : self.custodianTwoName
-        return (owner, ownerName)
+        return (ownerID, ownerName)
     }
 
     private func updateCustodyPercentages() {
@@ -167,9 +175,9 @@ class CalendarViewModel: ObservableObject {
         for dayOffset in 0..<daysInMonth {
             if let date = calendar.date(byAdding: .day, value: dayOffset, to: monthInterval.start) {
                 let owner = getCustodyInfo(for: date).owner
-                if owner == "jeff" { // "jeff" is the internal identifier for custodian one
+                if owner == self.custodianOne?.id {
                     custodianOneDays += 1
-                } else if owner == "deanna" { // "deanna" for custodian two
+                } else if owner == self.custodianTwo?.id {
                     custodianTwoDays += 1
                 }
             }
@@ -189,7 +197,18 @@ class CalendarViewModel: ObservableObject {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         
+        guard let currentUserID = self.currentUserID else {
+            self.custodyStreak = 0
+            return
+        }
+        
         let todaysOwner = getCustodyInfo(for: today).owner
+        
+        // We only care about the streak of the logged-in user
+        guard todaysOwner == currentUserID else {
+            self.custodyStreak = 0
+            return
+        }
         
         var streak = 0
         var dateToCheck = calendar.date(byAdding: .day, value: -1, to: today)!

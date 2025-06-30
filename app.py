@@ -160,18 +160,22 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
 @app.get("/api/family/custodians")
 async def get_family_custodians(current_user: User = Depends(get_current_user)):
     """
-    Returns the first names of the two custodians in the current user's family.
+    Returns the first names and IDs of the two custodians in the current user's family.
     """
-    query = users.select().where(users.c.family_id == current_user.family_id)
+    query = users.select().where(users.c.family_id == current_user.family_id).order_by(users.c.first_name)
     family_members = await database.fetch_all(query)
+    
     if not family_members or len(family_members) < 2:
         # Fallback or error for incomplete families
-        return {"custodian_one": "Parent 1", "custodian_two": "Parent 2"}
+        return {
+            "custodian_one": {"id": "placeholder1", "first_name": "Parent 1"},
+            "custodian_two": {"id": "placeholder2", "first_name": "Parent 2"}
+        }
         
     # Assuming the first two members found are the two primary custodians
     return {
-        "custodian_one": family_members[0]['first_name'],
-        "custodian_two": family_members[1]['first_name'],
+        "custodian_one": {"id": str(family_members[0]['id']), "first_name": family_members[0]['first_name']},
+        "custodian_two": {"id": str(family_members[1]['id']), "first_name": family_members[1]['first_name']},
     }
 
 @app.post("/api/auth/token", response_model=Token)

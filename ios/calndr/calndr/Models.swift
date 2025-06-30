@@ -31,9 +31,14 @@ struct Event: Codable, Identifiable {
     }
 }
 
-enum Custody: String, Codable {
-    case jeff
-    case deanna
+struct Custodian: Codable, Identifiable {
+    let id: String
+    let first_name: String
+}
+
+struct CustodianResponse: Codable {
+    let custodian_one: Custodian
+    let custodian_two: Custodian
 }
 
 // Represents a school event

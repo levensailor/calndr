@@ -465,40 +465,22 @@ class APIService {
         task.resume()
     }
 
-    func fetchCustodianNames(completion: @escaping (Result<CustodianNamesResponse, Error>) -> Void) {
+    func fetchCustodianNames(completion: @escaping (Result<CustodianResponse, Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/family/custodians")
         let request = createAuthenticatedRequest(url: url)
-
+        
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 completion(.failure(error))
                 return
             }
-
-            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+            guard let data = data else {
                 completion(.failure(APIError.invalidResponse))
                 return
             }
-
-            if httpResponse.statusCode == 401 {
-                completion(.failure(APIError.unauthorized))
-                return
-            }
-            
-            if let jsonString = String(data: data, encoding: .utf8) {
-                print("--- Raw JSON for fetchCustodianNames (Status: \(httpResponse.statusCode)) ---")
-                print(jsonString)
-                print("---------------------------------")
-            }
-
-            guard (200...299).contains(httpResponse.statusCode) else {
-                completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
-                return
-            }
-
             do {
-                let names = try JSONDecoder().decode(CustodianNamesResponse.self, from: data)
-                completion(.success(names))
+                let custodianResponse = try JSONDecoder().decode(CustodianResponse.self, from: data)
+                completion(.success(custodianResponse))
             } catch {
                 completion(.failure(error))
             }
