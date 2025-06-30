@@ -13,6 +13,7 @@ struct DayCellView: View {
     let isCurrentMonth: Bool
     let isToday: Bool
     let custodyOwner: String
+    let custodyID: String
     @State private var showToggleFeedback: Bool = false
     
     var body: some View {
@@ -23,11 +24,13 @@ struct DayCellView: View {
             }
 
             DayContentView(
+                viewModel: viewModel,
                 date: date,
                 events: events,
                 schoolEvent: schoolEvent,
                 weatherInfo: weatherInfo,
                 custodyOwner: custodyOwner,
+                custodyID: custodyID,
                 isCurrentMonth: isCurrentMonth,
                 themeManager: themeManager
             )

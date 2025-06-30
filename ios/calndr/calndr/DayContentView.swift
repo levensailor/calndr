@@ -1,11 +1,13 @@
 import SwiftUI
 
 struct DayContentView: View {
+    @ObservedObject var viewModel: CalendarViewModel
     let date: Date
     let events: [Event]
     let schoolEvent: String?
     let weatherInfo: WeatherInfo?
     let custodyOwner: String
+    let custodyID: String
     let isCurrentMonth: Bool
     let themeManager: ThemeManager
 
@@ -60,7 +62,7 @@ struct DayContentView: View {
                     .bold()
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
-                    .background(custodyOwner == "jeff" ? Color(hex: "#96CBFC") : Color(hex: "#FFC2D9"))
+                    .background(custodyID == viewModel.custodianOne?.id ? Color(hex: "#96CBFC") : Color(hex: "#FFC2D9"))
             }
         }
     }
