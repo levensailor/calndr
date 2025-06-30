@@ -1,0 +1,12 @@
+{
+  "appId": "club.calndr.app",
+  "appName": "Rowen's Calendar",
+  "webDir": "dist",
+  "server": {
+    "hostname": "localhost",
+    "iosScheme": "https"
+  },
+  "ios": {
+    "scheme": "https"
+  }
+} 

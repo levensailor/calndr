@@ -1,0 +1,8 @@
+{
+  "appId": "club.calndr.app",
+  "appName": "calndr",
+  "webDir": "dist",
+  "server": {
+    "hostname": "localhost"
+  }
+}

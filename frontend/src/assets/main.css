@@ -1,0 +1,112 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  /* Support for safe areas on iOS */
+  height: 100vh;
+  height: -webkit-fill-available;
+}
+
+body {
+  font-family: 'Courier New', Courier, monospace;
+  background-color: #f0f0f0;
+  color: #333;
+  margin: 0;
+  padding: 0;
+  font-size: 16px;
+  overflow: hidden;
+  /* Improved mobile webkit rendering */
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Support for safe areas - only apply top padding on desktop */
+  padding-top: constant(safe-area-inset-top); /* iOS 11.0 */
+  padding-top: env(safe-area-inset-top); /* iOS 11.2+ */
+}
+
+#app {
+  width: 100vw;
+  height: 100vh;
+  /* Better iOS support */
+  height: -webkit-fill-available;
+  display: flex;
+  flex-direction: column;
+  /* Remove body padding from app container on desktop */
+  margin-top: calc(-1 * constant(safe-area-inset-top)); /* iOS 11.0 */
+  margin-top: calc(-1 * env(safe-area-inset-top)); /* iOS 11.2+ */
+} 
+
+/* Mobile-specific optimizations */
+@media (max-width: 768px) {
+  html, body {
+    /* Ensure full height without extra space */
+    height: 100vh;
+    height: -webkit-fill-available;
+    /* Remove any default margin/padding */
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-size: 14px;
+    /* Disable webkit features that can cause scrolling issues */
+    -webkit-overflow-scrolling: touch;
+    /* Prevent horizontal overflow */
+    overflow-x: hidden;
+    /* Remove the safe area padding from body on mobile since we handle it in the calendar component */
+    padding-top: 0;
+    /* Ensure body fills entire screen */
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+
+  #app {
+    /* Ensure proper viewport sizing on mobile */
+    width: 100vw;
+    height: 100vh;
+    /* Fix iOS Safari height issues */
+    height: -webkit-fill-available;
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    /* Reset margin since we're handling safe areas in the calendar component */
+    margin-top: 0;
+    margin-bottom: 0;
+    /* Ensure no extra space at bottom */
+    padding-bottom: 0;
+  }
+}
+
+/* Disable text selection on touch devices for better UX */
+@media (pointer: coarse) {
+  * {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  /* Re-enable text selection for editable content */
+  input, textarea, [contenteditable="true"] {
+    -webkit-user-select: text;
+    -khtml-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+}
+
+/* Prevent horizontal scrolling on small screens */
+@media (max-width: 480px) {
+  html, body {
+    overflow-x: hidden;
+    /* Ensure absolute full height */
+    height: 100vh !important;
+    height: -webkit-fill-available !important;
+  }
+} 
