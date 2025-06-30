@@ -24,7 +24,6 @@ struct MainTabView: View {
     @StateObject var calendarViewModel: CalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
     
-    @State private var currentView: CalendarViewType = .month
     @State private var focusedDate: Date?
     @State private var showSettings = false
     @Namespace private var namespace
@@ -43,29 +42,30 @@ struct MainTabView: View {
                 
                 // Header with month/year and view switcher
                 HStack {
+                    Button(action: {
+                        calendarViewModel.changeMonth(by: -1)
+                    }) {
+                        Image(systemName: "chevron.left")
+                    }
+                    .padding(.leading)
+
+                    Spacer()
+
                     Text(monthYearString(from: calendarViewModel.currentDate))
                         .font(.title.bold())
+
                     Spacer()
-                    Picker("View", selection: $currentView) {
-                        Text("Month").tag(CalendarViewType.month)
-                        Text("Week").tag(CalendarViewType.week)
-                        Text("Day").tag(CalendarViewType.day)
+
+                    Button(action: {
+                        calendarViewModel.changeMonth(by: 1)
+                    }) {
+                        Image(systemName: "chevron.right")
                     }
-                    .pickerStyle(SegmentedPickerStyle())
+                    .padding(.trailing)
                 }
                 .padding(.horizontal)
 
-                TabView(selection: $currentView) {
-                    CalendarGridView(viewModel: calendarViewModel, focusedDate: $focusedDate, namespace: namespace)
-                        .tag(CalendarViewType.month)
-
-                    WeekView(viewModel: calendarViewModel)
-                        .tag(CalendarViewType.week)
-
-                    DayView(viewModel: calendarViewModel)
-                        .tag(CalendarViewType.day)
-                }
-                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                CalendarGridView(viewModel: calendarViewModel, focusedDate: $focusedDate, namespace: namespace)
 
                 // Custody Percentage Footer
                 HStack(spacing: 15) {
