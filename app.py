@@ -116,37 +116,9 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     sub: Optional[str] = None
 
-# --- Database Migration ---
-def run_db_migration():
-    """
-    Checks for and applies necessary database schema migrations synchronously
-    on application startup.
-    """
-    logger.info("--- Checking for database migrations ---")
-    try:
-        # Use a synchronous engine for migration tasks
-        sync_engine = create_engine(DATABASE_URL.replace("+asyncpg", ""))
-        with sync_engine.connect() as connection:
-            inspector = inspect(sync_engine)
-            columns = [col['name'] for col in inspector.get_columns('users')]
-            
-            if 'apns_token' in columns:
-                logger.info("Column 'apns_token' already exists. No migration needed.")
-            else:
-                logger.info("Column 'apns_token' not found. Adding it...")
-                # Use a transaction to be safe
-                with connection.begin():
-                    connection.execute(sqlalchemy.text('ALTER TABLE users ADD COLUMN apns_token VARCHAR(255);'))
-                logger.info("Successfully added 'apns_token' column to 'users' table.")
-    except Exception as e:
-        logger.error(f"FATAL: An error occurred during database migration: {e}")
-        # We might want to prevent the app from starting if migrations fail
-        raise e
-
 # --- FastAPI Lifespan ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    run_db_migration()  # Run migrations on startup
     await database.connect()
     yield
     await database.disconnect()

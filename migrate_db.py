@@ -159,35 +159,29 @@ async def main():
 
 def run_migration():
     """
-    Connects to the database and applies necessary schema migrations.
+    Checks for the 'apns_token' column in the 'users' table and adds it if it doesn't exist.
     """
-    logger.info("--- Starting database migration ---")
-    if not all([DB_USER, DB_PASSWORD, DB_HOST, DB_NAME]):
-        logger.error("FATAL: Missing one or more required database environment variables.")
-        exit(1)
-
+    logger.info("--- Starting database migration check ---")
     try:
         engine = create_engine(POSTGRES_DATABASE_URL)
         with engine.connect() as connection:
-            # Use a transaction to ensure atomicity
-            with connection.begin():
-                inspector = inspect(engine)
-                columns = [col['name'] for col in inspector.get_columns('users')]
+            inspector = inspect(engine)
+            columns = [col['name'] for col in inspector.get_columns('users')]
 
-                if 'apns_token' in columns:
-                    logger.info("Column 'apns_token' already exists in 'users' table. No migration needed.")
-                else:
-                    logger.info("Column 'apns_token' not found in 'users' table. Adding it now...")
-                    # The VARCHAR length is arbitrary but should be sufficient for an APNS token
-                    add_column_query = text('ALTER TABLE users ADD COLUMN apns_token VARCHAR(255);')
-                    connection.execute(add_column_query)
-                    logger.info("Successfully added 'apns_token' column to 'users' table.")
-
-        logger.info("--- Database migration finished successfully! ---")
+            if 'apns_token' in columns:
+                logger.info("Column 'apns_token' already exists in 'users' table. No migration needed.")
+            else:
+                logger.info("Column 'apns_token' not found. Adding it to 'users' table...")
+                with connection.begin():
+                    connection.execute(text('ALTER TABLE users ADD COLUMN apns_token VARCHAR(255);'))
+                logger.info("Successfully added 'apns_token' column.")
 
     except Exception as e:
         logger.error(f"An error occurred during database migration: {e}")
-        exit(1) # Exit with a non-zero status code to indicate failure
+        # Exit with a non-zero status code to indicate failure
+        exit(1)
+
+    logger.info("--- Database migration check finished ---")
 
 
 if __name__ == "__main__":
