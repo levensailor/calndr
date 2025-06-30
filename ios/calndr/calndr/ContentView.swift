@@ -70,7 +70,7 @@ struct MainTabView: View {
                 // Custody Percentage Footer
                 HStack(spacing: 15) {
                     Text(calendarViewModel.custodianOneName + " " + String(format: "%.0f", calendarViewModel.custodianOnePercentage) + "%")
-                    Text("(\\(calendarViewModel.custodyStreak))")
+                    Text("(\(calendarViewModel.custodyStreak))")
                         .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
                     Text(calendarViewModel.custodianTwoName + " " + String(format: "%.0f", calendarViewModel.custodianTwoPercentage) + "%")
                 }

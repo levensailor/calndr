@@ -186,60 +186,24 @@ class CalendarViewModel: ObservableObject {
     }
 
     private func updateCustodyStreak() {
-        let now = Date()
-
-        func getSwitchoverTime(for date: Date) -> Int {
-            let dayOfWeek = Calendar.current.component(.weekday, from: date)
-            let isWeekend = dayOfWeek == 1 || dayOfWeek == 7
-            let dateString = isoDateString(from: date)
-            let dayEvents = eventsForDate(date)
-            let hasDaycare = dayEvents.contains { $0.content.lowercased().contains("daycare") }
-            return isWeekend || hasDaycare ? 12 : 17 // 12 PM or 5 PM
-        }
-
-        func getEffectiveOwner(for date: Date) -> String {
-            let ownerOnRefDay = getCustodyInfo(for: date).owner
-            
-            guard let prevDay = Calendar.current.date(byAdding: .day, value: -1, to: date) else { return ownerOnRefDay }
-            let ownerOnPrevDay = getCustodyInfo(for: prevDay).owner
-            
-            if ownerOnRefDay != ownerOnPrevDay {
-                let switchHour = getSwitchoverTime(for: date)
-                if Calendar.current.component(.hour, from: date) < switchHour {
-                    return ownerOnPrevDay
-                }
-            }
-            return ownerOnRefDay
-        }
-
-        let currentEffectiveOwner = getEffectiveOwner(for: now)
-        var streak = 0
-        var dateToCheck = now
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
         
-        // Always start counting from the day before today.
-        if let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: dateToCheck) {
-            dateToCheck = yesterday
-        }
+        let todaysOwner = getCustodyInfo(for: today).owner
+        
+        var streak = 0
+        var dateToCheck = calendar.date(byAdding: .day, value: -1, to: today)!
 
-        for _ in 0..<365 {
-            var components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: dateToCheck)
-            components.hour = 23
-            components.minute = 59
-            components.second = 59
-            
-            guard let endOfDay = Calendar.current.date(from: components) else { break }
-
-            if getEffectiveOwner(for: endOfDay) == currentEffectiveOwner {
+        for _ in 0..<365 { // Check up to a year back
+            let dayOwner = getCustodyInfo(for: dateToCheck).owner
+            if dayOwner == todaysOwner {
                 streak += 1
-                if let prevDay = Calendar.current.date(byAdding: .day, value: -1, to: dateToCheck) {
-                    dateToCheck = prevDay
-                } else {
-                    break
-                }
             } else {
                 break
             }
+            dateToCheck = calendar.date(byAdding: .day, value: -1, to: dateToCheck)!
         }
+        
         self.custodyStreak = streak
     }
     
