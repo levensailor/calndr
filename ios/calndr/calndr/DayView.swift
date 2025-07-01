@@ -47,6 +47,39 @@ struct DayView: View {
             .padding()
             .frame(minHeight: UIScreen.main.bounds.height - 150)
         }
+        .gesture(
+            DragGesture()
+                .onEnded { value in
+                    handleDaySwipeGesture(value)
+                }
+        )
+    }
+    
+    private func handleDaySwipeGesture(_ value: DragGesture.Value) {
+        let translation = value.translation
+        let velocity = sqrt(pow(value.velocity.width, 2) + pow(value.velocity.height, 2))
+        
+        // Check for vertical swipes
+        let isVerticalDominant = abs(translation.height) > abs(translation.width)
+        let swipeThreshold: CGFloat = 50
+        let velocityThreshold: CGFloat = 250
+        
+        if isVerticalDominant && (abs(translation.height) > swipeThreshold || velocity > velocityThreshold) {
+            let calendar = Calendar.current
+            if translation.height < 0 {
+                // Swipe up - next day
+                if let nextDay = calendar.date(byAdding: .day, value: 1, to: viewModel.currentDate) {
+                    viewModel.currentDate = nextDay
+                    viewModel.fetchEvents()
+                }
+            } else {
+                // Swipe down - previous day
+                if let previousDay = calendar.date(byAdding: .day, value: -1, to: viewModel.currentDate) {
+                    viewModel.currentDate = previousDay
+                    viewModel.fetchEvents()
+                }
+            }
+        }
     }
 }
 
