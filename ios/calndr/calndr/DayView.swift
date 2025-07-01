@@ -5,12 +5,33 @@ struct DayView: View {
     @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            // Header
-            Text(viewModel.currentDate.formatted(.dateTime.weekday(.wide).month(.wide).day()))
-                .font(.largeTitle.bold())
-                .foregroundColor(themeManager.currentTheme.textColor)
-                .frame(maxWidth: .infinity, alignment: .center)
+        ZStack {
+            // Weather effects background
+            if viewModel.showWeather, let weatherInfo = viewModel.weatherInfoForDate(viewModel.currentDate) {
+                WeatherFXView(weatherInfo: weatherInfo)
+                    .ignoresSafeArea()
+            }
+            
+            VStack(alignment: .leading, spacing: 20) {
+                // Header with temperature
+                VStack(spacing: 8) {
+                    Text(viewModel.currentDate.formatted(.dateTime.weekday(.wide).month(.wide).day()))
+                        .font(.largeTitle.bold())
+                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                    
+                    // Temperature display
+                    if viewModel.showWeather, let weatherInfo = viewModel.weatherInfoForDate(viewModel.currentDate) {
+                        Text("\(Int(weatherInfo.temperature.rounded()))°F")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(themeManager.currentTheme.bubbleBackgroundColor)
+                            .cornerRadius(12)
+                    }
+                }
             
             // Custody Information
             VStack(alignment: .leading, spacing: 12) {
@@ -63,10 +84,11 @@ struct DayView: View {
             }
             
             Spacer()
+            }
+            .padding()
+            .background(themeManager.currentTheme.mainBackgroundColor.opacity(0.8))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .padding()
-        .background(themeManager.currentTheme.mainBackgroundColor)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
     private func isDateInPast(_ date: Date) -> Bool {

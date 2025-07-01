@@ -91,25 +91,43 @@ struct MainTabView: View {
 
                 // Menu Bar
                 HStack(alignment: .top, spacing: 60) {
-                    Button(action: {
-                        calendarViewModel.toggleWeather()
-                    }) {
-                        Image(systemName: calendarViewModel.showWeather ? "cloud.sun.fill" : "cloud.sun")
-                            .font(.title2)
+                    VStack(spacing: 4) {
+                        Button(action: {
+                            calendarViewModel.toggleWeather()
+                        }) {
+                            Image(systemName: calendarViewModel.showWeather ? "cloud.sun.fill" : "cloud.sun")
+                                .font(.title2)
+                                .foregroundColor(calendarViewModel.showWeather ? themeManager.currentTheme.iconActiveColor : themeManager.currentTheme.iconColor)
+                        }
+                        Text("Weather")
+                            .font(.caption2)
+                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
                     }
                     
-                    Button(action: {
-                        calendarViewModel.toggleSchoolEvents()
-                    }) {
-                        Image(systemName: calendarViewModel.showSchoolEvents ? "graduationcap.fill" : "graduationcap")
-                            .font(.title2)
+                    VStack(spacing: 4) {
+                        Button(action: {
+                            calendarViewModel.toggleSchoolEvents()
+                        }) {
+                            Image(systemName: calendarViewModel.showSchoolEvents ? "graduationcap.fill" : "graduationcap")
+                                .font(.title2)
+                                .foregroundColor(calendarViewModel.showSchoolEvents ? themeManager.currentTheme.iconActiveColor : themeManager.currentTheme.iconColor)
+                        }
+                        Text("School")
+                            .font(.caption2)
+                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
                     }
                     
-                    Button(action: {
-                        showSettings = true
-                    }) {
-                        Image(systemName: "gear")
-                            .font(.title2)
+                    VStack(spacing: 4) {
+                        Button(action: {
+                            showSettings = true
+                        }) {
+                            Image(systemName: "gear")
+                                .font(.title2)
+                                .foregroundColor(themeManager.currentTheme.iconColor)
+                        }
+                        Text("Settings")
+                            .font(.caption2)
+                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
                     }
                 }
                 .padding(.bottom)
