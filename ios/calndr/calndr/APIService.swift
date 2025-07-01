@@ -486,6 +486,40 @@ class APIService {
             }
         }.resume()
     }
+
+    func fetchUserProfile(completion: @escaping (Result<UserProfile, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/users/me")
+        let request = createAuthenticatedRequest(url: url)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            if httpResponse.statusCode == 401 {
+                completion(.failure(APIError.unauthorized))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            do {
+                let userProfile = try JSONDecoder().decode(UserProfile.self, from: data)
+                completion(.success(userProfile))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
 }
 
 // MARK: - Password Management

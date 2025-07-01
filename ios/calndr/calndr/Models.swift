@@ -87,4 +87,20 @@ struct PasswordUpdate: Codable {
 
 struct PasswordValidation: Codable {
     let password: String
+}
+
+// User Profile Model
+struct UserProfile: Codable {
+    let id: String
+    let first_name: String
+    let last_name: String
+    let email: String
+    let phone_number: String?
+    let subscription_type: String?
+    let subscription_status: String?
+    let created_at: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id, first_name, last_name, email, phone_number, subscription_type, subscription_status, created_at
+    }
 } 

@@ -19,6 +19,11 @@ struct SettingsView: View {
             }
             
             TabView {
+                NavigationView { AccountsView() }
+                    .tabItem {
+                        Label("Account", systemImage: "person.circle")
+                    }
+
                 NavigationView { ThemeSettingsView() }
                     .tabItem {
                         Label("Theme", systemImage: "paintbrush")

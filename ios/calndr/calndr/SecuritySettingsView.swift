@@ -1,77 +1,70 @@
 import SwiftUI
 
 struct SecuritySettingsView: View {
-    @StateObject private var passwordViewModel = PasswordViewModel()
     @EnvironmentObject var authManager: AuthenticationManager
-    @State private var showSuccessMessage = false
+    @State private var biometricEnabled = false
+    @State private var sessionTimeout = 30.0
 
     var body: some View {
         Form {
-            Section(header: Text("Update Web UI Password")) {
-                SecureField("Current Password", text: $passwordViewModel.currentPassword)
-                SecureField("New Password", text: $passwordViewModel.newPassword)
-                SecureField("Confirm New Password", text: $passwordViewModel.confirmPassword)
+            Section(header: Text("Authentication")) {
+                HStack {
+                    Image(systemName: "faceid")
+                        .foregroundColor(.blue)
+                    Toggle("Enable Biometric Authentication", isOn: $biometricEnabled)
+                }
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Session Timeout")
+                    Text("\(Int(sessionTimeout)) minutes")
+                        .foregroundColor(.secondary)
+                        .font(.caption)
+                    Slider(value: $sessionTimeout, in: 5...120, step: 5)
+                }
             }
-
-            Button(action: {
-                passwordViewModel.updatePassword()
-            }) {
-                Text("Update Password")
-                    .frame(maxWidth: .infinity)
-            }
-            .disabled(passwordViewModel.currentPassword.isEmpty || passwordViewModel.newPassword.isEmpty)
-
-            if !passwordViewModel.passwordUpdateMessage.isEmpty {
-                Text(passwordViewModel.passwordUpdateMessage)
-                    .foregroundColor(passwordViewModel.isPasswordUpdateSuccessful ? .green : .red)
-                    .onAppear {
-                        // If the message is a success message, make it disappear after a few seconds
-                        if passwordViewModel.isPasswordUpdateSuccessful {
-                            showSuccessMessage = true
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                showSuccessMessage = false
-                                // Also clear the message from the viewmodel
-                                passwordViewModel.passwordUpdateMessage = ""
-                                passwordViewModel.isPasswordUpdateSuccessful = false
-                            }
-                        }
+            
+            Section(header: Text("Privacy")) {
+                HStack {
+                    Image(systemName: "lock.shield")
+                        .foregroundColor(.green)
+                    VStack(alignment: .leading) {
+                        Text("App Lock")
+                        Text("Require authentication to open app")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
-                    // Only show the view if the logic says so
-                    .if(showSuccessMessage || !passwordViewModel.isPasswordUpdateSuccessful) { view in
-                        view
+                    Spacer()
+                    Toggle("", isOn: .constant(false))
+                }
+                
+                HStack {
+                    Image(systemName: "eye.slash")
+                        .foregroundColor(.orange)
+                    VStack(alignment: .leading) {
+                        Text("Hide Sensitive Content")
+                        Text("Hide event details in notifications")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
+                    Spacer()
+                    Toggle("", isOn: .constant(false))
+                }
             }
 
-            Section {
+            Section(header: Text("Account"), footer: Text("Password changes have been moved to the Account tab")) {
                 Button(action: {
                     authManager.logout()
                 }) {
-                    Text("Logout")
-                        .foregroundColor(.red)
-                        .frame(maxWidth: .infinity)
+                    HStack {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                            .foregroundColor(.red)
+                        Text("Logout")
+                            .foregroundColor(.red)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
         }
         .navigationTitle("Security")
-        .onDisappear {
-            // Clear fields and messages when the view disappears
-            passwordViewModel.currentPassword = ""
-            passwordViewModel.newPassword = ""
-            passwordViewModel.confirmPassword = ""
-            passwordViewModel.passwordUpdateMessage = ""
-            passwordViewModel.isPasswordUpdateSuccessful = false
-        }
-    }
-}
-
-// Custom ViewModifier to conditionally apply a view
-extension View {
-    @ViewBuilder
-    func `if`<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {
-        if condition {
-            transform(self)
-        } else {
-            self
-        }
     }
 } 
