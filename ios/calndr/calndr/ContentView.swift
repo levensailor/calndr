@@ -30,6 +30,8 @@ struct MainTabView: View {
 
     var body: some View {
         ZStack {
+            themeManager.currentTheme.mainBackgroundColor.ignoresSafeArea()
+            
             VStack {
                 if calendarViewModel.isOffline {
                     Text("Offline Mode")
@@ -107,7 +109,6 @@ struct MainTabView: View {
                 FocusedDayView(viewModel: calendarViewModel, focusedDate: $focusedDate, namespace: namespace)
             }
         }
-        .background(themeManager.currentTheme.mainBackgroundColor)
         .foregroundColor(themeManager.currentTheme.textColor)
         .onAppear {
             calendarViewModel.fetchEvents()
