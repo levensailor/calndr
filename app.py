@@ -325,9 +325,13 @@ async def save_event(request: dict, current_user: User = Depends(get_current_use
         if 'custodian_id' in request and 'date' in request:
             # New format for custody events
             logger.info("Using new format (custody event)")
-            event = Event(**request)
-            event_date = event.date
-            custodian_id = event.custodian_id
+            event_date_str = request['date']
+            if isinstance(event_date_str, str):
+                event_date = datetime.strptime(event_date_str, '%Y-%m-%d').date()
+            else:
+                event_date = event_date_str
+            custodian_id = request['custodian_id']
+            
         elif 'event_date' in request and 'position' in request:
             # Old format - need to convert
             logger.info("Using legacy format - converting to new format")
@@ -355,31 +359,41 @@ async def save_event(request: dict, current_user: User = Depends(get_current_use
         else:
             raise HTTPException(status_code=400, detail="Invalid event format")
 
+        logger.info(f"Processed: event_date={event_date}, custodian_id={custodian_id}")
+
         # Check for an existing event for that date
         existing_event_query = events.select().where(
-            (events.c.family_id == current_user.family_id) & (events.c.date == event_date)
+            (events.c.family_id == current_user.family_id) & 
+            (events.c.date == event_date)
         )
         existing_event = await database.fetch_one(existing_event_query)
 
         if existing_event:
             # Update existing event
-            query = events.update().where(events.c.id == existing_event['id']).values(custodian_id=custodian_id)
+            logger.info(f"Updating existing event with ID: {existing_event['id']}")
+            query = events.update().where(
+                events.c.id == existing_event['id']
+            ).values(custodian_id=custodian_id)
             await database.execute(query)
+            event_id = existing_event['id']
         else:
             # Create new event
+            logger.info("Creating new event")
             query = events.insert().values(
                 family_id=current_user.family_id,
                 date=event_date,
                 custodian_id=custodian_id,
             )
-            await database.execute(query)
+            event_id = await database.execute(query)
         
         await send_custody_change_notification(current_user.id, current_user.family_id, event_date)
         
         # Return the state of the event from the DB in frontend-compatible format
-        final_event = await database.fetch_one(events.select().where(
-            (events.c.family_id == current_user.family_id) & (events.c.date == event_date)
-        ))
+        final_event_query = events.select().where(
+            (events.c.family_id == current_user.family_id) & 
+            (events.c.date == event_date)
+        )
+        final_event = await database.fetch_one(final_event_query)
         
         # Get family members to map custodian ID to name
         family_query = users.select().where(users.c.family_id == current_user.family_id).order_by(users.c.first_name)
@@ -394,6 +408,7 @@ async def save_event(request: dict, current_user: User = Depends(get_current_use
         # Convert to frontend format
         if final_event and final_event['custodian_id']:
             custodian_name = custodian_map.get(str(final_event['custodian_id']), 'unknown')
+            logger.info(f"Returning custody event: {custodian_name} for {event_date}")
             return {
                 'id': final_event['id'],
                 'event_date': str(final_event['date']),
@@ -401,10 +416,13 @@ async def save_event(request: dict, current_user: User = Depends(get_current_use
                 'position': 4
             }
         
-        return final_event
+        logger.error(f"No event found after creation/update")
+        return {"error": "Event not found after save"}
     
     except Exception as e:
         logger.error(f"Error in save_event: {e}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 # MARK: - Notification Email Endpoints
