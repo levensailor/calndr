@@ -30,6 +30,8 @@ struct MainTabView: View {
     @State private var isAnimating = false
     @State private var animationOpacity: Double = 1.0
     @State private var animationScale: CGFloat = 1.0
+    @State private var headerOpacity: Double = 1.0
+    @State private var headerOffset: CGFloat = 0.0
     @Namespace private var namespace
 
     var body: some View {
@@ -48,10 +50,11 @@ struct MainTabView: View {
                 
                 // Header with month/year and view switcher
                 HStack {
+                    Spacer()
                     Text(headerTitle(for: currentView))
                         .font(.title.bold())
-                        .opacity(currentView == .month ? animationOpacity : 1.0)
-                        .scaleEffect(currentView == .month ? animationScale : 1.0)
+                        .opacity(currentView == .month ? headerOpacity : 1.0)
+                        .offset(y: currentView == .month ? headerOffset : 0.0)
                     Spacer()
                 }
                 .padding(.horizontal)
@@ -130,17 +133,17 @@ struct MainTabView: View {
         guard !isAnimating else { return }
         
         let translation = value.translation
-        let distance = sqrt(pow(translation.x, 2) + pow(translation.y, 2))
+        let distance = sqrt(pow(translation.width, 2) + pow(translation.height, 2))
         let velocity = sqrt(pow(value.velocity.width, 2) + pow(value.velocity.height, 2))
         
         // Determine if this is primarily horizontal or vertical
-        let isHorizontalDominant = abs(translation.x) > abs(translation.y)
-        let isVerticalDominant = abs(translation.y) > abs(translation.x)
+        let isHorizontalDominant = abs(translation.width) > abs(translation.height)
+        let isVerticalDominant = abs(translation.height) > abs(translation.width)
         
         // Thresholds for gesture recognition
         let shortSwipeThreshold: CGFloat = 50
-        let longSwipeThreshold: CGFloat = 100
-        let velocityThreshold: CGFloat = 500
+        let longSwipeThreshold: CGFloat = 60
+        let velocityThreshold: CGFloat = 250
         
         if isVerticalDominant && currentView == .month {
             // Vertical swipes in month view - check if it's a long swipe for month navigation
@@ -148,7 +151,7 @@ struct MainTabView: View {
             
             if isLongVerticalSwipe {
                 // Long vertical swipe - change months with animation
-                if translation.y < 0 {
+                if translation.height < 0 {
                     // Swipe up - next month
                     changeMonthWithAnimation(by: 1)
                 } else {
@@ -158,9 +161,9 @@ struct MainTabView: View {
             }
             // Short vertical swipes in month view are ignored
             
-        } else if isHorizontalDominant && abs(translation.x) > shortSwipeThreshold {
+        } else if isHorizontalDominant && abs(translation.width) > shortSwipeThreshold {
             // Horizontal swipes - standard navigation for all views
-            if translation.x < 0 {
+            if translation.width < 0 {
                 // Swipe left
                 changeDate(by: 1, for: currentView)
             } else {
@@ -168,9 +171,9 @@ struct MainTabView: View {
                 changeDate(by: -1, for: currentView)
             }
             
-        } else if isVerticalDominant && currentView != .month && abs(translation.y) > shortSwipeThreshold {
+        } else if isVerticalDominant && currentView != .month && abs(translation.height) > shortSwipeThreshold {
             // Vertical swipes in week/day views - use as alternative navigation
-            if translation.y < 0 {
+            if translation.height < 0 {
                 // Swipe up - forward
                 changeDate(by: 1, for: currentView)
             } else {
@@ -183,14 +186,16 @@ struct MainTabView: View {
     private func changeMonthWithAnimation(by amount: Int) {
         isAnimating = true
         
-        // Fly-out animation - scale down and fade out
-        withAnimation(.easeInOut(duration: 0.5)) {
-            animationOpacity = 0.0
-            animationScale = 0.8
+        // Fly-out animation - fade out header and slide up
+        withAnimation(.easeInOut(duration: 0.01)) {
+            animationOpacity = 1.0
+            animationScale = 1.0
+            headerOpacity = 0.0
+            headerOffset = -20.0
         }
         
         // Change the month at the midpoint of the animation
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             let calendar = Calendar.current
             if let newDate = calendar.date(byAdding: .month, value: amount, to: calendarViewModel.currentDate) {
                 calendarViewModel.currentDate = newDate
@@ -198,11 +203,17 @@ struct MainTabView: View {
             }
         }
         
-        // Fly-in animation - scale up and fade in
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            withAnimation(.easeInOut(duration: 0.5)) {
+        // Fly-in animation - fade in header and slide down
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            // Start header from below
+            headerOffset = 20.0
+            headerOpacity = 0.0
+            
+            withAnimation(.easeInOut(duration: 0.01)) {
                 animationOpacity = 1.0
                 animationScale = 1.0
+                headerOpacity = 1.0
+                headerOffset = 0.0
             }
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
