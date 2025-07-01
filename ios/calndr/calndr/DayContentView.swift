@@ -55,13 +55,12 @@ struct DayContentView: View {
             
             Spacer()
             
-            // Custody row
+            // Custody row - fixed height for consistency
             if !custodyOwner.isEmpty {
                 Text(custodyOwner.capitalized)
                     .font(.system(size: 9))
                     .bold()
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24) // Fixed height
                     .background(custodyID == viewModel.custodianOne?.id ? Color(hex: "#96CBFC") : Color(hex: "#FFC2D9"))
             }
         }

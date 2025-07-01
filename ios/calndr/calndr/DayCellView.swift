@@ -49,7 +49,7 @@ struct DayCellView: View {
                 Rectangle()
                     .fill(Color.clear)
                     .contentShape(Rectangle())
-                    .frame(height: 30)
+                    .frame(height: 24) // Match the fixed custody rectangle height
                     .onLongPressGesture(minimumDuration: 0.25, maximumDistance: .infinity, pressing: { isPressing in
                         if isPressing {
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
