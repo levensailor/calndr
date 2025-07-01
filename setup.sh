@@ -24,6 +24,7 @@ sudo mkdir -p $APP_DIR
 [ -f /home/$APP_USER/send_weekly_email.py ] && sudo mv -f /home/$APP_USER/send_weekly_email.py $APP_DIR/
 [ -f /home/$APP_USER/setup.sh ] && sudo mv -f /home/$APP_USER/setup.sh $APP_DIR/
 [ -f /home/$APP_USER/initial_setup.py ] && sudo mv -f /home/$APP_USER/initial_setup.py $APP_DIR/
+[ -f /home/$APP_USER/migrate_user_profile.py ] && sudo mv -f /home/$APP_USER/migrate_user_profile.py $APP_DIR/
 
 # Remove old directory before moving the new one
 [ -d /home/$APP_USER/dist ] && sudo rm -rf $APP_DIR/dist && sudo mv /home/$APP_USER/dist $APP_DIR/
@@ -147,6 +148,10 @@ echo "Cron job for weekly email set up."
 # 9. Run the initial data seeding script
 echo "--- Running initial database setup script ---"
 sudo -u $APP_USER $APP_DIR/venv/bin/python3 $APP_DIR/initial_setup.py
+
+# 10. Run user profile migration script
+echo "--- Running user profile migration script ---"
+sudo -u $APP_USER $APP_DIR/venv/bin/python3 $APP_DIR/migrate_user_profile.py
 
 echo "--- Deployment to EC2 finished successfully! ---"
 echo "Your app should be available at https://calndr.club" 

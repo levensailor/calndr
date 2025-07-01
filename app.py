@@ -75,6 +75,9 @@ users = sqlalchemy.Table(
     sqlalchemy.Column("password_hash", sqlalchemy.String, nullable=False),
     sqlalchemy.Column("phone_number", sqlalchemy.String, nullable=True),
     sqlalchemy.Column("apns_token", sqlalchemy.String, nullable=True),
+    sqlalchemy.Column("subscription_type", sqlalchemy.String, nullable=True, default="Free"),
+    sqlalchemy.Column("subscription_status", sqlalchemy.String, nullable=True, default="Active"),
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
 )
 
 families = sqlalchemy.Table(
@@ -115,6 +118,20 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     sub: Optional[str] = None
+
+class UserProfile(BaseModel):
+    id: str
+    first_name: str
+    last_name: str
+    email: str
+    phone_number: Optional[str] = None
+    subscription_type: Optional[str] = "Free"
+    subscription_status: Optional[str] = "Active"
+    created_at: Optional[str] = None
+
+class PasswordUpdate(BaseModel):
+    current_password: str
+    new_password: str
 
 # --- FastAPI Lifespan ---
 @asynccontextmanager
@@ -184,6 +201,46 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     if not user or not verify_password(form_data.password, user['password_hash']):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect username or password")
     return {"access_token": create_access_token(data={"sub": str(user['id'])}), "token_type": "bearer"}
+
+@app.get("/api/users/me", response_model=UserProfile)
+async def get_user_profile(current_user: User = Depends(get_current_user)):
+    """
+    Returns the full profile information for the current authenticated user.
+    """
+    query = users.select().where(users.c.id == current_user.id)
+    user_record = await database.fetch_one(query)
+    
+    if not user_record:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    
+    return UserProfile(
+        id=str(user_record['id']),
+        first_name=user_record['first_name'],
+        last_name=user_record['last_name'],
+        email=user_record['email'],
+        phone_number=user_record['phone_number'],
+        subscription_type=user_record['subscription_type'] or "Free",
+        subscription_status=user_record['subscription_status'] or "Active",
+        created_at=str(user_record['created_at']) if user_record['created_at'] else None
+    )
+
+@app.put("/api/users/me/password")
+async def update_user_password(password_update: PasswordUpdate, current_user: User = Depends(get_current_user)):
+    """
+    Updates the password for the current authenticated user.
+    """
+    # Verify current password
+    user_record = await database.fetch_one(users.select().where(users.c.id == current_user.id))
+    if not user_record or not verify_password(password_update.current_password, user_record['password_hash']):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid current password")
+    
+    # Hash new password and update
+    new_password_hash = pwd_context.hash(password_update.new_password)
+    await database.execute(
+        users.update().where(users.c.id == current_user.id).values(password_hash=new_password_hash)
+    )
+    
+    return {"status": "success", "message": "Password updated successfully"}
 
 @app.post("/api/users/me/device-token")
 async def update_device_token(token: str = Form(...), current_user: User = Depends(get_current_user)):

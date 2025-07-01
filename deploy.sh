@@ -23,6 +23,7 @@ FILES_TO_DEPLOY=(
     ".env"
     "initial_setup.py"
     "send_weekly_email.py"
+    "migrate_user_profile.py"
     "dist"
 )
 
