@@ -60,6 +60,7 @@ struct DayContentView: View {
                 Text(custodyOwner.capitalized)
                     .font(.system(size: 9))
                     .bold()
+                    .foregroundColor(.black) // Always black for good contrast on light backgrounds
                     .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24) // Fixed height
                     .background(custodyID == viewModel.custodianOne?.id ? Color(hex: "#96CBFC") : Color(hex: "#FFC2D9"))
             }
