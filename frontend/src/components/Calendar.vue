@@ -559,6 +559,10 @@ export default {
       }
     },
     async toggleCustody(date) {
+      console.log('toggleCustody called with date:', date);
+      console.log('custodianOne:', this.custodianOne);
+      console.log('custodianTwo:', this.custodianTwo);
+      
       const currentInfo = this.getCustodyInfo(date);
       const newOwner = currentInfo.owner === 'jeff' ? 'deanna' : 'jeff';
       
@@ -574,6 +578,8 @@ export default {
         console.error('Error: No custodian ID available for', newOwner);
         return;
       }
+
+      console.log('Sending new format custody request:', { date, custodian_id: newCustodianId });
 
       try {
         const response = await axios.post('/api/events', {
@@ -677,10 +683,15 @@ export default {
         }
     },
     async saveEvent(event, date, position) {
+      console.log('saveEvent called with:', { date, position });
       const content = event.target.innerText;
+      console.log('content:', content);
+      
       if (this.events[date] && this.events[date][position] && this.events[date][position].content === content) {
           return;
       }
+      
+      console.log('Sending old format event request:', { event_date: date, content, position });
       
       try {
         const response = await axios.post('/api/events', {

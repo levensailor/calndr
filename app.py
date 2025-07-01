@@ -154,6 +154,13 @@ class FamilyMemberEmail(BaseModel):
     first_name: str
     email: str
 
+# Add a new Pydantic model for the old format
+class LegacyEvent(BaseModel):
+    id: Optional[int] = None
+    event_date: str
+    content: str
+    position: int
+
 # --- FastAPI Lifespan ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -268,8 +275,15 @@ async def update_device_token(token: str = Form(...), current_user: User = Depen
     await database.execute(users.update().where(users.c.id == current_user.id).values(apns_token=token))
     return {"status": "success"}
 
-@app.get("/api/events")
-async def get_events(start_date: date, end_date: date, current_user: User = Depends(get_current_user)):
+@app.get("/api/events/{year}/{month}")
+async def get_events(year: int, month: int, current_user: User = Depends(get_current_user)):
+    # Calculate start and end dates for the month
+    start_date = date(year, month, 1)
+    if month == 12:
+        end_date = date(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        end_date = date(year, month + 1, 1) - timedelta(days=1)
+        
     query = events.select().where(
         (events.c.family_id == current_user.family_id) &
         (events.c.date.between(start_date, end_date))
@@ -303,54 +317,95 @@ async def get_events(start_date: date, end_date: date, current_user: User = Depe
     return frontend_events
 
 @app.post("/api/events")
-async def save_event(event: Event, current_user: User = Depends(get_current_user)):
-    # Check for an existing event for that date
-    existing_event_query = events.select().where(
-        (events.c.family_id == current_user.family_id) & (events.c.date == event.date)
-    )
-    existing_event = await database.fetch_one(existing_event_query)
+async def save_event(request: dict, current_user: User = Depends(get_current_user)):
+    try:
+        logger.info(f"Received event request: {request}")
+        
+        # Handle both new format (Event) and old format (LegacyEvent)
+        if 'custodian_id' in request and 'date' in request:
+            # New format for custody events
+            logger.info("Using new format (custody event)")
+            event = Event(**request)
+            event_date = event.date
+            custodian_id = event.custodian_id
+        elif 'event_date' in request and 'position' in request:
+            # Old format - need to convert
+            logger.info("Using legacy format - converting to new format")
+            legacy_event = LegacyEvent(**request)
+            event_date = datetime.strptime(legacy_event.event_date, '%Y-%m-%d').date()
+            
+            if legacy_event.position == 4:  # Custody event
+                logger.info(f"Legacy custody event: {legacy_event.content}")
+                # Map content to custodian_id
+                family_query = users.select().where(users.c.family_id == current_user.family_id).order_by(users.c.first_name)
+                family_members = await database.fetch_all(family_query)
+                
+                if len(family_members) >= 2:
+                    if legacy_event.content == 'jeff':
+                        custodian_id = family_members[0]['id']
+                    elif legacy_event.content == 'deanna':
+                        custodian_id = family_members[1]['id']
+                    else:
+                        raise HTTPException(status_code=400, detail="Invalid custodian name")
+                else:
+                    raise HTTPException(status_code=400, detail="Family not found")
+            else:
+                # Non-custody events not supported in new schema yet
+                raise HTTPException(status_code=400, detail="Non-custody events not supported")
+        else:
+            raise HTTPException(status_code=400, detail="Invalid event format")
 
-    if existing_event:
-        # Update existing event
-        query = events.update().where(events.c.id == existing_event['id']).values(custodian_id=event.custodian_id)
-        await database.execute(query)
-    else:
-        # Create new event
-        query = events.insert().values(
-            family_id=current_user.family_id,
-            date=event.date,
-            custodian_id=event.custodian_id,
+        # Check for an existing event for that date
+        existing_event_query = events.select().where(
+            (events.c.family_id == current_user.family_id) & (events.c.date == event_date)
         )
-        await database.execute(query)
+        existing_event = await database.fetch_one(existing_event_query)
+
+        if existing_event:
+            # Update existing event
+            query = events.update().where(events.c.id == existing_event['id']).values(custodian_id=custodian_id)
+            await database.execute(query)
+        else:
+            # Create new event
+            query = events.insert().values(
+                family_id=current_user.family_id,
+                date=event_date,
+                custodian_id=custodian_id,
+            )
+            await database.execute(query)
+        
+        await send_custody_change_notification(current_user.id, current_user.family_id, event_date)
+        
+        # Return the state of the event from the DB in frontend-compatible format
+        final_event = await database.fetch_one(events.select().where(
+            (events.c.family_id == current_user.family_id) & (events.c.date == event_date)
+        ))
+        
+        # Get family members to map custodian ID to name
+        family_query = users.select().where(users.c.family_id == current_user.family_id).order_by(users.c.first_name)
+        family_members = await database.fetch_all(family_query)
+        
+        # Create a mapping from custodian ID to name
+        custodian_map = {}
+        if len(family_members) >= 2:
+            custodian_map[str(family_members[0]['id'])] = 'jeff'
+            custodian_map[str(family_members[1]['id'])] = 'deanna'
+        
+        # Convert to frontend format
+        if final_event and final_event['custodian_id']:
+            custodian_name = custodian_map.get(str(final_event['custodian_id']), 'unknown')
+            return {
+                'id': final_event['id'],
+                'event_date': str(final_event['date']),
+                'content': custodian_name,
+                'position': 4
+            }
+        
+        return final_event
     
-    await send_custody_change_notification(current_user.id, current_user.family_id, event.date)
-    
-    # Return the state of the event from the DB in frontend-compatible format
-    final_event = await database.fetch_one(events.select().where(
-        (events.c.family_id == current_user.family_id) & (events.c.date == event.date)
-    ))
-    
-    # Get family members to map custodian ID to name
-    family_query = users.select().where(users.c.family_id == current_user.family_id).order_by(users.c.first_name)
-    family_members = await database.fetch_all(family_query)
-    
-    # Create a mapping from custodian ID to name
-    custodian_map = {}
-    if len(family_members) >= 2:
-        custodian_map[str(family_members[0]['id'])] = 'jeff'
-        custodian_map[str(family_members[1]['id'])] = 'deanna'
-    
-    # Convert to frontend format
-    if final_event and final_event['custodian_id']:
-        custodian_name = custodian_map.get(str(final_event['custodian_id']), 'unknown')
-        return {
-            'id': final_event['id'],
-            'event_date': str(final_event['date']),
-            'content': custodian_name,
-            'position': 4
-        }
-    
-    return final_event
+    except Exception as e:
+        logger.error(f"Error in save_event: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 # MARK: - Notification Email Endpoints
 
