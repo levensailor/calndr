@@ -579,7 +579,7 @@ export default {
         return;
       }
 
-      console.log('Sending new format custody request:', { date, custodian_id: newCustodianId });
+      console.log('Sending NEW FORMAT custody request (v2):', { date, custodian_id: newCustodianId });
 
       try {
         const response = await axios.post('/api/events', {
@@ -684,6 +684,13 @@ export default {
     },
     async saveEvent(event, date, position) {
       console.log('saveEvent called with:', { date, position });
+      
+      // Custody events (position 4) should use toggleCustody instead
+      if (position === 4) {
+        console.log('Position 4 detected - redirecting to toggleCustody instead of saveEvent');
+        return; // Don't handle custody events here
+      }
+      
       const content = event.target.innerText;
       console.log('content:', content);
       
