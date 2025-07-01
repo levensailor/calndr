@@ -16,13 +16,5 @@ struct ThemeSettingsView: View {
         }
         .navigationTitle("Themes")
         .background(themeManager.currentTheme.mainBackgroundColor)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                Text("Themes")
-                    .font(.custom(themeManager.currentTheme.fontName, size: 20))
-                    .foregroundColor(themeManager.currentTheme.textColor)
-            }
-        }
     }
 } 

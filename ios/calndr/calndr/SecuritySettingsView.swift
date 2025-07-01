@@ -51,7 +51,7 @@ struct SecuritySettingsView: View {
                 }
             }
 
-            Section(header: Text("Account"), footer: Text("Password changes have been moved to the Account tab")) {
+            Section(footer: Text("Password changes have been moved to the Account tab")) {
                 Button(action: {
                     authManager.logout()
                 }) {
