@@ -131,7 +131,7 @@ struct MainTabView: View {
         
         let translation = value.translation
         let distance = sqrt(pow(translation.x, 2) + pow(translation.y, 2))
-        let velocity = sqrt(pow(value.velocity.x, 2) + pow(value.velocity.y, 2))
+        let velocity = sqrt(pow(value.velocity.width, 2) + pow(value.velocity.height, 2))
         
         // Determine if this is primarily horizontal or vertical
         let isHorizontalDominant = abs(translation.x) > abs(translation.y)
