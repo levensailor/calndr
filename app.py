@@ -5,11 +5,11 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import create_engine, inspect
 from dotenv import load_dotenv
 from datetime import date, datetime, timedelta, timezone
-from fastapi import FastAPI, Depends, HTTPException, status, Form
+from fastapi import FastAPI, Depends, HTTPException, status, Form, Query
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 import logging
 from passlib.context import CryptContext
 import uuid
@@ -17,6 +17,8 @@ from apns2.client import APNsClient
 from apns2.payload import Payload
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+import httpx
+import asyncio
 
 # --- Environment variables ---
 load_dotenv()
@@ -182,6 +184,16 @@ class LegacyEvent(BaseModel):
     event_date: str
     content: str
     position: int
+
+# Weather API models
+class DailyWeather(BaseModel):
+    time: List[str]
+    temperature_2m_max: List[float]
+    precipitation_probability_mean: List[float]
+    cloudcover_mean: List[float]
+
+class WeatherAPIResponse(BaseModel):
+    daily: DailyWeather
 
 # --- FastAPI Lifespan ---
 @asynccontextmanager
@@ -355,6 +367,91 @@ async def get_family_custodians(current_user: User = Depends(get_current_user)):
         "custodian_one": {"id": str(family_members[0]['id']), "first_name": family_members[0]['first_name']},
         "custodian_two": {"id": str(family_members[1]['id']), "first_name": family_members[1]['first_name']},
     }
+
+@app.get("/api/weather/{latitude}/{longitude}", response_model=WeatherAPIResponse)
+async def get_weather(
+    latitude: float, 
+    longitude: float, 
+    start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
+    end_date: str = Query(..., description="End date in YYYY-MM-DD format"),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Fetches weather data from Open-Meteo API for the specified coordinates and date range.
+    Returns temperature, precipitation probability, and cloud cover data.
+    """
+    try:
+        logger.info(f"Fetching weather for coordinates {latitude}, {longitude} from {start_date} to {end_date}")
+        
+        # Validate date format
+        try:
+            datetime.strptime(start_date, '%Y-%m-%d')
+            datetime.strptime(end_date, '%Y-%m-%d')
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+        
+        # Build Open-Meteo API URL
+        weather_url = (
+            f"https://api.open-meteo.com/v1/forecast?"
+            f"latitude={latitude}&longitude={longitude}"
+            f"&start_date={start_date}&end_date={end_date}"
+            f"&daily=temperature_2m_max,precipitation_probability_mean,cloudcover_mean"
+            f"&temperature_unit=fahrenheit"
+            f"&timezone=auto"
+        )
+        
+        # Make request to Open-Meteo API
+        async with httpx.AsyncClient() as client:
+            response = await client.get(weather_url, timeout=10.0)
+            
+        if response.status_code != 200:
+            logger.error(f"Open-Meteo API error: {response.status_code} - {response.text}")
+            raise HTTPException(status_code=500, detail="Failed to fetch weather data from external API")
+        
+        weather_data = response.json()
+        
+        # Validate and transform the response
+        if 'daily' not in weather_data:
+            logger.error(f"Unexpected weather API response format: {weather_data}")
+            raise HTTPException(status_code=500, detail="Invalid weather data format")
+        
+        daily_data = weather_data['daily']
+        
+        # Ensure we have all required fields
+        required_fields = ['time', 'temperature_2m_max', 'precipitation_probability_mean', 'cloudcover_mean']
+        for field in required_fields:
+            if field not in daily_data:
+                logger.error(f"Missing field '{field}' in weather response")
+                raise HTTPException(status_code=500, detail=f"Missing weather data field: {field}")
+        
+        # Convert temperature from Celsius to Fahrenheit if needed (Open-Meteo should return Fahrenheit based on our request)
+        temperatures = daily_data['temperature_2m_max']
+        precipitation = daily_data['precipitation_probability_mean']
+        cloudcover = daily_data['cloudcover_mean']
+        
+        # Handle None values by replacing with reasonable defaults
+        temperatures = [temp if temp is not None else 70.0 for temp in temperatures]
+        precipitation = [precip if precip is not None else 0.0 for precip in precipitation]
+        cloudcover = [cloud if cloud is not None else 0.0 for cloud in cloudcover]
+        
+        logger.info(f"Successfully fetched weather data for {len(daily_data['time'])} days")
+        
+        return WeatherAPIResponse(
+            daily=DailyWeather(
+                time=daily_data['time'],
+                temperature_2m_max=temperatures,
+                precipitation_probability_mean=precipitation,
+                cloudcover_mean=cloudcover
+            )
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching weather data: {e}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @app.post("/api/auth/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
