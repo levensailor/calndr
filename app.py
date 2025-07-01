@@ -274,7 +274,33 @@ async def get_events(start_date: date, end_date: date, current_user: User = Depe
         (events.c.family_id == current_user.family_id) &
         (events.c.date.between(start_date, end_date))
     )
-    return await database.fetch_all(query)
+    db_events = await database.fetch_all(query)
+    
+    # Get family members to map custodian IDs to names
+    family_query = users.select().where(users.c.family_id == current_user.family_id).order_by(users.c.first_name)
+    family_members = await database.fetch_all(family_query)
+    
+    # Create a mapping from custodian ID to name (for backward compatibility)
+    custodian_map = {}
+    if len(family_members) >= 2:
+        custodian_map[str(family_members[0]['id'])] = 'jeff'
+        custodian_map[str(family_members[1]['id'])] = 'deanna'
+    
+    # Convert events to the format expected by frontend
+    frontend_events = []
+    for event in db_events:
+        if event['custodian_id']:
+            # This is a custody event - convert to old format
+            custodian_name = custodian_map.get(str(event['custodian_id']), 'unknown')
+            frontend_events.append({
+                'id': event['id'],
+                'event_date': str(event['date']),
+                'content': custodian_name,
+                'position': 4  # Custody events are always position 4
+            })
+        # Note: Non-custody events would be handled here if they existed
+        
+    return frontend_events
 
 @app.post("/api/events")
 async def save_event(event: Event, current_user: User = Depends(get_current_user)):
@@ -299,10 +325,31 @@ async def save_event(event: Event, current_user: User = Depends(get_current_user
     
     await send_custody_change_notification(current_user.id, current_user.family_id, event.date)
     
-    # Return the state of the event from the DB
+    # Return the state of the event from the DB in frontend-compatible format
     final_event = await database.fetch_one(events.select().where(
         (events.c.family_id == current_user.family_id) & (events.c.date == event.date)
     ))
+    
+    # Get family members to map custodian ID to name
+    family_query = users.select().where(users.c.family_id == current_user.family_id).order_by(users.c.first_name)
+    family_members = await database.fetch_all(family_query)
+    
+    # Create a mapping from custodian ID to name
+    custodian_map = {}
+    if len(family_members) >= 2:
+        custodian_map[str(family_members[0]['id'])] = 'jeff'
+        custodian_map[str(family_members[1]['id'])] = 'deanna'
+    
+    # Convert to frontend format
+    if final_event and final_event['custodian_id']:
+        custodian_name = custodian_map.get(str(final_event['custodian_id']), 'unknown')
+        return {
+            'id': final_event['id'],
+            'event_date': str(final_event['date']),
+            'content': custodian_name,
+            'position': 4
+        }
+    
     return final_event
 
 # MARK: - Notification Email Endpoints

@@ -91,7 +91,7 @@
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
           </button>
           <div class="custody-share">
-            Jeff {{ custodyShare.jeff }}% | ({{ custodyStreak }}) | Deanna {{ custodyShare.deanna }}%
+            {{ custodianOne ? custodianOne.first_name : 'Jeff' }} {{ custodyShare.jeff }}% | ({{ custodyStreak }}) | {{ custodianTwo ? custodianTwo.first_name : 'Deanna' }} {{ custodyShare.deanna }}%
           </div>
         </div>
         <div class="footer-actions">
@@ -266,6 +266,8 @@ export default {
         },
       },
       customThemes: {}, // This will hold themes from localStorage
+      custodianOne: null,
+      custodianTwo: null,
     };
   },
   computed: {
@@ -519,6 +521,19 @@ export default {
             this.fetchSchoolEvents();
         }
     },
+    async fetchCustodianInfo() {
+      try {
+        const response = await axios.get('/api/family/custodians');
+        this.custodianOne = response.data.custodian_one;
+        this.custodianTwo = response.data.custodian_two;
+        console.log("Calendar.vue: Fetched custodian info", this.custodianOne, this.custodianTwo);
+      } catch (error) {
+        console.error('Error fetching custodian info:', error);
+        // Fallback to hardcoded values
+        this.custodianOne = { id: 'jeff-id', first_name: 'Jeff' };
+        this.custodianTwo = { id: 'deanna-id', first_name: 'Deanna' };
+      }
+    },
     getCustodyInfo(date) {
       const event = (this.events[date] && this.events[date][4]) ? this.events[date][4].content : null;
       // Adding 'T00:00:00' avoids timezone issues when getting the day
@@ -534,33 +549,51 @@ export default {
       }
 
       if (owner === 'jeff') {
-        return { owner: 'jeff', text: 'Jeff', class: 'custody-jeff' };
+        const ownerName = this.custodianOne ? this.custodianOne.first_name : 'Jeff';
+        const ownerId = this.custodianOne ? this.custodianOne.id : null;
+        return { owner: 'jeff', text: ownerName, class: 'custody-jeff', id: ownerId };
       } else {
-        return { owner: 'deanna', text: 'Deanna', class: 'custody-deanna' };
+        const ownerName = this.custodianTwo ? this.custodianTwo.first_name : 'Deanna';
+        const ownerId = this.custodianTwo ? this.custodianTwo.id : null;
+        return { owner: 'deanna', text: ownerName, class: 'custody-deanna', id: ownerId };
       }
     },
     async toggleCustody(date) {
       const currentInfo = this.getCustodyInfo(date);
       const newOwner = currentInfo.owner === 'jeff' ? 'deanna' : 'jeff';
-      const position = 4;
+      
+      // Get the custodian ID for the new owner
+      let newCustodianId;
+      if (newOwner === 'jeff') {
+        newCustodianId = this.custodianOne ? this.custodianOne.id : null;
+      } else {
+        newCustodianId = this.custodianTwo ? this.custodianTwo.id : null;
+      }
+
+      if (!newCustodianId) {
+        console.error('Error: No custodian ID available for', newOwner);
+        return;
+      }
 
       try {
         const response = await axios.post('/api/events', {
-          event_date: date,
-          content: newOwner,
-          position: position,
+          date: date,
+          custodian_id: newCustodianId,
         });
         
+        // Update local events storage to reflect the change
         const updatedEvents = { ...this.events };
         if (!updatedEvents[date]) {
           updatedEvents[date] = [];
         }
-        updatedEvents[date][position] = response.data;
+        // Store the custody info as position 4 event for backward compatibility with UI
+        updatedEvents[date][4] = { content: newOwner, position: 4 };
         this.events = updatedEvents;
 
         console.log("Calendar.vue: Custody event saved successfully");
       } catch (error) {
         console.error('Error saving custody event:', error);
+        alert('Failed to update custody. Please try again.');
       }
     },
     async fetchWeather() {
@@ -787,6 +820,7 @@ export default {
     this.$nextTick(() => {
       this.loadCustomThemes(); // Load custom themes first
       this.currentTheme = localStorage.getItem('calendarTheme') || 'Stork';
+      this.fetchCustodianInfo(); // Fetch custodian info before other data
       this.fetchEvents();
       this.fetchWeather();
       this.fetchWaves();
