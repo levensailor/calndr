@@ -47,7 +47,7 @@ struct DayView: View {
             .padding()
             .frame(minHeight: UIScreen.main.bounds.height - 150)
         }
-        .gesture(
+        .simultaneousGesture(
             DragGesture()
                 .onEnded { value in
                     handleDaySwipeGesture(value)
@@ -59,12 +59,15 @@ struct DayView: View {
         let translation = value.translation
         let velocity = sqrt(pow(value.velocity.width, 2) + pow(value.velocity.height, 2))
         
-        // Check for vertical swipes
-        let isVerticalDominant = abs(translation.height) > abs(translation.width)
-        let swipeThreshold: CGFloat = 50
-        let velocityThreshold: CGFloat = 250
+        // Check for vertical swipes - be more aggressive about navigation detection
+        let isVerticalDominant = abs(translation.height) > abs(translation.width) * 1.5
+        let swipeThreshold: CGFloat = 100  // Increased threshold
+        let velocityThreshold: CGFloat = 400  // Increased velocity threshold
         
-        if isVerticalDominant && (abs(translation.height) > swipeThreshold || velocity > velocityThreshold) {
+        // Require either a long swipe OR high velocity for day navigation
+        let isNavigationSwipe = (abs(translation.height) > swipeThreshold) || (velocity > velocityThreshold)
+        
+        if isVerticalDominant && isNavigationSwipe {
             let calendar = Calendar.current
             if translation.height < 0 {
                 // Swipe up - next day
