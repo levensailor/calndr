@@ -21,7 +21,11 @@ struct CalendarGridView: View {
             .padding(.vertical, 4)
             .background(themeManager.currentTheme.headerBackgroundColor)
             
-            // Grid for the days of the month - fixed adequate height
+            // Calendar grid with fixed height - cells adapt to fill space
+            let numberOfWeeks = calculateNumberOfWeeks()
+            let fixedCalendarHeight: CGFloat = 510 // Fixed height for consistent layout
+            let rowHeight = fixedCalendarHeight / CGFloat(numberOfWeeks)
+            
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 1) {
                 ForEach(getDaysForCurrentMonth(), id: \.self) { date in
                     DayCellView(
@@ -37,9 +41,10 @@ struct CalendarGridView: View {
                         custodyOwner: viewModel.getCustodyInfo(for: date).text,
                         custodyID: viewModel.getCustodyInfo(for: date).owner
                     )
-                    .frame(height: 85) // Fixed height that ensures custody rectangle is always visible
+                    .frame(height: rowHeight) // Adaptive height based on number of weeks
                 }
             }
+            .frame(height: fixedCalendarHeight) // Fixed calendar height
             .background(themeManager.currentTheme.gridLinesColor)
         }
     }
@@ -83,6 +88,11 @@ struct CalendarGridView: View {
 
     private func isDateInCurrentMonth(_ date: Date) -> Bool {
         return Calendar.current.isDate(date, equalTo: viewModel.currentDate, toGranularity: .month)
+    }
+    
+    private func calculateNumberOfWeeks() -> Int {
+        let days = getDaysForCurrentMonth()
+        return days.count / 7 // Each week has 7 days
     }
     
     private func cellBackgroundColor(for date: Date) -> Color {
