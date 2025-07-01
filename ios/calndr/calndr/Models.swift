@@ -41,6 +41,35 @@ struct CustodianResponse: Codable {
     let custodian_two: Custodian
 }
 
+// Represents a custody record for the new custody API
+struct CustodyRecord: Codable, Identifiable {
+    let id: Int
+    let date: String
+    let custodian_id: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id, date, custodian_id
+    }
+}
+
+// Request model for creating/updating custody
+struct CustodyRequest: Codable {
+    let date: String
+    let custodian_id: String
+}
+
+// Response model from custody API (compatible with frontend format)
+struct CustodyResponse: Codable, Identifiable {
+    let id: Int
+    let event_date: String
+    let content: String
+    let position: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case id, event_date, content, position
+    }
+}
+
 // Represents a school event
 struct SchoolEvent: Codable, Identifiable, Hashable {
     let date: String

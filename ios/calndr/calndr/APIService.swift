@@ -168,6 +168,98 @@ class APIService {
         }.resume()
     }
     
+    // MARK: - Custody API (New dedicated custody endpoints)
+    
+    func fetchCustodyRecords(year: Int, month: Int, completion: @escaping (Result<[CustodyResponse], Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/custody/\(year)/\(month)")
+        let request = createAuthenticatedRequest(url: url)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            // Log the raw data as a string for debugging
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("--- Raw JSON for fetchCustodyRecords ---")
+                print(jsonString)
+                print("--------------------------------------")
+            }
+
+            if httpResponse.statusCode == 401 {
+                completion(.failure(NSError(domain: "APIService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Unauthorized"])))
+                return
+            }
+
+            do {
+                let custodyRecords = try JSONDecoder().decode([CustodyResponse].self, from: data)
+                completion(.success(custodyRecords))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func updateCustodyRecord(for date: String, custodianId: String, completion: @escaping (Result<CustodyResponse, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/custody")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let custodyRequest = CustodyRequest(date: date, custodian_id: custodianId)
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(custodyRequest)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server - not HTTP"])))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received on custody update"])))
+                return
+            }
+
+            // Log the raw data as a string for debugging
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("--- Raw JSON for updateCustodyRecord (Status: \(httpResponse.statusCode)) ---")
+                print(jsonString)
+                print("--------------------------------------------------------------------")
+            }
+
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            do {
+                let updatedCustody = try JSONDecoder().decode(CustodyResponse.self, from: data)
+                completion(.success(updatedCustody))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    // MARK: - Legacy Custody (Deprecated - use new custody API above)
+    
     func updateCustody(for date: String, newOwner: String, existingEvents: [Event], completion: @escaping (Result<Event, Error>) -> Void) {
         let custodyEventForDay = existingEvents.first { $0.event_date == date && $0.position == 4 }
 

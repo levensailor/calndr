@@ -3,6 +3,7 @@ import Combine
 
 class CalendarViewModel: ObservableObject {
     @Published var events: [Event] = []
+    @Published var custodyRecords: [CustodyResponse] = [] // New: custody data from dedicated API
     @Published var schoolEvents: [SchoolEvent] = []
     @Published var showSchoolEvents: Bool = false
     @Published var weatherData: [String: WeatherInfo] = [:]
@@ -57,21 +58,53 @@ class CalendarViewModel: ObservableObject {
         // Also fetch weather for the visible range
         fetchWeather(from: firstDateString, to: lastDateString)
         
-        APIService.shared.fetchEvents(from: firstDateString, to: lastDateString) { [weak self] result in
+        // Fetch both regular events and custody records
+        fetchRegularEvents(from: firstDateString, to: lastDateString)
+        fetchCustodyRecords()
+    }
+    
+    private func fetchRegularEvents(from startDate: String, to endDate: String) {
+        APIService.shared.fetchEvents(from: startDate, to: endDate) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let events):
                     self?.events = events
-                    self?.updateCustodyStreak()
-                    self?.updateCustodyPercentages()
-                    
-                    print("Successfully fetched \(events.count) events for the visible date range.")
+                    print("Successfully fetched \(events.count) regular events for the visible date range.")
                 case .failure(let error):
                     if (error as NSError).code == 401 {
                         self?.authManager.logout()
                     }
-                    print("Error fetching events: \(error.localizedDescription)")
-                    // Here you could update the UI to show an error state
+                    print("Error fetching regular events: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    func fetchCustodyRecords() {
+        guard !isOffline else {
+            print("Offline, not fetching custody records.")
+            return
+        }
+        
+        let calendar = Calendar.current
+        let year = calendar.component(.year, from: currentDate)
+        let month = calendar.component(.month, from: currentDate)
+        
+        APIService.shared.fetchCustodyRecords(year: year, month: month) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let custodyRecords):
+                    self?.custodyRecords = custodyRecords
+                    self?.updateCustodyStreak()
+                    self?.updateCustodyPercentages()
+                    print("Successfully fetched \(custodyRecords.count) custody records for \(year)-\(month).")
+                case .failure(let error):
+                    if (error as NSError).code == 401 {
+                        self?.authManager.logout()
+                    }
+                    print("Error fetching custody records: \(error.localizedDescription)")
+                    // Fall back to empty custody records
+                    self?.custodyRecords = []
                 }
             }
         }
@@ -125,7 +158,7 @@ class CalendarViewModel: ObservableObject {
     func changeMonth(by amount: Int) {
         if let newDate = Calendar.current.date(byAdding: .month, value: amount, to: currentDate) {
             currentDate = newDate
-            fetchEvents()
+            fetchEvents() // This now calls both fetchRegularEvents and fetchCustodyRecords
         }
     }
     
@@ -144,7 +177,17 @@ class CalendarViewModel: ObservableObject {
         let dateString = isoDateString(from: date)
         let dayOfWeek = Calendar.current.component(.weekday, from: date) // 1=Sun, 2=Mon, 7=Sat
         
-        // Check for a manual override
+        // NEW: Check custody records first (from dedicated custody API)
+        if let custodyRecord = custodyRecords.first(where: { $0.event_date == dateString }) {
+            // Map the content back to custodian names and IDs
+            if custodyRecord.content == "jeff" {
+                return (self.custodianOne?.id ?? "", self.custodianOneName)
+            } else if custodyRecord.content == "deanna" {
+                return (self.custodianTwo?.id ?? "", self.custodianTwoName)
+            }
+        }
+        
+        // LEGACY: Check for old custody events in events array (position 4) for backward compatibility
         if let custodyEvent = events.first(where: { $0.event_date == dateString && $0.position == 4 }) {
             if custodyEvent.content == "jeff" {
                 return (self.custodianOne?.id ?? "", self.custodianOneName)
@@ -235,24 +278,38 @@ class CalendarViewModel: ObservableObject {
 
     func toggleCustodian(for date: Date) {
         let (currentOwner, _) = getCustodyInfo(for: date)
-        let newOwner = (currentOwner == "jeff") ? "deanna" : "jeff"
         
-        APIService.shared.updateCustody(for: isoDateString(from: date), newOwner: newOwner, existingEvents: self.events) { [weak self] result in
+        // Determine the new custodian and their ID
+        let newCustodianId: String
+        if currentOwner == self.custodianOne?.id {
+            newCustodianId = self.custodianTwo?.id ?? ""
+        } else {
+            newCustodianId = self.custodianOne?.id ?? ""
+        }
+        
+        guard !newCustodianId.isEmpty else {
+            print("Error: Could not determine new custodian ID")
+            return
+        }
+        
+        // Use the new custody API
+        APIService.shared.updateCustodyRecord(for: isoDateString(from: date), custodianId: newCustodianId) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let savedEvent):
-                    // Update the local events array with the new/updated event
-                    if let index = self?.events.firstIndex(where: { $0.id == savedEvent.id }) {
-                        self?.events[index] = savedEvent
+                case .success(let custodyResponse):
+                    // Update the local custody records array
+                    if let index = self?.custodyRecords.firstIndex(where: { $0.event_date == custodyResponse.event_date }) {
+                        self?.custodyRecords[index] = custodyResponse
                     } else {
-                        self?.events.append(savedEvent)
+                        self?.custodyRecords.append(custodyResponse)
                     }
                     
                     self?.updateCustodyStreak()
                     self?.updateCustodyPercentages()
-                    print("Successfully toggled custodian for \(date)")
+                    print("Successfully toggled custodian for \(date) using new custody API")
                 case .failure(let error):
-                    print("Error toggling custodian: \(error.localizedDescription)")
+                    print("Error toggling custodian with new API: \(error.localizedDescription)")
+                    // Could fall back to legacy API here if needed
                 }
             }
         }
