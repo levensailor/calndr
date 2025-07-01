@@ -44,14 +44,49 @@ async def migrate_notification_emails():
         await database.execute(create_table_query)
         print("✅ Created notification_emails table")
         
-        # Check if we already have notification emails
-        count_query = "SELECT COUNT(*) FROM notification_emails"
-        email_count = await database.fetch_val(count_query)
-        
-        if email_count > 0:
-            print(f"⚠️  Found {email_count} existing notification emails, skipping auto-population")
-        else:
-            # Get all families and their parent emails
+        # Check if table structure is correct by trying to query it
+        try:
+            count_query = "SELECT COUNT(*) FROM notification_emails"
+            email_count = await database.fetch_val(count_query)
+            print(f"📊 Found {email_count} existing notification emails")
+            
+            if email_count == 0:
+                # Get all families and their parent emails
+                families_query = """
+                SELECT DISTINCT f.id as family_id, u.email
+                FROM families f
+                JOIN users u ON u.family_id = f.id
+                WHERE u.email IS NOT NULL
+                ORDER BY f.id, u.email
+                """
+                
+                family_emails = await database.fetch_all(families_query)
+                print(f"📧 Found {len(family_emails)} parent emails to add")
+                
+                # Insert parent emails as notification emails
+                for row in family_emails:
+                    insert_query = """
+                    INSERT INTO notification_emails (family_id, email, created_at)
+                    VALUES ($1, $2, NOW())
+                    """
+                    await database.execute(insert_query, row['family_id'], row['email'])
+                    print(f"✅ Added notification email: {row['email']} for family {row['family_id']}")
+            else:
+                print("⚠️  Notification emails already exist, skipping auto-population")
+                
+        except Exception as e:
+            print(f"⚠️  Error querying notification_emails table: {e}")
+            # If there's an issue with the table structure, drop and recreate it
+            print("🔧 Recreating notification_emails table...")
+            
+            drop_query = "DROP TABLE IF EXISTS notification_emails"
+            await database.execute(drop_query)
+            
+            # Recreate with correct structure
+            await database.execute(create_table_query)
+            print("✅ Recreated notification_emails table")
+            
+            # Now populate it
             families_query = """
             SELECT DISTINCT f.id as family_id, u.email
             FROM families f
@@ -61,17 +96,15 @@ async def migrate_notification_emails():
             """
             
             family_emails = await database.fetch_all(families_query)
+            print(f"📧 Found {len(family_emails)} parent emails to add")
             
             # Insert parent emails as notification emails
             for row in family_emails:
                 insert_query = """
                 INSERT INTO notification_emails (family_id, email, created_at)
-                VALUES (:family_id, :email, NOW())
+                VALUES ($1, $2, NOW())
                 """
-                await database.execute(insert_query, {
-                    'family_id': row['family_id'],
-                    'email': row['email']
-                })
+                await database.execute(insert_query, row['family_id'], row['email'])
                 print(f"✅ Added notification email: {row['email']} for family {row['family_id']}")
         
         print("✅ Notification emails migration completed successfully!")
