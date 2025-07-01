@@ -146,13 +146,13 @@ CRON_JOB="0 18 * * 0 source /var/www/cal-app/.env; /var/www/cal-app/venv/bin/pyt
 
 echo "Cron job for weekly email set up."
 
-# 9. Run the initial data seeding script
-echo "--- Running initial database setup script ---"
-sudo -u $APP_USER $APP_DIR/venv/bin/python3 $APP_DIR/initial_setup.py
+# 9. Run the initial data seeding script (DISABLED to prevent data loss on deployments)
+# echo "--- Running initial database setup script ---"
+# sudo -u $APP_USER $APP_DIR/venv/bin/python3 $APP_DIR/initial_setup.py
 
-# 10. Run user profile migration script
-echo "--- Running user profile migration script ---"
-sudo -u $APP_USER $APP_DIR/venv/bin/python3 $APP_DIR/migrate_user_profile.py
+# 10. Run user profile migration script (DISABLED to prevent data loss on deployments)
+# echo "--- Running user profile migration script ---"
+# sudo -u $APP_USER $APP_DIR/venv/bin/python3 $APP_DIR/migrate_user_profile.py
 
 # 11. Run notification emails migration script
 echo "--- Running notification emails migration script ---"
