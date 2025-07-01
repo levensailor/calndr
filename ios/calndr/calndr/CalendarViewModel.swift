@@ -313,8 +313,37 @@ class CalendarViewModel: ObservableObject {
                 switch result {
                 case .success(let emails):
                     self?.notificationEmails = emails
+                    // If no notification emails exist, auto-populate with parent emails
+                    if emails.isEmpty {
+                        self?.autoPopulateWithParentEmails()
+                    }
                 case .failure(let error):
                     print("Error fetching notification emails: \(error.localizedDescription)")
+                    // If fetch fails, try to auto-populate with parent emails
+                    self?.autoPopulateWithParentEmails()
+                }
+            }
+        }
+    }
+    
+    private func autoPopulateWithParentEmails() {
+        guard !isOffline else { return }
+        APIService.shared.fetchFamilyMemberEmails { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let familyEmails):
+                    // Add each parent email as a notification email
+                    for familyMember in familyEmails {
+                        self?.addNotificationEmail(familyMember.email) { success in
+                            if success {
+                                print("✅ Auto-added parent email: \(familyMember.email)")
+                            } else {
+                                print("❌ Failed to auto-add parent email: \(familyMember.email)")
+                            }
+                        }
+                    }
+                case .failure(let error):
+                    print("Error fetching family member emails: \(error.localizedDescription)")
                 }
             }
         }

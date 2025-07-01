@@ -98,6 +98,15 @@ events = sqlalchemy.Table(
     # Add other event columns if needed
 )
 
+notification_emails = sqlalchemy.Table(
+    "notification_emails",
+    metadata,
+    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
+    sqlalchemy.Column("family_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("families.id"), nullable=False),
+    sqlalchemy.Column("email", sqlalchemy.String, nullable=False),
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
+)
+
 
 # --- Pydantic Models ---
 class User(BaseModel):
@@ -132,6 +141,18 @@ class UserProfile(BaseModel):
 class PasswordUpdate(BaseModel):
     current_password: str
     new_password: str
+
+class NotificationEmail(BaseModel):
+    id: int
+    email: str
+
+class AddNotificationEmail(BaseModel):
+    email: str
+
+class FamilyMemberEmail(BaseModel):
+    id: str
+    first_name: str
+    email: str
 
 # --- FastAPI Lifespan ---
 @asynccontextmanager
@@ -283,6 +304,70 @@ async def save_event(event: Event, current_user: User = Depends(get_current_user
         (events.c.family_id == current_user.family_id) & (events.c.date == event.date)
     ))
     return final_event
+
+# MARK: - Notification Email Endpoints
+
+@app.get("/api/notifications/emails", response_model=list[NotificationEmail])
+async def get_notification_emails(current_user: User = Depends(get_current_user)):
+    """
+    Returns all notification emails for the current user's family.
+    """
+    query = notification_emails.select().where(notification_emails.c.family_id == current_user.family_id)
+    emails = await database.fetch_all(query)
+    return [NotificationEmail(id=email['id'], email=email['email']) for email in emails]
+
+@app.post("/api/notifications/emails", response_model=NotificationEmail)
+async def add_notification_email(email_data: AddNotificationEmail, current_user: User = Depends(get_current_user)):
+    """
+    Adds a new notification email for the current user's family.
+    """
+    query = notification_emails.insert().values(
+        family_id=current_user.family_id,
+        email=email_data.email
+    )
+    email_id = await database.execute(query)
+    return NotificationEmail(id=email_id, email=email_data.email)
+
+@app.put("/api/notifications/emails/{email_id}")
+async def update_notification_email(email_id: int, email_data: AddNotificationEmail, current_user: User = Depends(get_current_user)):
+    """
+    Updates an existing notification email for the current user's family.
+    """
+    query = notification_emails.update().where(
+        (notification_emails.c.id == email_id) & 
+        (notification_emails.c.family_id == current_user.family_id)
+    ).values(email=email_data.email)
+    await database.execute(query)
+    return {"status": "success"}
+
+@app.delete("/api/notifications/emails/{email_id}")
+async def delete_notification_email(email_id: int, current_user: User = Depends(get_current_user)):
+    """
+    Deletes a notification email for the current user's family.
+    """
+    query = notification_emails.delete().where(
+        (notification_emails.c.id == email_id) & 
+        (notification_emails.c.family_id == current_user.family_id)
+    )
+    await database.execute(query)
+    return {"status": "success"}
+
+@app.get("/api/family/emails", response_model=list[FamilyMemberEmail])
+async def get_family_member_emails(current_user: User = Depends(get_current_user)):
+    """
+    Returns the email addresses of all family members (parents) for automatic population in alerts.
+    """
+    query = users.select().where(users.c.family_id == current_user.family_id).order_by(users.c.first_name)
+    family_members = await database.fetch_all(query)
+    
+    return [
+        FamilyMemberEmail(
+            id=str(member['id']),
+            first_name=member['first_name'],
+            email=member['email']
+        )
+        for member in family_members
+    ]
 
 async def send_custody_change_notification(sender_id: uuid.UUID, family_id: uuid.UUID, event_date: date):
     if not apns_client:

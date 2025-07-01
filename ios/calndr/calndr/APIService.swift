@@ -487,6 +487,40 @@ class APIService {
         }.resume()
     }
 
+    func fetchFamilyMemberEmails(completion: @escaping (Result<[FamilyMemberEmail], Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/family/emails")
+        let request = createAuthenticatedRequest(url: url)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            if httpResponse.statusCode == 401 {
+                completion(.failure(APIError.unauthorized))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            do {
+                let familyEmails = try JSONDecoder().decode([FamilyMemberEmail].self, from: data)
+                completion(.success(familyEmails))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+
     func fetchUserProfile(completion: @escaping (Result<UserProfile, Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/users/me")
         let request = createAuthenticatedRequest(url: url)

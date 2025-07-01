@@ -24,6 +24,7 @@ FILES_TO_DEPLOY=(
     "initial_setup.py"
     "send_weekly_email.py"
     "migrate_user_profile.py"
+    "migrate_notification_emails.py"
     "dist"
 )
 

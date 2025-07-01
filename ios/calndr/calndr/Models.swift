@@ -103,4 +103,10 @@ struct UserProfile: Codable {
     enum CodingKeys: String, CodingKey {
         case id, first_name, last_name, email, phone_number, subscription_type, subscription_status, created_at
     }
+}
+
+struct FamilyMemberEmail: Codable {
+    let id: String
+    let first_name: String
+    let email: String
 } 

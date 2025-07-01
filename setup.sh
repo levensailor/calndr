@@ -25,6 +25,7 @@ sudo mkdir -p $APP_DIR
 [ -f /home/$APP_USER/setup.sh ] && sudo mv -f /home/$APP_USER/setup.sh $APP_DIR/
 [ -f /home/$APP_USER/initial_setup.py ] && sudo mv -f /home/$APP_USER/initial_setup.py $APP_DIR/
 [ -f /home/$APP_USER/migrate_user_profile.py ] && sudo mv -f /home/$APP_USER/migrate_user_profile.py $APP_DIR/
+[ -f /home/$APP_USER/migrate_notification_emails.py ] && sudo mv -f /home/$APP_USER/migrate_notification_emails.py $APP_DIR/
 
 # Remove old directory before moving the new one
 [ -d /home/$APP_USER/dist ] && sudo rm -rf $APP_DIR/dist && sudo mv /home/$APP_USER/dist $APP_DIR/
@@ -152,6 +153,10 @@ sudo -u $APP_USER $APP_DIR/venv/bin/python3 $APP_DIR/initial_setup.py
 # 10. Run user profile migration script
 echo "--- Running user profile migration script ---"
 sudo -u $APP_USER $APP_DIR/venv/bin/python3 $APP_DIR/migrate_user_profile.py
+
+# 11. Run notification emails migration script
+echo "--- Running notification emails migration script ---"
+sudo -u $APP_USER $APP_DIR/venv/bin/python3 $APP_DIR/migrate_notification_emails.py
 
 echo "--- Deployment to EC2 finished successfully! ---"
 echo "Your app should be available at https://calndr.club" 
