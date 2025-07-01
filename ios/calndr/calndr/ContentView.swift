@@ -245,11 +245,44 @@ struct MainTabView: View {
         case .month:
             formatter.dateFormat = "MMMM yyyy"
         case .week:
-            formatter.dateFormat = "MMMM"
+            return weekRangeString(from: calendarViewModel.currentDate)
         case .day:
             formatter.dateFormat = "MMMM d"
         }
         return formatter.string(from: calendarViewModel.currentDate)
+    }
+
+    private func weekRangeString(from date: Date) -> String {
+        let calendar = Calendar.current
+        
+        // Get the start of the week (Sunday)
+        guard let weekInterval = calendar.dateInterval(of: .weekOfYear, for: date) else {
+            return "Week"
+        }
+        
+        let startOfWeek = weekInterval.start
+        let endOfWeek = calendar.date(byAdding: .day, value: 6, to: startOfWeek)!
+        
+        let monthFormatter = DateFormatter()
+        monthFormatter.dateFormat = "MMMM"
+        
+        let dayFormatter = DateFormatter()
+        dayFormatter.dateFormat = "d"
+        
+        let startMonth = monthFormatter.string(from: startOfWeek)
+        let startDay = dayFormatter.string(from: startOfWeek)
+        let endDay = dayFormatter.string(from: endOfWeek)
+        
+        // Check if the week spans multiple months
+        if calendar.isDate(startOfWeek, equalTo: endOfWeek, toGranularity: .month) {
+            // Same month: "July 14 - 20"
+            return "\(startMonth) \(startDay) - \(endDay)"
+        } else {
+            // Different months: "July 30 - Aug 5"
+            let endMonth = monthFormatter.string(from: endOfWeek)
+            let shortEndMonth = String(endMonth.prefix(3)) // First 3 letters
+            return "\(startMonth) \(startDay) - \(shortEndMonth) \(endDay)"
+        }
     }
 
     private func monthYearString(from date: Date) -> String {
