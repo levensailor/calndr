@@ -28,23 +28,18 @@ database = databases.Database(DATABASE_URL)
 sync_engine = sqlalchemy.create_engine(DATABASE_URL.replace("+asyncpg", ""))
 metadata = sqlalchemy.MetaData()
 
-# Define the new custody table
-custody = sqlalchemy.Table(
-    "custody",
-    metadata,
-    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
-    sqlalchemy.Column("family_id", sqlalchemy.dialects.postgresql.UUID(as_uuid=True), nullable=False),
-    sqlalchemy.Column("date", sqlalchemy.Date, nullable=False),
-    sqlalchemy.Column("actor_id", sqlalchemy.dialects.postgresql.UUID(as_uuid=True), nullable=False),
-    sqlalchemy.Column("custodian_id", sqlalchemy.dialects.postgresql.UUID(as_uuid=True), nullable=False),
-    sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
-    # Add foreign key constraints
-    sqlalchemy.ForeignKeyConstraint(["family_id"], ["families.id"]),
-    sqlalchemy.ForeignKeyConstraint(["actor_id"], ["users.id"]),
-    sqlalchemy.ForeignKeyConstraint(["custodian_id"], ["users.id"]),
-    # Add unique constraint to prevent duplicate custody records for the same date
-    sqlalchemy.UniqueConstraint("family_id", "date", name="unique_family_date_custody"),
-)
+# SQL to create the custody table
+CREATE_CUSTODY_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS custody (
+    id SERIAL PRIMARY KEY,
+    family_id UUID NOT NULL REFERENCES families(id),
+    date DATE NOT NULL,
+    actor_id UUID NOT NULL REFERENCES users(id),
+    custodian_id UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_family_date_custody UNIQUE (family_id, date)
+);
+"""
 
 async def main():
     """Main migration function"""
@@ -66,9 +61,9 @@ async def main():
         if table_exists:
             print("✅ Custody table already exists, skipping creation")
         else:
-            # Create the custody table
+            # Create the custody table using raw SQL
             print("📊 Creating custody table...")
-            metadata.create_all(sync_engine, tables=[custody])
+            await database.execute(CREATE_CUSTODY_TABLE_SQL)
             print("✅ Created custody table")
         
         # Check if there are any existing custody events in the events table to migrate
