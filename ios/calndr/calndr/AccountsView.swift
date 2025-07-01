@@ -9,104 +9,102 @@ struct AccountsView: View {
     @State private var showBillingModal = false
     
     var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
-                if isLoading {
-                    ProgressView("Loading profile...")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let errorMessage = errorMessage {
-                    VStack(spacing: 16) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.system(size: 50))
-                            .foregroundColor(.orange)
-                        Text("Unable to load profile")
-                            .font(.headline)
-                        Text(errorMessage)
-                            .font(.caption)
-                            .multilineTextAlignment(.center)
-                            .foregroundColor(.secondary)
-                        Button("Retry") {
-                            fetchUserProfile()
-                        }
-                        .buttonStyle(.borderedProminent)
-                    }
+        VStack(spacing: 20) {
+            if isLoading {
+                ProgressView("Loading profile...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let profile = userProfile {
-                    ScrollView {
-                        VStack(spacing: 24) {
-                            // Profile Header
-                            VStack(spacing: 12) {
-                                Image(systemName: "person.circle.fill")
-                                    .font(.system(size: 60))
-                                    .foregroundColor(.blue)
-                                
-                                Text("\(profile.first_name) \(profile.last_name)")
-                                    .font(.title2.bold())
-                                
-                                Text(profile.email)
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding(.top)
+            } else if let errorMessage = errorMessage {
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 50))
+                        .foregroundColor(.orange)
+                    Text("Unable to load profile")
+                        .font(.headline)
+                    Text(errorMessage)
+                        .font(.caption)
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(.secondary)
+                    Button("Retry") {
+                        fetchUserProfile()
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let profile = userProfile {
+                ScrollView {
+                    VStack(spacing: 24) {
+                        // Profile Header
+                        VStack(spacing: 12) {
+                            Image(systemName: "person.circle.fill")
+                                .font(.system(size: 60))
+                                .foregroundColor(.blue)
                             
-                            // Profile Information
-                            VStack(spacing: 16) {
-                                ProfileRowView(title: "First Name", value: profile.first_name)
-                                ProfileRowView(title: "Last Name", value: profile.last_name)
-                                ProfileRowView(title: "Email", value: profile.email)
-                                ProfileRowView(title: "Phone Number", value: profile.phone_number ?? "Not provided")
-                                ProfileRowView(title: "Subscription", value: formatSubscription(profile))
-                            }
-                            .padding(.horizontal)
+                            Text("\(profile.first_name) \(profile.last_name)")
+                                .font(.title2.bold())
                             
-                            Spacer(minLength: 40)
-                            
-                            // Action Buttons
-                            VStack(spacing: 12) {
-                                Button(action: {
-                                    showBillingModal = true
-                                }) {
-                                    HStack {
-                                        Image(systemName: "creditcard")
-                                        Text("Manage Billing")
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(Color.blue)
-                                    .foregroundColor(.white)
-                                    .cornerRadius(10)
-                                }
-                                
-                                Button(action: {
-                                    showPasswordModal = true
-                                }) {
-                                    HStack {
-                                        Image(systemName: "key")
-                                        Text("Change Password")
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(Color.gray.opacity(0.2))
-                                    .foregroundColor(.primary)
-                                    .cornerRadius(10)
-                                }
-                            }
-                            .padding(.horizontal)
-                            .padding(.bottom, 20)
+                            Text(profile.email)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
                         }
+                        .padding(.top)
+                        
+                        // Profile Information
+                        VStack(spacing: 16) {
+                            ProfileRowView(title: "First Name", value: profile.first_name)
+                            ProfileRowView(title: "Last Name", value: profile.last_name)
+                            ProfileRowView(title: "Email", value: profile.email)
+                            ProfileRowView(title: "Phone Number", value: profile.phone_number ?? "Not provided")
+                            ProfileRowView(title: "Subscription", value: formatSubscription(profile))
+                        }
+                        .padding(.horizontal)
+                        
+                        Spacer(minLength: 40)
+                        
+                        // Action Buttons
+                        VStack(spacing: 12) {
+                            Button(action: {
+                                showBillingModal = true
+                            }) {
+                                HStack {
+                                    Image(systemName: "creditcard")
+                                    Text("Manage Billing")
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(10)
+                            }
+                            
+                            Button(action: {
+                                showPasswordModal = true
+                            }) {
+                                HStack {
+                                    Image(systemName: "key")
+                                    Text("Change Password")
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.gray.opacity(0.2))
+                                .foregroundColor(.primary)
+                                .cornerRadius(10)
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, 20)
                     }
                 }
             }
-            .navigationTitle("Account")
-            .onAppear {
-                fetchUserProfile()
-            }
-            .sheet(isPresented: $showPasswordModal) {
-                PasswordChangeModal(viewModel: passwordViewModel)
-            }
-            .sheet(isPresented: $showBillingModal) {
-                BillingManagementModal()
-            }
+        }
+        .navigationTitle("Account")
+        .onAppear {
+            fetchUserProfile()
+        }
+        .sheet(isPresented: $showPasswordModal) {
+            PasswordChangeModal(viewModel: passwordViewModel)
+        }
+        .sheet(isPresented: $showBillingModal) {
+            BillingManagementModal()
         }
     }
     
