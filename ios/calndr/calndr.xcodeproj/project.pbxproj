@@ -6,10 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		E74EB97A2E0DB30000E22B6D /* CC.png in Resources */ = {isa = PBXBuildFile; fileRef = E74EB9792E0DB30000E22B6D /* CC.png */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		E744AF142E0C54D600DA25AB /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -31,7 +27,6 @@
 		E744AF062E0C54D000DA25AB /* calndr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = calndr.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E744AF132E0C54D600DA25AB /* calndrTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = calndrTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E744AF1D2E0C54D700DA25AB /* calndrUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = calndrUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		E74EB9792E0DB30000E22B6D /* CC.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = CC.png; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -84,7 +79,6 @@
 				E744AF162E0C54D600DA25AB /* calndrTests */,
 				E744AF202E0C54D700DA25AB /* calndrUITests */,
 				E744AF072E0C54D000DA25AB /* Products */,
-				E74EB9792E0DB30000E22B6D /* CC.png */,
 			);
 			sourceTree = "<group>";
 		};
@@ -218,7 +212,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E74EB97A2E0DB30000E22B6D /* CC.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
