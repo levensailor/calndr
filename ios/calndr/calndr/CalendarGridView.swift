@@ -9,45 +9,38 @@ struct CalendarGridView: View {
     private let daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
     
     var body: some View {
-        GeometryReader { geometry in
-            VStack(spacing: 0) {
-                // Header for days of the week - always visible
-                HStack(spacing: 0) {
-                    ForEach(daysOfWeek, id: \.self) { day in
-                        Text(day)
-                            .frame(maxWidth: .infinity)
-                            .font(.headline)
-                    }
+        VStack(spacing: 0) {
+            // Header for days of the week - always visible
+            HStack(spacing: 0) {
+                ForEach(daysOfWeek, id: \.self) { day in
+                    Text(day)
+                        .frame(maxWidth: .infinity)
+                        .font(.headline)
                 }
-                .padding(.vertical, 4)
-                .background(themeManager.currentTheme.headerBackgroundColor)
-                .frame(height: 35) // Fixed header height
-                
-                // Grid for the days of the month - adaptive height
-                let numberOfWeeks = calculateNumberOfWeeks()
-                let availableHeight = geometry.size.height - 35 // Subtract header height
-                let rowHeight = availableHeight / CGFloat(numberOfWeeks)
-                
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 1) {
-                    ForEach(getDaysForCurrentMonth(), id: \.self) { date in
-                        DayCellView(
-                            viewModel: viewModel,
-                            focusedDate: $focusedDate,
-                            namespace: namespace,
-                            date: date,
-                            events: viewModel.eventsForDate(date),
-                            schoolEvent: viewModel.schoolEventForDate(date),
-                            weatherInfo: viewModel.weatherInfoForDate(date),
-                            isCurrentMonth: isDateInCurrentMonth(date),
-                            isToday: isToday(date),
-                            custodyOwner: viewModel.getCustodyInfo(for: date).text,
-                            custodyID: viewModel.getCustodyInfo(for: date).owner
-                        )
-                        .frame(height: rowHeight)
-                    }
-                }
-                .background(themeManager.currentTheme.gridLinesColor)
             }
+            .padding(.vertical, 4)
+            .background(themeManager.currentTheme.headerBackgroundColor)
+            
+            // Grid for the days of the month - fixed adequate height
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 1) {
+                ForEach(getDaysForCurrentMonth(), id: \.self) { date in
+                    DayCellView(
+                        viewModel: viewModel,
+                        focusedDate: $focusedDate,
+                        namespace: namespace,
+                        date: date,
+                        events: viewModel.eventsForDate(date),
+                        schoolEvent: viewModel.schoolEventForDate(date),
+                        weatherInfo: viewModel.weatherInfoForDate(date),
+                        isCurrentMonth: isDateInCurrentMonth(date),
+                        isToday: isToday(date),
+                        custodyOwner: viewModel.getCustodyInfo(for: date).text,
+                        custodyID: viewModel.getCustodyInfo(for: date).owner
+                    )
+                    .frame(height: 85) // Fixed height that ensures custody rectangle is always visible
+                }
+            }
+            .background(themeManager.currentTheme.gridLinesColor)
         }
     }
     
@@ -90,11 +83,6 @@ struct CalendarGridView: View {
 
     private func isDateInCurrentMonth(_ date: Date) -> Bool {
         return Calendar.current.isDate(date, equalTo: viewModel.currentDate, toGranularity: .month)
-    }
-    
-    private func calculateNumberOfWeeks() -> Int {
-        let days = getDaysForCurrentMonth()
-        return days.count / 7 // Each week has 7 days
     }
     
     private func cellBackgroundColor(for date: Date) -> Color {

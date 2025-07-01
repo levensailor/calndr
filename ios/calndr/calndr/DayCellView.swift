@@ -67,7 +67,7 @@ struct DayCellView: View {
                     })
             }
         )
-        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 110)
+        .frame(minWidth: 0, maxWidth: .infinity)
         .background(isCurrentMonth ? themeManager.currentTheme.mainBackgroundColor : themeManager.currentTheme.otherMonthBackgroundColor)
         .cornerRadius(0)
         .overlay(
