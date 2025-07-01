@@ -2,25 +2,48 @@ import SwiftUI
 
 struct WeekView: View {
     @ObservedObject var viewModel: CalendarViewModel
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         VStack {
             ForEach(getDaysForCurrentWeek(), id: \.self) { day in
                 HStack {
-                    VStack(alignment: .leading) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(day.formatted(.dateTime.weekday(.wide)))
                             .font(.headline)
+                            .foregroundColor(themeManager.currentTheme.textColor)
                         Text(day.formatted(.dateTime.month().day()))
                             .font(.caption)
+                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
                     }
+                    .frame(width: 100, alignment: .leading)
                     
                     Spacer()
                     
-                    // You could add event indicators here
+                    // Custody information and toggle button
+                    let custodyInfo = viewModel.getCustodyInfo(for: day)
+                    let ownerName = custodyInfo.text
+                    let ownerId = custodyInfo.owner
+                    
+                    if !ownerName.isEmpty {
+                        Button(action: {
+                            viewModel.toggleCustodian(for: day)
+                        }) {
+                            Text(ownerName.capitalized)
+                                .font(.headline.bold())
+                                .foregroundColor(.black)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(ownerId == viewModel.custodianOne?.id ? Color(hex: "#FFC2D9") : Color(hex: "#96CBFC"))
+                                .cornerRadius(8)
+                        }
+                        .disabled(isDateInPast(day))
+                        .opacity(isDateInPast(day) ? 0.5 : 1.0)
+                    }
                 }
                 .padding()
-                .frame(minHeight: 75)
-                .background(Color.gray.opacity(0.1))
+                .frame(minHeight: 60)
+                .background(themeManager.currentTheme.mainBackgroundColor.opacity(0.5))
                 .cornerRadius(8)
             }
         }
@@ -40,6 +63,10 @@ struct WeekView: View {
             }
         }
         return days
+    }
+    
+    private func isDateInPast(_ date: Date) -> Bool {
+        return date < Calendar.current.startOfDay(for: Date())
     }
 }
 
