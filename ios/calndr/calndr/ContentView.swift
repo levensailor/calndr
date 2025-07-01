@@ -24,6 +24,7 @@ struct MainTabView: View {
     @StateObject var calendarViewModel: CalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
     
+    @State private var currentView: CalendarViewType = .month
     @State private var focusedDate: Date?
     @State private var showSettings = false
     @Namespace private var namespace
@@ -44,30 +45,34 @@ struct MainTabView: View {
                 
                 // Header with month/year and view switcher
                 HStack {
-                    Button(action: {
-                        calendarViewModel.changeMonth(by: -1)
-                    }) {
-                        Image(systemName: "chevron.left")
-                    }
-                    .padding(.leading)
-
-                    Spacer()
-
-                    Text(monthYearString(from: calendarViewModel.currentDate))
+                    Text(headerTitle(for: currentView))
                         .font(.title.bold())
-
                     Spacer()
-
-                    Button(action: {
-                        calendarViewModel.changeMonth(by: 1)
-                    }) {
-                        Image(systemName: "chevron.right")
-                    }
-                    .padding(.trailing)
                 }
                 .padding(.horizontal)
 
-                CalendarGridView(viewModel: calendarViewModel, focusedDate: $focusedDate, namespace: namespace)
+                TabView(selection: $currentView) {
+                    CalendarGridView(viewModel: calendarViewModel, focusedDate: $focusedDate, namespace: namespace)
+                        .tag(CalendarViewType.month)
+
+                    WeekView(viewModel: calendarViewModel)
+                        .tag(CalendarViewType.week)
+
+                    DayView(viewModel: calendarViewModel)
+                        .tag(CalendarViewType.day)
+                }
+                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                .gesture(
+                    DragGesture().onEnded { value in
+                        if value.translation.width < -50 {
+                            // Swipe left
+                            changeDate(by: 1, for: currentView)
+                        } else if value.translation.width > 50 {
+                            // Swipe right
+                            changeDate(by: -1, for: currentView)
+                        }
+                    }
+                )
 
                 // Custody Percentage Footer
                 HStack(spacing: 15) {
@@ -116,6 +121,36 @@ struct MainTabView: View {
         .sheet(isPresented: $showSettings) {
             SettingsView(viewModel: calendarViewModel)
         }
+    }
+
+    private func changeDate(by amount: Int, for viewType: CalendarViewType) {
+        let calendar = Calendar.current
+        var dateComponent: Calendar.Component
+        switch viewType {
+        case .month:
+            dateComponent = .month
+        case .week:
+            dateComponent = .weekOfYear
+        case .day:
+            dateComponent = .day
+        }
+        if let newDate = calendar.date(byAdding: dateComponent, value: amount, to: calendarViewModel.currentDate) {
+            calendarViewModel.currentDate = newDate
+            calendarViewModel.fetchEvents()
+        }
+    }
+
+    private func headerTitle(for viewType: CalendarViewType) -> String {
+        let formatter = DateFormatter()
+        switch viewType {
+        case .month:
+            formatter.dateFormat = "MMMM yyyy"
+        case .week:
+            formatter.dateFormat = "MMMM"
+        case .day:
+            formatter.dateFormat = "MMMM d"
+        }
+        return formatter.string(from: calendarViewModel.currentDate)
     }
 
     private func monthYearString(from date: Date) -> String {
