@@ -180,18 +180,18 @@ class CalendarViewModel: ObservableObject {
         // NEW: Check custody records first (from dedicated custody API)
         if let custodyRecord = custodyRecords.first(where: { $0.event_date == dateString }) {
             // Map the content back to custodian names and IDs
-            if custodyRecord.content == "jeff" {
+            if custodyRecord.content.lowercased() == self.custodianOneName.lowercased() {
                 return (self.custodianOne?.id ?? "", self.custodianOneName)
-            } else if custodyRecord.content == "deanna" {
+            } else if custodyRecord.content.lowercased() == self.custodianTwoName.lowercased() {
                 return (self.custodianTwo?.id ?? "", self.custodianTwoName)
             }
         }
         
         // LEGACY: Check for old custody events in events array (position 4) for backward compatibility
         if let custodyEvent = events.first(where: { $0.event_date == dateString && $0.position == 4 }) {
-            if custodyEvent.content == "jeff" {
+            if custodyEvent.content.lowercased() == self.custodianOneName.lowercased() {
                 return (self.custodianOne?.id ?? "", self.custodianOneName)
-            } else if custodyEvent.content == "deanna" {
+            } else if custodyEvent.content.lowercased() == self.custodianTwoName.lowercased() {
                 return (self.custodianTwo?.id ?? "", self.custodianTwoName)
             }
         }
