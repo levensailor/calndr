@@ -258,24 +258,9 @@ class APIService {
         }.resume()
     }
     
-    // MARK: - Legacy Custody (Deprecated - use new custody API above)
-    
-    func updateCustody(for date: String, newOwner: String, existingEvents: [Event], completion: @escaping (Result<Event, Error>) -> Void) {
-        let custodyEventForDay = existingEvents.first { $0.event_date == date && $0.position == 4 }
-
-        var eventData: [String: Any] = [
-            "event_date": date,
-            "content": newOwner,
-            "position": 4
-        ]
-        
-        if let event = custodyEventForDay {
-            eventData["id"] = event.id
-        }
-
-        // Pass the full details and let saveEvent handle create/update
-        saveEvent(eventDetails: eventData, existingEvent: custodyEventForDay, completion: completion)
-    }
+    // MARK: - Legacy Custody (REMOVED - use new custody API above)
+    // The old updateCustody function has been removed to prevent accidental use.
+    // Use updateCustodyRecord() instead.
     
     func deleteEvent(eventId: Int, completion: @escaping (Result<Void, Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/events/\(eventId)")

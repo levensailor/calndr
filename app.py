@@ -409,7 +409,7 @@ async def update_device_token(token: str = Form(...), current_user: User = Depen
     return {"status": "success"}
 
 @app.get("/api/events/{year}/{month}")
-async def get_events(year: int, month: int, current_user: User = Depends(get_current_user)):
+async def get_events_by_month(year: int, month: int, current_user: User = Depends(get_current_user)):
     """
     Returns non-custody events for the specified month.
     Custody events are now handled by the separate custody API.
@@ -429,6 +429,44 @@ async def get_events(year: int, month: int, current_user: User = Depends(get_cur
     db_events = await database.fetch_all(query)
     
     # Convert events to the format expected by frontend
+    frontend_events = []
+    for event in db_events:
+        frontend_events.append({
+            'id': event['id'],
+            'event_date': str(event['date']),
+            'content': event.get('content', ''),  # Add content field if it exists
+            'position': event.get('position', 0)   # Add position field if it exists
+        })
+        
+    return frontend_events
+
+@app.get("/api/events")
+async def get_events_by_date_range(start_date: str = None, end_date: str = None, current_user: User = Depends(get_current_user)):
+    """
+    Returns non-custody events for the specified date range (iOS app compatibility).
+    Custody events are now handled by the separate custody API.
+    """
+    logger.info(f"iOS app requesting events from {start_date} to {end_date}")
+    
+    if not start_date or not end_date:
+        raise HTTPException(status_code=400, detail="start_date and end_date query parameters are required")
+    
+    try:
+        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+        
+    query = events.select().where(
+        (events.c.family_id == current_user.family_id) &
+        (events.c.date.between(start_date_obj, end_date_obj)) &
+        (events.c.event_type != 'custody')  # Exclude custody events
+    )
+    db_events = await database.fetch_all(query)
+    
+    logger.info(f"Returning {len(db_events)} non-custody events to iOS app")
+    
+    # Convert events to the format expected by iOS app
     frontend_events = []
     for event in db_events:
         frontend_events.append({

@@ -521,6 +521,12 @@ class CalendarViewModel: ObservableObject {
     }
 
     func saveEvent(date: Date, title: String, position: Int) {
+        // Guard against custody events (position 4) - these should use the custody API
+        guard position != 4 else {
+            print("ERROR: Position 4 (custody) events should use toggleCustodian() and the custody API, not saveEvent()")
+            return
+        }
+        
         let dateString = isoDateString(from: date)
         
         // Find if an event already exists for this date and position to update it, otherwise create a new one.
