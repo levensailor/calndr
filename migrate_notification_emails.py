@@ -67,9 +67,12 @@ async def migrate_notification_emails():
                 for row in family_emails:
                     insert_query = """
                     INSERT INTO notification_emails (family_id, email, created_at)
-                    VALUES ($1, $2, NOW())
+                    VALUES (:family_id, :email, NOW())
                     """
-                    await database.execute(insert_query, row['family_id'], row['email'])
+                    await database.execute(insert_query, {
+                        'family_id': row['family_id'],
+                        'email': row['email']
+                    })
                     print(f"✅ Added notification email: {row['email']} for family {row['family_id']}")
             else:
                 print("⚠️  Notification emails already exist, skipping auto-population")
@@ -102,9 +105,12 @@ async def migrate_notification_emails():
             for row in family_emails:
                 insert_query = """
                 INSERT INTO notification_emails (family_id, email, created_at)
-                VALUES ($1, $2, NOW())
+                VALUES (:family_id, :email, NOW())
                 """
-                await database.execute(insert_query, row['family_id'], row['email'])
+                await database.execute(insert_query, {
+                    'family_id': row['family_id'],
+                    'email': row['email']
+                })
                 print(f"✅ Added notification email: {row['email']} for family {row['family_id']}")
         
         print("✅ Notification emails migration completed successfully!")
