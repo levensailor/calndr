@@ -579,10 +579,10 @@ export default {
         return;
       }
 
-      console.log('Sending NEW FORMAT custody request (v2):', { date, custodian_id: newCustodianId });
+      console.log('Sending custody request to NEW CUSTODY API:', { date, custodian_id: newCustodianId });
 
       try {
-        const response = await axios.post('/api/events', {
+        const response = await axios.post('/api/custody', {
           date: date,
           custodian_id: newCustodianId,
         });
@@ -592,11 +592,11 @@ export default {
         if (!updatedEvents[date]) {
           updatedEvents[date] = [];
         }
-        // Store the custody info as position 4 event for backward compatibility with UI
-        updatedEvents[date][4] = { content: newOwner, position: 4 };
+        // Store the response directly since it's already in the right format
+        updatedEvents[date][4] = response.data;
         this.events = updatedEvents;
 
-        console.log("Calendar.vue: Custody event saved successfully");
+        console.log("Calendar.vue: Custody saved successfully via new custody API");
       } catch (error) {
         console.error('Error saving custody event:', error);
         alert('Failed to update custody. Please try again.');
@@ -632,18 +632,30 @@ export default {
     async fetchEvents() {
       console.log("Calendar.vue: fetchEvents() called");
       try {
-        const response = await axios.get(`/api/events/${this.currentYear}/${this.currentMonth + 1}`);
+        // Fetch regular events (if any exist)
+        const eventsResponse = await axios.get(`/api/events/${this.currentYear}/${this.currentMonth + 1}`);
         this.events = {};
-        response.data.forEach(event => {
+        eventsResponse.data.forEach(event => {
           if (!this.events[event.event_date]) {
             this.events[event.event_date] = [];
           }
           this.events[event.event_date][event.position] = event;
         });
-        console.log("Calendar.vue: Events fetched successfully", this.events);
+        
+        // Fetch custody data from the new custody API
+        const custodyResponse = await axios.get(`/api/custody/${this.currentYear}/${this.currentMonth + 1}`);
+        custodyResponse.data.forEach(custodyEvent => {
+          if (!this.events[custodyEvent.event_date]) {
+            this.events[custodyEvent.event_date] = [];
+          }
+          // Store custody as position 4 for frontend compatibility
+          this.events[custodyEvent.event_date][4] = custodyEvent;
+        });
+        
+        console.log("Calendar.vue: Events and custody fetched successfully", this.events);
         this.adjustFontSize();
       } catch (error) {
-        console.error('Error fetching events:', error);
+        console.error('Error fetching events/custody:', error);
         // Don't break the app if API fails
       }
     },

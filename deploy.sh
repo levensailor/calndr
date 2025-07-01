@@ -25,6 +25,7 @@ FILES_TO_DEPLOY=(
     "send_weekly_email.py"
     "migrate_user_profile.py"
     "migrate_notification_emails.py"
+    "migrate_custody_table.py"
     "dist"
 )
 

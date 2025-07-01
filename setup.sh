@@ -158,5 +158,9 @@ echo "Cron job for weekly email set up."
 echo "--- Running notification emails migration script ---"
 sudo -u $APP_USER $APP_DIR/venv/bin/python3 $APP_DIR/migrate_notification_emails.py
 
+# 12. Run custody table migration script
+echo "--- Running custody table migration script ---"
+sudo -u $APP_USER $APP_DIR/venv/bin/python3 $APP_DIR/migrate_custody_table.py
+
 echo "--- Deployment to EC2 finished successfully! ---"
 echo "Your app should be available at https://calndr.club" 
