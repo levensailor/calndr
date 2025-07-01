@@ -48,13 +48,15 @@ struct FocusedDayView: View {
                     
                     Spacer()
                     
-                    let owner = viewModel.getCustodyInfo(for: date).owner
-                    if !owner.isEmpty {
-                        Text(owner.capitalized)
+                    let custodyInfo = viewModel.getCustodyInfo(for: date)
+                    let ownerName = custodyInfo.text
+                    let ownerId = custodyInfo.owner
+                    if !ownerName.isEmpty {
+                        Text(ownerName.capitalized)
                             .font(.headline.bold())
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                            .background(owner == "jeff" ? Color(hex: "#96CBFC") : Color(hex: "#FFC2D9"))
+                            .background(ownerId == viewModel.custodianOne?.id ? Color(hex: "#96CBFC") : Color(hex: "#FFC2D9"))
                             .foregroundColor(themeManager.currentTheme.textColor)
                             .cornerRadius(10)
                             .contentShape(Rectangle())
