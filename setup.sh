@@ -168,5 +168,6 @@ sudo -u $APP_USER $APP_DIR/venv/bin/python3 $APP_DIR/migrate_custody_table.py
 echo "--- Running events table migration script ---"
 sudo -u $APP_USER $APP_DIR/venv/bin/python3 $APP_DIR/migrate_events_table.py
 
+sudo systemctl restart cal-app
 echo "--- Deployment to EC2 finished successfully! ---"
 echo "Your app should be available at https://calndr.club" 

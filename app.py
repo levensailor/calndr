@@ -561,8 +561,8 @@ async def get_events_by_month(year: int, month: int, current_user: User = Depend
                 'id': event['id'],
                 'family_id': str(event['family_id']),
                 'event_date': str(event['date']),
-                'content': event.get('content', ''),
-                'position': event.get('position', 0)
+                'content': event['content'],
+                'position': event['position']
             }
             frontend_events.append(event_data)
     except Exception as e:
@@ -611,8 +611,8 @@ async def get_events_by_date_range(start_date: str = None, end_date: str = None,
                 'id': event['id'],
                 'family_id': str(event['family_id']),
                 'event_date': str(event['date']),
-                'content': event.get('content', ''),
-                'position': event.get('position', 0)
+                'content': event['content'],
+                'position': event['position']
             }
             frontend_events.append(event_data)
     except Exception as e:
