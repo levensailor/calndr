@@ -593,7 +593,14 @@ async def save_event(request: dict, current_user: User = Depends(get_current_use
         if 'event_date' in request and 'position' in request and 'content' in request:
             legacy_event = LegacyEvent(**request)
             event_date = datetime.strptime(legacy_event.event_date, '%Y-%m-%d').date()
-            
+            insert_query = events.insert().values(
+                family_id=current_user.family_id,
+                date=event_date,
+                content=legacy_event.content,
+                position=legacy_event.position,
+                event_type='regular'
+            )
+            event_id = await database.execute(insert_query)
             # This is a placeholder for future non-custody event handling
             # For now, we'll just return the event as-is since the events table structure
             # doesn't fully support arbitrary content/position events yet
