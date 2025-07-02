@@ -555,14 +555,19 @@ async def get_events_by_month(year: int, month: int, current_user: User = Depend
     
     # Convert events to the format expected by frontend
     frontend_events = []
-    for event in db_events:
-        frontend_events.append({
-            'id': event['id'],
-            'family_id': str(event['family_id']),
-            'event_date': str(event['date']),
-            'content': event.get('content', ''),
-            'position': event.get('position', 0)
-        })
+    try:
+        for event in db_events:
+            event_data = {
+                'id': event['id'],
+                'family_id': str(event['family_id']),
+                'event_date': str(event['date']),
+                'content': event.get('content', ''),
+                'position': event.get('position', 0)
+            }
+            frontend_events.append(event_data)
+    except Exception as e:
+        logger.error(f"Error processing event records for /api/events/{{year}}/{{month}}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error processing event data")
         
     logger.info(f"Payload for /api/events/{{year}}/{{month}}: {json.dumps(frontend_events, indent=2)}")
     return frontend_events
@@ -600,14 +605,19 @@ async def get_events_by_date_range(start_date: str = None, end_date: str = None,
     
     # Convert events to the format expected by iOS app
     frontend_events = []
-    for event in db_events:
-        frontend_events.append({
-            'id': event['id'],
-            'family_id': str(event['family_id']),
-            'event_date': str(event['date']),
-            'content': event.get('content', ''),
-            'position': event.get('position', 0)
-        })
+    try:
+        for event in db_events:
+            event_data = {
+                'id': event['id'],
+                'family_id': str(event['family_id']),
+                'event_date': str(event['date']),
+                'content': event.get('content', ''),
+                'position': event.get('position', 0)
+            }
+            frontend_events.append(event_data)
+    except Exception as e:
+        logger.error(f"Error processing event records for /api/events: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error processing event data")
         
     logger.info(f"Payload for /api/events: {json.dumps(frontend_events, indent=2)}")
     return frontend_events
