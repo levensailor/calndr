@@ -601,13 +601,10 @@ async def save_event(request: dict, current_user: User = Depends(get_current_use
                 event_type='regular'
             )
             event_id = await database.execute(insert_query)
-            # This is a placeholder for future non-custody event handling
-            # For now, we'll just return the event as-is since the events table structure
-            # doesn't fully support arbitrary content/position events yet
-            logger.info(f"Legacy non-custody event: position={legacy_event.position}, content={legacy_event.content}")
+            logger.info(f"Successfully created event with ID {event_id}: position={legacy_event.position}, content={legacy_event.content}")
             
             return {
-                'id': 0,  # Placeholder ID
+                'id': event_id,  # Return the actual database-generated ID
                 'event_date': legacy_event.event_date,
                 'content': legacy_event.content,
                 'position': legacy_event.position
