@@ -484,20 +484,36 @@ class CalendarViewModel: ObservableObject {
             self.isPasswordUpdateSuccessful = false
             return
         }
+        
         // Basic validation
         guard !newPassword.isEmpty, newPassword == confirmPassword else {
             passwordUpdateMessage = "New passwords do not match."
             isPasswordUpdateSuccessful = false
             return
         }
-
-        // Since there is no API endpoint, we will just give a success message.
-        self.passwordUpdateMessage = "Password updated successfully!"
-        self.isPasswordUpdateSuccessful = true
-        // Clear fields after successful update
-        self.currentPassword = ""
-        self.newPassword = ""
-        self.confirmPassword = ""
+        
+        // FIX: Actually call the backend API instead of local-only update
+        let passwordUpdate = PasswordUpdate(
+            current_password: currentPassword,
+            new_password: newPassword
+        )
+        
+        APIService.shared.updatePassword(passwordUpdate: passwordUpdate) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    self?.passwordUpdateMessage = "Password updated successfully!"
+                    self?.isPasswordUpdateSuccessful = true
+                    // Clear fields after successful update
+                    self?.currentPassword = ""
+                    self?.newPassword = ""
+                    self?.confirmPassword = ""
+                case .failure(let error):
+                    self?.passwordUpdateMessage = "Failed to update password: \(error.localizedDescription)"
+                    self?.isPasswordUpdateSuccessful = false
+                }
+            }
+        }
     }
 
     private func getVisibleDates() -> [Date] {
