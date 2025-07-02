@@ -368,6 +368,32 @@ class APIService {
         }.resume()
     }
     
+    func deleteEvent(eventId: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/events/\(eventId)")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "DELETE"
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                let statusCode = httpResponse.statusCode
+                completion(.failure(NSError(domain: "APIService", code: statusCode, userInfo: [NSLocalizedDescriptionKey: "Failed to delete event - HTTP \(statusCode)"])))
+                return
+            }
+            
+            completion(.success(()))
+        }.resume()
+    }
+    
     // MARK: - Notification Emails
     
     func fetchNotificationEmails(completion: @escaping (Result<[NotificationEmail], Error>) -> Void) {

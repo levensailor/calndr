@@ -38,6 +38,43 @@ struct Theme: Identifiable, Equatable, Hashable {
     var bubbleBackgroundColor: Color {
         return mainBackgroundColor.isLight ? Color.black.opacity(0.1) : Color.white.opacity(0.2)
     }
+    
+    // New computed colors for the updated UI
+    var selectedDayColor: Color {
+        return iconActiveColor.opacity(0.2)
+    }
+    
+    var modalBackgroundColor: Color {
+        return mainBackgroundColor
+    }
+    
+    var custodyTextColor: Color {
+        return textColor
+    }
+    
+    var custodyBackgroundColor: Color {
+        return iconActiveColor
+    }
+    
+    var eventTextColor: Color {
+        return textColor
+    }
+    
+    var eventBackgroundColor: Color {
+        return textColor
+    }
+    
+    var accentColor: Color {
+        return iconActiveColor
+    }
+    
+    var todayNumberColor: Color {
+        return iconActiveColor
+    }
+    
+    var otherMonthTextColor: Color {
+        return otherMonthForegroundColor
+    }
 
     static func == (lhs: Theme, rhs: Theme) -> Bool {
         lhs.id == rhs.id
@@ -59,7 +96,7 @@ class ThemeManager: ObservableObject {
               otherMonthForegroundColor: Color(hex: "#aaa"),
               mainBackgroundColor: Color(hex: "#fff"),
               textColor: Color(hex: "#000"),
-              gridLinesColor: Color(hex: "#979797"),
+              gridLinesColor: Color(hex: "#e0e0e0"),
               headerBackgroundColor: Color(hex: "#e0e0e0"),
               footerBackgroundColor: Color(hex: "#f0f0f0"),
               iconColor: Color(hex: "#555"),
@@ -71,7 +108,7 @@ class ThemeManager: ObservableObject {
               otherMonthForegroundColor: Color(hex: "#6272a4"),
               mainBackgroundColor: Color(hex: "#282a36"),
               textColor: Color(hex: "#f8f8f2"),
-              gridLinesColor: Color(hex: "#44475a"),
+              gridLinesColor: Color(hex: "#191a21"),
               headerBackgroundColor: Color(hex: "#191a21"),
               footerBackgroundColor: Color(hex: "#191a21"),
               iconColor: Color(hex: "#bd93f9"),
@@ -83,7 +120,7 @@ class ThemeManager: ObservableObject {
               otherMonthForegroundColor: Color(hex: "#5d4a9c"),
               mainBackgroundColor: Color(hex: "#251758"),
               textColor: Color(hex: "#e0d8ff"),
-              gridLinesColor: Color(hex: "#3b2d60"),
+              gridLinesColor: Color(hex: "#12092a"),
               headerBackgroundColor: Color(hex: "#12092a"),
               footerBackgroundColor: Color(hex: "#12092a"),
               iconColor: Color(hex: "#b3a5ef"),
@@ -95,7 +132,7 @@ class ThemeManager: ObservableObject {
               otherMonthForegroundColor: Color(hex: "#d3d3d3"),
               mainBackgroundColor: Color(hex: "#fff"),
               textColor: Color(hex: "#000"),
-              gridLinesColor: Color(hex: "#b0c4de"),
+              gridLinesColor: Color(hex: "#ffd700"),
               headerBackgroundColor: Color(hex: "#ffd700"),
               footerBackgroundColor: Color(hex: "#ff7f50"),
               iconColor: Color(hex: "#000"),
@@ -107,7 +144,7 @@ class ThemeManager: ObservableObject {
               otherMonthForegroundColor: Color(hex: "#d8bfd8"),
               mainBackgroundColor: Color(hex: "#fffafb"),
               textColor: Color(hex: "#5e3c58"),
-              gridLinesColor: Color(hex: "#f1e4f2"),
+              gridLinesColor: Color(hex: "#fae3f5"),
               headerBackgroundColor: Color(hex: "#fae3f5"),
               footerBackgroundColor: Color(hex: "#fae3f5"),
               iconColor: Color(hex: "#c789a8"),
@@ -119,7 +156,7 @@ class ThemeManager: ObservableObject {
               otherMonthForegroundColor: Color(hex: "#8E8E93"),
               mainBackgroundColor: Color(hex: "#FFFFFF"),
               textColor: Color(hex: "#000000"),
-              gridLinesColor: Color(hex: "#D1D1D6"),
+              gridLinesColor: Color(hex: "#E5E5EA"),
               headerBackgroundColor: Color(hex: "#E5E5EA"),
               footerBackgroundColor: Color(hex: "#E5E5EA"),
               iconColor: Color(hex: "#000000"),

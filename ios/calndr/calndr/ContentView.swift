@@ -25,7 +25,7 @@ struct MainTabView: View {
     @EnvironmentObject var themeManager: ThemeManager
     
     @State private var currentView: CalendarViewType = .month
-    @State private var focusedDate: Date?
+    @State private var selectedDate: Date?
     @State private var showSettings = false
     @State private var isAnimating = false
     @State private var animationOpacity: Double = 1.0
@@ -60,7 +60,7 @@ struct MainTabView: View {
                 .padding(.horizontal)
 
                 TabView(selection: $currentView) {
-                    CalendarGridView(viewModel: calendarViewModel, focusedDate: $focusedDate, namespace: namespace)
+                    CalendarGridView(viewModel: calendarViewModel, selectedDate: $selectedDate, namespace: namespace)
                         .opacity(currentView == .month ? animationOpacity : 1.0)
                         .scaleEffect(currentView == .month ? animationScale : 1.0)
                         .tag(CalendarViewType.month)
@@ -133,9 +133,7 @@ struct MainTabView: View {
                 .padding(.bottom)
             }
             
-            if focusedDate != nil {
-                FocusedDayView(viewModel: calendarViewModel, focusedDate: $focusedDate, namespace: namespace)
-            }
+            // Note: FocusedDayView is now handled within CalendarGridView as an overlay
         }
         .foregroundColor(themeManager.currentTheme.textColor)
         .onAppear {

@@ -17,4 +17,4 @@ python-jose[pycryptodome]
 psycopg2-binary
 asyncpg
 python-multipart
-apns2 
+apns2

@@ -9,7 +9,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, Form, Query, Reques
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from pydantic import BaseModel, EmailStr
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 import logging
 from logging.handlers import RotatingFileHandler
 from passlib.context import CryptContext
@@ -637,26 +637,26 @@ async def save_event(request: dict, current_user: User = Depends(get_current_use
             raise HTTPException(status_code=400, detail="Custody events should use /api/custody endpoint")
         
         # Handle legacy event format for non-custody events
-        if 'event_date' in request and 'position' in request and 'content' in request:
-            logger.info(f"[Line 596] Processing legacy event format")
-            legacy_event = LegacyEvent(**request)
-            logger.info(f"[Line 598] Created LegacyEvent object: {legacy_event}")
+        if 'event_date' in request and 'content' in request:
+            logger.info(f"[Line 596] Processing event format")
+            event_date = datetime.strptime(request['event_date'], '%Y-%m-%d').date()
+            content = request['content']
+            position = request.get('position', 0)  # Default to 0 if not provided
             
-            event_date = datetime.strptime(legacy_event.event_date, '%Y-%m-%d').date()
             logger.info(f"[Line 601] Parsed event_date: {event_date}")
             
             logger.info(f"[Line 603] Creating insert query with values:")
             logger.info(f"[Line 604]   - family_id: {current_user.family_id}")
             logger.info(f"[Line 605]   - date: {event_date}")
-            logger.info(f"[Line 606]   - content: {legacy_event.content}")
-            logger.info(f"[Line 607]   - position: {legacy_event.position}")
+            logger.info(f"[Line 606]   - content: {content}")
+            logger.info(f"[Line 607]   - position: {position}")
             logger.info(f"[Line 608]   - event_type: 'regular'")
             
             insert_query = events.insert().values(
                 family_id=current_user.family_id,
                 date=event_date,
-                content=legacy_event.content,
-                position=legacy_event.position,
+                content=content,
+                position=position,
                 event_type='regular'
             )
             logger.info(f"[Line 617] Insert query created successfully")
@@ -665,18 +665,18 @@ async def save_event(request: dict, current_user: User = Depends(get_current_use
             event_id = await database.execute(insert_query)
             logger.info(f"[Line 621] Successfully executed insert, got event_id: {event_id}")
             
-            logger.info(f"[Line 623] Successfully created event with ID {event_id}: position={legacy_event.position}, content={legacy_event.content}")
+            logger.info(f"[Line 623] Successfully created event with ID {event_id}: position={position}, content={content}")
             
             return {
                 'id': event_id,  # Return the actual database-generated ID
-                'event_date': legacy_event.event_date,
-                'content': legacy_event.content,
-                'position': legacy_event.position
+                'event_date': request['event_date'],
+                'content': content,
+                'position': position
             }
         else:
             logger.error(f"[Line 632] Invalid event format - missing required fields")
             logger.error(f"[Line 633] Request keys: {list(request.keys())}")
-            raise HTTPException(status_code=400, detail="Invalid event format - use legacy format with event_date, content, and position")
+            raise HTTPException(status_code=400, detail="Invalid event format - missing event_date or content")
     
     except HTTPException:
         logger.error(f"[Line 637] HTTPException occurred")
@@ -685,6 +685,39 @@ async def save_event(request: dict, current_user: User = Depends(get_current_use
         logger.error(f"[Line 640] Exception in save_event: {e}")
         import traceback
         logger.error(f"[Line 642] Full traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@app.delete("/api/events/{event_id}")
+async def delete_event(event_id: int, current_user: User = Depends(get_current_user)):
+    """
+    Deletes a specific event by ID. Only allows deletion of events belonging to the current user's family.
+    """
+    logger.info(f"Deleting event with ID: {event_id}")
+    try:
+        # First, verify the event belongs to the current user's family
+        verify_query = events.select().where(
+            (events.c.id == event_id) & 
+            (events.c.family_id == current_user.family_id)
+        )
+        event_record = await database.fetch_one(verify_query)
+        
+        if not event_record:
+            logger.warning(f"Event {event_id} not found or does not belong to family {current_user.family_id}")
+            raise HTTPException(status_code=404, detail="Event not found")
+        
+        # Delete the event
+        delete_query = events.delete().where(events.c.id == event_id)
+        await database.execute(delete_query)
+        
+        logger.info(f"Successfully deleted event {event_id}")
+        return {"status": "success", "message": f"Event {event_id} deleted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting event {event_id}: {e}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 # MARK: - Notification Email Endpoints
@@ -776,11 +809,94 @@ async def send_custody_change_notification(sender_id: uuid.UUID, family_id: uuid
         except Exception as e:
             logger.error(f"Failed to send push notification: {e}")
 
+# ---------------------- School Events Caching ----------------------
+SCHOOL_EVENTS_CACHE: Optional[List[Dict[str, Any]]] = None  # type: ignore
+SCHOOL_EVENTS_CACHE_TIME: Optional[datetime] = None
+SCHOOL_EVENTS_CACHE_TTL_HOURS = 24
+
+async def fetch_school_events() -> list[dict[str, str]]:
+    """Scrape school closing events and return list of {date, title}. Uses 24-hour in-memory cache."""
+    global SCHOOL_EVENTS_CACHE, SCHOOL_EVENTS_CACHE_TIME
+    # Return cached copy if fresh
+    if SCHOOL_EVENTS_CACHE and SCHOOL_EVENTS_CACHE_TIME:
+        if datetime.now(timezone.utc) - SCHOOL_EVENTS_CACHE_TIME < timedelta(hours=SCHOOL_EVENTS_CACHE_TTL_HOURS):
+            return SCHOOL_EVENTS_CACHE  # type: ignore
+
+    import re
+    from bs4 import BeautifulSoup  # type: ignore
+
+    logger.info("Fetching school events from The Learning Tree website …")
+    events: dict[str, str] = {}
+    url = "https://www.thelearningtreewilmington.com/calendar-of-events/"
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
+            response = await client.get(url)
+            response.raise_for_status()
+            html = response.text
+    except Exception as e:
+        logger.error(f"Failed to download school events page: {e}")
+        return []
+
+    try:
+        soup = BeautifulSoup(html, "lxml")
+        header = soup.find('p', string=re.compile(r'THE LEARNING TREE CLOSINGS IN 202[0-9]'))
+        if not header:
+            logger.warning("School events header not found on page.")
+            return []
+        for sibling in header.find_next_siblings():
+            if sibling.name != 'p':
+                break
+            text = sibling.get_text(separator=' ', strip=True)
+            if not text:
+                continue
+            # Split by hyphen
+            parts = text.split('-')
+            if len(parts) > 1:
+                event_name = parts[0].strip()
+                date_str = '-'.join(parts[1:]).strip()
+            else:
+                event_name = text
+                date_str = ''
+            # Extract first occurrence of month day pattern
+            date_match = re.search(r'(\w+\s+\d+)', text)
+            if date_match:
+                date_str = date_match.group(1)
+            # Determine year from header
+            year_match = re.search(r'(\d{4})', header.text)
+            year = year_match.group(1) if year_match else str(datetime.now(timezone.utc).year)
+            # Special New Year edge case for next year
+            if "new year" in event_name.lower() and str(int(year)+1) in text:
+                year = str(int(year)+1)
+            # Clean event name
+            event_name = event_name.replace(date_str, '').strip().rstrip('-').strip()
+            # Parse date
+            try:
+                date_str_no_weekday = re.sub(r'^\w+,\s*', '', date_str)
+                full_date_str = f"{date_str_no_weekday}, {year}"
+                full_date_str = full_date_str.replace("Jan ", "January ")
+                event_date = datetime.strptime(full_date_str, '%B %d, %Y')
+                iso_date = event_date.strftime('%Y-%m-%d')
+                if event_name:
+                    events[iso_date] = event_name
+            except ValueError:
+                logger.warning(f"Could not parse date from: {date_str} ({text})")
+    except Exception as e:
+        logger.error(f"Failed to parse school events: {e}")
+        return []
+
+    logger.info(f"Successfully scraped {len(events)} school events.")
+    SCHOOL_EVENTS_CACHE = [{"date": d, "title": name} for d, name in events.items()]
+    SCHOOL_EVENTS_CACHE_TIME = datetime.now(timezone.utc)
+    return SCHOOL_EVENTS_CACHE  # type: ignore
+
+# -------------------------------------------------------------------
+
 @app.get("/api/school-events")
 async def get_school_events(current_user: User = Depends(get_current_user)):
-    """
-    Returns school events. For now, returns empty array to prevent iOS app crashes.
-    TODO: Implement actual school events scraping from test.py
-    """
-    logger.info("School events requested - returning empty array (placeholder)")
-    return []
+    """Returns a JSON array of school events scraped from the Learning Tree website."""
+    try:
+        events = await fetch_school_events()
+        return events
+    except Exception as e:
+        logger.error(f"Error retrieving school events: {e}")
+        raise HTTPException(status_code=500, detail="Unable to retrieve school events")
