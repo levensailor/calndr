@@ -637,26 +637,26 @@ async def save_event(request: dict, current_user: User = Depends(get_current_use
             raise HTTPException(status_code=400, detail="Custody events should use /api/custody endpoint")
         
         # Handle legacy event format for non-custody events
-        if 'event_date' in request and 'content' in request:
-            logger.info(f"[Line 596] Processing event format")
-            event_date = datetime.strptime(request['event_date'], '%Y-%m-%d').date()
-            content = request['content']
-            position = request.get('position', 0)  # Default to 0 if not provided
+        if 'event_date' in request and 'position' in request and 'content' in request:
+            logger.info(f"[Line 596] Processing legacy event format")
+            legacy_event = LegacyEvent(**request)
+            logger.info(f"[Line 598] Created LegacyEvent object: {legacy_event}")
             
+            event_date = datetime.strptime(legacy_event.event_date, '%Y-%m-%d').date()
             logger.info(f"[Line 601] Parsed event_date: {event_date}")
             
             logger.info(f"[Line 603] Creating insert query with values:")
             logger.info(f"[Line 604]   - family_id: {current_user.family_id}")
             logger.info(f"[Line 605]   - date: {event_date}")
-            logger.info(f"[Line 606]   - content: {content}")
-            logger.info(f"[Line 607]   - position: {position}")
+            logger.info(f"[Line 606]   - content: {legacy_event.content}")
+            logger.info(f"[Line 607]   - position: {legacy_event.position}")
             logger.info(f"[Line 608]   - event_type: 'regular'")
             
             insert_query = events.insert().values(
                 family_id=current_user.family_id,
                 date=event_date,
-                content=content,
-                position=position,
+                content=legacy_event.content,
+                position=legacy_event.position,
                 event_type='regular'
             )
             logger.info(f"[Line 617] Insert query created successfully")
@@ -665,18 +665,18 @@ async def save_event(request: dict, current_user: User = Depends(get_current_use
             event_id = await database.execute(insert_query)
             logger.info(f"[Line 621] Successfully executed insert, got event_id: {event_id}")
             
-            logger.info(f"[Line 623] Successfully created event with ID {event_id}: position={position}, content={content}")
+            logger.info(f"[Line 623] Successfully created event with ID {event_id}: position={legacy_event.position}, content={legacy_event.content}")
             
             return {
                 'id': event_id,  # Return the actual database-generated ID
-                'event_date': request['event_date'],
-                'content': content,
-                'position': position
+                'event_date': legacy_event.event_date,
+                'content': legacy_event.content,
+                'position': legacy_event.position
             }
         else:
             logger.error(f"[Line 632] Invalid event format - missing required fields")
             logger.error(f"[Line 633] Request keys: {list(request.keys())}")
-            raise HTTPException(status_code=400, detail="Invalid event format - missing event_date or content")
+            raise HTTPException(status_code=400, detail="Invalid event format - use legacy format with event_date, content, and position")
     
     except HTTPException:
         logger.error(f"[Line 637] HTTPException occurred")
@@ -687,35 +687,90 @@ async def save_event(request: dict, current_user: User = Depends(get_current_use
         logger.error(f"[Line 642] Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
+@app.put("/api/events/{event_id}")
+async def update_event(event_id: int, request: dict, current_user: User = Depends(get_current_user)):
+    """
+    Updates an existing non-custody event.
+    """
+    logger.info(f"Updating event {event_id}: {request}")
+    try:
+        # Check if this is a custody event (position 4) and reject it
+        if 'position' in request and request['position'] == 4:
+            logger.error(f"Rejecting custody event - position 4 should use /api/custody endpoint")
+            raise HTTPException(status_code=400, detail="Custody events should use /api/custody endpoint")
+        
+        # Verify the event exists and belongs to the user's family
+        verify_query = events.select().where(
+            (events.c.id == event_id) & 
+            (events.c.family_id == current_user.family_id) &
+            (events.c.event_type != 'custody')
+        )
+        existing_event = await database.fetch_one(verify_query)
+        
+        if not existing_event:
+            raise HTTPException(status_code=404, detail="Event not found or access denied")
+        
+        # Handle legacy event format
+        if 'event_date' in request and 'position' in request and 'content' in request:
+            legacy_event = LegacyEvent(**request)
+            event_date = datetime.strptime(legacy_event.event_date, '%Y-%m-%d').date()
+            
+            # Update the event
+            update_query = events.update().where(events.c.id == event_id).values(
+                date=event_date,
+                content=legacy_event.content,
+                position=legacy_event.position
+            )
+            await database.execute(update_query)
+            
+            logger.info(f"Successfully updated event {event_id}: position={legacy_event.position}, content={legacy_event.content}")
+            
+            return {
+                'id': event_id,
+                'event_date': legacy_event.event_date,
+                'content': legacy_event.content,
+                'position': legacy_event.position
+            }
+        else:
+            raise HTTPException(status_code=400, detail="Invalid event format - use legacy format with event_date, content, and position")
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Exception in update_event: {e}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
 @app.delete("/api/events/{event_id}")
 async def delete_event(event_id: int, current_user: User = Depends(get_current_user)):
     """
-    Deletes a specific event by ID. Only allows deletion of events belonging to the current user's family.
+    Deletes an existing non-custody event.
     """
-    logger.info(f"Deleting event with ID: {event_id}")
+    logger.info(f"Deleting event {event_id}")
     try:
-        # First, verify the event belongs to the current user's family
+        # Verify the event exists and belongs to the user's family
         verify_query = events.select().where(
             (events.c.id == event_id) & 
-            (events.c.family_id == current_user.family_id)
+            (events.c.family_id == current_user.family_id) &
+            (events.c.event_type != 'custody')
         )
-        event_record = await database.fetch_one(verify_query)
+        existing_event = await database.fetch_one(verify_query)
         
-        if not event_record:
-            logger.warning(f"Event {event_id} not found or does not belong to family {current_user.family_id}")
-            raise HTTPException(status_code=404, detail="Event not found")
+        if not existing_event:
+            raise HTTPException(status_code=404, detail="Event not found or access denied")
         
         # Delete the event
         delete_query = events.delete().where(events.c.id == event_id)
         await database.execute(delete_query)
         
         logger.info(f"Successfully deleted event {event_id}")
-        return {"status": "success", "message": f"Event {event_id} deleted successfully"}
-        
+        return {"status": "success", "message": "Event deleted successfully"}
+    
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error deleting event {event_id}: {e}")
+        logger.error(f"Exception in delete_event: {e}")
         import traceback
         logger.error(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
