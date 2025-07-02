@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import asyncio
 from datetime import date
 from passlib.context import CryptContext
+from app import metadata, families, users, children, schedules, subscriptions, events, engine
 
 # This script is intended to be run ON THE SERVER during deployment.
 
@@ -20,7 +21,6 @@ DB_NAME = os.getenv("DB_NAME")
 
 DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 db = databases.Database(DATABASE_URL)
-metadata = sqlalchemy.MetaData()
 
 # --- Password Hashing ---
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -28,21 +28,17 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 def get_password_hash(password):
     return pwd_context.hash(password)
 
-# --- Table Definitions (Autoloaded) ---
-engine = sqlalchemy.create_engine(DATABASE_URL.replace("+asyncpg", ""))
-families = sqlalchemy.Table("families", metadata, autoload_with=engine)
-users = sqlalchemy.Table("users", metadata, autoload_with=engine)
-children = sqlalchemy.Table("children", metadata, autoload_with=engine)
-schedules = sqlalchemy.Table("schedules", metadata, autoload_with=engine)
-subscriptions = sqlalchemy.Table("subscriptions", metadata, autoload_with=engine)
-events = sqlalchemy.Table("events", metadata, autoload_with=engine)
-
 async def main():
     """Connects to the DB, clears old data, and seeds it with initial data."""
     print("--- Starting Initial Database Setup ---")
     
     try:
         await db.connect()
+        
+        # Ensure all tables are created
+        print("Creating all database tables if they don't exist...")
+        metadata.create_all(engine)
+        print("✅ All tables ensured to exist.")
         
         # 1. Clear existing data to ensure a clean slate
         # We delete in reverse order of dependency

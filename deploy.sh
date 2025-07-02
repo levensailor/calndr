@@ -26,6 +26,7 @@ FILES_TO_DEPLOY=(
     "migrate_user_profile.py"
     "migrate_notification_emails.py"
     "migrate_custody_table.py"
+    "migrate_events_table.py"
     "dist"
 )
 

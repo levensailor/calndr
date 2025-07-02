@@ -26,6 +26,8 @@ sudo mkdir -p $APP_DIR
 [ -f /home/$APP_USER/initial_setup.py ] && sudo mv -f /home/$APP_USER/initial_setup.py $APP_DIR/
 [ -f /home/$APP_USER/migrate_user_profile.py ] && sudo mv -f /home/$APP_USER/migrate_user_profile.py $APP_DIR/
 [ -f /home/$APP_USER/migrate_notification_emails.py ] && sudo mv -f /home/$APP_USER/migrate_notification_emails.py $APP_DIR/
+[ -f /home/$APP_USER/migrate_custody_table.py ] && sudo mv -f /home/$APP_USER/migrate_custody_table.py $APP_DIR/
+[ -f /home/$APP_USER/migrate_events_table.py ] && sudo mv -f /home/$APP_USER/migrate_events_table.py $APP_DIR/
 
 # Remove old directory before moving the new one
 [ -d /home/$APP_USER/dist ] && sudo rm -rf $APP_DIR/dist && sudo mv /home/$APP_USER/dist $APP_DIR/
@@ -161,6 +163,10 @@ sudo -u $APP_USER $APP_DIR/venv/bin/python3 $APP_DIR/migrate_notification_emails
 # 12. Run custody table migration script
 echo "--- Running custody table migration script ---"
 sudo -u $APP_USER $APP_DIR/venv/bin/python3 $APP_DIR/migrate_custody_table.py
+
+# 13. Run events table migration script
+echo "--- Running events table migration script ---"
+sudo -u $APP_USER $APP_DIR/venv/bin/python3 $APP_DIR/migrate_events_table.py
 
 echo "--- Deployment to EC2 finished successfully! ---"
 echo "Your app should be available at https://calndr.club" 
