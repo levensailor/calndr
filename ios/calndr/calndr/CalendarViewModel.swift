@@ -317,8 +317,12 @@ class CalendarViewModel: ObservableObject {
 
     func toggleWeather() {
         showWeather.toggle()
+        print("Weather toggled to: \(showWeather)")
         if showWeather && weatherData.isEmpty {
+            print("Weather is enabled and data is empty, fetching weather...")
             fetchWeather()
+        } else if showWeather {
+            print("Weather is enabled but data already exists (\(weatherData.count) entries)")
         }
     }
 
@@ -327,6 +331,7 @@ class CalendarViewModel: ObservableObject {
             print("Offline, not fetching weather.")
             return
         }
+        print("fetchWeather called with startDate: \(startDate ?? "nil"), endDate: \(endDate ?? "nil")")
         let calendar = Calendar.current
         
         let finalStartDate: String
@@ -342,6 +347,7 @@ class CalendarViewModel: ObservableObject {
         }
 
         // Using a fixed lat/long for now, similar to web.
+        print("Calling APIService.fetchWeather with coordinates (34.29, -77.97), dates: \(finalStartDate) to \(finalEndDate)")
         APIService.shared.fetchWeather(latitude: 34.29, longitude: -77.97, startDate: finalStartDate, endDate: finalEndDate) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
