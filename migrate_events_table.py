@@ -37,6 +37,7 @@ async def migrate_events_table():
                 SELECT column_name 
                 FROM information_schema.columns 
                 WHERE table_name = 'events' 
+<<<<<<< HEAD
                 AND column_name IN ('content', 'position', 'event_type')
             """))
             existing_columns = [row[0] for row in result.fetchall()]
@@ -53,6 +54,12 @@ async def migrate_events_table():
             else:
                 print("ℹ️  'event_type' column already exists")
             
+=======
+                AND column_name IN ('content', 'position')
+            """))
+            existing_columns = [row[0] for row in result.fetchall()]
+            
+>>>>>>> f52cc88208e2593816416afd30e15f87f7f3c372
             # Add content column if it doesn't exist
             if 'content' not in existing_columns:
                 print("➕ Adding 'content' column to events table...")
