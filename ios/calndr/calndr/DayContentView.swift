@@ -12,7 +12,7 @@ struct DayContentView: View {
     let themeManager: ThemeManager
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 1) {
             ZStack {
                 // Temperature on the left
                 if let weather = weatherInfo {
@@ -21,9 +21,9 @@ struct DayContentView: View {
                             .font(.caption2)
                             .fontWeight(.bold)
                             .foregroundColor(themeManager.currentTheme.dayNumberColor)
-                            .padding(2)
+                            .padding(1)
                             .background(themeManager.currentTheme.bubbleBackgroundColor)
-                            .cornerRadius(3)
+                            .cornerRadius(2)
                         Spacer()
                     }
                 }
