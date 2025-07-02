@@ -14,7 +14,7 @@ struct CalendarGridView: View {
             HStack(spacing: 0) {
                 ForEach(daysOfWeek, id: \.self) { day in
                     Text(day)
-                        .frame(maxWidth: .infinity)
+                        .frame(minWidth: 50, maxWidth: .infinity)
                         .font(.headline)
                 }
             }
@@ -26,7 +26,7 @@ struct CalendarGridView: View {
             let fixedCalendarHeight: CGFloat = 510 // Fixed height for consistent layout
             let rowHeight = fixedCalendarHeight / CGFloat(numberOfWeeks)
             
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 1) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 50)), count: 7), spacing: 0) {
                 ForEach(getDaysForCurrentMonth(), id: \.self) { date in
                     DayCellView(
                         viewModel: viewModel,

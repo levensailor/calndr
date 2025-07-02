@@ -72,7 +72,7 @@ struct DayCellView: View {
         .cornerRadius(0)
         .overlay(
             Rectangle()
-                .stroke(showToggleFeedback ? .green : (isToday ? themeManager.currentTheme.todayBorderColor : .clear), lineWidth: showToggleFeedback ? 3 : 2)
+                .stroke(showToggleFeedback ? .green : (isToday ? themeManager.currentTheme.todayBorderColor : themeManager.currentTheme.gridLinesColor), lineWidth: showToggleFeedback ? 3 : (isToday ? 2 : 0.5))
         )
         .scaleEffect(showToggleFeedback ? 1.05 : 1.0)
         .matchedGeometryEffect(id: date, in: namespace, isSource: focusedDate != date)
