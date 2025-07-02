@@ -346,9 +346,19 @@ class CalendarViewModel: ObservableObject {
             finalEndDate = isoDateString(from: monthInterval.end.addingTimeInterval(-1))
         }
 
+        // Limit weather requests to 16 days maximum (Open-Meteo API limit)
+        // Start from today and fetch up to 16 days forward
+        let today = Date()
+        let maxForecastDate = calendar.date(byAdding: .day, value: 15, to: today)! // 16 days total (today + 15)
+        
+        let requestStartDate = isoDateString(from: today)
+        let requestEndDate = isoDateString(from: maxForecastDate)
+        
+        print("Weather API limited to 16-day forecast: \(requestStartDate) to \(requestEndDate)")
+
         // Using a fixed lat/long for now, similar to web.
-        print("Calling APIService.fetchWeather with coordinates (34.29, -77.97), dates: \(finalStartDate) to \(finalEndDate)")
-        APIService.shared.fetchWeather(latitude: 34.29, longitude: -77.97, startDate: finalStartDate, endDate: finalEndDate) { [weak self] result in
+        print("Calling APIService.fetchWeather with coordinates (34.29, -77.97), dates: \(requestStartDate) to \(requestEndDate)")
+        APIService.shared.fetchWeather(latitude: 34.29, longitude: -77.97, startDate: requestStartDate, endDate: requestEndDate) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let weatherInfos):
