@@ -20,6 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import httpx
 import asyncio
+from sqlalchemy.dialects import postgresql
 
 # --- Environment variables ---
 load_dotenv()
@@ -586,6 +587,11 @@ async def get_events_by_date_range(start_date: str = None, end_date: str = None,
         (events.c.date.between(start_date_obj, end_date_obj)) &
         (events.c.event_type != 'custody')  # Exclude custody events
     )
+    
+    # Log the raw SQL query for debugging
+    compiled_query = query.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True})
+    logger.info(f"Executing event query: {compiled_query}")
+
     db_events = await database.fetch_all(query)
     
     logger.info(f"Returning {len(db_events)} non-custody events to iOS app")
