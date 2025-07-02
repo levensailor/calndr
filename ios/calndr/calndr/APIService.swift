@@ -497,10 +497,7 @@ class APIService {
     }
 
     func updateDeviceToken(token: String, completion: @escaping (Result<Void, Error>) -> Void) {
-        guard let url = URL(string: "\(baseURL)/api/users/me/device-token") else {
-            completion(.failure(NSError(domain: "InvalidURL", code: -1, userInfo: nil)))
-            return
-        }
+        let url = baseURL.appendingPathComponent("/users/me/device-token")
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"

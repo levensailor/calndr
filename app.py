@@ -95,9 +95,10 @@ events = sqlalchemy.Table(
     sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
     sqlalchemy.Column("family_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("families.id"), nullable=False),
     sqlalchemy.Column("date", sqlalchemy.Date, nullable=False),
+    sqlalchemy.Column("content", sqlalchemy.String(255), nullable=True),
+    sqlalchemy.Column("position", sqlalchemy.Integer, nullable=True),
     sqlalchemy.Column("custodian_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("users.id"), nullable=True),
-    sqlalchemy.Column("event_type", sqlalchemy.String, default='custody', nullable=False),
-    # Add other event columns if needed
+    sqlalchemy.Column("event_type", sqlalchemy.String, default='regular', nullable=False),
 )
 
 custody = sqlalchemy.Table(
@@ -363,9 +364,10 @@ async def get_family_custodians(current_user: User = Depends(get_current_user)):
         }
         
     # Assuming the first two members found are the two primary custodians
+    # FIX: Ensure consistent UUID string formatting for iOS compatibility
     return {
-        "custodian_one": {"id": str(family_members[0]['id']), "first_name": family_members[0]['first_name']},
-        "custodian_two": {"id": str(family_members[1]['id']), "first_name": family_members[1]['first_name']},
+        "custodian_one": {"id": str(family_members[0]['id']).lower(), "first_name": family_members[0]['first_name']},
+        "custodian_two": {"id": str(family_members[1]['id']).lower(), "first_name": family_members[1]['first_name']},
     }
 
 @app.get("/api/weather/{latitude}/{longitude}", response_model=WeatherAPIResponse)
@@ -701,4 +703,13 @@ async def send_custody_change_notification(sender_id: uuid.UUID, family_id: uuid
             await apns_client.send_notification(other_user['apns_token'], payload, topic=APNS_TOPIC)
             logger.info("Push notification sent successfully.")
         except Exception as e:
-            logger.error(f"Failed to send push notification: {e}") 
+            logger.error(f"Failed to send push notification: {e}")
+
+@app.get("/api/school-events")
+async def get_school_events(current_user: User = Depends(get_current_user)):
+    """
+    Returns school events. For now, returns empty array to prevent iOS app crashes.
+    TODO: Implement actual school events scraping from test.py
+    """
+    logger.info("School events requested - returning empty array (placeholder)")
+    return [] 
