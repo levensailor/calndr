@@ -11,6 +11,7 @@ from jose import JWTError, jwt
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 import logging
+from logging.handlers import RotatingFileHandler
 from passlib.context import CryptContext
 import uuid
 from apns2.client import APNsClient
@@ -24,7 +25,21 @@ import asyncio
 load_dotenv()
 
 # --- Logging ---
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - [%(lineno)d] - %(message)s')
+log_directory = "logs"
+if not os.path.exists(log_directory):
+    os.makedirs(log_directory)
+
+log_file_path = os.path.join(log_directory, "backend.log")
+
+# Configure logging to a rotating file and to the console
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
+    handlers=[
+        RotatingFileHandler(log_file_path, maxBytes=1*1024*1024, backupCount=3), # 1MB file, 3 backups
+        logging.StreamHandler() # Keep logging to console for journalctl as a fallback
+    ]
+)
 logger = logging.getLogger(__name__)
 
 # --- Configuration ---
