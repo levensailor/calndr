@@ -583,16 +583,29 @@ async def save_event(request: dict, current_user: User = Depends(get_current_use
     Handles non-custody events only. Custody events should use the /api/custody endpoint.
     """
     try:
-        logger.info(f"Received non-custody event request: {request}")
+        logger.info(f"[Line 587] Received non-custody event request: {request}")
         
         # Check if this is a custody event (position 4) and reject it
         if 'position' in request and request['position'] == 4:
+            logger.error(f"[Line 591] Rejecting custody event - position 4 should use /api/custody endpoint")
             raise HTTPException(status_code=400, detail="Custody events should use /api/custody endpoint")
         
         # Handle legacy event format for non-custody events
         if 'event_date' in request and 'position' in request and 'content' in request:
+            logger.info(f"[Line 596] Processing legacy event format")
             legacy_event = LegacyEvent(**request)
+            logger.info(f"[Line 598] Created LegacyEvent object: {legacy_event}")
+            
             event_date = datetime.strptime(legacy_event.event_date, '%Y-%m-%d').date()
+            logger.info(f"[Line 601] Parsed event_date: {event_date}")
+            
+            logger.info(f"[Line 603] Creating insert query with values:")
+            logger.info(f"[Line 604]   - family_id: {current_user.family_id}")
+            logger.info(f"[Line 605]   - date: {event_date}")
+            logger.info(f"[Line 606]   - content: {legacy_event.content}")
+            logger.info(f"[Line 607]   - position: {legacy_event.position}")
+            logger.info(f"[Line 608]   - event_type: 'regular'")
+            
             insert_query = events.insert().values(
                 family_id=current_user.family_id,
                 date=event_date,
@@ -600,27 +613,32 @@ async def save_event(request: dict, current_user: User = Depends(get_current_use
                 position=legacy_event.position,
                 event_type='regular'
             )
+            logger.info(f"[Line 617] Insert query created successfully")
+            logger.info(f"[Line 618] About to execute database insert...")
+            
             event_id = await database.execute(insert_query)
-            # This is a placeholder for future non-custody event handling
-            # For now, we'll just return the event as-is since the events table structure
-            # doesn't fully support arbitrary content/position events yet
-            logger.info(f"Legacy non-custody event: position={legacy_event.position}, content={legacy_event.content}")
+            logger.info(f"[Line 621] Successfully executed insert, got event_id: {event_id}")
+            
+            logger.info(f"[Line 623] Successfully created event with ID {event_id}: position={legacy_event.position}, content={legacy_event.content}")
             
             return {
-                'id': 0,  # Placeholder ID
+                'id': event_id,  # Return the actual database-generated ID
                 'event_date': legacy_event.event_date,
                 'content': legacy_event.content,
                 'position': legacy_event.position
             }
         else:
+            logger.error(f"[Line 632] Invalid event format - missing required fields")
+            logger.error(f"[Line 633] Request keys: {list(request.keys())}")
             raise HTTPException(status_code=400, detail="Invalid event format - use legacy format with event_date, content, and position")
     
     except HTTPException:
+        logger.error(f"[Line 637] HTTPException occurred")
         raise
     except Exception as e:
-        logger.error(f"Error in save_event: {e}")
+        logger.error(f"[Line 640] Exception in save_event: {e}")
         import traceback
-        logger.error(f"Full traceback: {traceback.format_exc()}")
+        logger.error(f"[Line 642] Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 # MARK: - Notification Email Endpoints
