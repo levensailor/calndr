@@ -92,7 +92,7 @@ class APIService {
 
     // Placeholder for fetching weather data
     func fetchWeather(latitude: Double, longitude: Double, startDate: String, endDate: String, completion: @escaping (Result<[String: WeatherInfo], Error>) -> Void) {
-        var components = URLComponents(url: baseURL.appendingPathComponent("/weather/\(latitude)/\(longitude)"), resolvingAgainstBaseURL: false)!
+        var components = URLComponents(url: baseURL.appendingPathComponent("/api/weather/\(latitude)/\(longitude)"), resolvingAgainstBaseURL: false)!
         components.queryItems = [
             URLQueryItem(name: "start_date", value: startDate),
             URLQueryItem(name: "end_date", value: endDate)
@@ -103,7 +103,9 @@ class APIService {
             return
         }
         
-        URLSession.shared.dataTask(with: url) { data, response, error in
+        let request = createAuthenticatedRequest(url: url)
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 completion(.failure(error))
                 return
