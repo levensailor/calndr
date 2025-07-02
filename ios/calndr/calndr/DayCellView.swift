@@ -39,7 +39,7 @@ struct DayCellView: View {
             Text(dayString(from: date))
                 .font(.caption)
                 .bold()
-                .padding(4)
+                .padding(2)
                 .foregroundColor(isCurrentMonth ? themeManager.currentTheme.dayNumberColor : themeManager.currentTheme.otherMonthForegroundColor)
         }
         // Add a tap gesture to the custody area specifically

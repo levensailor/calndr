@@ -28,7 +28,7 @@ struct DayContentView: View {
                     }
                 }
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, 1)
             .frame(height: 15) // Give a fixed height to maintain layout
 
             // School Event
@@ -37,7 +37,7 @@ struct DayContentView: View {
                     .font(.system(size: 8))
                     .lineLimit(2)
                     .foregroundColor(.white)
-                    .padding(.horizontal, 2)
+                    .padding(.horizontal, 1)
                     .background(Color.green)
                     .cornerRadius(3)
             }
@@ -48,7 +48,7 @@ struct DayContentView: View {
                     .font(.system(size: 8))
                     .lineLimit(1)
                     .foregroundColor(themeManager.currentTheme.textColor)
-                    .padding(.horizontal, 2)
+                    .padding(.horizontal, 1)
                     .background(themeManager.currentTheme.iconActiveColor.opacity(0.8))
                     .cornerRadius(3)
             }
