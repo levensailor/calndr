@@ -20,6 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import httpx
 import asyncio
+import json
 from sqlalchemy.dialects import postgresql
 
 # --- Environment variables ---
@@ -113,7 +114,6 @@ events = sqlalchemy.Table(
     sqlalchemy.Column("date", sqlalchemy.Date, nullable=False),
     sqlalchemy.Column("content", sqlalchemy.String(255), nullable=True),
     sqlalchemy.Column("position", sqlalchemy.Integer, nullable=True),
-    sqlalchemy.Column("custodian_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("users.id"), nullable=True),
     sqlalchemy.Column("event_type", sqlalchemy.String, default='regular', nullable=False),
 )
 
@@ -558,11 +558,13 @@ async def get_events_by_month(year: int, month: int, current_user: User = Depend
     for event in db_events:
         frontend_events.append({
             'id': event['id'],
+            'family_id': str(event['family_id']),
             'event_date': str(event['date']),
-            'content': event.get('content', ''),  # Add content field if it exists
-            'position': event.get('position', 0)   # Add position field if it exists
+            'content': event.get('content', ''),
+            'position': event.get('position', 0)
         })
         
+    logger.info(f"Payload for /api/events/{{year}}/{{month}}: {json.dumps(frontend_events, indent=2)}")
     return frontend_events
 
 @app.get("/api/events")
@@ -601,11 +603,13 @@ async def get_events_by_date_range(start_date: str = None, end_date: str = None,
     for event in db_events:
         frontend_events.append({
             'id': event['id'],
+            'family_id': str(event['family_id']),
             'event_date': str(event['date']),
-            'content': event.get('content', ''),  # Add content field if it exists
-            'position': event.get('position', 0)   # Add position field if it exists
+            'content': event.get('content', ''),
+            'position': event.get('position', 0)
         })
         
+    logger.info(f"Payload for /api/events: {json.dumps(frontend_events, indent=2)}")
     return frontend_events
 
 @app.post("/api/events")
@@ -769,4 +773,4 @@ async def get_school_events(current_user: User = Depends(get_current_user)):
     TODO: Implement actual school events scraping from test.py
     """
     logger.info("School events requested - returning empty array (placeholder)")
-    return [] 
+    return []
