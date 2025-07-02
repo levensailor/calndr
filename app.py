@@ -5,7 +5,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import create_engine, inspect
 from dotenv import load_dotenv
 from datetime import date, datetime, timedelta, timezone
-from fastapi import FastAPI, Depends, HTTPException, status, Form, Query
+from fastapi import FastAPI, Depends, HTTPException, status, Form, Query, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from pydantic import BaseModel, EmailStr
@@ -219,6 +219,15 @@ async def lifespan(app: FastAPI):
     await database.disconnect()
 
 app = FastAPI(lifespan=lifespan)
+
+@app.middleware("http")
+async def add_no_cache_headers(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
 
 # --- CORS ---
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
@@ -528,6 +537,7 @@ async def get_events_by_month(year: int, month: int, current_user: User = Depend
     Returns non-custody events for the specified month.
     Custody events are now handled by the separate custody API.
     """
+    logger.info(f"Getting events for {year}/{month}")
     # Calculate start and end dates for the month
     start_date = date(year, month, 1)
     if month == 12:
@@ -597,6 +607,7 @@ async def save_event(request: dict, current_user: User = Depends(get_current_use
     """
     Handles non-custody events only. Custody events should use the /api/custody endpoint.
     """
+    logger.info(f"Saving event: {request}")
     try:
         logger.info(f"[Line 587] Received non-custody event request: {request}")
         
