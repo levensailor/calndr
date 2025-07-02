@@ -45,7 +45,6 @@ struct CalendarGridView: View {
                 }
             }
             .frame(height: fixedCalendarHeight) // Fixed calendar height
-            .background(themeManager.currentTheme.gridLinesColor)
         }
     }
     
