@@ -28,9 +28,38 @@ import pytz
 import boto3
 from botocore.exceptions import ClientError
 import base64
+import hashlib
+from typing import Tuple
+import time
 
 # --- Environment variables ---
 load_dotenv()
+
+# --- Weather Cache ---
+# Simple in-memory cache with TTL (time-to-live) expiration
+weather_cache = {}
+
+def get_cache_key(latitude: float, longitude: float, start_date: str, end_date: str, endpoint_type: str) -> str:
+    """Generate a unique cache key for weather data."""
+    key_string = f"{endpoint_type}:{latitude}:{longitude}:{start_date}:{end_date}"
+    return hashlib.md5(key_string.encode()).hexdigest()
+
+def get_cached_weather(cache_key: str) -> Optional[Dict]:
+    """Get cached weather data if it exists and hasn't expired."""
+    if cache_key in weather_cache:
+        cached_data, timestamp = weather_cache[cache_key]
+        # Cache expires after 1 hour for forecast, 24 hours for historic
+        cache_ttl = 3600 if "forecast" in cache_key else 86400
+        if time.time() - timestamp < cache_ttl:
+            return cached_data
+        else:
+            # Remove expired cache entry
+            del weather_cache[cache_key]
+    return None
+
+def cache_weather_data(cache_key: str, data: Dict):
+    """Cache weather data with timestamp."""
+    weather_cache[cache_key] = (data, time.time())
 
 # --- Logging ---
 log_directory = "logs"
@@ -538,11 +567,11 @@ async def get_weather(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Fetches weather data from Open-Meteo API for the specified coordinates and date range.
+    Fetches weather forecast data from Open-Meteo API for the specified coordinates and date range.
     Returns temperature, precipitation probability, and cloud cover data.
     """
     try:
-        logger.info(f"Fetching weather for coordinates {latitude}, {longitude} from {start_date} to {end_date}")
+        logger.info(f"Fetching forecast weather for coordinates {latitude}, {longitude} from {start_date} to {end_date}")
         
         # Validate date format
         try:
@@ -550,6 +579,13 @@ async def get_weather(
             datetime.strptime(end_date, '%Y-%m-%d')
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+        
+        # Check cache first
+        cache_key = get_cache_key(latitude, longitude, start_date, end_date, "forecast")
+        cached_data = get_cached_weather(cache_key)
+        if cached_data:
+            logger.info(f"Returning cached forecast weather data for {latitude}, {longitude}")
+            return WeatherAPIResponse(**cached_data)
         
         # Build Open-Meteo API URL
         weather_url = (
@@ -595,21 +631,134 @@ async def get_weather(
         precipitation = [precip if precip is not None else 0.0 for precip in precipitation]
         cloudcover = [cloud if cloud is not None else 0.0 for cloud in cloudcover]
         
-        logger.info(f"Successfully fetched weather data for {len(daily_data['time'])} days")
+        logger.info(f"Successfully fetched forecast weather data for {len(daily_data['time'])} days")
         
-        return WeatherAPIResponse(
-            daily=DailyWeather(
-                time=daily_data['time'],
-                temperature_2m_max=temperatures,
-                precipitation_probability_mean=precipitation,
-                cloudcover_mean=cloudcover
-            )
-        )
+        # Prepare response
+        response_data = {
+            "daily": {
+                "time": daily_data['time'],
+                "temperature_2m_max": temperatures,
+                "precipitation_probability_mean": precipitation,
+                "cloudcover_mean": cloudcover
+            }
+        }
+        
+        # Cache the response
+        cache_weather_data(cache_key, response_data)
+        
+        return WeatherAPIResponse(**response_data)
         
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error fetching weather data: {e}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@app.get("/api/weather/historic/{latitude}/{longitude}", response_model=WeatherAPIResponse)
+async def get_historic_weather(
+    latitude: float, 
+    longitude: float, 
+    start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
+    end_date: str = Query(..., description="End date in YYYY-MM-DD format"),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Fetches historic weather data from Open-Meteo Archive API for the specified coordinates and date range.
+    Returns temperature, precipitation probability, and cloud cover data for past dates.
+    """
+    try:
+        logger.info(f"Fetching historic weather for coordinates {latitude}, {longitude} from {start_date} to {end_date}")
+        
+        # Validate date format
+        try:
+            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+        
+        # Validate that dates are in the past
+        today = datetime.now().date()
+        if start_dt.date() >= today or end_dt.date() >= today:
+            raise HTTPException(status_code=400, detail="Historic weather endpoint is only for past dates")
+        
+        # Check cache first
+        cache_key = get_cache_key(latitude, longitude, start_date, end_date, "historic")
+        cached_data = get_cached_weather(cache_key)
+        if cached_data:
+            logger.info(f"Returning cached historic weather data for {latitude}, {longitude}")
+            return WeatherAPIResponse(**cached_data)
+        
+        # Build Open-Meteo Archive API URL
+        weather_url = (
+            f"https://archive-api.open-meteo.com/v1/archive?"
+            f"latitude={latitude}&longitude={longitude}"
+            f"&start_date={start_date}&end_date={end_date}"
+            f"&daily=temperature_2m_max,precipitation_sum,cloudcover_mean"
+            f"&temperature_unit=fahrenheit"
+            f"&timezone=auto"
+        )
+        
+        # Make request to Open-Meteo Archive API
+        async with httpx.AsyncClient() as client:
+            response = await client.get(weather_url, timeout=15.0)
+            
+        if response.status_code != 200:
+            logger.error(f"Open-Meteo Archive API error: {response.status_code} - {response.text}")
+            raise HTTPException(status_code=500, detail="Failed to fetch historic weather data from external API")
+        
+        weather_data = response.json()
+        
+        # Validate and transform the response
+        if 'daily' not in weather_data:
+            logger.error(f"Unexpected historic weather API response format: {weather_data}")
+            raise HTTPException(status_code=500, detail="Invalid historic weather data format")
+        
+        daily_data = weather_data['daily']
+        
+        # Ensure we have all required fields (note: historic API uses different field names)
+        required_fields = ['time', 'temperature_2m_max', 'precipitation_sum', 'cloudcover_mean']
+        for field in required_fields:
+            if field not in daily_data:
+                logger.error(f"Missing field '{field}' in historic weather response")
+                raise HTTPException(status_code=500, detail=f"Missing historic weather data field: {field}")
+        
+        # Convert temperature from Celsius to Fahrenheit if needed (Open-Meteo should return Fahrenheit based on our request)
+        temperatures = daily_data['temperature_2m_max']
+        precipitation_sum = daily_data['precipitation_sum']
+        cloudcover = daily_data['cloudcover_mean']
+        
+        # Handle None values by replacing with reasonable defaults
+        temperatures = [temp if temp is not None else 70.0 for temp in temperatures]
+        precipitation_sum = [precip if precip is not None else 0.0 for precip in precipitation_sum]
+        cloudcover = [cloud if cloud is not None else 0.0 for cloud in cloudcover]
+        
+        # Convert precipitation_sum to precipitation_probability_mean (approximate)
+        # Historic API returns precipitation amount, forecast API returns probability
+        # We'll estimate probability based on precipitation amount
+        precipitation_probability = [min(100.0, precip * 10) if precip > 0 else 0.0 for precip in precipitation_sum]
+        
+        logger.info(f"Successfully fetched historic weather data for {len(daily_data['time'])} days")
+        
+        # Prepare response
+        response_data = {
+            "daily": {
+                "time": daily_data['time'],
+                "temperature_2m_max": temperatures,
+                "precipitation_probability_mean": precipitation_probability,
+                "cloudcover_mean": cloudcover
+            }
+        }
+        
+        # Cache the response
+        cache_weather_data(cache_key, response_data)
+        
+        return WeatherAPIResponse(**response_data)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching historic weather data: {e}")
         logger.error(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
