@@ -8,17 +8,17 @@ struct DayView: View {
         ZStack {
             // Weather effects background
             if viewModel.showWeather, let weatherInfo = viewModel.weatherInfoForDate(viewModel.currentDate) {
-                WeatherFXView(weatherInfo: weatherInfo)
+                WeatherFXView(weatherInfo: weatherInfo, scale: 10.0, opacityMultiplier: 2.0)
                     .ignoresSafeArea()
             }
             
             VStack(alignment: .leading, spacing: 20) {
                 // Header with temperature
                 VStack(spacing: 8) {
-                    Text(viewModel.currentDate.formatted(.dateTime.weekday(.wide).month(.wide).day()))
-                        .font(.largeTitle.bold())
-                        .foregroundColor(themeManager.currentTheme.textColor)
-                        .frame(maxWidth: .infinity, alignment: .center)
+//                    Text(viewModel.currentDate.formatted(.dateTime.weekday(.wide)))
+//                        .font(.largeTitle.bold())
+//                        .foregroundColor(themeManager.currentTheme.textColor)
+//                        .frame(maxWidth: .infinity, alignment: .center)
                     
                     // Temperature display
                     if viewModel.showWeather, let weatherInfo = viewModel.weatherInfoForDate(viewModel.currentDate) {
@@ -30,6 +30,8 @@ struct DayView: View {
                             .padding(.vertical, 6)
                             .background(themeManager.currentTheme.bubbleBackgroundColor)
                             .cornerRadius(12)
+                            .frame(maxWidth: .infinity, alignment: .center)
+
                     }
                 }
             
@@ -82,7 +84,7 @@ struct DayView: View {
                             .padding()
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(themeManager.currentTheme.iconActiveColor.opacity(0.8))
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .foregroundColor(.white)
                             .cornerRadius(10)
                     }
                     

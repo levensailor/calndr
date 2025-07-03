@@ -321,7 +321,7 @@ struct MainTabView: View {
         case .week:
             return weekRangeString(from: calendarViewModel.currentDate)
         case .day:
-            formatter.dateFormat = "MMMM d"
+            formatter.dateFormat = "EEEE, MMMM d"
         }
         return formatter.string(from: calendarViewModel.currentDate)
     }
