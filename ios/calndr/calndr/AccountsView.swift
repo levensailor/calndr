@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct AccountsView: View {
     @StateObject private var passwordViewModel = PasswordViewModel()
@@ -7,6 +8,11 @@ struct AccountsView: View {
     @State private var errorMessage: String?
     @State private var showPasswordModal = false
     @State private var showBillingModal = false
+    @State private var showPhotoActionSheet = false
+    @State private var showImagePicker = false
+    @State private var showCamera = false
+    @State private var profileImage: UIImage?
+    @State private var isUploadingPhoto = false
     
     var body: some View {
         VStack(spacing: 20) {
@@ -35,9 +41,46 @@ struct AccountsView: View {
                     VStack(spacing: 24) {
                         // Profile Header
                         VStack(spacing: 12) {
-                            Image(systemName: "person.circle.fill")
-                                .font(.system(size: 60))
-                                .foregroundColor(.blue)
+                            Button(action: {
+                                showPhotoActionSheet = true
+                            }) {
+                                ZStack {
+                                    if let profileImage = profileImage {
+                                        Image(uiImage: profileImage)
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(width: 80, height: 80)
+                                            .clipShape(Circle())
+                                            .overlay(Circle().stroke(Color.blue, lineWidth: 2))
+                                    } else if let photoUrl = profile.profile_photo_url, !photoUrl.isEmpty {
+                                        AsyncImage(url: URL(string: photoUrl)) { image in
+                                            image
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                        } placeholder: {
+                                            Image(systemName: "person.circle.fill")
+                                                .font(.system(size: 60))
+                                                .foregroundColor(.blue)
+                                        }
+                                        .frame(width: 80, height: 80)
+                                        .clipShape(Circle())
+                                        .overlay(Circle().stroke(Color.blue, lineWidth: 2))
+                                    } else {
+                                        Image(systemName: "person.circle.fill")
+                                            .font(.system(size: 60))
+                                            .foregroundColor(.blue)
+                                    }
+                                    
+                                    if isUploadingPhoto {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                            .scaleEffect(0.8)
+                                            .background(Color.black.opacity(0.3))
+                                            .clipShape(Circle())
+                                    }
+                                }
+                            }
+                            .disabled(isUploadingPhoto)
                             
                             Text("\(profile.first_name) \(profile.last_name)")
                                 .font(.title2.bold())
@@ -106,6 +149,36 @@ struct AccountsView: View {
         .sheet(isPresented: $showBillingModal) {
             BillingManagementModal()
         }
+        .sheet(isPresented: $showImagePicker) {
+            ImagePicker(selectedImage: $profileImage, sourceType: .photoLibrary) { image in
+                if let image = image {
+                    uploadProfilePhoto(image)
+                }
+            }
+        }
+        .sheet(isPresented: $showCamera) {
+            ImagePicker(selectedImage: $profileImage, sourceType: .camera) { image in
+                if let image = image {
+                    uploadProfilePhoto(image)
+                }
+            }
+        }
+        .actionSheet(isPresented: $showPhotoActionSheet) {
+            ActionSheet(
+                title: Text("Select Profile Photo"),
+                buttons: [
+                    .default(Text("Camera")) {
+                        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                            showCamera = true
+                        }
+                    },
+                    .default(Text("Photo Library")) {
+                        showImagePicker = true
+                    },
+                    .cancel()
+                ]
+            )
+        }
     }
     
     private func fetchUserProfile() {
@@ -125,10 +198,69 @@ struct AccountsView: View {
         }
     }
     
+    private func uploadProfilePhoto(_ image: UIImage) {
+        isUploadingPhoto = true
+        
+        APIService.shared.uploadProfilePhoto(image: image) { result in
+            DispatchQueue.main.async {
+                isUploadingPhoto = false
+                switch result {
+                case .success(let updatedProfile):
+                    self.userProfile = updatedProfile
+                    self.profileImage = image
+                case .failure(let error):
+                    // Show error message to user
+                    print("Failed to upload profile photo: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
     private func formatSubscription(_ profile: UserProfile) -> String {
         let type = profile.subscription_type ?? "Free"
         let status = profile.subscription_status ?? "Active"
         return "\(type) (\(status))"
+    }
+}
+
+// Image Picker wrapper for UIImagePickerController
+struct ImagePicker: UIViewControllerRepresentable {
+    @Binding var selectedImage: UIImage?
+    let sourceType: UIImagePickerController.SourceType
+    let onImageSelected: (UIImage?) -> Void
+    @Environment(\.dismiss) private var dismiss
+    
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = sourceType
+        picker.delegate = context.coordinator
+        return picker
+    }
+    
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let parent: ImagePicker
+        
+        init(_ parent: ImagePicker) {
+            self.parent = parent
+        }
+        
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+            if let image = info[.originalImage] as? UIImage {
+                parent.selectedImage = image
+                parent.onImageSelected(image)
+            }
+            parent.dismiss()
+        }
+        
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.dismiss()
+        }
     }
 }
 

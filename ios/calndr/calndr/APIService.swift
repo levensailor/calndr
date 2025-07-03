@@ -622,8 +622,10 @@ class APIService {
         }.resume()
     }
 
+    // MARK: - User Profile
+    
     func fetchUserProfile(completion: @escaping (Result<UserProfile, Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/users/me")
+        let url = baseURL.appendingPathComponent("/user/profile")
         let request = createAuthenticatedRequest(url: url)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
@@ -632,18 +634,13 @@ class APIService {
                 return
             }
             
-            guard let httpResponse = response as? HTTPURLResponse else {
-                completion(.failure(APIError.invalidResponse))
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
                 return
             }
             
             if httpResponse.statusCode == 401 {
-                completion(.failure(APIError.unauthorized))
-                return
-            }
-            
-            guard let data = data else {
-                completion(.failure(APIError.invalidResponse))
+                completion(.failure(NSError(domain: "APIService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Unauthorized"])))
                 return
             }
             
@@ -655,10 +652,66 @@ class APIService {
             }
         }.resume()
     }
-}
+    
+    func uploadProfilePhoto(image: UIImage, completion: @escaping (Result<UserProfile, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/user/profile/photo")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        
+        // Convert image to JPEG data
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+            completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to convert image to data"])))
+            return
+        }
+        
+        // Create multipart form data
+        let boundary = UUID().uuidString
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        
+        var body = Data()
+        
+        // Add image data
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"photo\"; filename=\"profile.jpg\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+        body.append(imageData)
+        body.append("\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        
+        request.httpBody = body
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            if httpResponse.statusCode == 401 {
+                completion(.failure(NSError(domain: "APIService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Unauthorized"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Upload failed with status \(httpResponse.statusCode)"])))
+                return
+            }
+            
+            do {
+                let updatedProfile = try JSONDecoder().decode(UserProfile.self, from: data)
+                completion(.success(updatedProfile))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
 
-// MARK: - Password Management
-extension APIService {
+    // MARK: - Authentication
+    
     func validatePassword(password: String, completion: @escaping (Result<Bool, Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/validate-password")
         var request = URLRequest(url: url)
