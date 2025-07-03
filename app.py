@@ -538,6 +538,33 @@ async def get_user_profile(current_user: User = Depends(get_current_user)):
         logger.error(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
+@app.get("/api/users/me", response_model=UserProfile)
+async def get_user_profile_legacy(current_user: User = Depends(get_current_user)):
+    """
+    Legacy endpoint for backward compatibility.
+    """
+    try:
+        # Get user data from database
+        user_record = await database.fetch_one(users.select().where(users.c.id == current_user.id))
+        if not user_record:
+            raise HTTPException(status_code=404, detail="User not found")
+            
+        return UserProfile(
+            id=str(user_record['id']),
+            first_name=user_record['first_name'],
+            last_name=user_record['last_name'],
+            email=user_record['email'],
+            phone_number=user_record['phone_number'],
+            subscription_type=user_record['subscription_type'] or "Free",
+            subscription_status=user_record['subscription_status'] or "Active",
+            profile_photo_url=user_record['profile_photo_url'],
+            created_at=str(user_record['created_at']) if user_record['created_at'] else None
+        )
+    except Exception as e:
+        logger.error(f"Error fetching user profile (legacy): {e}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
 @app.put("/api/users/me/password")
 async def update_user_password(password_update: PasswordUpdate, current_user: User = Depends(get_current_user)):
     """

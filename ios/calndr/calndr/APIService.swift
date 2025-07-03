@@ -626,7 +626,7 @@ class APIService {
     // MARK: - User Profile
     
     func fetchUserProfile(completion: @escaping (Result<UserProfile, Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/user/profile")
+        let url = baseURL.appendingPathComponent("/users/me")
         let request = createAuthenticatedRequest(url: url)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
@@ -640,8 +640,21 @@ class APIService {
                 return
             }
             
+            // Log the raw response for debugging
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("--- Raw JSON for fetchUserProfile ---")
+                print("Status Code: \(httpResponse.statusCode)")
+                print(jsonString)
+                print("------------------------------------")
+            }
+            
             if httpResponse.statusCode == 401 {
                 completion(.failure(NSError(domain: "APIService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Unauthorized"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "HTTP error \(httpResponse.statusCode)"])))
                 return
             }
             
@@ -649,6 +662,10 @@ class APIService {
                 let userProfile = try JSONDecoder().decode(UserProfile.self, from: data)
                 completion(.success(userProfile))
             } catch {
+                print("JSON Decoding Error: \(error)")
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("Failed to decode JSON: \(jsonString)")
+                }
                 completion(.failure(error))
             }
         }.resume()
