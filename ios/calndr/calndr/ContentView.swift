@@ -81,13 +81,53 @@ struct MainTabView: View {
                 )
 
                 // Custody Percentage Footer
-                HStack(spacing: 15) {
-                    Text(calendarViewModel.custodianOneName + " " + String(format: "%.0f", calendarViewModel.custodianOnePercentage) + "%")
-                    Text("(\(calendarViewModel.custodyStreak))")
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
-                    Text(calendarViewModel.custodianTwoName + " " + String(format: "%.0f", calendarViewModel.custodianTwoPercentage) + "%")
+                HStack(spacing: 30) {
+                    // Custodian One
+                    VStack(spacing: 4) {
+                        Text(calendarViewModel.custodianOneName + " " + String(format: "%.0f", calendarViewModel.custodianOnePercentage) + "%")
+                            .font(.headline)
+                        
+                        // Green dots for custodian one's streak
+                        HStack(spacing: 2) {
+                            if calendarViewModel.custodianWithStreak == 1 && calendarViewModel.custodyStreak > 0 {
+                                ForEach(0..<min(calendarViewModel.custodyStreak, 10), id: \.self) { _ in
+                                    Circle()
+                                        .fill(Color.green)
+                                        .frame(width: 6, height: 6)
+                                }
+                                if calendarViewModel.custodyStreak > 10 {
+                                    Text("...")
+                                        .font(.caption)
+                                        .foregroundColor(.green)
+                                }
+                            }
+                        }
+                        .frame(height: 10) // Reserve space even when empty
+                    }
+                    
+                    // Custodian Two
+                    VStack(spacing: 4) {
+                        Text(calendarViewModel.custodianTwoName + " " + String(format: "%.0f", calendarViewModel.custodianTwoPercentage) + "%")
+                            .font(.headline)
+                        
+                        // Green dots for custodian two's streak
+                        HStack(spacing: 2) {
+                            if calendarViewModel.custodianWithStreak == 2 && calendarViewModel.custodyStreak > 0 {
+                                ForEach(0..<min(calendarViewModel.custodyStreak, 10), id: \.self) { _ in
+                                    Circle()
+                                        .fill(Color.green)
+                                        .frame(width: 6, height: 6)
+                                }
+                                if calendarViewModel.custodyStreak > 10 {
+                                    Text("...")
+                                        .font(.caption)
+                                        .foregroundColor(.green)
+                                }
+                            }
+                        }
+                        .frame(height: 10) // Reserve space even when empty
+                    }
                 }
-                .font(.headline)
                 .padding()
 
                 // Menu Bar

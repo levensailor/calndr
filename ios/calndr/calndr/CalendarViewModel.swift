@@ -10,6 +10,7 @@ class CalendarViewModel: ObservableObject {
     @Published var showWeather: Bool = false
     @Published var currentDate: Date = Date()
     @Published var custodyStreak: Int = 0
+    @Published var custodianWithStreak: Int = 0 // 1 for custodian one, 2 for custodian two, 0 for none
     @Published var custodianOne: Custodian?
     @Published var custodianTwo: Custodian?
     @Published var custodianOneName: String = "Parent 1"
@@ -240,22 +241,19 @@ class CalendarViewModel: ObservableObject {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         
-        guard let currentUserID = self.currentUserID else {
-            self.custodyStreak = 0
-            return
-        }
-        
         let todaysOwner = getCustodyInfo(for: today).owner
         
-        // We only care about the streak of the logged-in user
-        guard todaysOwner == currentUserID else {
+        // If no one has custody today, reset streak
+        guard !todaysOwner.isEmpty else {
             self.custodyStreak = 0
+            self.custodianWithStreak = 0
             return
         }
         
         var streak = 0
         var dateToCheck = calendar.date(byAdding: .day, value: -1, to: today)!
 
+        // Count consecutive days (not including today) that the same person had custody
         for _ in 0..<365 { // Check up to a year back
             let dayOwner = getCustodyInfo(for: dateToCheck).owner
             if dayOwner == todaysOwner {
@@ -267,6 +265,15 @@ class CalendarViewModel: ObservableObject {
         }
         
         self.custodyStreak = streak
+        
+        // Determine which custodian has the streak
+        if todaysOwner == self.custodianOne?.id {
+            self.custodianWithStreak = 1
+        } else if todaysOwner == self.custodianTwo?.id {
+            self.custodianWithStreak = 2
+        } else {
+            self.custodianWithStreak = 0
+        }
     }
     
     func isoDateString(from date: Date) -> String {
