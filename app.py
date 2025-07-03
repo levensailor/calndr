@@ -859,59 +859,73 @@ async def get_family_member_emails(current_user: User = Depends(get_current_user
     ]
 
 async def send_custody_change_notification(sender_id: uuid.UUID, family_id: uuid.UUID, event_date: date):
+    logger.info("Attempting to send custody change notification...")
+    
     if not apns_client:
-        logger.warning("APNs client not configured. Skipping push notification.")
+        logger.warning("APNs client not configured or initialized. Skipping push notification. Check APNS env vars.")
         return
 
-    other_user = await database.fetch_one(
-        users.select().where((users.c.family_id == family_id) & (users.c.id != sender_id))
-    )
+    logger.info(f"Searching for other user in family '{family_id}' who is not sender '{sender_id}'.")
+    other_user_query = users.select().where((users.c.family_id == family_id) & (users.c.id != sender_id))
+    other_user = await database.fetch_one(other_user_query)
 
-    if other_user and other_user['apns_token']:
-        sender = await database.fetch_one(users.select().where(users.c.id == sender_id))
-        sender_name = sender['first_name'] if sender else "Someone"
+    if not other_user:
+        logger.warning(f"Could not find another user in family '{family_id}' to notify.")
+        return
         
-        # Get the new custodian info for the changed date
-        custodian_query = custody.select().where(
-            (custody.c.family_id == family_id) & 
-            (custody.c.date == event_date)
-        )
-        custody_record = await database.fetch_one(custodian_query)
+    logger.info(f"Found other user: {other_user['first_name']} (ID: {other_user['id']}). Checking for APNs token.")
+
+    if not other_user['apns_token']:
+        logger.warning(f"User {other_user['first_name']} does not have an APNs token. Cannot send notification.")
+        return
+
+    logger.info(f"User {other_user['first_name']} has an APNs token. Proceeding with notification creation.")
         
-        # Get custodian name
-        custodian_name = "Unknown"
-        if custody_record:
-            custodian = await database.fetch_one(users.select().where(users.c.id == custody_record['custodian_id']))
-            custodian_name = custodian['first_name'] if custodian else "Unknown"
-        
-        # Format the date nicely
-        formatted_date = event_date.strftime('%A, %B %-d')
-        
-        # Create enhanced notification payload
-        payload = Payload(
-            alert={
-                "title": "📅 Schedule Updated",
-                "subtitle": f"{custodian_name} now has custody",
-                "body": f"{sender_name} changed the schedule for {formatted_date}. Tap to manage your schedule."
-            },
-            sound="default",
-            badge=1,
-            category="CUSTODY_CHANGE",  # For custom actions
-            custom={
-                "type": "custody_change",
-                "date": event_date.isoformat(),
-                "custodian": custodian_name,
-                "sender": sender_name,
-                "deep_link": "calndr://schedule"  # Deep link to schedule view
-            }
-        )
-        
-        try:
-            logger.info(f"Sending enhanced APNs notification to {other_user['first_name']} about {custodian_name} having custody on {formatted_date}")
-            await apns_client.send_notification(other_user['apns_token'], payload, topic=APNS_TOPIC)
-            logger.info("Enhanced push notification sent successfully.")
-        except Exception as e:
-            logger.error(f"Failed to send push notification: {e}")
+    sender = await database.fetch_one(users.select().where(users.c.id == sender_id))
+    sender_name = sender['first_name'] if sender else "Someone"
+    
+    # Get the new custodian info for the changed date
+    custodian_query = custody.select().where(
+        (custody.c.family_id == family_id) & 
+        (custody.c.date == event_date)
+    )
+    custody_record = await database.fetch_one(custodian_query)
+    
+    # Get custodian name
+    custodian_name = "Unknown"
+    if custody_record:
+        custodian = await database.fetch_one(users.select().where(users.c.id == custody_record['custodian_id']))
+        custodian_name = custodian['first_name'] if custodian else "Unknown"
+    
+    # Format the date nicely
+    formatted_date = event_date.strftime('%A, %B %-d')
+    
+    # Create enhanced notification payload
+    payload = Payload(
+        alert={
+            "title": "📅 Schedule Updated",
+            "subtitle": f"{custodian_name} now has custody",
+            "body": f"{sender_name} changed the schedule for {formatted_date}. Tap to manage your schedule."
+        },
+        sound="default",
+        badge=1,
+        category="CUSTODY_CHANGE",  # For custom actions
+        custom={
+            "type": "custody_change",
+            "date": event_date.isoformat(),
+            "custodian": custodian_name,
+            "sender": sender_name,
+            "deep_link": "calndr://schedule"  # Deep link to schedule view
+        }
+    )
+    
+    try:
+        logger.info(f"Sending enhanced APNs notification to {other_user['first_name']} about {custodian_name} having custody on {formatted_date}")
+        await apns_client.send_notification(other_user['apns_token'], payload, topic=APNS_TOPIC)
+        logger.info("Enhanced push notification sent successfully.")
+    except Exception as e:
+        logger.error(f"Failed to send push notification: {e}")
+        logger.error(f"Full APNs error traceback: {traceback.format_exc()}")
 
 # ---------------------- School Events Caching ----------------------
 SCHOOL_EVENTS_CACHE: Optional[List[Dict[str, Any]]] = None  # type: ignore
