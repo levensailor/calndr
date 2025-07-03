@@ -12,6 +12,7 @@ struct calndrApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var authManager = AuthenticationManager()
     @StateObject private var navigationManager = NavigationManager()
+    @StateObject private var storeManager = StoreKitManager()
 
     var body: some Scene {
         WindowGroup {
@@ -19,6 +20,7 @@ struct calndrApp: App {
                 .environmentObject(authManager)
                 .environmentObject(navigationManager)
                 .environmentObject(ThemeManager()) // It's okay to create this here if it's stateless
+                .environmentObject(storeManager)
                 .onOpenURL { url in
                     handleURL(url)
                 }

@@ -1,0 +1,121 @@
+{
+  "identifier" : "3B6CDD15",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_askToBuyEnabled" : false,
+    "_billingIssuesEnabled" : false,
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptions" : [
+    {
+      "adHocOffers" : [
+
+      ],
+      "codeOffers" : [
+
+      ],
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "groupNumber" : 1,
+      "internalID" : "6573537A",
+      "introductoryOffer" : null,
+      "localizations" : [
+        {
+          "description" : "Full access to all premium features, billed monthly",
+          "displayName" : "Premium Monthly",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.calndr.premium.monthly",
+      "recurringSubscriptionPeriod" : "P1M",
+      "referenceName" : "Premium Monthly",
+      "subscriptionGroupDisplayName" : "Premium",
+      "subscriptionGroupInternalID" : "21512375",
+      "type" : "RecurringSubscription"
+    },
+    {
+      "adHocOffers" : [
+
+      ],
+      "codeOffers" : [
+
+      ],
+      "displayPrice" : "49.99",
+      "familyShareable" : false,
+      "groupNumber" : 1,
+      "internalID" : "6573538B",
+      "introductoryOffer" : null,
+      "localizations" : [
+        {
+          "description" : "Full access to all premium features, billed yearly (Save 20%)",
+          "displayName" : "Premium Yearly",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.calndr.premium.yearly",
+      "recurringSubscriptionPeriod" : "P1Y",
+      "referenceName" : "Premium Yearly",
+      "subscriptionGroupDisplayName" : "Premium",
+      "subscriptionGroupInternalID" : "21512375",
+      "type" : "RecurringSubscription"
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+} 

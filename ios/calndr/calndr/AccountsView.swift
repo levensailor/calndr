@@ -7,13 +7,14 @@ struct AccountsView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var showPasswordModal = false
-    @State private var showBillingModal = false
+    @State private var showSubscriptionModal = false
     @State private var showPhotoActionSheet = false
     @State private var showImagePicker = false
     @State private var showCamera = false
     @State private var profileImage: UIImage?
     @State private var isUploadingPhoto = false
     @StateObject private var passwordViewModel = PasswordViewModel()
+    @StateObject private var storeManager = StoreKitManager()
     
     var body: some View {
         VStack(spacing: 20) {
@@ -107,15 +108,15 @@ struct AccountsView: View {
                         // Action Buttons
                         VStack(spacing: 12) {
                             Button(action: {
-                                showBillingModal = true
+                                showSubscriptionModal = true
                             }) {
                                 HStack {
-                                    Image(systemName: "creditcard")
-                                    Text("Manage Billing")
+                                    Image(systemName: "crown.fill")
+                                    Text(storeManager.isPremiumActive() ? "Manage Subscription" : "Upgrade to Premium")
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(Color.blue)
+                                .background(storeManager.isPremiumActive() ? Color.orange : Color.blue)
                                 .foregroundColor(.white)
                                 .cornerRadius(10)
                             }
@@ -157,12 +158,15 @@ struct AccountsView: View {
         .navigationTitle("Account")
         .onAppear {
             fetchUserProfile()
+            Task {
+                await storeManager.updatePurchasedProducts()
+            }
         }
         .sheet(isPresented: $showPasswordModal) {
             PasswordChangeModal(viewModel: passwordViewModel)
         }
-        .sheet(isPresented: $showBillingModal) {
-            BillingManagementModal()
+        .sheet(isPresented: $showSubscriptionModal) {
+            SubscriptionView()
         }
         .sheet(isPresented: $showImagePicker) {
             ImagePicker(selectedImage: $profileImage, sourceType: .photoLibrary) { image in
@@ -232,9 +236,11 @@ struct AccountsView: View {
     }
     
     private func formatSubscription(_ profile: UserProfile) -> String {
-        let type = profile.subscription_type ?? "Free"
-        let status = profile.subscription_status ?? "Active"
-        return "\(type) (\(status))"
+        if let activeSubscription = storeManager.getActiveSubscription() {
+            return activeSubscription
+        } else {
+            return "Free"
+        }
     }
 }
 
@@ -380,85 +386,6 @@ struct PasswordChangeModal: View {
                     }
                 }
             }
-        }
-    }
-}
-
-struct BillingManagementModal: View {
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
-                VStack(spacing: 16) {
-                    Image(systemName: "creditcard.circle")
-                        .font(.system(size: 60))
-                        .foregroundColor(.blue)
-                    
-                    Text("Billing Management")
-                        .font(.title2.bold())
-                    
-                    Text("Manage your subscription, payment methods, and billing history.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.top, 40)
-                
-                VStack(spacing: 12) {
-                    Button("View Subscription Details") {
-                        // TODO: Implement subscription details
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-                    
-                    Button("Update Payment Method") {
-                        // TODO: Implement payment method update
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.green)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-                    
-                    Button("Billing History") {
-                        // TODO: Implement billing history
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.orange)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-                    
-                    Button("Cancel Subscription") {
-                        // TODO: Implement subscription cancellation
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.red)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-                }
-                .padding(.horizontal)
-                
-                Spacer()
-                
-                Button("Close") {
-                    dismiss()
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.gray.opacity(0.2))
-                .foregroundColor(.primary)
-                .cornerRadius(10)
-                .padding(.horizontal)
-                .padding(.bottom, 20)
-            }
-            .navigationTitle("Billing")
-            .navigationBarTitleDisplayMode(.inline)
         }
     }
 }
