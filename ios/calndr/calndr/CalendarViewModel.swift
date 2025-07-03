@@ -353,41 +353,79 @@ class CalendarViewModel: ObservableObject {
         }
         print("fetchWeather called with startDate: \(startDate ?? "nil"), endDate: \(endDate ?? "nil")")
         let calendar = Calendar.current
-        
-        let finalStartDate: String
-        let finalEndDate: String
-
-        if let startDate = startDate, let endDate = endDate {
-            finalStartDate = startDate
-            finalEndDate = endDate
-        } else {
-            guard let monthInterval = calendar.dateInterval(of: .month, for: currentDate) else { return }
-            finalStartDate = isoDateString(from: monthInterval.start)
-            finalEndDate = isoDateString(from: monthInterval.end.addingTimeInterval(-1))
-        }
-
-        // Limit weather requests to 16 days maximum (Open-Meteo API limit)
-        // Start from today and fetch up to 16 days forward
         let today = Date()
+        
+        // Calculate date ranges for both historic and forecast data
+        let sixMonthsAgo = calendar.date(byAdding: .month, value: -6, to: today)!
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
         let maxForecastDate = calendar.date(byAdding: .day, value: 15, to: today)! // 16 days total (today + 15)
         
-        let requestStartDate = isoDateString(from: today)
-        let requestEndDate = isoDateString(from: maxForecastDate)
+        let historicStartDate = isoDateString(from: sixMonthsAgo)
+        let historicEndDate = isoDateString(from: yesterday)
+        let forecastStartDate = isoDateString(from: today)
+        let forecastEndDate = isoDateString(from: maxForecastDate)
         
-        print("Weather API limited to 16-day forecast: \(requestStartDate) to \(requestEndDate)")
-
-        // Using a fixed lat/long for now, similar to web.
-        print("Calling APIService.fetchWeather with coordinates (34.29, -77.97), dates: \(requestStartDate) to \(requestEndDate)")
-        APIService.shared.fetchWeather(latitude: 34.29, longitude: -77.97, startDate: requestStartDate, endDate: requestEndDate) { [weak self] result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let weatherInfos):
-                    self?.weatherData = weatherInfos
-                    print("Successfully fetched weather for \(weatherInfos.count) days.")
-                case .failure(let error):
-                    print("Error fetching weather: \(error.localizedDescription)")
-                }
+        print("Fetching weather data:")
+        print("Historic: \(historicStartDate) to \(historicEndDate)")
+        print("Forecast: \(forecastStartDate) to \(forecastEndDate)")
+        
+        // Create a dispatch group to coordinate both API calls
+        let weatherGroup = DispatchGroup()
+        var forecastData: [String: WeatherInfo] = [:]
+        var historicData: [String: WeatherInfo] = [:]
+        var hasErrors = false
+        
+        // Fetch forecast weather (16 days from today)
+        weatherGroup.enter()
+        APIService.shared.fetchWeather(latitude: 34.29, longitude: -77.97, startDate: forecastStartDate, endDate: forecastEndDate) { result in
+            defer { weatherGroup.leave() }
+            switch result {
+            case .success(let weatherInfos):
+                forecastData = weatherInfos
+                print("Successfully fetched forecast weather for \(weatherInfos.count) days.")
+            case .failure(let error):
+                print("Error fetching forecast weather: \(error.localizedDescription)")
+                hasErrors = true
             }
+        }
+        
+        // Fetch historic weather (previous 6 months)
+        weatherGroup.enter()
+        APIService.shared.fetchHistoricWeather(latitude: 34.29, longitude: -77.97, startDate: historicStartDate, endDate: historicEndDate) { result in
+            defer { weatherGroup.leave() }
+            switch result {
+            case .success(let weatherInfos):
+                historicData = weatherInfos
+                print("Successfully fetched historic weather for \(weatherInfos.count) days.")
+            case .failure(let error):
+                print("Error fetching historic weather: \(error.localizedDescription)")
+                // Don't set hasErrors for historic data - forecast is more important
+                print("Historic weather failed, but continuing with forecast data only")
+            }
+        }
+        
+        // Combine both datasets when complete
+        weatherGroup.notify(queue: .main) {
+            guard !hasErrors else {
+                print("Critical error in weather fetching - forecast data failed")
+                return
+            }
+            
+            // Combine historic and forecast data
+            var combinedWeatherData: [String: WeatherInfo] = [:]
+            
+            // Add historic data first
+            for (dateString, weatherInfo) in historicData {
+                combinedWeatherData[dateString] = weatherInfo
+            }
+            
+            // Add forecast data (will override any overlapping dates)
+            for (dateString, weatherInfo) in forecastData {
+                combinedWeatherData[dateString] = weatherInfo
+            }
+            
+            self.weatherData = combinedWeatherData
+            print("Successfully combined weather data: \(historicData.count) historic + \(forecastData.count) forecast = \(combinedWeatherData.count) total days")
         }
     }
 

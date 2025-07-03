@@ -91,7 +91,7 @@ class APIService {
         }.resume()
     }
 
-    // Placeholder for fetching weather data
+    // Fetch current and future weather data (forecast)
     func fetchWeather(latitude: Double, longitude: Double, startDate: String, endDate: String, completion: @escaping (Result<[String: WeatherInfo], Error>) -> Void) {
         var components = URLComponents(url: baseURL.appendingPathComponent("/weather/\(latitude)/\(longitude)"), resolvingAgainstBaseURL: false)!
         components.queryItems = [
@@ -146,6 +146,66 @@ class APIService {
                 completion(.success(weatherInfos))
             } catch {
                 print("Weather API: JSON decode error - \(error)")
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    // Fetch historic weather data (past 6 months)
+    func fetchHistoricWeather(latitude: Double, longitude: Double, startDate: String, endDate: String, completion: @escaping (Result<[String: WeatherInfo], Error>) -> Void) {
+        var components = URLComponents(url: baseURL.appendingPathComponent("/weather/historic/\(latitude)/\(longitude)"), resolvingAgainstBaseURL: false)!
+        components.queryItems = [
+            URLQueryItem(name: "start_date", value: startDate),
+            URLQueryItem(name: "end_date", value: endDate)
+        ]
+
+        guard let url = components.url else {
+            completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL for historic weather"])))
+            return
+        }
+        
+        print("Historic Weather API URL: \(url.absoluteString)")
+        let request = createAuthenticatedRequest(url: url)
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("Historic Weather API network error: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                print("Historic Weather API: Invalid response from server")
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            // Log the raw data as a string for debugging
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("--- Raw JSON for fetchHistoricWeather (Status: \(httpResponse.statusCode)) ---")
+                print(jsonString)
+                print("----------------------------------------------------------------")
+            }
+            
+            if httpResponse.statusCode == 401 {
+                print("Historic Weather API: Unauthorized (401)")
+                completion(.failure(NSError(domain: "APIService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Unauthorized"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                print("Historic Weather API: HTTP error \(httpResponse.statusCode)")
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "HTTP error \(httpResponse.statusCode)"])))
+                return
+            }
+
+            do {
+                let apiResponse = try JSONDecoder().decode(WeatherAPIResponse.self, from: data)
+                let weatherInfos = self.transformWeatherData(from: apiResponse)
+                print("Successfully decoded historic weather data for \(weatherInfos.count) days")
+                completion(.success(weatherInfos))
+            } catch {
+                print("Historic Weather API: JSON decode error - \(error)")
                 completion(.failure(error))
             }
         }.resume()
