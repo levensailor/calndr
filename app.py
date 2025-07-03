@@ -12,6 +12,7 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional, List, Dict, Any
 import logging
 from logging.handlers import RotatingFileHandler
+import traceback
 from passlib.context import CryptContext
 import uuid
 from apns2.client import APNsClient
@@ -23,6 +24,7 @@ import httpx
 import asyncio
 import json
 from sqlalchemy.dialects import postgresql
+import pytz
 
 # --- Environment variables ---
 load_dotenv()
@@ -388,7 +390,6 @@ async def set_custody(custody_data: CustodyRecord, current_user: User = Depends(
         
     except Exception as e:
         logger.error(f"Error setting custody: {e}")
-        import traceback
         logger.error(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
@@ -495,7 +496,6 @@ async def get_weather(
         raise
     except Exception as e:
         logger.error(f"Error fetching weather data: {e}")
-        import traceback
         logger.error(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
@@ -702,7 +702,6 @@ async def save_event(request: dict, current_user: User = Depends(get_current_use
         raise
     except Exception as e:
         logger.error(f"[Line 640] Exception in save_event: {e}")
-        import traceback
         logger.error(f"[Line 642] Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
@@ -757,7 +756,6 @@ async def update_event(event_id: int, request: dict, current_user: User = Depend
         raise
     except Exception as e:
         logger.error(f"Exception in update_event: {e}")
-        import traceback
         logger.error(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
@@ -790,7 +788,6 @@ async def delete_event(event_id: int, current_user: User = Depends(get_current_u
         raise
     except Exception as e:
         logger.error(f"Exception in delete_event: {e}")
-        import traceback
         logger.error(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
@@ -921,30 +918,31 @@ async def send_custody_change_notification(sender_id: uuid.UUID, family_id: uuid
     
     try:
         logger.info(f"Sending enhanced APNs notification to {other_user['first_name']} about {custodian_name} having custody on {formatted_date}")
-        await apns_client.send_notification(other_user['apns_token'], payload, topic=APNS_TOPIC)
+        # Run the synchronous APNs call in a separate thread
+        await asyncio.to_thread(apns_client.send_notification, other_user['apns_token'], payload, topic=APNS_TOPIC)
         logger.info("Enhanced push notification sent successfully.")
     except Exception as e:
         logger.error(f"Failed to send push notification: {e}")
         logger.error(f"Full APNs error traceback: {traceback.format_exc()}")
 
 # ---------------------- School Events Caching ----------------------
-SCHOOL_EVENTS_CACHE: Optional[List[Dict[str, Any]]] = None  # type: ignore
+SCHOOL_EVENTS_CACHE: Optional[List[Dict[str, Any]]] = None
 SCHOOL_EVENTS_CACHE_TIME: Optional[datetime] = None
 SCHOOL_EVENTS_CACHE_TTL_HOURS = 24
 
-async def fetch_school_events() -> list[dict[str, str]]:
+async def fetch_school_events() -> List[Dict[str, str]]:
     """Scrape school closing events and return list of {date, title}. Uses 24-hour in-memory cache."""
     global SCHOOL_EVENTS_CACHE, SCHOOL_EVENTS_CACHE_TIME
     # Return cached copy if fresh
     if SCHOOL_EVENTS_CACHE and SCHOOL_EVENTS_CACHE_TIME:
         if datetime.now(timezone.utc) - SCHOOL_EVENTS_CACHE_TIME < timedelta(hours=SCHOOL_EVENTS_CACHE_TTL_HOURS):
-            return SCHOOL_EVENTS_CACHE  # type: ignore
+            return SCHOOL_EVENTS_CACHE
 
     import re
-    from bs4 import BeautifulSoup  # type: ignore
+    from bs4 import BeautifulSoup
 
     logger.info("Fetching school events from The Learning Tree website …")
-    events: dict[str, str] = {}
+    events: Dict[str, str] = {}
     url = "https://www.thelearningtreewilmington.com/calendar-of-events/"
     try:
         async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
@@ -1005,7 +1003,7 @@ async def fetch_school_events() -> list[dict[str, str]]:
     logger.info(f"Successfully scraped {len(events)} school events.")
     SCHOOL_EVENTS_CACHE = [{"date": d, "title": name} for d, name in events.items()]
     SCHOOL_EVENTS_CACHE_TIME = datetime.now(timezone.utc)
-    return SCHOOL_EVENTS_CACHE  # type: ignore
+    return SCHOOL_EVENTS_CACHE
 
 # -------------------------------------------------------------------
 
