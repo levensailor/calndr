@@ -140,3 +140,72 @@ struct FamilyMemberEmail: Codable {
     let first_name: String
     let email: String
 } 
+
+struct Babysitter: Codable, Identifiable {
+    let id: Int
+    let first_name: String
+    let last_name: String
+    let phone_number: String
+    let rate: Double?
+    let notes: String?
+    let created_by_user_id: String
+    let created_at: String
+    
+    var fullName: String {
+        return "\(first_name) \(last_name)"
+    }
+    
+    var formattedRate: String {
+        if let rate = rate {
+            return String(format: "$%.2f/hr", rate)
+        }
+        return "Rate not specified"
+    }
+}
+
+struct BabysitterCreate: Codable {
+    let first_name: String
+    let last_name: String
+    let phone_number: String
+    let rate: Double?
+    let notes: String?
+}
+
+struct EmergencyContact: Codable, Identifiable {
+    let id: Int
+    let first_name: String
+    let last_name: String
+    let phone_number: String
+    let relationship: String?
+    let notes: String?
+    let created_by_user_id: String
+    let created_at: String
+    
+    var fullName: String {
+        return "\(first_name) \(last_name)"
+    }
+    
+    var displayRelationship: String {
+        return relationship ?? "Emergency Contact"
+    }
+}
+
+struct EmergencyContactCreate: Codable {
+    let first_name: String
+    let last_name: String
+    let phone_number: String
+    let relationship: String?
+    let notes: String?
+}
+
+struct GroupChatCreate: Codable {
+    let contact_type: String
+    let contact_id: Int
+    let group_identifier: String?
+}
+
+struct GroupChatResponse: Codable {
+    let group_identifier: String
+    let exists: Bool
+    let created_at: String
+} 

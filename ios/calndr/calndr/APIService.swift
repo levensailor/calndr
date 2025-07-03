@@ -800,4 +800,265 @@ class APIService {
             }
         }.resume()
     }
+    
+    // MARK: - Babysitters
+    
+    func fetchBabysitters(completion: @escaping (Result<[Babysitter], Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/babysitters")
+        let request = createAuthenticatedRequest(url: url)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
+                return
+            }
+            
+            do {
+                let babysitters = try JSONDecoder().decode([Babysitter].self, from: data)
+                completion(.success(babysitters))
+            } catch {
+                print("Failed to decode babysitters: \(error)")
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func createBabysitter(_ babysitter: BabysitterCreate, completion: @escaping (Result<Babysitter, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/babysitters")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(babysitter)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
+                return
+            }
+            
+            do {
+                let createdBabysitter = try JSONDecoder().decode(Babysitter.self, from: data)
+                completion(.success(createdBabysitter))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func updateBabysitter(id: Int, babysitter: BabysitterCreate, completion: @escaping (Result<Babysitter, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/babysitters/\(id)")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(babysitter)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
+                return
+            }
+            
+            do {
+                let updatedBabysitter = try JSONDecoder().decode(Babysitter.self, from: data)
+                completion(.success(updatedBabysitter))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func deleteBabysitter(id: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/babysitters/\(id)")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "DELETE"
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                completion(.success(()))
+            } else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to delete babysitter"])))
+            }
+        }.resume()
+    }
+    
+    // MARK: - Emergency Contacts
+    
+    func fetchEmergencyContacts(completion: @escaping (Result<[EmergencyContact], Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/emergency-contacts")
+        let request = createAuthenticatedRequest(url: url)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
+                return
+            }
+            
+            do {
+                let contacts = try JSONDecoder().decode([EmergencyContact].self, from: data)
+                completion(.success(contacts))
+            } catch {
+                print("Failed to decode emergency contacts: \(error)")
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func createEmergencyContact(_ contact: EmergencyContactCreate, completion: @escaping (Result<EmergencyContact, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/emergency-contacts")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(contact)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
+                return
+            }
+            
+            do {
+                let createdContact = try JSONDecoder().decode(EmergencyContact.self, from: data)
+                completion(.success(createdContact))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func updateEmergencyContact(id: Int, contact: EmergencyContactCreate, completion: @escaping (Result<EmergencyContact, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/emergency-contacts/\(id)")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(contact)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
+                return
+            }
+            
+            do {
+                let updatedContact = try JSONDecoder().decode(EmergencyContact.self, from: data)
+                completion(.success(updatedContact))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func deleteEmergencyContact(id: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/emergency-contacts/\(id)")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "DELETE"
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                completion(.success(()))
+            } else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to delete emergency contact"])))
+            }
+        }.resume()
+    }
+    
+    // MARK: - Group Chat
+    
+    func createOrGetGroupChat(contactType: String, contactId: Int, completion: @escaping (Result<GroupChatResponse, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/group-chat")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let chatData = GroupChatCreate(contact_type: contactType, contact_id: contactId, group_identifier: nil)
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(chatData)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
+                return
+            }
+            
+            do {
+                let chatResponse = try JSONDecoder().decode(GroupChatResponse.self, from: data)
+                completion(.success(chatResponse))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
 } 

@@ -162,6 +162,56 @@ notification_emails = sqlalchemy.Table(
     sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
 )
 
+babysitters = sqlalchemy.Table(
+    "babysitters",
+    metadata,
+    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
+    sqlalchemy.Column("first_name", sqlalchemy.String(100), nullable=False),
+    sqlalchemy.Column("last_name", sqlalchemy.String(100), nullable=False),
+    sqlalchemy.Column("phone_number", sqlalchemy.String(20), nullable=False),
+    sqlalchemy.Column("rate", sqlalchemy.Numeric(6, 2), nullable=True),
+    sqlalchemy.Column("notes", sqlalchemy.Text, nullable=True),
+    sqlalchemy.Column("created_by_user_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("users.id"), nullable=False),
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
+)
+
+babysitter_families = sqlalchemy.Table(
+    "babysitter_families",
+    metadata,
+    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
+    sqlalchemy.Column("babysitter_id", sqlalchemy.Integer, sqlalchemy.ForeignKey("babysitters.id", ondelete="CASCADE"), nullable=False),
+    sqlalchemy.Column("family_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("families.id", ondelete="CASCADE"), nullable=False),
+    sqlalchemy.Column("added_by_user_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("users.id"), nullable=False),
+    sqlalchemy.Column("added_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
+    sqlalchemy.UniqueConstraint("babysitter_id", "family_id", name="unique_babysitter_family"),
+)
+
+emergency_contacts = sqlalchemy.Table(
+    "emergency_contacts",
+    metadata,
+    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
+    sqlalchemy.Column("family_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("families.id", ondelete="CASCADE"), nullable=False),
+    sqlalchemy.Column("first_name", sqlalchemy.String(100), nullable=False),
+    sqlalchemy.Column("last_name", sqlalchemy.String(100), nullable=False),
+    sqlalchemy.Column("phone_number", sqlalchemy.String(20), nullable=False),
+    sqlalchemy.Column("relationship", sqlalchemy.String(100), nullable=True),
+    sqlalchemy.Column("notes", sqlalchemy.Text, nullable=True),
+    sqlalchemy.Column("created_by_user_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("users.id"), nullable=False),
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
+)
+
+group_chats = sqlalchemy.Table(
+    "group_chats",
+    metadata,
+    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
+    sqlalchemy.Column("family_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("families.id", ondelete="CASCADE"), nullable=False),
+    sqlalchemy.Column("contact_type", sqlalchemy.String(20), nullable=False),
+    sqlalchemy.Column("contact_id", sqlalchemy.Integer, nullable=False),
+    sqlalchemy.Column("group_identifier", sqlalchemy.String(255), unique=True, nullable=True),
+    sqlalchemy.Column("created_by_user_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("users.id"), nullable=False),
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
+)
+
 
 # --- Pydantic Models ---
 class User(BaseModel):
@@ -220,6 +270,65 @@ class FamilyMemberEmail(BaseModel):
     id: str
     first_name: str
     email: str
+
+class Babysitter(BaseModel):
+    id: Optional[int] = None
+    first_name: str
+    last_name: str
+    phone_number: str
+    rate: Optional[float] = None
+    notes: Optional[str] = None
+    created_by_user_id: Optional[str] = None
+    created_at: Optional[str] = None
+
+class BabysitterCreate(BaseModel):
+    first_name: str
+    last_name: str
+    phone_number: str
+    rate: Optional[float] = None
+    notes: Optional[str] = None
+
+class BabysitterResponse(BaseModel):
+    id: int
+    first_name: str
+    last_name: str
+    phone_number: str
+    rate: Optional[float] = None
+    notes: Optional[str] = None
+    created_by_user_id: str
+    created_at: str
+
+class EmergencyContact(BaseModel):
+    id: Optional[int] = None
+    first_name: str
+    last_name: str
+    phone_number: str
+    relationship: Optional[str] = None
+    notes: Optional[str] = None
+    created_by_user_id: Optional[str] = None
+    created_at: Optional[str] = None
+
+class EmergencyContactCreate(BaseModel):
+    first_name: str
+    last_name: str
+    phone_number: str
+    relationship: Optional[str] = None
+    notes: Optional[str] = None
+
+class EmergencyContactResponse(BaseModel):
+    id: int
+    first_name: str
+    last_name: str
+    phone_number: str
+    relationship: Optional[str] = None
+    notes: Optional[str] = None
+    created_by_user_id: str
+    created_at: str
+
+class GroupChatCreate(BaseModel):
+    contact_type: str  # 'babysitter' or 'emergency'
+    contact_id: int
+    group_identifier: Optional[str] = None
 
 # Add a new Pydantic model for the old format
 class LegacyEvent(BaseModel):
@@ -958,6 +1067,300 @@ async def get_family_member_emails(current_user: User = Depends(get_current_user
         )
         for member in family_members
     ]
+
+# ---------------------- Babysitters API ----------------------
+
+@app.get("/api/babysitters", response_model=list[BabysitterResponse])
+async def get_babysitters(current_user: User = Depends(get_current_user)):
+    """
+    Get all babysitters associated with the current user's family.
+    """
+    query = """
+        SELECT b.*, bf.added_at, bf.added_by_user_id
+        FROM babysitters b
+        JOIN babysitter_families bf ON b.id = bf.babysitter_id
+        WHERE bf.family_id = $1
+        ORDER BY b.first_name, b.last_name
+    """
+    babysitter_records = await database.fetch_all(query, current_user.family_id)
+    
+    return [
+        BabysitterResponse(
+            id=record['id'],
+            first_name=record['first_name'],
+            last_name=record['last_name'],
+            phone_number=record['phone_number'],
+            rate=float(record['rate']) if record['rate'] else None,
+            notes=record['notes'],
+            created_by_user_id=str(record['created_by_user_id']),
+            created_at=str(record['created_at'])
+        )
+        for record in babysitter_records
+    ]
+
+@app.post("/api/babysitters", response_model=BabysitterResponse)
+async def create_babysitter(babysitter_data: BabysitterCreate, current_user: User = Depends(get_current_user)):
+    """
+    Create a new babysitter and associate with the current user's family.
+    """
+    try:
+        # Insert babysitter
+        babysitter_insert = babysitters.insert().values(
+            first_name=babysitter_data.first_name,
+            last_name=babysitter_data.last_name,
+            phone_number=babysitter_data.phone_number,
+            rate=babysitter_data.rate,
+            notes=babysitter_data.notes,
+            created_by_user_id=current_user.id
+        )
+        babysitter_id = await database.execute(babysitter_insert)
+        
+        # Associate with family
+        family_insert = babysitter_families.insert().values(
+            babysitter_id=babysitter_id,
+            family_id=current_user.family_id,
+            added_by_user_id=current_user.id
+        )
+        await database.execute(family_insert)
+        
+        # Fetch the created babysitter
+        babysitter_record = await database.fetch_one(babysitters.select().where(babysitters.c.id == babysitter_id))
+        
+        return BabysitterResponse(
+            id=babysitter_record['id'],
+            first_name=babysitter_record['first_name'],
+            last_name=babysitter_record['last_name'],
+            phone_number=babysitter_record['phone_number'],
+            rate=float(babysitter_record['rate']) if babysitter_record['rate'] else None,
+            notes=babysitter_record['notes'],
+            created_by_user_id=str(babysitter_record['created_by_user_id']),
+            created_at=str(babysitter_record['created_at'])
+        )
+    except Exception as e:
+        logger.error(f"Error creating babysitter: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create babysitter")
+
+@app.put("/api/babysitters/{babysitter_id}", response_model=BabysitterResponse)
+async def update_babysitter(babysitter_id: int, babysitter_data: BabysitterCreate, current_user: User = Depends(get_current_user)):
+    """
+    Update a babysitter that belongs to the current user's family.
+    """
+    # Check if babysitter belongs to user's family
+    check_query = """
+        SELECT b.id FROM babysitters b
+        JOIN babysitter_families bf ON b.id = bf.babysitter_id
+        WHERE b.id = $1 AND bf.family_id = $2
+    """
+    existing = await database.fetch_one(check_query, babysitter_id, current_user.family_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Babysitter not found")
+    
+    # Update babysitter
+    update_query = babysitters.update().where(babysitters.c.id == babysitter_id).values(
+        first_name=babysitter_data.first_name,
+        last_name=babysitter_data.last_name,
+        phone_number=babysitter_data.phone_number,
+        rate=babysitter_data.rate,
+        notes=babysitter_data.notes
+    )
+    await database.execute(update_query)
+    
+    # Fetch updated record
+    babysitter_record = await database.fetch_one(babysitters.select().where(babysitters.c.id == babysitter_id))
+    
+    return BabysitterResponse(
+        id=babysitter_record['id'],
+        first_name=babysitter_record['first_name'],
+        last_name=babysitter_record['last_name'],
+        phone_number=babysitter_record['phone_number'],
+        rate=float(babysitter_record['rate']) if babysitter_record['rate'] else None,
+        notes=babysitter_record['notes'],
+        created_by_user_id=str(babysitter_record['created_by_user_id']),
+        created_at=str(babysitter_record['created_at'])
+    )
+
+@app.delete("/api/babysitters/{babysitter_id}")
+async def delete_babysitter(babysitter_id: int, current_user: User = Depends(get_current_user)):
+    """
+    Remove a babysitter from the current user's family (deletes the association, not the babysitter).
+    """
+    # Delete the family association
+    delete_query = babysitter_families.delete().where(
+        (babysitter_families.c.babysitter_id == babysitter_id) &
+        (babysitter_families.c.family_id == current_user.family_id)
+    )
+    result = await database.execute(delete_query)
+    
+    if result == 0:
+        raise HTTPException(status_code=404, detail="Babysitter not found in your family")
+    
+    return {"status": "success", "message": "Babysitter removed from family"}
+
+# ---------------------- Emergency Contacts API ----------------------
+
+@app.get("/api/emergency-contacts", response_model=list[EmergencyContactResponse])
+async def get_emergency_contacts(current_user: User = Depends(get_current_user)):
+    """
+    Get all emergency contacts for the current user's family.
+    """
+    query = emergency_contacts.select().where(
+        emergency_contacts.c.family_id == current_user.family_id
+    ).order_by(emergency_contacts.c.first_name, emergency_contacts.c.last_name)
+    
+    contact_records = await database.fetch_all(query)
+    
+    return [
+        EmergencyContactResponse(
+            id=record['id'],
+            first_name=record['first_name'],
+            last_name=record['last_name'],
+            phone_number=record['phone_number'],
+            relationship=record['relationship'],
+            notes=record['notes'],
+            created_by_user_id=str(record['created_by_user_id']),
+            created_at=str(record['created_at'])
+        )
+        for record in contact_records
+    ]
+
+@app.post("/api/emergency-contacts", response_model=EmergencyContactResponse)
+async def create_emergency_contact(contact_data: EmergencyContactCreate, current_user: User = Depends(get_current_user)):
+    """
+    Create a new emergency contact for the current user's family.
+    """
+    try:
+        insert_query = emergency_contacts.insert().values(
+            family_id=current_user.family_id,
+            first_name=contact_data.first_name,
+            last_name=contact_data.last_name,
+            phone_number=contact_data.phone_number,
+            relationship=contact_data.relationship,
+            notes=contact_data.notes,
+            created_by_user_id=current_user.id
+        )
+        contact_id = await database.execute(insert_query)
+        
+        # Fetch the created contact
+        contact_record = await database.fetch_one(emergency_contacts.select().where(emergency_contacts.c.id == contact_id))
+        
+        return EmergencyContactResponse(
+            id=contact_record['id'],
+            first_name=contact_record['first_name'],
+            last_name=contact_record['last_name'],
+            phone_number=contact_record['phone_number'],
+            relationship=contact_record['relationship'],
+            notes=contact_record['notes'],
+            created_by_user_id=str(contact_record['created_by_user_id']),
+            created_at=str(contact_record['created_at'])
+        )
+    except Exception as e:
+        logger.error(f"Error creating emergency contact: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create emergency contact")
+
+@app.put("/api/emergency-contacts/{contact_id}", response_model=EmergencyContactResponse)
+async def update_emergency_contact(contact_id: int, contact_data: EmergencyContactCreate, current_user: User = Depends(get_current_user)):
+    """
+    Update an emergency contact that belongs to the current user's family.
+    """
+    # Check if contact belongs to user's family
+    existing = await database.fetch_one(
+        emergency_contacts.select().where(
+            (emergency_contacts.c.id == contact_id) &
+            (emergency_contacts.c.family_id == current_user.family_id)
+        )
+    )
+    if not existing:
+        raise HTTPException(status_code=404, detail="Emergency contact not found")
+    
+    # Update contact
+    update_query = emergency_contacts.update().where(emergency_contacts.c.id == contact_id).values(
+        first_name=contact_data.first_name,
+        last_name=contact_data.last_name,
+        phone_number=contact_data.phone_number,
+        relationship=contact_data.relationship,
+        notes=contact_data.notes
+    )
+    await database.execute(update_query)
+    
+    # Fetch updated record
+    contact_record = await database.fetch_one(emergency_contacts.select().where(emergency_contacts.c.id == contact_id))
+    
+    return EmergencyContactResponse(
+        id=contact_record['id'],
+        first_name=contact_record['first_name'],
+        last_name=contact_record['last_name'],
+        phone_number=contact_record['phone_number'],
+        relationship=contact_record['relationship'],
+        notes=contact_record['notes'],
+        created_by_user_id=str(contact_record['created_by_user_id']),
+        created_at=str(contact_record['created_at'])
+    )
+
+@app.delete("/api/emergency-contacts/{contact_id}")
+async def delete_emergency_contact(contact_id: int, current_user: User = Depends(get_current_user)):
+    """
+    Delete an emergency contact that belongs to the current user's family.
+    """
+    delete_query = emergency_contacts.delete().where(
+        (emergency_contacts.c.id == contact_id) &
+        (emergency_contacts.c.family_id == current_user.family_id)
+    )
+    result = await database.execute(delete_query)
+    
+    if result == 0:
+        raise HTTPException(status_code=404, detail="Emergency contact not found")
+    
+    return {"status": "success", "message": "Emergency contact deleted"}
+
+# ---------------------- Group Chat API ----------------------
+
+@app.post("/api/group-chat")
+async def create_or_get_group_chat(chat_data: GroupChatCreate, current_user: User = Depends(get_current_user)):
+    """
+    Create a group chat identifier or return existing one for the given contact.
+    This prevents duplicate group chats for the same contact.
+    """
+    # Check if group chat already exists
+    existing_query = group_chats.select().where(
+        (group_chats.c.family_id == current_user.family_id) &
+        (group_chats.c.contact_type == chat_data.contact_type) &
+        (group_chats.c.contact_id == chat_data.contact_id)
+    )
+    existing_chat = await database.fetch_one(existing_query)
+    
+    if existing_chat:
+        return {
+            "group_identifier": existing_chat['group_identifier'],
+            "exists": True,
+            "created_at": str(existing_chat['created_at'])
+        }
+    
+    # Create new group chat identifier
+    import hashlib
+    import time
+    
+    # Generate unique group identifier
+    unique_string = f"{current_user.family_id}-{chat_data.contact_type}-{chat_data.contact_id}-{time.time()}"
+    group_identifier = hashlib.md5(unique_string.encode()).hexdigest()[:16]
+    
+    try:
+        insert_query = group_chats.insert().values(
+            family_id=current_user.family_id,
+            contact_type=chat_data.contact_type,
+            contact_id=chat_data.contact_id,
+            group_identifier=group_identifier,
+            created_by_user_id=current_user.id
+        )
+        await database.execute(insert_query)
+        
+        return {
+            "group_identifier": group_identifier,
+            "exists": False,
+            "created_at": str(datetime.now())
+        }
+    except Exception as e:
+        logger.error(f"Error creating group chat: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create group chat")
 
 async def send_custody_change_notification(sender_id: uuid.UUID, family_id: uuid.UUID, event_date: date):
     logger.info("Attempting to send custody change notification...")
