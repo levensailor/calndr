@@ -61,12 +61,10 @@ struct FocusedDayView: View {
                             .cornerRadius(10)
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                if !isDateInPast(date) {
-                                    viewModel.toggleCustodian(for: date)
-                                }
+                                viewModel.toggleCustodian(for: date)
                             }
-                            .disabled(isDateInPast(date))
-                            .opacity(isDateInPast(date) ? 0.5 : 1.0)
+                            .disabled(isDateInPast(date) && !UserDefaults.standard.bool(forKey: "allowPastCustodyEditing"))
+                            .opacity((isDateInPast(date) && !UserDefaults.standard.bool(forKey: "allowPastCustodyEditing")) ? 0.5 : 1.0)
                     }
                 }
             }

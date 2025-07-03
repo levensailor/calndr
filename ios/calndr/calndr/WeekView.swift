@@ -57,8 +57,8 @@ struct WeekView: View {
                                     .background(ownerId == viewModel.custodianOne?.id ? Color(hex: "#FFC2D9") : Color(hex: "#96CBFC"))
                                     .cornerRadius(8)
                             }
-                            .disabled(isDateInPast(day))
-                            .opacity(isDateInPast(day) ? 0.5 : 1.0)
+                            .disabled(isDateInPast(day) && !UserDefaults.standard.bool(forKey: "allowPastCustodyEditing"))
+                            .opacity((isDateInPast(day) && !UserDefaults.standard.bool(forKey: "allowPastCustodyEditing")) ? 0.5 : 1.0)
                         }
                     }
                 }

@@ -47,9 +47,7 @@ struct DayView: View {
                 
                 if !ownerName.isEmpty {
                     Button(action: {
-                        if !isDateInPast(viewModel.currentDate) {
-                            viewModel.toggleCustodian(for: viewModel.currentDate)
-                        }
+                        viewModel.toggleCustodian(for: viewModel.currentDate)
                     }) {
                         Text(ownerName.capitalized)
                             .font(.title2.bold())
@@ -59,8 +57,8 @@ struct DayView: View {
                             .background(ownerId == viewModel.custodianOne?.id ? Color(hex: "#FFC2D9") : Color(hex: "#96CBFC"))
                             .cornerRadius(10)
                     }
-                    .disabled(isDateInPast(viewModel.currentDate))
-                    .opacity(isDateInPast(viewModel.currentDate) ? 0.5 : 1.0)
+                    .disabled(isDateInPast(viewModel.currentDate) && !UserDefaults.standard.bool(forKey: "allowPastCustodyEditing"))
+                    .opacity((isDateInPast(viewModel.currentDate) && !UserDefaults.standard.bool(forKey: "allowPastCustodyEditing")) ? 0.5 : 1.0)
                 }
             }
             
