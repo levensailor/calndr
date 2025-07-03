@@ -625,6 +625,32 @@ class APIService {
 
     // MARK: - User Profile
     
+    private func resizeImage(_ image: UIImage, to targetSize: CGSize) -> UIImage? {
+        let size = image.size
+        
+        let widthRatio  = targetSize.width  / size.width
+        let heightRatio = targetSize.height / size.height
+        
+        // Figure out what our orientation is, and use that to form the rectangle
+        var newSize: CGSize
+        if(widthRatio > heightRatio) {
+            newSize = CGSize(width: size.width * heightRatio, height: size.height * heightRatio)
+        } else {
+            newSize = CGSize(width: size.width * widthRatio, height: size.height * widthRatio)
+        }
+        
+        // This is the rect that we've calculated out and this is what is actually used below
+        let rect = CGRect(x: 0, y: 0, width: newSize.width, height: newSize.height)
+        
+        // Actually do the resizing to the rect using the ImageContext stuff
+        UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+        image.draw(in: rect)
+        let newImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        
+        return newImage
+    }
+    
     func fetchUserProfile(completion: @escaping (Result<UserProfile, Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/users/me")
         let request = createAuthenticatedRequest(url: url)
@@ -676,11 +702,23 @@ class APIService {
         var request = createAuthenticatedRequest(url: url)
         request.httpMethod = "POST"
         
-        // Convert image to JPEG data
-        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+        // Resize image to maximum 800x800 pixels to reduce file size
+        let maxSize = CGSize(width: 800, height: 800)
+        guard let resizedImage = resizeImage(image, to: maxSize) else {
+            completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to resize image"])))
+            return
+        }
+        
+        // Convert resized image to JPEG data with higher compression
+        guard let imageData = resizedImage.jpegData(compressionQuality: 0.6) else {
             completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to convert image to data"])))
             return
         }
+        
+        // Log the file size for debugging
+        let fileSize = imageData.count
+        let fileSizeInKB = Double(fileSize) / 1024.0
+        print("Upload image size: \(String(format: "%.2f", fileSizeInKB)) KB")
         
         // Create multipart form data
         let boundary = UUID().uuidString
@@ -711,6 +749,11 @@ class APIService {
             
             if httpResponse.statusCode == 401 {
                 completion(.failure(NSError(domain: "APIService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Unauthorized"])))
+                return
+            }
+            
+            if httpResponse.statusCode == 413 {
+                completion(.failure(NSError(domain: "APIService", code: 413, userInfo: [NSLocalizedDescriptionKey: "Image too large. Please try a smaller image."])))
                 return
             }
             
