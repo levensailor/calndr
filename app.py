@@ -5,7 +5,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import create_engine, inspect
 from dotenv import load_dotenv
 from datetime import date, datetime, timedelta, timezone
-from fastapi import FastAPI, Depends, HTTPException, status, Form, Query, Request
+from fastapi import FastAPI, Depends, HTTPException, status, Form, Query, Request, File, UploadFile
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from pydantic import BaseModel, EmailStr
@@ -25,6 +25,9 @@ import asyncio
 import json
 from sqlalchemy.dialects import postgresql
 import pytz
+import boto3
+from botocore.exceptions import ClientError
+import base64
 
 # --- Environment variables ---
 load_dotenv()
@@ -117,6 +120,7 @@ users = sqlalchemy.Table(
     sqlalchemy.Column("apns_token", sqlalchemy.String, nullable=True),
     sqlalchemy.Column("subscription_type", sqlalchemy.String, nullable=True, default="Free"),
     sqlalchemy.Column("subscription_status", sqlalchemy.String, nullable=True, default="Active"),
+    sqlalchemy.Column("profile_photo_url", sqlalchemy.String, nullable=True),
     sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
 )
 
@@ -198,6 +202,7 @@ class UserProfile(BaseModel):
     phone_number: Optional[str] = None
     subscription_type: Optional[str] = "Free"
     subscription_status: Optional[str] = "Active"
+    profile_photo_url: Optional[str] = None
     created_at: Optional[str] = None
 
 class PasswordUpdate(BaseModel):
@@ -506,27 +511,32 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect username or password")
     return {"access_token": create_access_token(data={"sub": str(user['id'])}), "token_type": "bearer"}
 
-@app.get("/api/users/me", response_model=UserProfile)
+@app.get("/api/user/profile", response_model=UserProfile)
 async def get_user_profile(current_user: User = Depends(get_current_user)):
     """
-    Returns the full profile information for the current authenticated user.
+    Fetch the current user's profile information.
     """
-    query = users.select().where(users.c.id == current_user.id)
-    user_record = await database.fetch_one(query)
-    
-    if not user_record:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    
-    return UserProfile(
-        id=str(user_record['id']),
-        first_name=user_record['first_name'],
-        last_name=user_record['last_name'],
-        email=user_record['email'],
-        phone_number=user_record['phone_number'],
-        subscription_type=user_record['subscription_type'] or "Free",
-        subscription_status=user_record['subscription_status'] or "Active",
-        created_at=str(user_record['created_at']) if user_record['created_at'] else None
-    )
+    try:
+        # Get user data from database
+        user_record = await database.fetch_one(users.select().where(users.c.id == current_user.id))
+        if not user_record:
+            raise HTTPException(status_code=404, detail="User not found")
+            
+        return UserProfile(
+            id=str(user_record['id']),
+            first_name=user_record['first_name'],
+            last_name=user_record['last_name'],
+            email=user_record['email'],
+            phone_number=user_record['phone_number'],
+            subscription_type=user_record['subscription_type'] or "Free",
+            subscription_status=user_record['subscription_status'] or "Active",
+            profile_photo_url=user_record['profile_photo_url'],
+            created_at=str(user_record['created_at']) if user_record['created_at'] else None
+        )
+    except Exception as e:
+        logger.error(f"Error fetching user profile: {e}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.put("/api/users/me/password")
 async def update_user_password(password_update: PasswordUpdate, current_user: User = Depends(get_current_user)):
@@ -550,6 +560,73 @@ async def update_user_password(password_update: PasswordUpdate, current_user: Us
 async def update_device_token(token: str = Form(...), current_user: User = Depends(get_current_user)):
     await database.execute(users.update().where(users.c.id == current_user.id).values(apns_token=token))
     return {"status": "success"}
+
+@app.post("/api/user/profile/photo", response_model=UserProfile)
+async def upload_profile_photo(
+    photo: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Uploads a profile photo for the current user.
+    """
+    try:
+        # Validate file type
+        if not photo.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="File must be an image")
+        
+        # Generate a unique filename
+        file_extension = os.path.splitext(photo.filename)[1]
+        unique_filename = f"{uuid.uuid4()}{file_extension}"
+        object_name = f"profile_photos/{unique_filename}"
+
+        # Upload to S3
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+            region_name=os.getenv("AWS_REGION")
+        )
+
+        # Read file content
+        file_content = await photo.read()
+
+        # Upload to S3
+        s3_client.put_object(
+            Bucket=os.getenv("AWS_S3_BUCKET_NAME"),
+            Key=object_name,
+            Body=file_content,
+            ContentType=photo.content_type,
+            ACL='public-read'  # Make the file publicly accessible
+        )
+
+        # Construct the S3 URL
+        s3_url = f"https://{os.getenv('AWS_S3_BUCKET_NAME')}.s3.{os.getenv('AWS_REGION')}.amazonaws.com/{object_name}"
+
+        # Update user's profile_photo_url in the database
+        await database.execute(
+            users.update().where(users.c.id == current_user.id).values(profile_photo_url=s3_url)
+        )
+
+        # Re-fetch user to get updated profile_photo_url
+        user_record = await database.fetch_one(users.select().where(users.c.id == current_user.id))
+        return UserProfile(
+            id=str(user_record['id']),
+            first_name=user_record['first_name'],
+            last_name=user_record['last_name'],
+            email=user_record['email'],
+            phone_number=user_record['phone_number'],
+            subscription_type=user_record['subscription_type'] or "Free",
+            subscription_status=user_record['subscription_status'] or "Active",
+            profile_photo_url=user_record['profile_photo_url'],
+            created_at=str(user_record['created_at']) if user_record['created_at'] else None
+        )
+    except ClientError as e:
+        logger.error(f"S3 upload error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to upload profile photo: {e.response['Error']['Message']}")
+    except Exception as e:
+        logger.error(f"Error uploading profile photo: {e}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @app.get("/api/events/{year}/{month}")
 async def get_events_by_month(year: int, month: int, current_user: User = Depends(get_current_user)):
