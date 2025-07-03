@@ -125,16 +125,17 @@ echo "--- Enabling automatic certificate renewal ---"
 sudo systemctl start certbot-renew.timer
 sudo systemctl enable certbot-renew.timer
 
-# Create .env file with secrets
-echo "Creating .env file on the server..."
-cat << EOF > /var/www/cal-app/.env
-DB_USER=postgres
-DB_PASSWORD=Money4cookies
-DB_HOST=cal-db-instance.cjy8vmu6rtrc.us-east-1.rds.amazonaws.com
-DB_PORT=5432
-DB_NAME=postgres
-SECRET_KEY=minnie_mouse_club_house_is_awesome
-EOF
+# # Create .env file with secrets
+# echo "Creating .env file on the server..."
+# cat << EOF > /var/www/cal-app/.env
+# DB_USER=postgres
+# DB_PASSWORD=Money4cookies
+# DB_HOST=cal-db-instance.cjy8vmu6rtrc.us-east-1.rds.amazonaws.com
+# DB_PORT=5432
+# DB_NAME=postgres
+# SECRET_KEY=minnie_mouse_club_house_is_awesome
+# APNS_CERT_PATH=/var/www/cal-app/AuthKey_4LZC88RV85.p8
+# EOF
 
 # Make our script executable
 chmod +x /var/www/cal-app/send_weekly_email.py

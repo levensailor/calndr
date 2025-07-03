@@ -38,43 +38,6 @@ struct Theme: Identifiable, Equatable, Hashable {
     var bubbleBackgroundColor: Color {
         return mainBackgroundColor.isLight ? Color.black.opacity(0.1) : Color.white.opacity(0.2)
     }
-    
-    // New computed colors for the updated UI
-    var selectedDayColor: Color {
-        return iconActiveColor.opacity(0.2)
-    }
-    
-    var modalBackgroundColor: Color {
-        return mainBackgroundColor
-    }
-    
-    var custodyTextColor: Color {
-        return textColor
-    }
-    
-    var custodyBackgroundColor: Color {
-        return iconActiveColor
-    }
-    
-    var eventTextColor: Color {
-        return textColor
-    }
-    
-    var eventBackgroundColor: Color {
-        return textColor
-    }
-    
-    var accentColor: Color {
-        return iconActiveColor
-    }
-    
-    var todayNumberColor: Color {
-        return iconActiveColor
-    }
-    
-    var otherMonthTextColor: Color {
-        return otherMonthForegroundColor
-    }
 
     static func == (lhs: Theme, rhs: Theme) -> Bool {
         lhs.id == rhs.id

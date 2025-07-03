@@ -167,11 +167,6 @@ class CalendarViewModel: ObservableObject {
         return events.filter { $0.event_date == dateString }
     }
     
-    func custodyForDate(_ date: Date) -> CustodyResponse? {
-        let dateString = isoDateString(from: date)
-        return custodyRecords.first { $0.event_date == dateString }
-    }
-    
     func schoolEventForDate(_ date: Date) -> String? {
         guard showSchoolEvents else { return nil }
         let dateString = isoDateString(from: date)
@@ -606,64 +601,6 @@ class CalendarViewModel: ObservableObject {
                 case .success:
                     self?.events.removeAll { $0.id == eventToDelete.id }
                     print("Successfully deleted event for \(dateString)")
-                case .failure(let error):
-                    print("Error deleting event: \(error.localizedDescription)")
-                }
-            }
-        }
-    }
-
-    func addEvent(for date: Date, content: String) {
-        let dateString = isoDateString(from: date)
-        let eventDetails: [String: Any] = [
-            "event_date": dateString,
-            "content": content,
-            "position": 0  // Send 0 for backend compatibility
-        ]
-        
-        APIService.shared.saveEvent(eventDetails: eventDetails, existingEvent: nil) { [weak self] result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let savedEvent):
-                    self?.events.append(savedEvent)
-                case .failure(let error):
-                    print("Error adding event: \(error.localizedDescription)")
-                    self?.fetchEvents() // Refresh on error
-                }
-            }
-        }
-    }
-    
-    func updateEvent(_ event: Event, content: String) {
-        let eventDetails: [String: Any] = [
-            "id": event.id,
-            "event_date": event.event_date,
-            "content": content,
-            "position": 0  // Send 0 for backend compatibility
-        ]
-        
-        APIService.shared.saveEvent(eventDetails: eventDetails, existingEvent: event) { [weak self] result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let savedEvent):
-                    if let index = self?.events.firstIndex(where: { $0.id == savedEvent.id }) {
-                        self?.events[index] = savedEvent
-                    }
-                case .failure(let error):
-                    print("Error updating event: \(error.localizedDescription)")
-                    self?.fetchEvents() // Refresh on error
-                }
-            }
-        }
-    }
-    
-    func deleteEvent(_ event: Event) {
-        APIService.shared.deleteEvent(eventId: event.id) { [weak self] result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success:
-                    self?.events.removeAll { $0.id == event.id }
-                    print("Successfully deleted event: \(event.content)")
                 case .failure(let error):
                     print("Error deleting event: \(error.localizedDescription)")
                 }

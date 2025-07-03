@@ -1,85 +1,94 @@
 import SwiftUI
 
 struct DayCellView: View {
-    let date: Date
-    let isCurrentMonth: Bool
     @ObservedObject var viewModel: CalendarViewModel
-    @Binding var selectedDate: Date?
-    let themeManager: ThemeManager
+    @EnvironmentObject var themeManager: ThemeManager
+    @Binding var focusedDate: Date?
+    var namespace: Namespace.ID
     
-    private var eventsForThisDate: [Event] {
-        viewModel.eventsForDate(date)
-    }
-    
-    private var custodyForThisDate: CustodyResponse? {
-        viewModel.custodyForDate(date)
-    }
-    
-    private var isSelected: Bool {
-        selectedDate?.isSameDay(as: date) == true
-    }
-    
-    private var isToday: Bool {
-        Calendar.current.isDateInToday(date)
-    }
+    let date: Date
+    let events: [Event]
+    let schoolEvent: String?
+    let weatherInfo: WeatherInfo?
+    let isCurrentMonth: Bool
+    let isToday: Bool
+    let custodyOwner: String
+    let custodyID: String
+    @State private var showToggleFeedback: Bool = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            // Date number at the top
-            HStack {
-                Text("\(Calendar.current.component(.day, from: date))")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(isCurrentMonth ? 
-                        (isToday ? themeManager.currentTheme.todayNumberColor : themeManager.currentTheme.textColor) : 
-                        themeManager.currentTheme.otherMonthTextColor)
-                
-                Spacer()
+        ZStack(alignment: .topTrailing) {
+            // Weather effects in the background
+            if viewModel.showWeather, let weather = weatherInfo {
+                WeatherFXView(weatherInfo: weather)
             }
-            
-            // All events displayed as multi-line text
-            VStack(alignment: .leading, spacing: 1) {
-                // Show custody if available
-                if let custody = custodyForThisDate {
-                    Text(custody.custodian_name)
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundColor(themeManager.currentTheme.custodyTextColor)
-                        .lineLimit(1)
-                }
-                
-                // Show all regular events
-                ForEach(eventsForThisDate, id: \.id) { event in
-                    if !event.content.isEmpty {
-                        Text(event.content)
-                            .font(.system(size: 9))
-                            .foregroundColor(themeManager.currentTheme.eventTextColor)
-                            .lineLimit(nil) // Allow unlimited lines
-                            .multilineTextAlignment(.leading)
-                    }
-                }
-            }
-            
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(2)
-        .background(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(isSelected ? themeManager.currentTheme.selectedDayColor : Color.clear)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .stroke(isToday ? themeManager.currentTheme.todayBorderColor : Color.clear, lineWidth: 2)
-        )
-        .contentShape(Rectangle())
-        .onTapGesture {
-            selectedDate = date
-        }
-    }
-}
 
-extension Date {
-    func isSameDay(as otherDate: Date) -> Bool {
-        Calendar.current.isDate(self, inSameDayAs: otherDate)
+            DayContentView(
+                viewModel: viewModel,
+                date: date,
+                events: events,
+                schoolEvent: schoolEvent,
+                weatherInfo: weatherInfo,
+                custodyOwner: custodyOwner,
+                custodyID: custodyID,
+                isCurrentMonth: isCurrentMonth,
+                themeManager: themeManager
+            )
+            
+            // Day Number on top
+            Text(dayString(from: date))
+                .font(.caption)
+                .bold()
+                .padding(2)
+                .foregroundColor(isCurrentMonth ? themeManager.currentTheme.dayNumberColor : themeManager.currentTheme.otherMonthForegroundColor)
+        }
+        // Add a tap gesture to the custody area specifically
+        .overlay(
+            VStack {
+                Spacer()
+                Rectangle()
+                    .fill(Color.clear)
+                    .contentShape(Rectangle())
+                    .frame(height: 24) // Match the fixed custody rectangle height
+                    .onLongPressGesture(minimumDuration: 0.25, maximumDistance: .infinity, pressing: { isPressing in
+                        if isPressing {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        }
+                    }, perform: {
+                        viewModel.toggleCustodian(for: date)
+                        withAnimation(.spring()) {
+                            showToggleFeedback = true
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                            withAnimation(.spring()) {
+                                showToggleFeedback = false
+                            }
+                        }
+                    })
+            }
+        )
+        .frame(minWidth: 0, maxWidth: .infinity)
+        .background(isCurrentMonth ? themeManager.currentTheme.mainBackgroundColor : themeManager.currentTheme.otherMonthBackgroundColor)
+        .cornerRadius(0)
+        .overlay(
+            Rectangle()
+            
+                .stroke(showToggleFeedback ? .green : (isToday ? themeManager.currentTheme.todayBorderColor : themeManager.currentTheme.gridLinesColor), lineWidth: showToggleFeedback ? 3 : 2)
+        )
+        .scaleEffect(showToggleFeedback ? 1.05 : 1.0)
+        .matchedGeometryEffect(id: date, in: namespace, isSource: focusedDate != date)
+        .onTapGesture {
+            withAnimation(.interactiveSpring(response: 0.3, dampingFraction: 0.8, blendDuration: 0.8)) {
+                focusedDate = date
+            }
+        }
+        .opacity(focusedDate == date ? 0 : 1)
+    }
+    
+    private func dayString(from date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d"
+        return formatter.string(from: date)
     }
 }
 

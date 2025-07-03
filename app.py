@@ -871,15 +871,45 @@ async def send_custody_change_notification(sender_id: uuid.UUID, family_id: uuid
         sender = await database.fetch_one(users.select().where(users.c.id == sender_id))
         sender_name = sender['first_name'] if sender else "Someone"
         
-        payload = Payload(
-            alert=f"{sender_name} updated the schedule for {event_date.strftime('%B %-d')}.",
-            sound="default",
-            badge=1
+        # Get the new custodian info for the changed date
+        custodian_query = custody.select().where(
+            (custody.c.family_id == family_id) & 
+            (custody.c.date == event_date)
         )
+        custody_record = await database.fetch_one(custodian_query)
+        
+        # Get custodian name
+        custodian_name = "Unknown"
+        if custody_record:
+            custodian = await database.fetch_one(users.select().where(users.c.id == custody_record['custodian_id']))
+            custodian_name = custodian['first_name'] if custodian else "Unknown"
+        
+        # Format the date nicely
+        formatted_date = event_date.strftime('%A, %B %-d')
+        
+        # Create enhanced notification payload
+        payload = Payload(
+            alert={
+                "title": "📅 Schedule Updated",
+                "subtitle": f"{custodian_name} now has custody",
+                "body": f"{sender_name} changed the schedule for {formatted_date}. Tap to manage your schedule."
+            },
+            sound="default",
+            badge=1,
+            category="CUSTODY_CHANGE",  # For custom actions
+            custom={
+                "type": "custody_change",
+                "date": event_date.isoformat(),
+                "custodian": custodian_name,
+                "sender": sender_name,
+                "deep_link": "calndr://schedule"  # Deep link to schedule view
+            }
+        )
+        
         try:
-            logger.info(f"Sending APNs notification to {other_user['first_name']}")
+            logger.info(f"Sending enhanced APNs notification to {other_user['first_name']} about {custodian_name} having custody on {formatted_date}")
             await apns_client.send_notification(other_user['apns_token'], payload, topic=APNS_TOPIC)
-            logger.info("Push notification sent successfully.")
+            logger.info("Enhanced push notification sent successfully.")
         except Exception as e:
             logger.error(f"Failed to send push notification: {e}")
 

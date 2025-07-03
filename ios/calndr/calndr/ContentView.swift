@@ -23,9 +23,10 @@ struct ContentView: View {
 struct MainTabView: View {
     @StateObject var calendarViewModel: CalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
+    @EnvironmentObject var navigationManager: NavigationManager
     
     @State private var currentView: CalendarViewType = .month
-    @State private var selectedDate: Date?
+    @State private var focusedDate: Date?
     @State private var showSettings = false
     @State private var isAnimating = false
     @State private var animationOpacity: Double = 1.0
@@ -60,7 +61,7 @@ struct MainTabView: View {
                 .padding(.horizontal)
 
                 TabView(selection: $currentView) {
-                    CalendarGridView(viewModel: calendarViewModel, selectedDate: $selectedDate, namespace: namespace)
+                    CalendarGridView(viewModel: calendarViewModel, focusedDate: $focusedDate, namespace: namespace)
                         .opacity(currentView == .month ? animationOpacity : 1.0)
                         .scaleEffect(currentView == .month ? animationScale : 1.0)
                         .tag(CalendarViewType.month)
@@ -133,7 +134,9 @@ struct MainTabView: View {
                 .padding(.bottom)
             }
             
-            // Note: FocusedDayView is now handled within CalendarGridView as an overlay
+            if focusedDate != nil {
+                FocusedDayView(viewModel: calendarViewModel, focusedDate: $focusedDate, namespace: namespace)
+            }
         }
         .foregroundColor(themeManager.currentTheme.textColor)
         .onAppear {
@@ -141,6 +144,14 @@ struct MainTabView: View {
         }
         .sheet(isPresented: $showSettings) {
             SettingsView(viewModel: calendarViewModel)
+        }
+        .onReceive(navigationManager.$shouldNavigateToSchedule) { shouldNavigate in
+            if shouldNavigate {
+                currentView = .month // Switch to month view
+                focusedDate = nil   // Ensure no day is focused
+                // Reset the state in the navigation manager
+                navigationManager.shouldNavigateToSchedule = false
+            }
         }
     }
 

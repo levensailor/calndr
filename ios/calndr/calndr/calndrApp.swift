@@ -11,12 +11,25 @@ import SwiftUI
 struct calndrApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var authManager = AuthenticationManager()
+    @StateObject private var navigationManager = NavigationManager()
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(authManager)
+                .environmentObject(navigationManager)
                 .environmentObject(ThemeManager()) // It's okay to create this here if it's stateless
+                .onOpenURL { url in
+                    handleURL(url)
+                }
+        }
+    }
+    
+    private func handleURL(_ url: URL) {
+        guard url.scheme == "calndr" else { return }
+        
+        if url.host == "schedule" {
+            navigationManager.shouldNavigateToSchedule = true
         }
     }
 }

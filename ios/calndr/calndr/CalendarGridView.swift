@@ -3,7 +3,7 @@ import SwiftUI
 struct CalendarGridView: View {
     @ObservedObject var viewModel: CalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
-    @Binding var selectedDate: Date?
+    @Binding var focusedDate: Date?
     var namespace: Namespace.ID
     
     private let daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -16,57 +16,38 @@ struct CalendarGridView: View {
                     Text(day)
                         .frame(maxWidth: .infinity)
                         .font(.headline)
-                        .foregroundColor(themeManager.currentTheme.textColor)
                 }
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, 4)
             .background(themeManager.currentTheme.headerBackgroundColor)
             
-            // Calendar grid with flexible height
+            // Calendar grid with fixed height - cells adapt to fill space
             let numberOfWeeks = calculateNumberOfWeeks()
-            let fixedCalendarHeight: CGFloat = 500
+            let fixedCalendarHeight: CGFloat = 510 // Fixed height for consistent layout
             let rowHeight = fixedCalendarHeight / CGFloat(numberOfWeeks)
             
-            let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
-            LazyVGrid(columns: columns, spacing: 0) {
+            let columns = Array(repeating: GridItem(.flexible(), spacing: 1), count: 7)
+            LazyVGrid(columns: columns, spacing: 1) {
                 ForEach(getDaysForCurrentMonth(), id: \.self) { date in
                     DayCellView(
+                        viewModel: viewModel,
+                        focusedDate: $focusedDate,
+                        namespace: namespace,
                         date: date,
+                        events: viewModel.eventsForDate(date),
+                        schoolEvent: viewModel.schoolEventForDate(date),
+                        weatherInfo: viewModel.weatherInfoForDate(date),
                         isCurrentMonth: isDateInCurrentMonth(date),
-                        viewModel: viewModel,
-                        selectedDate: $selectedDate,
-                        themeManager: themeManager
+                        isToday: isToday(date),
+                        custodyOwner: viewModel.getCustodyInfo(for: date).text,
+                        custodyID: viewModel.getCustodyInfo(for: date).owner
                     )
-                    .frame(height: rowHeight)
+                    .frame(height: rowHeight) // Adaptive height based on number of weeks
                 }
             }
-            .frame(height: fixedCalendarHeight)
+            .frame(height: fixedCalendarHeight) // Fixed calendar height
+            .background(themeManager.currentTheme.gridLinesColor)
         }
-        .overlay(
-            // Show focused day view when a date is selected
-            Group {
-                if let selectedDate = selectedDate {
-                    Rectangle()
-                        .fill(.ultraThinMaterial)
-                        .edgesIgnoringSafeArea(.all)
-                        .onTapGesture {
-                            withAnimation(.interactiveSpring(response: 0.3, dampingFraction: 0.8)) {
-                                self.selectedDate = nil
-                            }
-                        }
-                        .transition(.opacity)
-                    
-                    FocusedDayView(
-                        date: selectedDate,
-                        viewModel: viewModel,
-                        selectedDate: $selectedDate,
-                        themeManager: themeManager,
-                        namespace: namespace
-                    )
-                    .transition(.scale.combined(with: .opacity))
-                }
-            }
-        )
     }
     
     private func getDaysForCurrentMonth() -> [Date] {
@@ -95,6 +76,16 @@ struct CalendarGridView: View {
         }
         return days
     }
+    
+    private func dayString(from date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d"
+        return formatter.string(from: date)
+    }
+
+    private func isToday(_ date: Date) -> Bool {
+        return Calendar.current.isDateInToday(date)
+    }
 
     private func isDateInCurrentMonth(_ date: Date) -> Bool {
         return Calendar.current.isDate(date, equalTo: viewModel.currentDate, toGranularity: .month)
@@ -102,7 +93,15 @@ struct CalendarGridView: View {
     
     private func calculateNumberOfWeeks() -> Int {
         let days = getDaysForCurrentMonth()
-        return days.count / 7
+        return days.count / 7 // Each week has 7 days
+    }
+    
+    private func cellBackgroundColor(for date: Date) -> Color {
+        return isDateInCurrentMonth(date) ? Color.gray.opacity(0.1) : Color.clear
+    }
+    
+    private func cellForegroundColor(for date: Date) -> Color {
+        return isDateInCurrentMonth(date) ? .primary : .secondary
     }
 }
 

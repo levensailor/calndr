@@ -10,7 +10,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         UNUserNotificationCenter.current().delegate = self
         return true
     }
-
+    func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
+        // Example: calndr://schedule
+        if url.scheme == "calndr" {
+            if url.host == "schedule" {
+                // Post a notification or call a function to show the schedule view
+                NotificationCenter.default.post(name: NSNotification.Name("OpenScheduleView"), object: nil)
+                return true
+            }
+        }
+        return false
+    }
     // MARK: - Remote Notifications
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {

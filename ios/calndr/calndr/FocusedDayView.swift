@@ -1,204 +1,143 @@
 import SwiftUI
 
 struct FocusedDayView: View {
-    let date: Date
     @ObservedObject var viewModel: CalendarViewModel
-    @Binding var selectedDate: Date?
-    let themeManager: ThemeManager
+    @EnvironmentObject var themeManager: ThemeManager
+    @Binding var focusedDate: Date?
+    @State private var eventContents: [Int: String] = [:]
+    
     var namespace: Namespace.ID
-    
-    @State private var newEventText = ""
-    @State private var isAddingEvent = false
-    
-    private var eventsForThisDate: [Event] {
-        viewModel.eventsForDate(date)
-    }
-    
-    private var custodyForThisDate: CustodyResponse? {
-        viewModel.custodyForDate(date)
-    }
-    
-    private var dateFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, MMMM d"
-        return formatter
-    }
-    
+
     var body: some View {
-        VStack(spacing: 0) {
-            // Header with date and close button
-            HStack {
-                Text(dateFormatter.string(from: date))
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(themeManager.currentTheme.textColor)
-                
-                Spacer()
-                
-                Button(action: {
-                    withAnimation(.interactiveSpring(response: 0.3, dampingFraction: 0.8)) {
-                        selectedDate = nil
+        if let date = focusedDate {
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .edgesIgnoringSafeArea(.all)
+                .onTapGesture {
+                    saveChanges()
+                    withAnimation(.interactiveSpring(response: 0.3, dampingFraction: 0.8, blendDuration: 0.8)) {
+                        focusedDate = nil
                     }
-                }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
                 }
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 20)
-            .padding(.bottom, 16)
-            
-            // Scrollable content area
-            ScrollView {
-                VStack(spacing: 12) {
-                    // Custody section
-                    if let custody = custodyForThisDate {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Custody")
-                                .font(.headline)
-                                .foregroundColor(themeManager.currentTheme.textColor)
-                            
-                            HStack {
-                                Text(custody.custodian_name.capitalized)
-                                    .font(.body)
-                                    .foregroundColor(themeManager.currentTheme.custodyTextColor)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .fill(themeManager.currentTheme.custodyBackgroundColor.opacity(0.2))
-                                    )
-                                
-                                Spacer()
-                                
-                                Button(action: {
-                                    viewModel.toggleCustodian(for: date)
-                                }) {
-                                    Text("Switch")
-                                        .font(.caption)
-                                        .foregroundColor(themeManager.currentTheme.custodyTextColor)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 6)
-                                                .stroke(themeManager.currentTheme.custodyTextColor, lineWidth: 1)
-                                        )
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        
-                        Divider()
-                            .padding(.horizontal, 20)
+                .transition(.opacity)
+
+            ZStack {
+                if let weatherInfo = viewModel.weatherInfoForDate(date) {
+                    WeatherFXView(weatherInfo: weatherInfo)
+                        .transition(.opacity.animation(.easeInOut))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(dayString(from: date))
+                        .font(.title3.bold())
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .padding(.trailing)
+                    
+                    ForEach(0..<4) { index in
+                        TextField("Event...", text: Binding(
+                            get: { self.eventContents[index, default: ""] },
+                            set: { self.eventContents[index] = $0 }
+                        ))
+                        .font(.body)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(themeManager.currentTheme.textColor.opacity(eventContents[index, default: ""].isEmpty ? 0.1 : 0.3))
+                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .cornerRadius(6)
                     }
                     
-                    // Events section
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Events")
-                                .font(.headline)
-                                .foregroundColor(themeManager.currentTheme.textColor)
-                            
-                            Spacer()
-                            
-                            Button(action: {
-                                isAddingEvent = true
-                            }) {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.title3)
-                                    .foregroundColor(themeManager.currentTheme.accentColor)
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        
-                        // Existing events list
-                        ForEach(eventsForThisDate, id: \.id) { event in
-                            HStack(alignment: .top, spacing: 12) {
-                                Text(event.content)
-                                    .font(.body)
-                                    .foregroundColor(themeManager.currentTheme.eventTextColor)
-                                    .multilineTextAlignment(.leading)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                
-                                Button(action: {
-                                    viewModel.deleteEvent(event)
-                                }) {
-                                    Text("❌")
-                                        .font(.caption)
+                    Spacer()
+                    
+                    let custodyInfo = viewModel.getCustodyInfo(for: date)
+                    let ownerName = custodyInfo.text
+                    let ownerId = custodyInfo.owner
+                    if !ownerName.isEmpty {
+                        Text(ownerName.capitalized)
+                            .font(.headline.bold())
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(ownerId == viewModel.custodianOne?.id ? Color(hex: "#FFC2D9") : Color(hex: "#96CBFC"))
+                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .cornerRadius(10)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                if !isDateInPast(date) {
+                                    viewModel.toggleCustodian(for: date)
                                 }
                             }
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 8)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(themeManager.currentTheme.eventBackgroundColor.opacity(0.1))
-                            )
-                            .padding(.horizontal, 20)
-                        }
-                        
-                        // Add new event field
-                        if isAddingEvent {
-                            VStack(spacing: 8) {
-                                TextField("Enter new event...", text: $newEventText)
-                                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                                    .onSubmit {
-                                        if !newEventText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                                            viewModel.addEvent(for: date, content: newEventText.trimmingCharacters(in: .whitespacesAndNewlines))
-                                            newEventText = ""
-                                            isAddingEvent = false
-                                        }
-                                    }
-                                
-                                HStack {
-                                    Button("Cancel") {
-                                        newEventText = ""
-                                        isAddingEvent = false
-                                    }
-                                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
-                                    
-                                    Spacer()
-                                    
-                                    Button("Add") {
-                                        if !newEventText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                                            viewModel.addEvent(for: date, content: newEventText.trimmingCharacters(in: .whitespacesAndNewlines))
-                                            newEventText = ""
-                                            isAddingEvent = false
-                                        }
-                                    }
-                                    .disabled(newEventText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                                    .foregroundColor(themeManager.currentTheme.accentColor)
-                                }
-                                .font(.caption)
-                            }
-                            .padding(.horizontal, 20)
-                        }
-                        
-                        // Empty state message
-                        if eventsForThisDate.isEmpty && !isAddingEvent {
-                            Text("No events scheduled")
-                                .font(.body)
-                                .foregroundColor(themeManager.currentTheme.textColor.opacity(0.5))
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 20)
-                        }
+                            .disabled(isDateInPast(date))
+                            .opacity(isDateInPast(date) ? 0.5 : 1.0)
                     }
                 }
-                .padding(.bottom, 20)
+            }
+            .padding()
+            .matchedGeometryEffect(id: date, in: namespace)
+            .frame(width: 300, height: 400)
+            .background(themeManager.currentTheme.mainBackgroundColor)
+            .cornerRadius(20)
+            .shadow(radius: 10)
+            .onAppear(perform: loadEvents)
+        }
+    }
+
+    private func isDateInPast(_ date: Date) -> Bool {
+        return date < Calendar.current.startOfDay(for: Date())
+    }
+
+    private func dayString(from date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d"
+        return formatter.string(from: date)
+    }
+
+    private func loadEvents() {
+        guard let date = focusedDate else { return }
+        let dailyEvents = viewModel.eventsForDate(date)
+        for event in dailyEvents {
+            if event.position >= 0 && event.position < 4 {
+                self.eventContents[event.position] = event.content
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(themeManager.currentTheme.modalBackgroundColor)
-        .cornerRadius(20)
-        .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
-        .matchedGeometryEffect(id: date, in: namespace, isSource: true)
-        .onAppear {
-            // Auto-focus on new event field if no events exist
-            if eventsForThisDate.isEmpty && custodyForThisDate == nil {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    isAddingEvent = true
+    }
+
+    private func saveChanges() {
+        guard let date = focusedDate else { return }
+        
+        let dailyEvents = viewModel.eventsForDate(date)
+        let group = DispatchGroup()
+        
+        for position in 0..<4 {
+            let existingEvent = dailyEvents.first { $0.position == position }
+            let newContent = eventContents[position, default: ""].trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if let existingEvent = existingEvent {
+                if existingEvent.content != newContent {
+                    group.enter()
+                    if newContent.isEmpty {
+                        APIService.shared.deleteEvent(eventId: existingEvent.id) { _ in group.leave() }
+                    } else {
+                        let eventDetails: [String: Any] = [
+                            "id": existingEvent.id,
+                            "event_date": viewModel.isoDateString(from: date),
+                            "content": newContent,
+                            "position": position
+                        ]
+                        APIService.shared.saveEvent(eventDetails: eventDetails, existingEvent: existingEvent) { _ in group.leave() }
+                    }
                 }
+            } else if !newContent.isEmpty {
+                group.enter()
+                let eventDetails: [String: Any] = [
+                    "event_date": viewModel.isoDateString(from: date),
+                    "content": newContent,
+                    "position": position
+                ]
+                APIService.shared.saveEvent(eventDetails: eventDetails, existingEvent: nil) { _ in group.leave() }
             }
+        }
+        
+        group.notify(queue: .main) {
+            self.viewModel.fetchEvents()
         }
     }
 } 
