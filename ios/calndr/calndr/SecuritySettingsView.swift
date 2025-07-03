@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct SecuritySettingsView: View {
-    @EnvironmentObject var authManager: AuthenticationManager
     @State private var biometricEnabled = false
     @State private var sessionTimeout = 30.0
 
@@ -48,20 +47,6 @@ struct SecuritySettingsView: View {
                     }
                     Spacer()
                     Toggle("", isOn: .constant(false))
-                }
-            }
-
-            Section(footer: Text("Password changes have been moved to the Account tab")) {
-                Button(action: {
-                    authManager.logout()
-                }) {
-                    HStack {
-                        Image(systemName: "rectangle.portrait.and.arrow.right")
-                            .foregroundColor(.red)
-                        Text("Logout")
-                            .foregroundColor(.red)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
         }

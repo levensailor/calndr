@@ -24,9 +24,9 @@ struct SettingsView: View {
                         Label("Account", systemImage: "person.circle")
                     }
 
-                NavigationView { ThemeSettingsView() }
+                NavigationView { PreferencesView().environmentObject(viewModel) }
                     .tabItem {
-                        Label("Theme", systemImage: "paintbrush")
+                        Label("Preferences", systemImage: "gear")
                     }
 
                 NavigationView { SecuritySettingsView() }
@@ -34,9 +34,9 @@ struct SettingsView: View {
                         Label("Security", systemImage: "lock.shield")
                     }
 
-                NavigationView { AlertsSettingsView().environmentObject(viewModel) }
+                NavigationView { ContactsView().environmentObject(viewModel) }
                     .tabItem {
-                        Label("Alerts", systemImage: "bell")
+                        Label("Contacts", systemImage: "person.2")
                     }
             }
         }

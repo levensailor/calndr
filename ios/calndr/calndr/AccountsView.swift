@@ -2,9 +2,9 @@ import SwiftUI
 import PhotosUI
 
 struct AccountsView: View {
-    @StateObject private var passwordViewModel = PasswordViewModel()
+    @EnvironmentObject var authManager: AuthenticationManager
     @State private var userProfile: UserProfile?
-    @State private var isLoading = true
+    @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var showPasswordModal = false
     @State private var showBillingModal = false
@@ -13,6 +13,7 @@ struct AccountsView: View {
     @State private var showCamera = false
     @State private var profileImage: UIImage?
     @State private var isUploadingPhoto = false
+    @StateObject private var passwordViewModel = PasswordViewModel()
     
     var body: some View {
         VStack(spacing: 20) {
@@ -130,6 +131,20 @@ struct AccountsView: View {
                                 .padding()
                                 .background(Color.gray.opacity(0.2))
                                 .foregroundColor(.primary)
+                                .cornerRadius(10)
+                            }
+                            
+                            Button(action: {
+                                authManager.logout()
+                            }) {
+                                HStack {
+                                    Image(systemName: "arrow.left.circle.fill")
+                                    Text("Logout")
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.red)
+                                .foregroundColor(.white)
                                 .cornerRadius(10)
                             }
                         }

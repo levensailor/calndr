@@ -284,6 +284,19 @@ class CalendarViewModel: ObservableObject {
     }
 
     func toggleCustodian(for date: Date) {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let selectedDate = calendar.startOfDay(for: date)
+        
+        // Check if trying to edit a past date
+        if selectedDate < today {
+            let allowPastEditing = UserDefaults.standard.bool(forKey: "allowPastCustodyEditing")
+            guard allowPastEditing else {
+                print("Editing past custody days is disabled in preferences")
+                return
+            }
+        }
+        
         let (currentOwner, _) = getCustodyInfo(for: date)
         
         // Determine the new custodian and their ID
