@@ -34,7 +34,7 @@ struct DayContentView: View {
             // School Event
             if let schoolEvent = schoolEvent {
                 Text(schoolEvent)
-                    .font(.system(size: 8))
+                    .font(.system(size: 6))
                     .lineLimit(2)
                     .foregroundColor(.white)
                     .padding(.horizontal, 1)
@@ -45,11 +45,11 @@ struct DayContentView: View {
             // Event rows
             ForEach(events.filter { $0.position < 4 && !$0.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.sorted(by: { $0.position < $1.position })) { event in
                 Text(event.content)
-                    .font(.system(size: 8))
-                    .lineLimit(1)
+                    .font(.system(size: 6))
+                    .lineLimit(4)
                     .foregroundColor(themeManager.currentTheme.textColor)
                     .padding(.horizontal, 1)
-                    .background(themeManager.currentTheme.iconActiveColor.opacity(0.8))
+                    .background(themeManager.currentTheme.iconActiveColor.opacity(0.1))
                     .cornerRadius(3)
             }
             

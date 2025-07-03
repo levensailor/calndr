@@ -67,11 +67,16 @@ struct DayView: View {
                 Text("Events")
                     .font(.headline)
                     .foregroundColor(themeManager.currentTheme.textColor)
+                
                 let events = viewModel.eventsForDate(viewModel.currentDate).filter { $0.position < 4 }
-                if events.isEmpty {
+                let schoolEvent = viewModel.schoolEventForDate(viewModel.currentDate)
+                let hasAnyEvents = !events.isEmpty || schoolEvent != nil
+                
+                if !hasAnyEvents {
                     Text("No events scheduled.")
                         .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
                 } else {
+                    // Regular Events
                     ForEach(events) { event in
                         Text(event.content)
                             .padding()
@@ -79,6 +84,25 @@ struct DayView: View {
                             .background(themeManager.currentTheme.iconActiveColor.opacity(0.8))
                             .foregroundColor(themeManager.currentTheme.textColor)
                             .cornerRadius(10)
+                    }
+                    
+                    // School Events (only shown if enabled and exists)
+                    if let schoolEvent = schoolEvent {
+                        Text(schoolEvent)
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.green.opacity(0.8))
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                            .overlay(
+                                HStack {
+                                    Spacer()
+                                    Image(systemName: "graduationcap.fill")
+                                        .font(.caption)
+                                        .foregroundColor(.white.opacity(0.8))
+                                }
+                                .padding(.trailing, 12)
+                            )
                     }
                 }
             }
