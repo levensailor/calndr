@@ -1075,14 +1075,14 @@ async def get_babysitters(current_user: User = Depends(get_current_user)):
     """
     Get all babysitters associated with the current user's family.
     """
-    query = """
-        SELECT b.*, bf.added_at, bf.added_by_user_id
-        FROM babysitters b
-        JOIN babysitter_families bf ON b.id = bf.babysitter_id
-        WHERE bf.family_id = $1
-        ORDER BY b.first_name, b.last_name
-    """
-    babysitter_records = await database.fetch_all(query, current_user.family_id)
+    # Use SQLAlchemy query syntax instead of raw SQL
+    query = babysitters.select().select_from(
+        babysitters.join(babysitter_families, babysitters.c.id == babysitter_families.c.babysitter_id)
+    ).where(
+        babysitter_families.c.family_id == current_user.family_id
+    ).order_by(babysitters.c.first_name, babysitters.c.last_name)
+    
+    babysitter_records = await database.fetch_all(query)
     
     return [
         BabysitterResponse(
@@ -1145,13 +1145,14 @@ async def update_babysitter(babysitter_id: int, babysitter_data: BabysitterCreat
     """
     Update a babysitter that belongs to the current user's family.
     """
-    # Check if babysitter belongs to user's family
-    check_query = """
-        SELECT b.id FROM babysitters b
-        JOIN babysitter_families bf ON b.id = bf.babysitter_id
-        WHERE b.id = $1 AND bf.family_id = $2
-    """
-    existing = await database.fetch_one(check_query, babysitter_id, current_user.family_id)
+    # Check if babysitter belongs to user's family using SQLAlchemy syntax
+    check_query = babysitters.select().select_from(
+        babysitters.join(babysitter_families, babysitters.c.id == babysitter_families.c.babysitter_id)
+    ).where(
+        (babysitters.c.id == babysitter_id) & 
+        (babysitter_families.c.family_id == current_user.family_id)
+    )
+    existing = await database.fetch_one(check_query)
     if not existing:
         raise HTTPException(status_code=404, detail="Babysitter not found")
     
