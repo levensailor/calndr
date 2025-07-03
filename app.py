@@ -14,7 +14,8 @@ import logging
 from logging.handlers import RotatingFileHandler
 from passlib.context import CryptContext
 import uuid
-from apns2.client import APNsClient, TokenCredentials
+from apns2.client import APNsClient
+from apns2.credentials import TokenCredentials
 from apns2.payload import Payload
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
