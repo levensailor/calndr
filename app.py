@@ -14,7 +14,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 from passlib.context import CryptContext
 import uuid
-from apns2.client import APNsClient
+from apns2.client import APNsClient, TokenCredentials
 from apns2.payload import Payload
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -33,16 +33,38 @@ if not os.path.exists(log_directory):
 
 log_file_path = os.path.join(log_directory, "backend.log")
 
+# Configure logging with EST timezone
+import pytz
+
+class ESTFormatter(logging.Formatter):
+    def converter(self, timestamp):
+        dt = datetime.fromtimestamp(timestamp, tz=pytz.timezone('US/Eastern'))
+        return dt.timetuple()
+
+est_formatter = ESTFormatter('%(asctime)s EST - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s')
+
 # Configure logging to a rotating file and to the console
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
-    handlers=[
-        RotatingFileHandler(log_file_path, maxBytes=1*1024*1024, backupCount=3), # 1MB file, 3 backups
-        logging.StreamHandler() # Keep logging to console for journalctl as a fallback
-    ]
-)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+# Remove default handlers
+for handler in logger.handlers[:]:
+    logger.removeHandler(handler)
+
+# Create file handler
+file_handler = RotatingFileHandler(log_file_path, maxBytes=1*1024*1024, backupCount=3)
+file_handler.setFormatter(est_formatter)
+
+# Create console handler  
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(est_formatter)
+
+# Add handlers to logger
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
+
+# Prevent duplicate logs
+logger.propagate = False
 
 # --- Configuration ---
 SECRET_KEY = os.getenv("SECRET_KEY", "a_random_secret_key_for_development")
@@ -54,15 +76,11 @@ APNS_TEAM_ID = os.getenv("APNS_TEAM_ID")
 APNS_TOPIC = os.getenv("APNS_TOPIC")
 
 # --- APNs Client Setup ---
+token_credentials = TokenCredentials(auth_key_path=APNS_CERT_PATH, auth_key_id=APNS_KEY_ID, team_id=APNS_TEAM_ID)
 apns_client = None
 if all([APNS_CERT_PATH, APNS_KEY_ID, APNS_TEAM_ID, APNS_TOPIC]):
     try:
-        apns_client = APNsClient(
-            team_id=APNS_TEAM_ID,
-            auth_key_id=APNS_KEY_ID,
-            auth_key_path=APNS_CERT_PATH,
-            use_sandbox=True
-        )
+        apns_client = APNsClient(credentials=token_credentials,use_sandbox=True)
         logger.info("APNsClient initialized successfully.")
     except Exception as e:
         logger.error(f"Failed to initialize APNsClient: {e}")
