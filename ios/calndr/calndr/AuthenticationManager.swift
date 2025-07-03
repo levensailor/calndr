@@ -3,6 +3,7 @@ import Combine
 
 class AuthenticationManager: ObservableObject {
     @Published var isAuthenticated: Bool = false
+    @Published var isLoading: Bool = true
     @Published var username: String?
     @Published var userID: String?
     
@@ -13,15 +14,19 @@ class AuthenticationManager: ObservableObject {
     }
     
     func checkAuthentication() {
-        if let token = KeychainManager.shared.loadToken(for: "currentUser") {
-            self.isAuthenticated = true
-            let decodedToken = decode(jwtToken: token)
-            self.username = decodedToken["name"] as? String
-            self.userID = decodedToken["sub"] as? String
-        } else {
-            self.isAuthenticated = false
-            self.username = nil
-            self.userID = nil
+        // Show splash screen for at least 2 seconds for better UX
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            if let token = KeychainManager.shared.loadToken(for: "currentUser") {
+                self.isAuthenticated = true
+                let decodedToken = self.decode(jwtToken: token)
+                self.username = decodedToken["name"] as? String
+                self.userID = decodedToken["sub"] as? String
+            } else {
+                self.isAuthenticated = false
+                self.username = nil
+                self.userID = nil
+            }
+            self.isLoading = false
         }
     }
     
@@ -33,6 +38,7 @@ class AuthenticationManager: ObservableObject {
                     let saved = KeychainManager.shared.save(token: token, for: "currentUser")
                     if saved {
                         self?.isAuthenticated = true
+                        self?.isLoading = false // Ensure loading is false after successful login
                         let decodedToken = self?.decode(jwtToken: token) ?? [:]
                         self?.username = decodedToken["name"] as? String
                         self?.userID = decodedToken["sub"] as? String
@@ -40,11 +46,13 @@ class AuthenticationManager: ObservableObject {
                     } else {
                         print("Error: Could not save token to keychain.")
                         self?.isAuthenticated = false
+                        self?.isLoading = false
                         completion(false)
                     }
                 case .failure(let error):
                     print("Login failed: \(error.localizedDescription)")
                     self?.isAuthenticated = false
+                    self?.isLoading = false
                     completion(false)
                 }
             }
@@ -55,6 +63,7 @@ class AuthenticationManager: ObservableObject {
         KeychainManager.shared.deleteToken(for: "currentUser")
         DispatchQueue.main.async {
             self.isAuthenticated = false
+            self.isLoading = false
             self.username = nil
             self.userID = nil
         }

@@ -6,12 +6,19 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if authManager.isAuthenticated {
+            if authManager.isLoading {
+                SplashScreenView()
+                    .transition(.opacity)
+            } else if authManager.isAuthenticated {
                 MainTabView(calendarViewModel: CalendarViewModel(authManager: authManager))
+                    .transition(.opacity)
             } else {
                 LoginView()
+                    .transition(.opacity)
             }
         }
+        .animation(.easeInOut(duration: 0.5), value: authManager.isLoading)
+        .animation(.easeInOut(duration: 0.5), value: authManager.isAuthenticated)
         .environmentObject(themeManager)
         .onAppear {
             authManager.checkAuthentication()
