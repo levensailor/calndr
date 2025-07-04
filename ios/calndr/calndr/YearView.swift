@@ -81,41 +81,7 @@ struct YearView: View {
             }
         }
         .background(themeManager.currentTheme.mainBackgroundColor)
-        .gesture(
-            DragGesture()
-                .onEnded { value in
-                    handleYearSwipeGesture(value)
-                }
-        )
         .onAppear {
-            viewModel.fetchCustodyRecordsForYear()
-        }
-    }
-    
-    private func handleYearSwipeGesture(_ value: DragGesture.Value) {
-        let translation = value.translation
-        let velocity = value.velocity
-        
-        // Check if it's primarily a vertical swipe
-        let isVerticalDominant = abs(translation.height) > abs(translation.width)
-        let swipeThreshold: CGFloat = 50
-        let velocityThreshold: CGFloat = 300
-        
-        if isVerticalDominant && (abs(translation.height) > swipeThreshold || abs(velocity.height) > velocityThreshold) {
-            if translation.height < 0 {
-                // Swipe up - next year
-                changeYear(by: 1)
-            } else {
-                // Swipe down - previous year
-                changeYear(by: -1)
-            }
-        }
-    }
-    
-    private func changeYear(by amount: Int) {
-        let calendar = Calendar.current
-        if let newDate = calendar.date(byAdding: .year, value: amount, to: viewModel.currentDate) {
-            viewModel.currentDate = newDate
             viewModel.fetchCustodyRecordsForYear()
         }
     }

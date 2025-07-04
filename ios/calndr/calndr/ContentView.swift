@@ -256,8 +256,8 @@ struct MainTabView: View {
                 changeDate(by: -1, for: currentView)
             }
             
-        } else if isVerticalDominant && currentView != .month && abs(translation.height) > shortSwipeThreshold {
-            // Vertical swipes in week/day views - use as alternative navigation
+        } else if isVerticalDominant && (currentView == .year || currentView == .week || currentView == .day) && abs(translation.height) > shortSwipeThreshold {
+            // Vertical swipes in year/week/day views - use as navigation within that view type
             if translation.height < 0 {
                 // Swipe up - forward
                 changeDate(by: 1, for: currentView)
@@ -322,7 +322,12 @@ struct MainTabView: View {
         }
         if let newDate = calendar.date(byAdding: dateComponent, value: amount, to: calendarViewModel.currentDate) {
             calendarViewModel.currentDate = newDate
-            calendarViewModel.fetchEvents()
+            // Fetch appropriate data based on current view
+            if viewType == .year {
+                calendarViewModel.fetchCustodyRecordsForYear()
+            } else {
+                calendarViewModel.fetchEvents()
+            }
         }
     }
 
