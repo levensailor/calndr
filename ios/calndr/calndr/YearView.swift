@@ -10,8 +10,7 @@ struct YearView: View {
     ]
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
+        VStack(spacing: 16) {
                 // Custody legend with yearly totals
                 VStack(spacing: 12) {
                     HStack(spacing: 30) {
@@ -79,7 +78,6 @@ struct YearView: View {
                 
                 Spacer(minLength: 50)
             }
-        }
         .background(themeManager.currentTheme.mainBackgroundColor)
         .onAppear {
             viewModel.fetchCustodyRecordsForYear()
