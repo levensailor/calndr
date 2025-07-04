@@ -5,11 +5,12 @@ struct ThreeDayView: View {
     @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Header for days of the week
-            HStack(spacing: 0) {
-                ForEach(getThreeDays(), id: \.self) { day in
-                    VStack(spacing: 4) {
+        VStack(spacing: 1) {
+            // Three day rows
+            ForEach(getThreeDays(), id: \.self) { day in
+                HStack(spacing: 8) {
+                    // Day header
+                    VStack(spacing: 2) {
                         Text(dayOfWeekString(from: day))
                             .font(.headline)
                             .foregroundColor(themeManager.currentTheme.textColor)
@@ -18,81 +19,70 @@ struct ThreeDayView: View {
                             .font(.caption)
                             .foregroundColor(isToday(day) ? themeManager.currentTheme.todayBorderColor : themeManager.currentTheme.textColor.opacity(0.7))
                     }
-                    .frame(maxWidth: .infinity)
-                }
-            }
-            .padding(.vertical, 8)
-            .background(themeManager.currentTheme.headerBackgroundColor)
-            
-            // Three day columns
-            HStack(spacing: 1) {
-                ForEach(getThreeDays(), id: \.self) { day in
-                    VStack(spacing: 4) {
-                        // Custody info
-                        if shouldShowCustodyInfo(for: day) {
-                            Text(getCustodyText(for: day))
-                                .font(.caption)
-                                .bold()
-                                .foregroundColor(.black)
-                                .frame(maxWidth: .infinity, minHeight: 20)
-                                .background(getCustodyBackgroundColor(for: day))
-                                .cornerRadius(4)
-                        } else {
-                            Rectangle()
-                                .fill(Color.clear)
-                                .frame(height: 20)
-                        }
-                        
-                        // Weather info
-                        if shouldShowWeatherInfo(for: day) {
-                            HStack(spacing: 4) {
-                                Image(systemName: getWeatherIconName(for: day))
-                                    .font(.caption2)
-                                Text(getTemperatureText(for: day))
-                                    .font(.caption2)
-                            }
-                            .foregroundColor(themeManager.currentTheme.textColor)
-                            .padding(2)
-                            .background(themeManager.currentTheme.bubbleBackgroundColor)
+                    .frame(width: 60)
+                    
+                    // Custody info
+                    if shouldShowCustodyInfo(for: day) {
+                        Text(getCustodyText(for: day))
+                            .font(.caption)
+                            .bold()
+                            .foregroundColor(.black)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(getCustodyBackgroundColor(for: day))
                             .cornerRadius(4)
-                        }
-                        
-                        // School event
-                        if let schoolEvent = viewModel.schoolEventForDate(day) {
-                            Text(schoolEvent)
+                    }
+                    
+                    // Weather info
+                    if shouldShowWeatherInfo(for: day) {
+                        HStack(spacing: 4) {
+                            Image(systemName: getWeatherIconName(for: day))
                                 .font(.caption2)
-                                .foregroundColor(.white)
-                                .padding(4)
-                                .background(Color.green)
-                                .cornerRadius(4)
+                            Text(getTemperatureText(for: day))
+                                .font(.caption2)
                         }
-                        
-                        // Regular events
+                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .padding(4)
+                        .background(themeManager.currentTheme.bubbleBackgroundColor)
+                        .cornerRadius(4)
+                    }
+                    
+                    // School event
+                    if let schoolEvent = viewModel.schoolEventForDate(day) {
+                        Text(schoolEvent)
+                            .font(.caption2)
+                            .foregroundColor(.white)
+                            .padding(4)
+                            .background(Color.green)
+                            .cornerRadius(4)
+                    }
+                    
+                    // Regular events
+                    HStack(spacing: 4) {
                         ForEach(getFilteredEvents(for: day)) { event in
                             Text(event.content)
                                 .font(.caption2)
                                 .foregroundColor(themeManager.currentTheme.textColor)
-                                .padding(2)
+                                .padding(4)
                                 .background(themeManager.currentTheme.iconActiveColor.opacity(0.1))
                                 .cornerRadius(4)
                         }
-                        
-                        Spacer()
                     }
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 8)
-                    .frame(maxWidth: .infinity)
-                    .background(getDayBackgroundColor(for: day))
-                    .overlay(
-                        Rectangle()
-                            .stroke(getDayBorderColor(for: day), lineWidth: getDayBorderWidth(for: day))
-                    )
+                    
+                    Spacer()
                 }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 16)
+                .background(getDayBackgroundColor(for: day))
+                .overlay(
+                    Rectangle()
+                        .stroke(getDayBorderColor(for: day), lineWidth: getDayBorderWidth(for: day))
+                )
             }
-            .background(themeManager.currentTheme.mainBackgroundColor)
             
             Spacer()
         }
+        .background(themeManager.currentTheme.mainBackgroundColor)
         .onAppear {
             viewModel.fetchEvents()
         }
