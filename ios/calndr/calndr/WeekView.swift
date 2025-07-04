@@ -36,7 +36,7 @@ struct WeekView: View {
                                 .font(.caption)
                                 .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
                         }
-                        .frame(width: 120, alignment: .leading)
+                        .frame(width: 200, alignment: .leading)
                         
                         Spacer()
                         

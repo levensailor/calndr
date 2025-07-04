@@ -279,7 +279,7 @@ class CalendarViewModel: ObservableObject {
     func isoDateString(from date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = TimeZone(secondsFromGMT: 0) // Ensure consistency with backend
+        formatter.timeZone = TimeZone.current // Use user's local timezone
         return formatter.string(from: date)
     }
 
