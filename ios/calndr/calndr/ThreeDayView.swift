@@ -5,82 +5,119 @@ struct ThreeDayView: View {
     @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
-        VStack(spacing: 1) {
-            // Three day rows
-            ForEach(getThreeDays(), id: \.self) { day in
-                HStack(spacing: 8) {
-                    // Day header
-                    VStack(spacing: 2) {
-                        Text(dayOfWeekString(from: day))
-                            .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor)
-                        
-                        Text(dayString(from: day))
-                            .font(.caption)
-                            .foregroundColor(isToday(day) ? themeManager.currentTheme.todayBorderColor : themeManager.currentTheme.textColor.opacity(0.7))
-                    }
-                    .frame(width: 60)
-                    
-                    // Custody info
-                    if shouldShowCustodyInfo(for: day) {
-                        Text(getCustodyText(for: day))
-                            .font(.caption)
-                            .bold()
-                            .foregroundColor(.black)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(getCustodyBackgroundColor(for: day))
-                            .cornerRadius(4)
-                    }
-                    
-                    // Weather info
-                    if shouldShowWeatherInfo(for: day) {
-                        HStack(spacing: 4) {
-                            Image(systemName: getWeatherIconName(for: day))
-                                .font(.caption2)
-                            Text(getTemperatureText(for: day))
-                                .font(.caption2)
-                        }
-                        .foregroundColor(themeManager.currentTheme.textColor)
-                        .padding(4)
-                        .background(themeManager.currentTheme.bubbleBackgroundColor)
-                        .cornerRadius(4)
-                    }
-                    
-                    // School event
-                    if let schoolEvent = viewModel.schoolEventForDate(day) {
-                        Text(schoolEvent)
-                            .font(.caption2)
-                            .foregroundColor(.white)
-                            .padding(4)
-                            .background(Color.green)
-                            .cornerRadius(4)
-                    }
-                    
-                    // Regular events
-                    HStack(spacing: 4) {
-                        ForEach(getFilteredEvents(for: day)) { event in
-                            Text(event.content)
-                                .font(.caption2)
+        GeometryReader { geometry in
+            VStack(spacing: 1) {
+                // Three day sections
+                ForEach(getThreeDays(), id: \.self) { day in
+                    VStack(spacing: 0) {
+                        // Header with day name and custody badge
+                        HStack {
+                            Text(getDayHeaderText(for: day))
+                                .font(.headline)
+                                .fontWeight(.semibold)
                                 .foregroundColor(themeManager.currentTheme.textColor)
-                                .padding(4)
-                                .background(themeManager.currentTheme.iconActiveColor.opacity(0.1))
-                                .cornerRadius(4)
+                            
+                            Spacer()
+                            
+                            // Custody badge
+                            if shouldShowCustodyInfo(for: day) {
+                                Text(getCustodyText(for: day))
+                                    .font(.caption)
+                                    .bold()
+                                    .foregroundColor(.black)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(getCustodyBackgroundColor(for: day))
+                                    .cornerRadius(8)
+                            }
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(themeManager.currentTheme.headerBackgroundColor)
+                        
+                        // Content area for events and info
+                        VStack(alignment: .leading, spacing: 8) {
+                            // Weather info
+                            if shouldShowWeatherInfo(for: day) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: getWeatherIconName(for: day))
+                                        .font(.title3)
+                                        .foregroundColor(themeManager.currentTheme.iconActiveColor)
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Weather")
+                                            .font(.caption)
+                                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                                        Text(getTemperatureText(for: day))
+                                            .font(.subheadline)
+                                            .foregroundColor(themeManager.currentTheme.textColor)
+                                    }
+                                    
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 16)
+                            }
+                            
+                            // School event
+                            if let schoolEvent = viewModel.schoolEventForDate(day) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "graduationcap.fill")
+                                        .font(.title3)
+                                        .foregroundColor(.green)
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("School")
+                                            .font(.caption)
+                                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                                        Text(schoolEvent)
+                                            .font(.subheadline)
+                                            .foregroundColor(themeManager.currentTheme.textColor)
+                                    }
+                                    
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 16)
+                            }
+                            
+                            // Regular events
+                            if !getFilteredEvents(for: day).isEmpty {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "calendar")
+                                            .font(.title3)
+                                            .foregroundColor(themeManager.currentTheme.iconActiveColor)
+                                        
+                                        Text("Events")
+                                            .font(.caption)
+                                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                                        
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, 16)
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        ForEach(getFilteredEvents(for: day)) { event in
+                                            Text(event.content)
+                                                .font(.subheadline)
+                                                .foregroundColor(themeManager.currentTheme.textColor)
+                                                .padding(.horizontal, 16)
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            Spacer()
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(getDayBackgroundColor(for: day))
                     }
-                    
-                    Spacer()
+                    .frame(height: (geometry.size.height - 2) / 3) // Equal height for each section
+                    .overlay(
+                        Rectangle()
+                            .stroke(getDayBorderColor(for: day), lineWidth: getDayBorderWidth(for: day))
+                    )
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 16)
-                .background(getDayBackgroundColor(for: day))
-                .overlay(
-                    Rectangle()
-                        .stroke(getDayBorderColor(for: day), lineWidth: getDayBorderWidth(for: day))
-                )
             }
-            
-            Spacer()
         }
         .background(themeManager.currentTheme.mainBackgroundColor)
         .onAppear {
@@ -169,6 +206,40 @@ struct ThreeDayView: View {
     
     private func getDayBorderWidth(for day: Date) -> CGFloat {
         return isToday(day) ? 2 : 1
+    }
+    
+    private func getDayHeaderText(for day: Date) -> String {
+        let dayFormatter = DateFormatter()
+        dayFormatter.dateFormat = "EEEE" // Full day name
+        
+        let dayNumberFormatter = DateFormatter()
+        dayNumberFormatter.dateFormat = "d"
+        
+        let dayName = dayFormatter.string(from: day)
+        let dayNumber = dayNumberFormatter.string(from: day)
+        
+        // Add ordinal suffix (1st, 2nd, 3rd, etc.)
+        let ordinalSuffix = getOrdinalSuffix(for: Int(dayNumber) ?? 0)
+        
+        return "\(dayName) \(dayNumber)\(ordinalSuffix)"
+    }
+    
+    private func getOrdinalSuffix(for number: Int) -> String {
+        switch number {
+        case 11, 12, 13:
+            return "th"
+        default:
+            switch number % 10 {
+            case 1:
+                return "st"
+            case 2:
+                return "nd"
+            case 3:
+                return "rd"
+            default:
+                return "th"
+            }
+        }
     }
     
     private func weatherIcon(for weather: WeatherInfo) -> String {
