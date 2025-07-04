@@ -301,24 +301,26 @@ class CalendarViewModel: ObservableObject {
 
     private func updateCustodyStreak() {
         let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
+        let now = Date()
         
-        let todaysOwner = getCustodyInfo(for: today).owner
+        // Determine the effective "current day" based on handoff times
+        let currentEffectiveDate = getEffectiveCustodyDate(for: now)
+        let currentOwner = getCustodyInfo(for: currentEffectiveDate).owner
         
         // If no one has custody today, reset streak
-        guard !todaysOwner.isEmpty else {
+        guard !currentOwner.isEmpty else {
             self.custodyStreak = 0
             self.custodianWithStreak = 0
             return
         }
         
-        var streak = 0
-        var dateToCheck = calendar.date(byAdding: .day, value: -1, to: today)!
+        var streak = 1 // Include current day in streak
+        var dateToCheck = calendar.date(byAdding: .day, value: -1, to: currentEffectiveDate)!
 
-        // Count consecutive days (not including today) that the same person had custody
+        // Count consecutive days that the same person had custody
         for _ in 0..<365 { // Check up to a year back
             let dayOwner = getCustodyInfo(for: dateToCheck).owner
-            if dayOwner == todaysOwner {
+            if dayOwner == currentOwner {
                 streak += 1
             } else {
                 break
@@ -329,12 +331,40 @@ class CalendarViewModel: ObservableObject {
         self.custodyStreak = streak
         
         // Determine which custodian has the streak
-        if todaysOwner == self.custodianOne?.id {
+        if currentOwner == self.custodianOne?.id {
             self.custodianWithStreak = 1
-        } else if todaysOwner == self.custodianTwo?.id {
+        } else if currentOwner == self.custodianTwo?.id {
             self.custodianWithStreak = 2
         } else {
             self.custodianWithStreak = 0
+        }
+    }
+    
+    // Helper function to determine effective custody date based on handoff times
+    private func getEffectiveCustodyDate(for date: Date) -> Date {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.hour, .minute, .weekday], from: date)
+        let hour = components.hour ?? 0
+        let minute = components.minute ?? 0
+        let weekday = components.weekday ?? 1 // 1=Sunday, 7=Saturday
+        
+        // Convert time to minutes for easier comparison
+        let currentTimeInMinutes = hour * 60 + minute
+        
+        // Determine handoff time based on day of week
+        let handoffTimeInMinutes: Int
+        if weekday == 1 || weekday == 7 { // Sunday or Saturday (weekends)
+            handoffTimeInMinutes = 12 * 60 // Noon (12:00 PM)
+        } else { // Monday through Friday (weekdays)
+            handoffTimeInMinutes = 17 * 60 // 5:00 PM
+        }
+        
+        // If current time is before handoff time, custody hasn't switched yet
+        // so we should use the previous day for custody calculation
+        if currentTimeInMinutes < handoffTimeInMinutes {
+            return calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: date)) ?? date
+        } else {
+            return calendar.startOfDay(for: date)
         }
     }
     
