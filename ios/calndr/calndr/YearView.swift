@@ -11,9 +11,11 @@ struct YearView: View {
     
     var body: some View {
         VStack(spacing: 16) {
-                // Custody legend with yearly totals
-                VStack(spacing: 12) {
-                    HStack(spacing: 30) {
+                // Custody legend with yearly totals on single line
+                let totals = viewModel.getYearlyCustodyTotals()
+                HStack {
+                    // First parent (far left)
+                    VStack(spacing: 8) {
                         HStack(spacing: 8) {
                             Rectangle()
                                 .fill(Color(hex: "#FFC2D9"))
@@ -24,20 +26,6 @@ struct YearView: View {
                                 .foregroundColor(themeManager.currentTheme.textColor)
                         }
                         
-                        HStack(spacing: 8) {
-                            Rectangle()
-                                .fill(Color(hex: "#96CBFC"))
-                                .frame(width: 20, height: 12)
-                                .cornerRadius(2)
-                            Text(viewModel.custodianTwoName)
-                                .font(.caption)
-                                .foregroundColor(themeManager.currentTheme.textColor)
-                        }
-                    }
-                    
-                    // Yearly custody totals
-                    let totals = viewModel.getYearlyCustodyTotals()
-                    HStack(spacing: 40) {
                         VStack(spacing: 2) {
                             Text("\(totals.custodianOneDays)")
                                 .font(.title2)
@@ -46,6 +34,21 @@ struct YearView: View {
                             Text("days")
                                 .font(.caption2)
                                 .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    // Second parent (far right)
+                    VStack(spacing: 8) {
+                        HStack(spacing: 8) {
+                            Rectangle()
+                                .fill(Color(hex: "#96CBFC"))
+                                .frame(width: 20, height: 12)
+                                .cornerRadius(2)
+                            Text(viewModel.custodianTwoName)
+                                .font(.caption)
+                                .foregroundColor(themeManager.currentTheme.textColor)
                         }
                         
                         VStack(spacing: 2) {
@@ -59,6 +62,7 @@ struct YearView: View {
                         }
                     }
                 }
+                .padding(.horizontal, 20)
                 .padding(.top)
                 .padding(.bottom, 10)
                 
