@@ -71,9 +71,10 @@ struct DayCellView: View {
         .background(isCurrentMonth ? themeManager.currentTheme.mainBackgroundColor : themeManager.currentTheme.otherMonthBackgroundColor)
         .cornerRadius(0)
         .overlay(
-            Rectangle()
-            
-                .stroke(showToggleFeedback ? .green : (isToday ? themeManager.currentTheme.todayBorderColor : themeManager.currentTheme.gridLinesColor), lineWidth: showToggleFeedback ? 3 : 2)
+            // Inset border that doesn't interfere with grid lines
+            RoundedRectangle(cornerRadius: 0)
+                .inset(by: 0.5) // Small inset to ensure consistent placement
+                .stroke(showToggleFeedback ? .green : (isToday ? themeManager.currentTheme.todayBorderColor : Color.clear), lineWidth: showToggleFeedback ? 3 : 2)
         )
         .scaleEffect(showToggleFeedback ? 1.05 : 1.0)
         .matchedGeometryEffect(id: date, in: namespace, isSource: focusedDate != date)
