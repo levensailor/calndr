@@ -49,39 +49,34 @@ struct SplashScreenView: View {
                 // App Logo/Icon
                 VStack(spacing: 20) {
                     ZStack {
-                        // Calendar icon background
+                        // Shadow background
                         RoundedRectangle(cornerRadius: 25)
-                            .fill(Color.white)
-                            .frame(width: 120, height: 120)
-                            .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+                            .fill(Color.black.opacity(0.1))
+                            .frame(width: 125, height: 125)
+                            .blur(radius: 10)
+                            .offset(y: 5)
                         
-                        // Calendar icon
-                        VStack(spacing: 4) {
-                            // Calendar header
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.blue)
-                                .frame(width: 80, height: 15)
-                            
-                            // Calendar grid
-                            VStack(spacing: 3) {
-                                ForEach(0..<3, id: \.self) { row in
-                                    HStack(spacing: 3) {
-                                        ForEach(0..<7, id: \.self) { col in
-                                            if (row == 1 && col == 2) || (row == 2 && col == 4) {
-                                                // Highlight some dates
-                                                Circle()
-                                                    .fill(Color.orange)
-                                                    .frame(width: 8, height: 8)
-                                            } else {
-                                                Circle()
-                                                    .fill(Color.gray.opacity(0.3))
-                                                    .frame(width: 6, height: 6)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            .padding(.top, 5)
+                        // App Icon
+                        if let appIcon = UIImage(named: "AppIcon") {
+                            Image(uiImage: appIcon)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 120, height: 120)
+                                .clipShape(RoundedRectangle(cornerRadius: 25))
+                        } else {
+                            // Fallback to system icon if AppIcon not found
+                            Image(systemName: "calendar")
+                                .font(.system(size: 60, weight: .light))
+                                .foregroundColor(.white)
+                                .frame(width: 120, height: 120)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 25)
+                                        .fill(LinearGradient(
+                                            gradient: Gradient(colors: [Color.blue, Color.purple]),
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ))
+                                )
                         }
                     }
                     .scaleEffect(logoScale)
