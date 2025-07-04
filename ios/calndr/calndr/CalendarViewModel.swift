@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import UIKit
 
 class CalendarViewModel: ObservableObject {
     @Published var events: [Event] = []
@@ -30,6 +31,7 @@ class CalendarViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private let networkMonitor = NetworkMonitor()
     private var authManager: AuthenticationManager
+    private var handoffTimer: Timer?
     var currentUserID: String? {
         authManager.userID
     }
@@ -41,6 +43,13 @@ class CalendarViewModel: ObservableObject {
             .assign(to: \.isOffline, on: self)
             .store(in: &cancellables)
         fetchCustodianNames()
+        setupHandoffTimer()
+        setupAppLifecycleObservers()
+    }
+    
+    deinit {
+        handoffTimer?.invalidate()
+        NotificationCenter.default.removeObserver(self)
     }
 
     func fetchEvents() {
@@ -367,6 +376,61 @@ class CalendarViewModel: ObservableObject {
             return calendar.startOfDay(for: date)
         }
     }
+    
+    // Setup timer to check for handoff times and update streak accordingly
+    private func setupHandoffTimer() {
+        // Check every minute to see if we've crossed a handoff time
+        handoffTimer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { [weak self] _ in
+            self?.checkForHandoffTimeUpdate()
+        }
+    }
+    
+    // Check if we need to update custody streak due to handoff time
+    private func checkForHandoffTimeUpdate() {
+        let calendar = Calendar.current
+        let now = Date()
+        let components = calendar.dateComponents([.hour, .minute, .weekday], from: now)
+        let hour = components.hour ?? 0
+        let minute = components.minute ?? 0
+        let weekday = components.weekday ?? 1
+        
+        // Convert current time to minutes
+        let currentTimeInMinutes = hour * 60 + minute
+        
+        // Determine if we're at a handoff time (within 1 minute)
+        var isHandoffTime = false
+        
+        if weekday == 1 || weekday == 7 { // Weekend
+            // Check if we're at noon (12:00 PM)
+            if currentTimeInMinutes == 12 * 60 {
+                isHandoffTime = true
+            }
+        } else { // Weekday
+            // Check if we're at 5:00 PM
+            if currentTimeInMinutes == 17 * 60 {
+                isHandoffTime = true
+            }
+        }
+        
+                 // If we're at a handoff time, update the custody streak
+         if isHandoffTime {
+             print("Handoff time reached, updating custody streak...")
+             updateCustodyStreak()
+         }
+     }
+     
+     // Setup app lifecycle observers to update streak when app becomes active
+     private func setupAppLifecycleObservers() {
+         NotificationCenter.default.addObserver(
+             forName: UIApplication.didBecomeActiveNotification,
+             object: nil,
+             queue: .main
+         ) { [weak self] _ in
+             // When app becomes active, check if we need to update custody streak
+             // in case handoff time was crossed while app was in background
+             self?.updateCustodyStreak()
+         }
+     }
     
     func isoDateString(from date: Date) -> String {
         let formatter = DateFormatter()
