@@ -246,6 +246,22 @@ struct MainTabView: View {
             }
             // Short vertical swipes in month view are ignored
             
+        } else if isVerticalDominant && currentView == .year {
+            // Vertical swipes in year view - check if it's a long swipe for year navigation
+            let isLongVerticalSwipe = distance > longSwipeThreshold || velocity > velocityThreshold
+            
+            if isLongVerticalSwipe {
+                // Long vertical swipe - change years with animation
+                if translation.height < 0 {
+                    // Swipe up - next year
+                    changeYearWithAnimation(by: 1)
+                } else {
+                    // Swipe down - previous year
+                    changeYearWithAnimation(by: -1)
+                }
+            }
+            // Short vertical swipes in year view are ignored
+            
         } else if isHorizontalDominant && abs(translation.width) > shortSwipeThreshold {
             // Horizontal swipes - standard navigation for all views
             if translation.width < 0 {
@@ -256,8 +272,8 @@ struct MainTabView: View {
                 changeDate(by: -1, for: currentView)
             }
             
-        } else if isVerticalDominant && (currentView == .year || currentView == .week || currentView == .day) && abs(translation.height) > shortSwipeThreshold {
-            // Vertical swipes in year/week/day views - use as navigation within that view type
+        } else if isVerticalDominant && (currentView == .week || currentView == .day) && abs(translation.height) > shortSwipeThreshold {
+            // Vertical swipes in week/day views - use as navigation within that view type
             if translation.height < 0 {
                 // Swipe up - forward
                 changeDate(by: 1, for: currentView)
@@ -285,6 +301,45 @@ struct MainTabView: View {
             if let newDate = calendar.date(byAdding: .month, value: amount, to: calendarViewModel.currentDate) {
                 calendarViewModel.currentDate = newDate
                 calendarViewModel.fetchEvents()
+            }
+        }
+        
+        // Fly-in animation - fade in header and slide down
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            // Start header from below
+            headerOffset = 20.0
+            headerOpacity = 0.0
+            
+            withAnimation(.easeInOut(duration: 0.01)) {
+                animationOpacity = 1.0
+                animationScale = 1.0
+                headerOpacity = 1.0
+                headerOffset = 0.0
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isAnimating = false
+            }
+        }
+    }
+    
+    private func changeYearWithAnimation(by amount: Int) {
+        isAnimating = true
+        
+        // Fly-out animation - fade out header and slide up
+        withAnimation(.easeInOut(duration: 0.01)) {
+            animationOpacity = 1.0
+            animationScale = 1.0
+            headerOpacity = 0.0
+            headerOffset = -20.0
+        }
+        
+        // Change the year at the midpoint of the animation
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            let calendar = Calendar.current
+            if let newDate = calendar.date(byAdding: .year, value: amount, to: calendarViewModel.currentDate) {
+                calendarViewModel.currentDate = newDate
+                calendarViewModel.fetchCustodyRecordsForYear()
             }
         }
         
