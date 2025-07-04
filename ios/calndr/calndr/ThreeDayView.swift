@@ -36,7 +36,7 @@ struct ThreeDayView: View {
                                 .bold()
                                 .foregroundColor(.black)
                                 .frame(maxWidth: .infinity, minHeight: 20)
-                                .background(custodyInfo.owner == viewModel.custodianOne?.id ? Color(hex: "#FFC2D9") : Color(hex: "#96CBFC"))
+                                .background(getCustodyBackgroundColor(for: custodyInfo.owner))
                                 .cornerRadius(4)
                         } else {
                             Rectangle()
@@ -69,7 +69,7 @@ struct ThreeDayView: View {
                         }
                         
                         // Regular events
-                        ForEach(viewModel.eventsForDate(day).filter { $0.position < 4 && !$0.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.sorted(by: { $0.position < $1.position })) { event in
+                        ForEach(getFilteredEvents(for: day)) { event in
                             Text(event.content)
                                 .font(.caption2)
                                 .foregroundColor(themeManager.currentTheme.textColor)
@@ -126,6 +126,22 @@ struct ThreeDayView: View {
     
     private func isToday(_ date: Date) -> Bool {
         return Calendar.current.isDateInToday(date)
+    }
+    
+    private func getFilteredEvents(for day: Date) -> [Event] {
+        let dayEvents = viewModel.eventsForDate(day)
+        let filteredEvents = dayEvents.filter { event in
+            event.position < 4 && !event.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        return filteredEvents.sorted { $0.position < $1.position }
+    }
+    
+    private func getCustodyBackgroundColor(for ownerID: String) -> Color {
+        if ownerID == viewModel.custodianOne?.id {
+            return Color(hex: "#FFC2D9")
+        } else {
+            return Color(hex: "#96CBFC")
+        }
     }
     
     private func weatherIcon(for condition: String) -> String {
