@@ -105,13 +105,13 @@ struct MainTabView: View {
                 HStack(spacing: 30) {
                     // Custodian One
                     VStack(spacing: 4) {
-                        Text(calendarViewModel.custodianOneName + " " + String(format: "%.0f", calendarViewModel.custodianOnePercentage) + "%")
+                        Text(getCustodianOneDisplayText())
                             .font(.headline)
                         
                         // Green dots for custodian one's streak
                         HStack(spacing: 2) {
                             if calendarViewModel.custodianWithStreak == 1 && calendarViewModel.custodyStreak > 0 {
-                                ForEach(0..<min(calendarViewModel.custodyStreak, 10), id: \.self) { _ in
+                                ForEach(0..<getStreakDotCount(), id: \.self) { _ in
                                     Circle()
                                         .fill(Color.green)
                                         .frame(width: 6, height: 6)
@@ -128,13 +128,13 @@ struct MainTabView: View {
                     
                     // Custodian Two
                     VStack(spacing: 4) {
-                        Text(calendarViewModel.custodianTwoName + " " + String(format: "%.0f", calendarViewModel.custodianTwoPercentage) + "%")
+                        Text(getCustodianTwoDisplayText())
                             .font(.headline)
                         
                         // Green dots for custodian two's streak
                         HStack(spacing: 2) {
                             if calendarViewModel.custodianWithStreak == 2 && calendarViewModel.custodyStreak > 0 {
-                                ForEach(0..<min(calendarViewModel.custodyStreak, 10), id: \.self) { _ in
+                                ForEach(0..<getStreakDotCount(), id: \.self) { _ in
                                     Circle()
                                         .fill(Color.green)
                                         .frame(width: 6, height: 6)
@@ -157,9 +157,9 @@ struct MainTabView: View {
                         Button(action: {
                             calendarViewModel.toggleWeather()
                         }) {
-                            Image(systemName: calendarViewModel.showWeather ? "cloud.sun.fill" : "cloud.sun")
+                            Image(systemName: getWeatherIconName())
                                 .font(.title2)
-                                .foregroundColor(calendarViewModel.showWeather ? themeManager.currentTheme.iconActiveColor : themeManager.currentTheme.iconColor)
+                                .foregroundColor(getWeatherIconColor())
                         }
                         Text("Weather")
                             .font(.caption2)
@@ -170,9 +170,9 @@ struct MainTabView: View {
                         Button(action: {
                             calendarViewModel.toggleSchoolEvents()
                         }) {
-                            Image(systemName: calendarViewModel.showSchoolEvents ? "graduationcap.fill" : "graduationcap")
+                            Image(systemName: getSchoolIconName())
                                 .font(.title2)
-                                .foregroundColor(calendarViewModel.showSchoolEvents ? themeManager.currentTheme.iconActiveColor : themeManager.currentTheme.iconColor)
+                                .foregroundColor(getSchoolIconColor())
                         }
                         Text("School")
                             .font(.caption2)
@@ -478,6 +478,35 @@ struct MainTabView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMMM yyyy"
         return formatter.string(from: date)
+    }
+    
+    // Helper methods to simplify complex expressions
+    private func getCustodianOneDisplayText() -> String {
+        return calendarViewModel.custodianOneName + " " + String(format: "%.0f", calendarViewModel.custodianOnePercentage) + "%"
+    }
+    
+    private func getCustodianTwoDisplayText() -> String {
+        return calendarViewModel.custodianTwoName + " " + String(format: "%.0f", calendarViewModel.custodianTwoPercentage) + "%"
+    }
+    
+    private func getStreakDotCount() -> Int {
+        return min(calendarViewModel.custodyStreak, 10)
+    }
+    
+    private func getWeatherIconName() -> String {
+        return calendarViewModel.showWeather ? "cloud.sun.fill" : "cloud.sun"
+    }
+    
+    private func getWeatherIconColor() -> Color {
+        return calendarViewModel.showWeather ? themeManager.currentTheme.iconActiveColor : themeManager.currentTheme.iconColor
+    }
+    
+    private func getSchoolIconName() -> String {
+        return calendarViewModel.showSchoolEvents ? "graduationcap.fill" : "graduationcap"
+    }
+    
+    private func getSchoolIconColor() -> Color {
+        return calendarViewModel.showSchoolEvents ? themeManager.currentTheme.iconActiveColor : themeManager.currentTheme.iconColor
     }
 }
 
