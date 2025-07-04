@@ -143,6 +143,36 @@ class CalendarViewModel: ObservableObject {
         }
     }
     
+    func getYearlyCustodyTotals() -> (custodianOneDays: Int, custodianTwoDays: Int) {
+        let calendar = Calendar.current
+        let year = calendar.component(.year, from: currentDate)
+        
+        var custodianOneDays = 0
+        var custodianTwoDays = 0
+        
+        // Calculate for the entire year
+        for month in 1...12 {
+            guard let monthDate = calendar.date(from: DateComponents(year: year, month: month)),
+                  let monthInterval = calendar.dateInterval(of: .month, for: monthDate),
+                  let daysInMonth = calendar.dateComponents([.day], from: monthInterval.start, to: monthInterval.end).day else {
+                continue
+            }
+            
+            for dayOffset in 0..<daysInMonth {
+                if let date = calendar.date(byAdding: .day, value: dayOffset, to: monthInterval.start) {
+                    let owner = getCustodyInfo(for: date).owner
+                    if owner == self.custodianOne?.id {
+                        custodianOneDays += 1
+                    } else if owner == self.custodianTwo?.id {
+                        custodianTwoDays += 1
+                    }
+                }
+            }
+        }
+        
+        return (custodianOneDays, custodianTwoDays)
+    }
+
     func fetchCustodianNames() {
         APIService.shared.fetchCustodianNames { [weak self] result in
             DispatchQueue.main.async {

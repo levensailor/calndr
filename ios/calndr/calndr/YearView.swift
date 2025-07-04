@@ -12,35 +12,55 @@ struct YearView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                // Year title
-                Text("\(Calendar.current.component(.year, from: viewModel.currentDate))")
-                    .font(.largeTitle)
-                    .bold()
-                    .foregroundColor(themeManager.currentTheme.textColor)
-                    .padding(.top)
-                
-                // Custody legend
-                HStack(spacing: 30) {
-                    HStack(spacing: 8) {
-                        Rectangle()
-                            .fill(Color(hex: "#FFC2D9"))
-                            .frame(width: 20, height: 12)
-                            .cornerRadius(2)
-                        Text(viewModel.custodianOneName)
-                            .font(.caption)
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                // Custody legend with yearly totals
+                VStack(spacing: 12) {
+                    HStack(spacing: 30) {
+                        HStack(spacing: 8) {
+                            Rectangle()
+                                .fill(Color(hex: "#FFC2D9"))
+                                .frame(width: 20, height: 12)
+                                .cornerRadius(2)
+                            Text(viewModel.custodianOneName)
+                                .font(.caption)
+                                .foregroundColor(themeManager.currentTheme.textColor)
+                        }
+                        
+                        HStack(spacing: 8) {
+                            Rectangle()
+                                .fill(Color(hex: "#96CBFC"))
+                                .frame(width: 20, height: 12)
+                                .cornerRadius(2)
+                            Text(viewModel.custodianTwoName)
+                                .font(.caption)
+                                .foregroundColor(themeManager.currentTheme.textColor)
+                        }
                     }
                     
-                    HStack(spacing: 8) {
-                        Rectangle()
-                            .fill(Color(hex: "#96CBFC"))
-                            .frame(width: 20, height: 12)
-                            .cornerRadius(2)
-                        Text(viewModel.custodianTwoName)
-                            .font(.caption)
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                    // Yearly custody totals
+                    let totals = viewModel.getYearlyCustodyTotals()
+                    HStack(spacing: 40) {
+                        VStack(spacing: 2) {
+                            Text("\(totals.custodianOneDays)")
+                                .font(.title2)
+                                .bold()
+                                .foregroundColor(themeManager.currentTheme.textColor)
+                            Text("days")
+                                .font(.caption2)
+                                .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                        }
+                        
+                        VStack(spacing: 2) {
+                            Text("\(totals.custodianTwoDays)")
+                                .font(.title2)
+                                .bold()
+                                .foregroundColor(themeManager.currentTheme.textColor)
+                            Text("days")
+                                .font(.caption2)
+                                .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                        }
                     }
                 }
+                .padding(.top)
                 .padding(.bottom, 10)
                 
                 // 4x3 grid of months
@@ -61,7 +81,41 @@ struct YearView: View {
             }
         }
         .background(themeManager.currentTheme.mainBackgroundColor)
+        .gesture(
+            DragGesture()
+                .onEnded { value in
+                    handleYearSwipeGesture(value)
+                }
+        )
         .onAppear {
+            viewModel.fetchCustodyRecordsForYear()
+        }
+    }
+    
+    private func handleYearSwipeGesture(_ value: DragGesture.Value) {
+        let translation = value.translation
+        let velocity = value.velocity
+        
+        // Check if it's primarily a vertical swipe
+        let isVerticalDominant = abs(translation.height) > abs(translation.width)
+        let swipeThreshold: CGFloat = 50
+        let velocityThreshold: CGFloat = 300
+        
+        if isVerticalDominant && (abs(translation.height) > swipeThreshold || abs(velocity.y) > velocityThreshold) {
+            if translation.height < 0 {
+                // Swipe up - next year
+                changeYear(by: 1)
+            } else {
+                // Swipe down - previous year
+                changeYear(by: -1)
+            }
+        }
+    }
+    
+    private func changeYear(by amount: Int) {
+        let calendar = Calendar.current
+        if let newDate = calendar.date(byAdding: .year, value: amount, to: viewModel.currentDate) {
+            viewModel.currentDate = newDate
             viewModel.fetchCustodyRecordsForYear()
         }
     }
