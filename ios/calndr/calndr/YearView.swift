@@ -101,7 +101,7 @@ struct YearView: View {
         let swipeThreshold: CGFloat = 50
         let velocityThreshold: CGFloat = 300
         
-        if isVerticalDominant && (abs(translation.height) > swipeThreshold || abs(velocity.y) > velocityThreshold) {
+        if isVerticalDominant && (abs(translation.height) > swipeThreshold || abs(velocity.height) > velocityThreshold) {
             if translation.height < 0 {
                 // Swipe up - next year
                 changeYear(by: 1)
