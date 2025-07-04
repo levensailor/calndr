@@ -111,6 +111,38 @@ class CalendarViewModel: ObservableObject {
         }
     }
     
+    func fetchCustodyRecordsForYear() {
+        guard !isOffline else {
+            print("Offline, not fetching custody records for year.")
+            return
+        }
+        
+        let calendar = Calendar.current
+        let year = calendar.component(.year, from: currentDate)
+        
+        var allCustodyRecords: [CustodyResponse] = []
+        let dispatchGroup = DispatchGroup()
+        
+        // Fetch custody data for all 12 months
+        for month in 1...12 {
+            dispatchGroup.enter()
+            APIService.shared.fetchCustodyRecords(year: year, month: month) { result in
+                switch result {
+                case .success(let custodyRecords):
+                    allCustodyRecords.append(contentsOf: custodyRecords)
+                case .failure(let error):
+                    print("Error fetching custody records for \(year)-\(month): \(error.localizedDescription)")
+                }
+                dispatchGroup.leave()
+            }
+        }
+        
+        dispatchGroup.notify(queue: .main) { [weak self] in
+            self?.custodyRecords = allCustodyRecords.sorted { $0.event_date < $1.event_date }
+            print("Successfully fetched \(allCustodyRecords.count) custody records for year \(year).")
+        }
+    }
+    
     func fetchCustodianNames() {
         APIService.shared.fetchCustodianNames { [weak self] result in
             DispatchQueue.main.async {

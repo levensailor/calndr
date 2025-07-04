@@ -57,7 +57,7 @@ struct SplashScreenView: View {
                             .offset(y: 5)
                         
                         // App Icon
-                        if let appIcon = UIImage(named: "AppIcon") {
+                        if let appIcon = UIImage(named: "Splash") {
                             Image(uiImage: appIcon)
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)

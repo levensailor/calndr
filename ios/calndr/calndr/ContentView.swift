@@ -68,6 +68,9 @@ struct MainTabView: View {
                 .padding(.horizontal)
 
                 TabView(selection: $currentView) {
+                    YearView(viewModel: calendarViewModel)
+                        .tag(CalendarViewType.year)
+                        
                     CalendarGridView(viewModel: calendarViewModel, focusedDate: $focusedDate, namespace: namespace)
                         .opacity(currentView == .month ? animationOpacity : 1.0)
                         .scaleEffect(currentView == .month ? animationScale : 1.0)
@@ -80,6 +83,14 @@ struct MainTabView: View {
                         .tag(CalendarViewType.day)
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                .onChange(of: currentView) { newView in
+                    // Fetch appropriate data when view changes
+                    if newView == .year {
+                        calendarViewModel.fetchCustodyRecordsForYear()
+                    } else {
+                        calendarViewModel.fetchEvents()
+                    }
+                }
                 .gesture(
                     DragGesture()
                         .onEnded { value in
@@ -300,6 +311,8 @@ struct MainTabView: View {
         let calendar = Calendar.current
         var dateComponent: Calendar.Component
         switch viewType {
+        case .year:
+            dateComponent = .year
         case .month:
             dateComponent = .month
         case .week:
@@ -316,6 +329,8 @@ struct MainTabView: View {
     private func headerTitle(for viewType: CalendarViewType) -> String {
         let formatter = DateFormatter()
         switch viewType {
+        case .year:
+            formatter.dateFormat = "yyyy"
         case .month:
             formatter.dateFormat = "MMMM yyyy"
         case .week:
