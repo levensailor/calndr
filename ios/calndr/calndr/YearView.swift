@@ -17,24 +17,26 @@ struct YearView: View {
                     // First parent (far left)
                     VStack(spacing: 8) {
                         HStack(spacing: 8) {
-                            Rectangle()
-                                .fill(Color(hex: "#FFC2D9"))
-                                .frame(width: 20, height: 12)
-                                .cornerRadius(2)
-                            Text(viewModel.custodianOneName)
-                                .font(.caption)
-                                .foregroundColor(themeManager.currentTheme.textColor)
+                            VStack(spacing: 2) {
+                                Text(viewModel.custodianOneName)
+                                    .font(.caption)
+                                    .foregroundColor(themeManager.currentTheme.textColor)
+                                Rectangle()
+                                    .fill(Color(hex: "#FFC2D9"))
+                                    .frame(width: 50, height: 12)
+                                    .cornerRadius(2)
+                            }
+                            VStack(spacing: 2) {
+                                Text("\(totals.custodianOneDays)")
+                                    .font(.title2)
+                                    .bold()
+                                    .foregroundColor(themeManager.currentTheme.textColor)
+                                Text("days")
+                                    .font(.caption2)
+                                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                            }
                         }
                         
-                        VStack(spacing: 2) {
-                            Text("\(totals.custodianOneDays)")
-                                .font(.title2)
-                                .bold()
-                                .foregroundColor(themeManager.currentTheme.textColor)
-                            Text("days")
-                                .font(.caption2)
-                                .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
-                        }
                     }
                     
                     Spacer()
@@ -42,24 +44,34 @@ struct YearView: View {
                     // Second parent (far right)
                     VStack(spacing: 8) {
                         HStack(spacing: 8) {
-                            Rectangle()
-                                .fill(Color(hex: "#96CBFC"))
-                                .frame(width: 20, height: 12)
-                                .cornerRadius(2)
-                            Text(viewModel.custodianTwoName)
-                                .font(.caption)
-                                .foregroundColor(themeManager.currentTheme.textColor)
+                            VStack(spacing: 2) {
+                                Text(viewModel.custodianTwoName)
+                                    .font(.caption)
+                                    .foregroundColor(themeManager.currentTheme.textColor)
+                                Rectangle()
+                                    .fill(Color(hex: "#96CBFC"))
+                                    .frame(width: 50, height: 12)
+                                    .cornerRadius(2)
+                            }
+                            VStack(spacing: 2) {
+                                Text("\(totals.custodianTwoDays)")
+                                    .font(.title2)
+                                    .bold()
+                                    .foregroundColor(themeManager.currentTheme.textColor)
+                                Text("days")
+                                    .font(.caption2)
+                                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                            }
+                            // Text("\(totals.custodianTwoDays)")
+                            //     .font(.title2)
+                            //     .bold()
+                            //     .foregroundColor(themeManager.currentTheme.textColor)
+                            // Text("days")
+                            //     .font(.caption2)
+                            //     .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
                         }
                         
-                        VStack(spacing: 2) {
-                            Text("\(totals.custodianTwoDays)")
-                                .font(.title2)
-                                .bold()
-                                .foregroundColor(themeManager.currentTheme.textColor)
-                            Text("days")
-                                .font(.caption2)
-                                .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
-                        }
+
                     }
                 }
                 .padding(.horizontal, 20)

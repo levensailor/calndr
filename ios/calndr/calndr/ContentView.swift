@@ -79,6 +79,9 @@ struct MainTabView: View {
                     WeekView(viewModel: calendarViewModel)
                         .tag(CalendarViewType.week)
 
+                    ThreeDayView(viewModel: calendarViewModel)
+                        .tag(CalendarViewType.threeDay)
+
                     DayView(viewModel: calendarViewModel)
                         .tag(CalendarViewType.day)
                 }
@@ -272,8 +275,8 @@ struct MainTabView: View {
                 changeDate(by: -1, for: currentView)
             }
             
-        } else if isVerticalDominant && (currentView == .week || currentView == .day) && abs(translation.height) > shortSwipeThreshold {
-            // Vertical swipes in week/day views - use as navigation within that view type
+        } else if isVerticalDominant && (currentView == .week || currentView == .threeDay || currentView == .day) && abs(translation.height) > shortSwipeThreshold {
+            // Vertical swipes in week/threeDay/day views - use as navigation within that view type
             if translation.height < 0 {
                 // Swipe up - forward
                 changeDate(by: 1, for: currentView)
@@ -365,6 +368,8 @@ struct MainTabView: View {
     private func changeDate(by amount: Int, for viewType: CalendarViewType) {
         let calendar = Calendar.current
         var dateComponent: Calendar.Component
+        var adjustedAmount = amount
+        
         switch viewType {
         case .year:
             dateComponent = .year
@@ -372,10 +377,14 @@ struct MainTabView: View {
             dateComponent = .month
         case .week:
             dateComponent = .weekOfYear
+        case .threeDay:
+            dateComponent = .day
+            adjustedAmount = amount * 3 // Move by 3 days at a time for 3-day view
         case .day:
             dateComponent = .day
         }
-        if let newDate = calendar.date(byAdding: dateComponent, value: amount, to: calendarViewModel.currentDate) {
+        
+        if let newDate = calendar.date(byAdding: dateComponent, value: adjustedAmount, to: calendarViewModel.currentDate) {
             calendarViewModel.currentDate = newDate
             // Fetch appropriate data based on current view
             if viewType == .year {
@@ -395,6 +404,8 @@ struct MainTabView: View {
             formatter.dateFormat = "MMMM yyyy"
         case .week:
             return weekRangeString(from: calendarViewModel.currentDate)
+        case .threeDay:
+            return threeDayRangeString(from: calendarViewModel.currentDate)
         case .day:
             formatter.dateFormat = "EEEE, MMMM d"
         }
@@ -429,6 +440,35 @@ struct MainTabView: View {
         } else {
             // Different months: "July 30 - Aug 5"
             let endMonth = monthFormatter.string(from: endOfWeek)
+            let shortEndMonth = String(endMonth.prefix(3)) // First 3 letters
+            return "\(startMonth) \(startDay) - \(shortEndMonth) \(endDay)"
+        }
+    }
+    
+    private func threeDayRangeString(from date: Date) -> String {
+        let calendar = Calendar.current
+        
+        // Get the three day range (previous day, current day, next day)
+        let startOfThreeDays = calendar.date(byAdding: .day, value: -1, to: date) ?? date
+        let endOfThreeDays = calendar.date(byAdding: .day, value: 1, to: date) ?? date
+        
+        let monthFormatter = DateFormatter()
+        monthFormatter.dateFormat = "MMMM"
+        
+        let dayFormatter = DateFormatter()
+        dayFormatter.dateFormat = "d"
+        
+        let startMonth = monthFormatter.string(from: startOfThreeDays)
+        let startDay = dayFormatter.string(from: startOfThreeDays)
+        let endDay = dayFormatter.string(from: endOfThreeDays)
+        
+        // Check if the three days span multiple months
+        if calendar.isDate(startOfThreeDays, equalTo: endOfThreeDays, toGranularity: .month) {
+            // Same month: "July 14 - 16"
+            return "\(startMonth) \(startDay) - \(endDay)"
+        } else {
+            // Different months: "July 30 - Aug 1"
+            let endMonth = monthFormatter.string(from: endOfThreeDays)
             let shortEndMonth = String(endMonth.prefix(3)) // First 3 letters
             return "\(startMonth) \(startDay) - \(shortEndMonth) \(endDay)"
         }
