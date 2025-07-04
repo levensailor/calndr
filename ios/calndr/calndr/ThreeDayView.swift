@@ -29,14 +29,13 @@ struct ThreeDayView: View {
                 ForEach(getThreeDays(), id: \.self) { day in
                     VStack(spacing: 4) {
                         // Custody info
-                        let custodyInfo = viewModel.getCustodyInfo(for: day)
-                        if !custodyInfo.text.isEmpty {
-                            Text(custodyInfo.text.capitalized)
+                        if shouldShowCustodyInfo(for: day) {
+                            Text(getCustodyText(for: day))
                                 .font(.caption)
                                 .bold()
                                 .foregroundColor(.black)
                                 .frame(maxWidth: .infinity, minHeight: 20)
-                                .background(getCustodyBackgroundColor(for: custodyInfo.owner))
+                                .background(getCustodyBackgroundColor(for: day))
                                 .cornerRadius(4)
                         } else {
                             Rectangle()
@@ -45,11 +44,11 @@ struct ThreeDayView: View {
                         }
                         
                         // Weather info
-                        if viewModel.showWeather, let weather = viewModel.weatherInfoForDate(day) {
+                        if shouldShowWeatherInfo(for: day) {
                             HStack(spacing: 4) {
-                                Image(systemName: weatherIcon(for: weather.condition))
+                                Image(systemName: getWeatherIconName(for: day))
                                     .font(.caption2)
-                                Text("\(Int(weather.temperature.rounded()))°")
+                                Text(getTemperatureText(for: day))
                                     .font(.caption2)
                             }
                             .foregroundColor(themeManager.currentTheme.textColor)
@@ -83,10 +82,10 @@ struct ThreeDayView: View {
                     .padding(.horizontal, 4)
                     .padding(.vertical, 8)
                     .frame(maxWidth: .infinity)
-                    .background(isToday(day) ? themeManager.currentTheme.todayBorderColor.opacity(0.1) : Color.clear)
+                    .background(getDayBackgroundColor(for: day))
                     .overlay(
                         Rectangle()
-                            .stroke(isToday(day) ? themeManager.currentTheme.todayBorderColor : themeManager.currentTheme.gridLinesColor, lineWidth: isToday(day) ? 2 : 1)
+                            .stroke(getDayBorderColor(for: day), lineWidth: getDayBorderWidth(for: day))
                     )
                 }
             }
@@ -136,12 +135,50 @@ struct ThreeDayView: View {
         return filteredEvents.sorted { $0.position < $1.position }
     }
     
-    private func getCustodyBackgroundColor(for ownerID: String) -> Color {
-        if ownerID == viewModel.custodianOne?.id {
+    private func getCustodyBackgroundColor(for day: Date) -> Color {
+        let custodyInfo = viewModel.getCustodyInfo(for: day)
+        if custodyInfo.owner == viewModel.custodianOne?.id {
             return Color(hex: "#FFC2D9")
         } else {
             return Color(hex: "#96CBFC")
         }
+    }
+    
+    // Helper methods to simplify complex expressions
+    private func shouldShowCustodyInfo(for day: Date) -> Bool {
+        let custodyInfo = viewModel.getCustodyInfo(for: day)
+        return !custodyInfo.text.isEmpty
+    }
+    
+    private func getCustodyText(for day: Date) -> String {
+        let custodyInfo = viewModel.getCustodyInfo(for: day)
+        return custodyInfo.text.capitalized
+    }
+    
+    private func shouldShowWeatherInfo(for day: Date) -> Bool {
+        return viewModel.showWeather && viewModel.weatherInfoForDate(day) != nil
+    }
+    
+    private func getWeatherIconName(for day: Date) -> String {
+        guard let weather = viewModel.weatherInfoForDate(day) else { return "cloud.fill" }
+        return weatherIcon(for: weather.condition)
+    }
+    
+    private func getTemperatureText(for day: Date) -> String {
+        guard let weather = viewModel.weatherInfoForDate(day) else { return "0°" }
+        return "\(Int(weather.temperature.rounded()))°"
+    }
+    
+    private func getDayBackgroundColor(for day: Date) -> Color {
+        return isToday(day) ? themeManager.currentTheme.todayBorderColor.opacity(0.1) : Color.clear
+    }
+    
+    private func getDayBorderColor(for day: Date) -> Color {
+        return isToday(day) ? themeManager.currentTheme.todayBorderColor : themeManager.currentTheme.gridLinesColor
+    }
+    
+    private func getDayBorderWidth(for day: Date) -> CGFloat {
+        return isToday(day) ? 2 : 1
     }
     
     private func weatherIcon(for condition: String) -> String {
