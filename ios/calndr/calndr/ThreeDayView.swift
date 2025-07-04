@@ -161,7 +161,7 @@ struct ThreeDayView: View {
     
     private func getWeatherIconName(for day: Date) -> String {
         guard let weather = viewModel.weatherInfoForDate(day) else { return "cloud.fill" }
-        return weatherIcon(for: weather.condition)
+        return weatherIcon(for: weather)
     }
     
     private func getTemperatureText(for day: Date) -> String {
@@ -181,20 +181,23 @@ struct ThreeDayView: View {
         return isToday(day) ? 2 : 1
     }
     
-    private func weatherIcon(for condition: String) -> String {
-        switch condition.lowercased() {
-        case "clear", "sunny":
-            return "sun.max.fill"
-        case "clouds", "cloudy", "overcast":
-            return "cloud.fill"
-        case "rain", "drizzle":
+    private func weatherIcon(for weather: WeatherInfo) -> String {
+        // Determine weather condition based on precipitation and cloud cover
+        if weather.precipitation > 60 {
+            // High precipitation - likely rain
             return "cloud.rain.fill"
-        case "snow":
-            return "cloud.snow.fill"
-        case "thunderstorm":
-            return "cloud.bolt.fill"
-        default:
+        } else if weather.precipitation > 20 {
+            // Some precipitation - drizzle or light rain
+            return "cloud.drizzle.fill"
+        } else if weather.cloudCover > 80 {
+            // Very cloudy
             return "cloud.fill"
+        } else if weather.cloudCover > 40 {
+            // Partly cloudy
+            return "cloud.sun.fill"
+        } else {
+            // Clear/sunny
+            return "sun.max.fill"
         }
     }
 }
