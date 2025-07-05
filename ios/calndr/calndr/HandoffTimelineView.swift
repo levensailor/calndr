@@ -398,71 +398,61 @@ struct HandoffTimelineView: View {
         
         print("Moving handoff from \(originalDateString) to \(newDateString) at \(newTime.display)")
         
-        // Get or create handoff data based on custody information
-        let originalHandoffData = getHandoffDataForDate(originalDate)
-        
-        // If moving to a different date, we need to handle this differently
-        if originalDateString != newDateString {
-            // Try to find existing handoff record to delete it
-            if let existingHandoff = viewModel.handoffTimes.first(where: { $0.date == originalDateString }) {
-                // Delete existing handoff record
-                APIService.shared.deleteHandoffTime(handoffId: "\(existingHandoff.id)") { deleteResult in
-                    DispatchQueue.main.async {
-                        switch deleteResult {
-                        case .success(_):
-                            print("✅ Deleted old handoff from \(originalDateString)")
-                            
-                            // Create new handoff on the new date
-                            let newHandoffData = self.getHandoffDataForDate(newDate)
-                            APIService.shared.saveHandoffTime(
-                                date: newDateString, 
-                                time: timeString,
-                                location: originalHandoffData.location,
-                                fromParentId: newHandoffData.fromParentId,
-                                toParentId: newHandoffData.toParentId
-                            ) { saveResult in
-                                DispatchQueue.main.async {
-                                    self.handleSaveResult(saveResult, newDate: newDate, newTime: newTime, originalDate: originalDate)
-                                }
-                            }
-                            
-                        case .failure(let error):
-                            print("❌ Failed to delete old handoff: \(error.localizedDescription)")
+        // Find existing handoff record to update
+        if let existingHandoff = viewModel.handoffTimes.first(where: { $0.date == originalDateString }) {
+            // Get handoff data for the new date to determine parent IDs
+            let newHandoffData = getHandoffDataForDate(newDate)
+            
+            // Update the existing handoff record with new date/time/location
+            APIService.shared.updateHandoffTime(
+                handoffId: existingHandoff.id,
+                date: newDateString,
+                time: timeString,
+                location: existingHandoff.location ?? "daycare",
+                fromParentId: newHandoffData.fromParentId,
+                toParentId: newHandoffData.toParentId
+            ) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let updatedHandoff):
+                        print("✅ Updated handoff from \(originalDateString) to \(newDateString) at \(newTime.display)")
+                        
+                        // Update custody for the move if different date
+                        if originalDateString != newDateString {
+                            self.updateCustodyForHandoffMove(originalDate: originalDate, newDate: newDate)
                         }
-                    }
-                }
-            } else {
-                // No existing handoff to delete, just create new one
-                let newHandoffData = getHandoffDataForDate(newDate)
-                APIService.shared.saveHandoffTime(
-                    date: newDateString, 
-                    time: timeString,
-                    location: originalHandoffData.location,
-                    fromParentId: newHandoffData.fromParentId,
-                    toParentId: newHandoffData.toParentId
-                ) { saveResult in
-                    DispatchQueue.main.async {
-                        self.handleSaveResult(saveResult, newDate: newDate, newTime: newTime, originalDate: originalDate)
+                        
+                        // Refresh handoff times to update the view
+                        self.viewModel.fetchHandoffTimes()
+                        
+                    case .failure(let error):
+                        print("❌ Failed to update handoff time: \(error.localizedDescription)")
                     }
                 }
             }
         } else {
-            // Same date, just update the time
+            // No existing handoff found, create a new one
+            let handoffData = getHandoffDataForDate(newDate)
             APIService.shared.saveHandoffTime(
-                date: newDateString, 
+                date: newDateString,
                 time: timeString,
-                location: originalHandoffData.location,
-                fromParentId: originalHandoffData.fromParentId,
-                toParentId: originalHandoffData.toParentId
+                location: handoffData.location,
+                fromParentId: handoffData.fromParentId,
+                toParentId: handoffData.toParentId
             ) { result in
                 DispatchQueue.main.async {
                     switch result {
                     case .success(_):
-                        print("✅ Updated handoff time to \(newTime.display) on \(newDateString)")
+                        print("✅ Created new handoff on \(newDateString) at \(newTime.display)")
+                        
+                        // Update custody for the new handoff
+                        self.updateCustodyForHandoffMove(originalDate: originalDate, newDate: newDate)
+                        
+                        // Refresh handoff times to update the view
                         self.viewModel.fetchHandoffTimes()
                         
                     case .failure(let error):
-                        print("❌ Failed to save handoff time: \(error.localizedDescription)")
+                        print("❌ Failed to create handoff time: \(error.localizedDescription)")
                     }
                 }
             }

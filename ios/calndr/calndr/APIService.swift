@@ -1225,6 +1225,65 @@ class APIService {
         }.resume()
     }
     
+    func updateHandoffTime(handoffId: Int, date: String, time: String, location: String? = "daycare", fromParentId: String? = nil, toParentId: String? = nil, completion: @escaping (Result<HandoffTimeResponse, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/handoff-times/\(handoffId)")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "PUT"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let handoffTimeRequest = HandoffTimeCreate(
+            date: date, 
+            time: time, 
+            location: location, 
+            from_parent_id: fromParentId, 
+            to_parent_id: toParentId
+        )
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(handoffTimeRequest)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server - not HTTP"])))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received on handoff time update"])))
+                return
+            }
+
+            // Log the raw data for debugging
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("--- Raw JSON for updateHandoffTime (Status: \(httpResponse.statusCode)) ---")
+                print(jsonString)
+                print("--------------------------------------------------------------------")
+            }
+
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            do {
+                let updatedHandoffTime = try JSONDecoder().decode(HandoffTimeResponse.self, from: data)
+                completion(.success(updatedHandoffTime))
+            } catch {
+                print("Failed to decode updated handoff time: \(error)")
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
     func deleteHandoffTime(handoffId: String, completion: @escaping (Result<Void, Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/handoff-times/\(handoffId)")
         var request = createAuthenticatedRequest(url: url)

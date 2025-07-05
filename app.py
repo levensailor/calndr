@@ -1659,6 +1659,82 @@ async def save_handoff_time(handoff_data: HandoffTimeCreate, current_user: User 
         logger.error(f"Error saving handoff time: {e}")
         raise HTTPException(status_code=500, detail="Failed to save handoff time")
 
+@app.put("/api/handoff-times/{handoff_id}", response_model=HandoffTimeResponse)
+async def update_handoff_time(handoff_id: int, handoff_data: HandoffTimeCreate, current_user: User = Depends(get_current_user)):
+    """Update an existing handoff time."""
+    try:
+        # Verify the handoff time belongs to the user's family
+        verify_query = handoff_times.select().where(
+            (handoff_times.c.id == handoff_id) &
+            (handoff_times.c.family_id == current_user.family_id)
+        )
+        existing_handoff = await database.fetch_one(verify_query)
+        
+        if not existing_handoff:
+            raise HTTPException(status_code=404, detail="Handoff time not found")
+        
+        # Update the handoff time record
+        update_query = handoff_times.update().where(
+            handoff_times.c.id == handoff_id
+        ).values(
+            date=handoff_data.date,
+            time=handoff_data.time,
+            location=handoff_data.location,
+            from_parent_id=handoff_data.from_parent_id,
+            to_parent_id=handoff_data.to_parent_id,
+            updated_at=datetime.now(timezone.utc)
+        )
+        await database.execute(update_query)
+        
+        # Return the updated handoff time with parent names
+        from_parent = users.alias('fp')
+        to_parent = users.alias('tp')
+        
+        select_query = sqlalchemy.select(
+            handoff_times.c.id,
+            handoff_times.c.date,
+            handoff_times.c.time,
+            handoff_times.c.location,
+            handoff_times.c.from_parent_id,
+            handoff_times.c.to_parent_id,
+            from_parent.c.first_name.label('from_parent_name'),
+            to_parent.c.first_name.label('to_parent_name'),
+            handoff_times.c.family_id,
+            handoff_times.c.created_at,
+            handoff_times.c.updated_at
+        ).select_from(
+            handoff_times
+            .outerjoin(from_parent, handoff_times.c.from_parent_id == from_parent.c.id)
+            .outerjoin(to_parent, handoff_times.c.to_parent_id == to_parent.c.id)
+        ).where(handoff_times.c.id == handoff_id)
+        
+        updated_handoff = await database.fetch_one(select_query)
+        
+        if not updated_handoff:
+            raise HTTPException(status_code=404, detail="Updated handoff time not found")
+        
+        logger.info(f"Updated handoff time {handoff_id} for {handoff_data.date} to {handoff_data.time} at {handoff_data.location} for user {current_user.id}")
+        
+        return HandoffTimeResponse(
+            id=updated_handoff['id'],
+            date=updated_handoff['date'],
+            time=updated_handoff['time'],
+            location=updated_handoff['location'],
+            from_parent_id=str(updated_handoff['from_parent_id']) if updated_handoff['from_parent_id'] else None,
+            to_parent_id=str(updated_handoff['to_parent_id']) if updated_handoff['to_parent_id'] else None,
+            from_parent_name=updated_handoff['from_parent_name'],
+            to_parent_name=updated_handoff['to_parent_name'],
+            family_id=str(updated_handoff['family_id']),
+            created_at=str(updated_handoff['created_at']),
+            updated_at=str(updated_handoff['updated_at'])
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating handoff time: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update handoff time")
+
 @app.delete("/api/handoff-times/{handoff_id}")
 async def delete_handoff_time(handoff_id: int, current_user: User = Depends(get_current_user)):
     """Delete a handoff time."""
