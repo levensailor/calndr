@@ -574,176 +574,43 @@ struct HandoffTimelineView: View {
     }
     
     private func updateCustodyForHandoffMove(originalDate: Date, newDate: Date) {
-        // When moving a handoff, we need to implement proper transition logic
-        // The handoff represents the point where custody changes from one parent to another
+        // Simplified handoff move logic:
+        // 1. Source day (originalDate): Keep its current custody (no changes)
+        // 2. Target day (newDate): Gets the "to parent" custody (handoff destination)
         
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let originalDateString = dateFormatter.string(from: originalDate)
         let newDateString = dateFormatter.string(from: newDate)
         
-        print("Updating custody transition logic for handoff move from \(originalDateString) to \(newDateString)")
+        print("Moving handoff from \(originalDateString) to \(newDateString)")
+        print("Source day (\(originalDateString)): Keeping current custody")
+        print("Target day (\(newDateString)): Setting to 'to parent' custody")
         
         // Get the handoff data to understand the transition
         let handoffData = getHandoffDataForDate(newDate)
         
-        guard let fromParentId = handoffData.fromParentId,
-              let toParentId = handoffData.toParentId else {
-            print("Error: Could not determine parent IDs for handoff transition")
+        guard let toParentId = handoffData.toParentId else {
+            print("Error: Could not determine 'to parent' ID for handoff transition")
             return
         }
         
-        // Determine the direction of the move and implement transition logic
-        let calendar = Calendar.current
-        let daysBetween = calendar.dateComponents([.day], from: originalDate, to: newDate).day ?? 0
-        
-        if daysBetween == 0 {
-            // Same day, just time change - no custody update needed
-            print("Same day handoff move, no custody changes needed")
-            return
-        }
-        
-        // For multi-day moves, we need to update custody based on handoff transition logic
-        updateCustodyTransition(
-            originalDate: originalDate,
-            newDate: newDate,
-            fromParentId: fromParentId,
-            toParentId: toParentId,
-            daysBetween: daysBetween
-        )
-    }
-    
-    private func updateCustodyTransition(
-        originalDate: Date,
-        newDate: Date,
-        fromParentId: String,
-        toParentId: String,
-        daysBetween: Int
-    ) {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        let calendar = Calendar.current
-        
-        // The handoff date gets custody for the "to" parent (after handoff)
-        let newDateString = dateFormatter.string(from: newDate)
-        
-        // Update custody for the new handoff date - this is where custody transitions TO the "to" parent
+        // Only update the target day with the "to parent" custody
         APIService.shared.updateCustodyRecord(for: newDateString, custodianId: toParentId) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let custodyResponse):
-                    print("✅ Updated custody for new handoff date \(newDateString): \(custodyResponse)")
+                    print("✅ Updated target day custody \(newDateString): \(custodyResponse)")
                     self.updateLocalCustodyRecord(custodyResponse)
                     
                 case .failure(let error):
-                    print("❌ Failed to update custody for new handoff date: \(error.localizedDescription)")
+                    print("❌ Failed to update target day custody: \(error.localizedDescription)")
                 }
             }
         }
         
-        // Handle the custody pattern around the handoff based on direction
-        if daysBetween > 0 {
-            // Moving handoff to the right (later) - update custody for days between
-            self.updateCustodyForRightwardMove(
-                originalDate: originalDate,
-                newDate: newDate,
-                fromParentId: fromParentId,
-                toParentId: toParentId
-            )
-        } else {
-            // Moving handoff to the left (earlier) - update custody for days between  
-            self.updateCustodyForLeftwardMove(
-                originalDate: originalDate,
-                newDate: newDate,
-                fromParentId: fromParentId,
-                toParentId: toParentId
-            )
-        }
-    }
-    
-    private func updateCustodyForRightwardMove(
-        originalDate: Date,
-        newDate: Date,
-        fromParentId: String,
-        toParentId: String
-    ) {
-        let calendar = Calendar.current
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        
-        // When moving handoff right, the "from" parent keeps custody until the new handoff date
-        // Update custody for days between original and new date to be "from" parent
-        
-        var currentDate = calendar.date(byAdding: .day, value: 1, to: originalDate)!
-        
-        while currentDate < newDate {
-            let dateString = dateFormatter.string(from: currentDate)
-            
-            APIService.shared.updateCustodyRecord(for: dateString, custodianId: fromParentId) { result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success(let custodyResponse):
-                        print("✅ Updated custody (rightward) for \(dateString): \(custodyResponse)")
-                        self.updateLocalCustodyRecord(custodyResponse)
-                        
-                    case .failure(let error):
-                        print("❌ Failed to update custody (rightward) for \(dateString): \(error.localizedDescription)")
-                    }
-                }
-            }
-            
-            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
-        }
-    }
-    
-    private func updateCustodyForLeftwardMove(
-        originalDate: Date,
-        newDate: Date,
-        fromParentId: String,
-        toParentId: String
-    ) {
-        let calendar = Calendar.current
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        
-        // When moving handoff left, the transition happens earlier
-        // Days between new date and original date get the "from" parent until the new handoff
-        
-        var currentDate = calendar.date(byAdding: .day, value: 1, to: newDate)!
-        
-        while currentDate < originalDate {
-            let dateString = dateFormatter.string(from: currentDate)
-            
-            APIService.shared.updateCustodyRecord(for: dateString, custodianId: fromParentId) { result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success(let custodyResponse):
-                        print("✅ Updated custody (leftward) for \(dateString): \(custodyResponse)")
-                        self.updateLocalCustodyRecord(custodyResponse)
-                        
-                    case .failure(let error):
-                        print("❌ Failed to update custody (leftward) for \(dateString): \(error.localizedDescription)")
-                    }
-                }
-            }
-            
-            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
-        }
-        
-        // Also update the original date to revert to the previous pattern
-        let originalDateString = dateFormatter.string(from: originalDate)
-        APIService.shared.updateCustodyRecord(for: originalDateString, custodianId: fromParentId) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let custodyResponse):
-                    print("✅ Reverted custody for original date \(originalDateString): \(custodyResponse)")
-                    self.updateLocalCustodyRecord(custodyResponse)
-                    
-                case .failure(let error):
-                    print("❌ Failed to revert custody for original date: \(error.localizedDescription)")
-                }
-            }
-        }
+        // Source day (originalDate) is intentionally left unchanged
+        print("✅ Source day \(originalDateString) custody preserved")
     }
     
     private func updateLocalCustodyRecord(_ custodyResponse: CustodyResponse) {
