@@ -13,6 +13,7 @@ struct HandoffTimelineView: View {
     @State private var showTimeOverlay = false
     @State private var overlayTime = ""
     @State private var overlayPosition: CGPoint = .zero
+    @State private var passedOverHandoffs: Set<Date> = [] // Track handoffs passed over during drag
     
     // Available handoff times - same as in modal
     private let availableHandoffTimes = [
@@ -54,6 +55,17 @@ struct HandoffTimelineView: View {
                                     if abs(value.translation.width) > 10 || abs(value.translation.height) > 10 {
                                         draggedBubbleDate = date
                                         dragOffset = value.translation
+                                        
+                                        // Check for collision with other handoff bubbles
+                                        detectHandoffCollisions(
+                                            draggedDate: date,
+                                            dragPosition: CGPoint(
+                                                x: position.x + value.translation.width,
+                                                y: position.y + value.translation.height
+                                            ),
+                                            cellWidth: cellWidth,
+                                            cellHeight: cellHeight
+                                        )
                                         
                                         // Show time overlay and update position/time
                                         showTimeOverlay = true
@@ -98,6 +110,9 @@ struct HandoffTimelineView: View {
                                     draggedBubbleDate = nil
                                     dragOffset = .zero
                                     showTimeOverlay = false
+                                    
+                                    // Delete any handoff bubbles that were passed over
+                                    deletePassedOverHandoffs()
                                 }
                         )
                 }
@@ -610,6 +625,56 @@ struct HandoffTimelineView: View {
             self.viewModel.custodyRecords.append(custodyResponse)
         }
         self.viewModel.updateCustodyPercentages()
+    }
+    
+    private func detectHandoffCollisions(draggedDate: Date, dragPosition: CGPoint, cellWidth: CGFloat, cellHeight: CGFloat) {
+        let bubbleRadius: CGFloat = 25.0 // Collision radius
+        
+        // Get all handoff days except the one being dragged
+        let otherHandoffDays = getHandoffDays().filter { $0 != draggedDate }
+        
+        for date in otherHandoffDays {
+            // Calculate the position of this handoff bubble
+            let bubblePosition = getBubblePosition(for: date, cellWidth: cellWidth, cellHeight: cellHeight, size: CGSize(width: cellWidth * CGFloat(gridColumns), height: cellHeight * CGFloat(calendarDays.count / gridColumns)))
+            
+            // Check if the dragged bubble is within collision distance
+            let distance = sqrt(pow(bubblePosition.x - dragPosition.x, 2) + pow(bubblePosition.y - dragPosition.y, 2))
+            
+            if distance < bubbleRadius {
+                passedOverHandoffs.insert(date)
+                print("Collision detected: dragged bubble passed over handoff at \(formatDate(date))")
+            }
+        }
+    }
+    
+    private func deletePassedOverHandoffs() {
+        for date in passedOverHandoffs {
+            print("Deleting handoff at \(formatDate(date)) due to collision")
+            
+            // Find the handoff record for this date to get the ID
+            if let handoffRecord = viewModel.handoffTimes.first(where: { Calendar.current.isDate($0.date, inSameDayAs: date) }) {
+                let handoffId = String(handoffRecord.id)
+                
+                // Call API to delete the handoff record
+                APIService.shared.deleteHandoffTime(handoffId: handoffId) { result in
+                    DispatchQueue.main.async {
+                        switch result {
+                        case .success:
+                            // Remove from viewModel data
+                            self.viewModel.handoffTimes.removeAll { $0.id == handoffRecord.id }
+                            print("Successfully deleted handoff at \(self.formatDate(date))")
+                        case .failure(let error):
+                            print("Failed to delete handoff at \(self.formatDate(date)): \(error)")
+                        }
+                    }
+                }
+            } else {
+                print("No handoff record found for date \(formatDate(date))")
+            }
+        }
+        
+        // Clear the set after processing
+        passedOverHandoffs.removeAll()
     }
 }
 
