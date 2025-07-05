@@ -41,42 +41,54 @@ struct HandoffTimelineView: View {
                         .frame(width: 20, height: 20)
                         .position(x: position.x, y: position.y)
                         .offset(draggedBubbleDate == date ? dragOffset : .zero)
-                        .onTapGesture {
-                            selectedHandoffDate = date
-                            showingHandoffModal = true
-                        }
+                        .scaleEffect(draggedBubbleDate == date ? 1.2 : 1.0)
+                        .animation(.easeInOut(duration: 0.2), value: draggedBubbleDate == date)
                         .gesture(
-                            DragGesture()
+                            // Combined gesture that handles both drag and tap
+                            DragGesture(minimumDistance: 0)
                                 .onChanged { value in
-                                    draggedBubbleDate = date
-                                    dragOffset = value.translation
-                                    
-                                    // Show time overlay and update position/time
-                                    showTimeOverlay = true
-                                    overlayPosition = CGPoint(
-                                        x: position.x + value.translation.width,
-                                        y: position.y - 50 // Position above the bubble
-                                    )
-                                    
-                                    // Calculate the new date and time based on drag position
-                                    let newDateAndTime = calculateNewDateAndTime(
-                                        originalDate: date,
-                                        dragOffset: value.translation,
-                                        cellWidth: cellWidth,
-                                        cellHeight: cellHeight,
-                                        originalPosition: position
-                                    )
-                                    
-                                    overlayTime = "\(formatDate(newDateAndTime.date)) \(newDateAndTime.time.display)"
+                                    // Only start dragging if we've moved beyond a threshold
+                                    if abs(value.translation.width) > 10 || abs(value.translation.height) > 10 {
+                                        draggedBubbleDate = date
+                                        dragOffset = value.translation
+                                        
+                                        // Show time overlay and update position/time
+                                        showTimeOverlay = true
+                                        overlayPosition = CGPoint(
+                                            x: position.x + value.translation.width,
+                                            y: position.y - 50 // Position above the bubble
+                                        )
+                                        
+                                        // Calculate the new date and time based on drag position
+                                        let newDateAndTime = calculateNewDateAndTime(
+                                            originalDate: date,
+                                            dragOffset: value.translation,
+                                            cellWidth: cellWidth,
+                                            cellHeight: cellHeight,
+                                            originalPosition: position
+                                        )
+                                        
+                                        overlayTime = "\(formatDate(newDateAndTime.date)) \(newDateAndTime.time.display)"
+                                    }
                                 }
                                 .onEnded { value in
-                                    updateHandoffTime(
-                                        originalDate: date,
-                                        dragOffset: value.translation,
-                                        cellWidth: cellWidth,
-                                        cellHeight: cellHeight,
-                                        originalPosition: position
-                                    )
+                                    // If we didn't drag much, treat as a tap
+                                    if abs(value.translation.width) <= 10 && abs(value.translation.height) <= 10 {
+                                        // Tap action - show modal
+                                        selectedHandoffDate = date
+                                        showingHandoffModal = true
+                                    } else {
+                                        // Drag action - update handoff time
+                                        updateHandoffTime(
+                                            originalDate: date,
+                                            dragOffset: value.translation,
+                                            cellWidth: cellWidth,
+                                            cellHeight: cellHeight,
+                                            originalPosition: position
+                                        )
+                                    }
+                                    
+                                    // Reset drag state
                                     draggedBubbleDate = nil
                                     dragOffset = .zero
                                     showTimeOverlay = false
