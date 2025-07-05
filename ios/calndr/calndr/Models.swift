@@ -214,12 +214,28 @@ struct GroupChatResponse: Codable {
 struct HandoffTimeCreate: Codable {
     let date: String
     let time: String
+    let location: String?
+    let from_parent_id: String?
+    let to_parent_id: String?
+    
+    init(date: String, time: String, location: String? = "daycare", from_parent_id: String? = nil, to_parent_id: String? = nil) {
+        self.date = date
+        self.time = time
+        self.location = location
+        self.from_parent_id = from_parent_id
+        self.to_parent_id = to_parent_id
+    }
 }
 
 struct HandoffTimeResponse: Codable, Identifiable {
     let id: Int
     let date: String
     let time: String
+    let location: String?
+    let from_parent_id: String?
+    let to_parent_id: String?
+    let from_parent_name: String?
+    let to_parent_name: String?
     let family_id: String
     let created_at: String
     let updated_at: String

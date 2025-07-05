@@ -7,6 +7,7 @@ struct HandoffTimeModal: View {
     @EnvironmentObject var themeManager: ThemeManager
     
     @State private var selectedTimeIndex = 2 // Default to 5pm (index 2)
+    @State private var selectedLocation = "daycare" // Default location
     @State private var isInitialized = false
     
     // Available handoff times
@@ -15,6 +16,21 @@ struct HandoffTimeModal: View {
         (hour: 12, minute: 0, display: "12:00 PM"),
         (hour: 17, minute: 0, display: "5:00 PM")
     ]
+    
+    // Available locations
+    private var handoffLocations: [String] {
+        var locations = ["daycare", "grocery store", "other"]
+        
+        // Add parent homes based on actual parent names
+        if let parent1Name = viewModel.custodianOne?.first_name.lowercased() {
+            locations.insert("\(parent1Name)'s home", at: 1)
+        }
+        if let parent2Name = viewModel.custodianTwo?.first_name.lowercased() {
+            locations.insert("\(parent2Name)'s home", at: 2)
+        }
+        
+        return locations
+    }
 
     var body: some View {
         VStack(spacing: 20) {
@@ -65,21 +81,84 @@ struct HandoffTimeModal: View {
                 .padding()
             }
             
-            // Selected time preview
-            VStack {
-                Text("Selected Time")
+            // Location Selection
+            VStack(spacing: 15) {
+                Text("Handoff Location")
                     .font(.headline)
                     .foregroundColor(themeManager.currentTheme.textColor)
                 
-                Text(handoffTimes[selectedTimeIndex].display)
-                    .font(.title)
-                    .fontWeight(.bold)
-                    .foregroundColor(Color.purple)
+                Menu {
+                    ForEach(handoffLocations, id: \.self) { location in
+                        Button(action: {
+                            selectedLocation = location
+                        }) {
+                            HStack {
+                                Text(location.capitalized)
+                                if selectedLocation == location {
+                                    Spacer()
+                                    Image(systemName: "checkmark")
+                                        .foregroundColor(.purple)
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: "location.fill")
+                            .foregroundColor(.purple)
+                        
+                        Text(selectedLocation.capitalized)
+                            .font(.title3)
+                            .foregroundColor(themeManager.currentTheme.textColor)
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.down")
+                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                    }
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(themeManager.currentTheme.bubbleBackgroundColor)
+                            .fill(themeManager.currentTheme.bubbleBackgroundColor.opacity(0.1))
+                            .stroke(Color.purple.opacity(0.3), lineWidth: 1)
                     )
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            .padding(.horizontal)
+            
+            // Selected time and location preview
+            VStack(spacing: 10) {
+                Text("Handoff Details")
+                    .font(.headline)
+                    .foregroundColor(themeManager.currentTheme.textColor)
+                
+                VStack(spacing: 8) {
+                    HStack {
+                        Image(systemName: "clock.fill")
+                            .foregroundColor(.purple)
+                        Text(handoffTimes[selectedTimeIndex].display)
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(themeManager.currentTheme.textColor)
+                        Spacer()
+                    }
+                    
+                    HStack {
+                        Image(systemName: "location.fill")
+                            .foregroundColor(.purple)
+                        Text(selectedLocation.capitalized)
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(themeManager.currentTheme.textColor)
+                        Spacer()
+                    }
+                }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(themeManager.currentTheme.bubbleBackgroundColor)
+                )
             }
             
             Spacer()
@@ -165,9 +244,31 @@ struct HandoffTimeModal: View {
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let dateString = dateFormatter.string(from: date)
         
-        print("Saving handoff time: \(timeString) for date: \(dateString)")
+        // Determine parent IDs based on current custody
+        let custodyInfo = viewModel.getCustodyInfo(for: date)
+        let currentCustodian = custodyInfo.owner
         
-        APIService.shared.saveHandoffTime(date: dateString, time: timeString) { result in
+        let fromParentId: String?
+        let toParentId: String?
+        
+        if currentCustodian == viewModel.custodianOne?.id {
+            fromParentId = viewModel.custodianOne?.id
+            toParentId = viewModel.custodianTwo?.id
+        } else {
+            fromParentId = viewModel.custodianTwo?.id
+            toParentId = viewModel.custodianOne?.id
+        }
+        
+        print("Saving handoff time: \(timeString) at \(selectedLocation) for date: \(dateString)")
+        print("From: \(fromParentId ?? "unknown") To: \(toParentId ?? "unknown")")
+        
+        APIService.shared.saveHandoffTime(
+            date: dateString, 
+            time: timeString,
+            location: selectedLocation,
+            fromParentId: fromParentId,
+            toParentId: toParentId
+        ) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let handoffTime):

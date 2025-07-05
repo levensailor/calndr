@@ -396,7 +396,13 @@ struct HandoffTimelineView: View {
                         print("✅ Deleted old handoff from \(originalDateString)")
                         
                         // Create new handoff on the new date
-                        APIService.shared.saveHandoffTime(date: newDateString, time: timeString) { saveResult in
+                                                    APIService.shared.saveHandoffTime(
+                                date: newDateString, 
+                                time: timeString,
+                                location: handoffRecord.location ?? "daycare",
+                                fromParentId: handoffRecord.from_parent_id,
+                                toParentId: handoffRecord.to_parent_id
+                            ) { saveResult in
                             DispatchQueue.main.async {
                                 switch saveResult {
                                 case .success(_):
@@ -421,7 +427,13 @@ struct HandoffTimelineView: View {
             }
         } else {
             // Same date, just update the time
-            APIService.shared.saveHandoffTime(date: newDateString, time: timeString) { result in
+                                        APIService.shared.saveHandoffTime(
+                                date: newDateString, 
+                                time: timeString,
+                                location: handoff.location ?? "daycare",
+                                fromParentId: handoff.from_parent_id,
+                                toParentId: handoff.to_parent_id
+                            ) { result in
                 DispatchQueue.main.async {
                     switch result {
                     case .success(_):

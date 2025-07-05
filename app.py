@@ -236,6 +236,9 @@ handoff_times = sqlalchemy.Table(
     sqlalchemy.Column("family_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("families.id", ondelete="CASCADE"), nullable=False),
     sqlalchemy.Column("date", sqlalchemy.Date, nullable=False),
     sqlalchemy.Column("time", sqlalchemy.Time, nullable=False),
+    sqlalchemy.Column("location", sqlalchemy.String(100), nullable=True, default="daycare"),
+    sqlalchemy.Column("from_parent_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("users.id"), nullable=True),
+    sqlalchemy.Column("to_parent_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("users.id"), nullable=True),
     sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
     sqlalchemy.Column("updated_at", sqlalchemy.DateTime, nullable=True, default=datetime.now, onupdate=datetime.now),
 )
@@ -373,11 +376,19 @@ class GroupChatCreate(BaseModel):
 class HandoffTimeCreate(BaseModel):
     date: str  # Format: YYYY-MM-DD
     time: str  # Format: HH:MM
+    location: Optional[str] = "daycare"
+    from_parent_id: Optional[str] = None
+    to_parent_id: Optional[str] = None
 
 class HandoffTimeResponse(BaseModel):
     id: int
     date: str
     time: str
+    location: Optional[str] = None
+    from_parent_id: Optional[str] = None
+    to_parent_id: Optional[str] = None
+    from_parent_name: Optional[str] = None
+    to_parent_name: Optional[str] = None
     family_id: str
     created_at: str
     updated_at: str
@@ -1489,7 +1500,7 @@ async def delete_emergency_contact(contact_id: int, current_user: User = Depends
 
 @app.get("/api/handoff-times/{year}/{month}", response_model=list[HandoffTimeResponse])
 async def get_handoff_times(year: int, month: int, current_user: User = Depends(get_current_user)):
-    """Get handoff times for a specific month."""
+    """Get handoff times for a specific month with parent names."""
     try:
         # Calculate date range for the month
         start_date = date(year, month, 1)
@@ -1498,13 +1509,26 @@ async def get_handoff_times(year: int, month: int, current_user: User = Depends(
         else:
             end_date = date(year, month + 1, 1) - timedelta(days=1)
         
-        query = handoff_times.select().where(
-            (handoff_times.c.family_id == current_user.family_id) &
-            (handoff_times.c.date >= start_date) &
-            (handoff_times.c.date <= end_date)
-        ).order_by(handoff_times.c.date.asc())
+        # Join with users table to get parent names
+        query = sqlalchemy.text("""
+            SELECT h.id, h.date, h.time, h.location, h.from_parent_id, h.to_parent_id,
+                   h.family_id, h.created_at, h.updated_at,
+                   fp.first_name as from_parent_name,
+                   tp.first_name as to_parent_name
+            FROM handoff_times h
+            LEFT JOIN users fp ON h.from_parent_id = fp.id
+            LEFT JOIN users tp ON h.to_parent_id = tp.id
+            WHERE h.family_id = :family_id 
+              AND h.date >= :start_date 
+              AND h.date <= :end_date
+            ORDER BY h.date ASC
+        """)
         
-        result = await database.fetch_all(query)
+        result = await database.fetch_all(query, {
+            "family_id": current_user.family_id,
+            "start_date": start_date,
+            "end_date": end_date
+        })
         
         handoff_list = []
         for row in result:
@@ -1512,6 +1536,11 @@ async def get_handoff_times(year: int, month: int, current_user: User = Depends(
                 id=row.id,
                 date=row.date.strftime("%Y-%m-%d"),
                 time=row.time.strftime("%H:%M"),
+                location=row.location,
+                from_parent_id=str(row.from_parent_id) if row.from_parent_id else None,
+                to_parent_id=str(row.to_parent_id) if row.to_parent_id else None,
+                from_parent_name=row.from_parent_name,
+                to_parent_name=row.to_parent_name,
                 family_id=str(row.family_id),
                 created_at=row.created_at.isoformat(),
                 updated_at=row.updated_at.isoformat()
@@ -1532,6 +1561,10 @@ async def save_handoff_time(handoff_data: HandoffTimeCreate, current_user: User 
         handoff_date = datetime.strptime(handoff_data.date, "%Y-%m-%d").date()
         handoff_time = datetime.strptime(handoff_data.time, "%H:%M").time()
         
+        # Parse parent IDs if provided
+        from_parent_id = uuid.UUID(handoff_data.from_parent_id) if handoff_data.from_parent_id else None
+        to_parent_id = uuid.UUID(handoff_data.to_parent_id) if handoff_data.to_parent_id else None
+        
         # Check if handoff time already exists for this date
         existing_query = handoff_times.select().where(
             (handoff_times.c.family_id == current_user.family_id) &
@@ -1546,52 +1579,61 @@ async def save_handoff_time(handoff_data: HandoffTimeCreate, current_user: User 
                 (handoff_times.c.date == handoff_date)
             ).values(
                 time=handoff_time,
+                location=handoff_data.location,
+                from_parent_id=from_parent_id,
+                to_parent_id=to_parent_id,
                 updated_at=datetime.now()
             )
             await database.execute(update_query)
             
-            # Get the updated record
-            updated_query = handoff_times.select().where(
-                (handoff_times.c.family_id == current_user.family_id) &
-                (handoff_times.c.date == handoff_date)
-            )
-            updated_record = await database.fetch_one(updated_query)
+            logger.info(f"Updated handoff time for {handoff_data.date} to {handoff_data.time} at {handoff_data.location} for user {current_user.id}")
             
-            logger.info(f"Updated handoff time for {handoff_data.date} to {handoff_data.time} for user {current_user.id}")
-            
-            return HandoffTimeResponse(
-                id=updated_record.id,
-                date=updated_record.date.strftime("%Y-%m-%d"),
-                time=updated_record.time.strftime("%H:%M"),
-                family_id=str(updated_record.family_id),
-                created_at=updated_record.created_at.isoformat(),
-                updated_at=updated_record.updated_at.isoformat()
-            )
         else:
             # Create new handoff time
             insert_query = handoff_times.insert().values(
                 family_id=current_user.family_id,
                 date=handoff_date,
                 time=handoff_time,
+                location=handoff_data.location,
+                from_parent_id=from_parent_id,
+                to_parent_id=to_parent_id,
                 created_at=datetime.now(),
                 updated_at=datetime.now()
             )
             handoff_id = await database.execute(insert_query)
             
-            # Get the created record
-            created_query = handoff_times.select().where(handoff_times.c.id == handoff_id)
-            created_record = await database.fetch_one(created_query)
-            
-            logger.info(f"Created handoff time for {handoff_data.date} at {handoff_data.time} for user {current_user.id}")
-            
-            return HandoffTimeResponse(
-                id=created_record.id,
-                date=created_record.date.strftime("%Y-%m-%d"),
-                time=created_record.time.strftime("%H:%M"),
-                family_id=str(created_record.family_id),
-                created_at=created_record.created_at.isoformat(),
-                updated_at=created_record.updated_at.isoformat()
-            )
+            logger.info(f"Created handoff time for {handoff_data.date} at {handoff_data.time} at {handoff_data.location} for user {current_user.id}")
+        
+        # Get the final record with parent names
+        final_query = sqlalchemy.text("""
+            SELECT h.id, h.date, h.time, h.location, h.from_parent_id, h.to_parent_id,
+                   h.family_id, h.created_at, h.updated_at,
+                   fp.first_name as from_parent_name,
+                   tp.first_name as to_parent_name
+            FROM handoff_times h
+            LEFT JOIN users fp ON h.from_parent_id = fp.id
+            LEFT JOIN users tp ON h.to_parent_id = tp.id
+            WHERE h.family_id = :family_id AND h.date = :date
+        """)
+        
+        final_record = await database.fetch_one(final_query, {
+            "family_id": current_user.family_id,
+            "date": handoff_date
+        })
+        
+        return HandoffTimeResponse(
+            id=final_record.id,
+            date=final_record.date.strftime("%Y-%m-%d"),
+            time=final_record.time.strftime("%H:%M"),
+            location=final_record.location,
+            from_parent_id=str(final_record.from_parent_id) if final_record.from_parent_id else None,
+            to_parent_id=str(final_record.to_parent_id) if final_record.to_parent_id else None,
+            from_parent_name=final_record.from_parent_name,
+            to_parent_name=final_record.to_parent_name,
+            family_id=str(final_record.family_id),
+            created_at=final_record.created_at.isoformat(),
+            updated_at=final_record.updated_at.isoformat()
+        )
     
     except ValueError as e:
         logger.error(f"Invalid date/time format: {e}")

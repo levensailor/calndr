@@ -1166,13 +1166,19 @@ class APIService {
         }.resume()
     }
     
-    func saveHandoffTime(date: String, time: String, completion: @escaping (Result<HandoffTimeResponse, Error>) -> Void) {
+    func saveHandoffTime(date: String, time: String, location: String? = "daycare", fromParentId: String? = nil, toParentId: String? = nil, completion: @escaping (Result<HandoffTimeResponse, Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/handoff-times")
         var request = createAuthenticatedRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        let handoffTimeRequest = HandoffTimeCreate(date: date, time: time)
+        let handoffTimeRequest = HandoffTimeCreate(
+            date: date, 
+            time: time, 
+            location: location, 
+            from_parent_id: fromParentId, 
+            to_parent_id: toParentId
+        )
         
         do {
             request.httpBody = try JSONEncoder().encode(handoffTimeRequest)
