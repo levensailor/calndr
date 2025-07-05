@@ -63,83 +63,95 @@ struct HandoffTimelineView: View {
                 ForEach(getHandoffDays(), id: \.self) { date in
                     let position = getBubblePosition(for: date, cellWidth: cellWidth, cellHeight: cellHeight, size: geometry.size)
                     
-                    Circle()
-                        .fill(Color.white)
-                        .stroke(Color.purple, lineWidth: 3)
-                        .frame(width: 20, height: 20)
-                        .position(x: position.x, y: position.y)
-                        .offset(draggedBubbleDate == date ? dragOffset : .zero)
-                        .scaleEffect(draggedBubbleDate == date ? 1.2 : 1.0)
-                        .animation(.easeInOut(duration: 0.2), value: draggedBubbleDate == date)
-                        .zIndex(2000) // Ensure bubbles are above everything else
-                        .gesture(
-                            // Combined gesture that handles both drag and tap
-                            DragGesture(minimumDistance: 0)
-                                .onChanged { value in
-                                    // Only start dragging if we've moved beyond a threshold
-                                    if abs(value.translation.width) > 10 || abs(value.translation.height) > 10 {
-                                        draggedBubbleDate = date
-                                        dragOffset = value.translation
-                                        
-                                        // Check for collision with other handoff bubbles
-                                        detectHandoffCollisions(
-                                            draggedDate: date,
-                                            dragPosition: CGPoint(
-                                                x: position.x + value.translation.width,
-                                                y: position.y + value.translation.height
-                                            ),
-                                            cellWidth: cellWidth,
-                                            cellHeight: cellHeight
-                                        )
-                                        
-                                        // Show time overlay and update position/time
-                                        showTimeOverlay = true
-                                        overlayPosition = CGPoint(
-                                            x: position.x + value.translation.width,
-                                            y: position.y - 50 // Position above the bubble
-                                        )
-                                        
-                                        // Calculate the new date and time based on drag position
-                                        let newDateAndTime = calculateNewDateAndTime(
-                                            originalDate: date,
-                                            dragOffset: value.translation,
-                                            cellWidth: cellWidth,
-                                            cellHeight: cellHeight,
-                                            originalPosition: position
-                                        )
-                                        
-                                        overlayTime = "\(formatDate(newDateAndTime.date)) \(newDateAndTime.time.display)"
-                                    }
-                                }
-                                .onEnded { value in
-                                    // If we didn't drag much, treat as a tap
-                                    if abs(value.translation.width) <= 10 && abs(value.translation.height) <= 10 {
-                                        // Tap action - show modal
-                                        selectedHandoffDate = date
-                                        // Use async to ensure state update completes before presenting modal
-                                        DispatchQueue.main.async {
-                                            showingHandoffModal = true
-                                        }
-                                    } else {
-                                        // Drag action - update handoff time
-                                        updateHandoffTime(
-                                            originalDate: date,
-                                            dragOffset: value.translation,
-                                            cellWidth: cellWidth,
-                                            cellHeight: cellHeight,
-                                            originalPosition: position
-                                        )
-                                    }
+                    ZStack {
+                        // Invisible larger touch target (60x60) for better touch sensitivity
+                        Rectangle()
+                            .fill(Color.clear)
+                            .frame(width: 60, height: 60)
+                        
+                        // Visual bubble (20x20) - same size as before
+                        Circle()
+                            .fill(Color.white)
+                            .stroke(Color.purple, lineWidth: 3)
+                            .frame(width: 20, height: 20)
+                            .scaleEffect(draggedBubbleDate == date ? 1.2 : 1.0)
+                            .animation(.easeInOut(duration: 0.2), value: draggedBubbleDate == date)
+                    }
+                    .position(x: position.x, y: position.y)
+                    .offset(x: draggedBubbleDate == date ? dragOffset.width : 0, y: 0) // X-axis only movement
+                    .zIndex(2000) // Ensure bubbles are above everything else
+                    .gesture(
+                        // Combined gesture that handles both drag and tap - X-axis only
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { value in
+                                // Only allow horizontal dragging (X-axis only)
+                                let horizontalTranslation = CGSize(width: value.translation.width, height: 0)
+                                
+                                // Only start dragging if we've moved horizontally beyond threshold (reduced to 5px for better sensitivity)
+                                if abs(value.translation.width) > 5 {
+                                    draggedBubbleDate = date
+                                    dragOffset = horizontalTranslation // Only horizontal movement
                                     
-                                    // Reset drag state
-                                    draggedBubbleDate = nil
-                                    dragOffset = .zero
-                                    showTimeOverlay = false
+                                    // Check for collision with other handoff bubbles
+                                    detectHandoffCollisions(
+                                        draggedDate: date,
+                                        dragPosition: CGPoint(
+                                            x: position.x + horizontalTranslation.width,
+                                            y: position.y // Keep Y position fixed
+                                        ),
+                                        cellWidth: cellWidth,
+                                        cellHeight: cellHeight
+                                    )
                                     
-                                    // Delete any handoff bubbles that were passed over
-                                    deletePassedOverHandoffs()
+                                    // Show time overlay and update position/time
+                                    showTimeOverlay = true
+                                    overlayPosition = CGPoint(
+                                        x: position.x + horizontalTranslation.width,
+                                        y: position.y - 50 // Position above the bubble
+                                    )
+                                    
+                                    // Calculate the new date and time based on horizontal drag only
+                                    let newDateAndTime = calculateNewDateAndTime(
+                                        originalDate: date,
+                                        dragOffset: horizontalTranslation, // X-axis only
+                                        cellWidth: cellWidth,
+                                        cellHeight: cellHeight,
+                                        originalPosition: position
+                                    )
+                                    
+                                    overlayTime = "\(formatDate(newDateAndTime.date)) \(newDateAndTime.time.display)"
                                 }
-                        )
+                            }
+                            .onEnded { value in
+                                // If we didn't drag much horizontally, treat as a tap
+                                if abs(value.translation.width) <= 5 {
+                                    // Tap action - show modal
+                                    selectedHandoffDate = date
+                                    // Use async to ensure state update completes before presenting modal
+                                    DispatchQueue.main.async {
+                                        showingHandoffModal = true
+                                    }
+                                } else {
+                                    // Drag action - update handoff time (X-axis only)
+                                    let horizontalTranslation = CGSize(width: value.translation.width, height: 0)
+                                    updateHandoffTime(
+                                        originalDate: date,
+                                        dragOffset: horizontalTranslation,
+                                        cellWidth: cellWidth,
+                                        cellHeight: cellHeight,
+                                        originalPosition: position
+                                    )
+                                }
+                                
+                                // Reset drag state
+                                draggedBubbleDate = nil
+                                dragOffset = .zero
+                                showTimeOverlay = false
+                                
+                                // Delete any handoff bubbles that were passed over
+                                deletePassedOverHandoffs()
+                            }
+                    )
                 }
                 
                 // Time overlay during dragging
@@ -194,32 +206,36 @@ struct HandoffTimelineView: View {
         originalPosition: CGPoint
     ) -> (date: Date, time: (hour: Int, minute: Int, display: String)) {
         
-        // Calculate the new position
-        let newPosition = CGPoint(
-            x: originalPosition.x + dragOffset.width,
-            y: originalPosition.y + dragOffset.height
-        )
+        // Calculate the new X position only (Y stays on timeline)
+        let newX = originalPosition.x + dragOffset.width
         
-        // Calculate which day this corresponds to
-        let newCol = Int(newPosition.x / cellWidth)
-        let newRow = Int(newPosition.y / cellHeight)
+        // Keep the original row (Y position stays the same)
+        guard let originalIndex = calendarDays.firstIndex(of: originalDate) else {
+            let selectedTime = availableHandoffTimes[1] // Default to 12pm
+            return (date: originalDate, time: selectedTime)
+        }
         
-        // Calculate the calendar index
-        let newIndex = newRow * gridColumns + newCol
+        let originalRow = originalIndex / gridColumns
         
-        // Ensure we're within bounds
+        // Calculate which column (day) this X position corresponds to
+        let newCol = max(0, min(gridColumns - 1, Int(newX / cellWidth)))
+        
+        // Calculate the new calendar index (same row, different column)
+        let newIndex = originalRow * gridColumns + newCol
+        
+        // Ensure we're within bounds of the calendar days
         let clampedIndex = max(0, min(calendarDays.count - 1, newIndex))
         let newDate = calendarDays[clampedIndex]
         
-        // Calculate time within the cell
-        let cellLocalX = newPosition.x - (CGFloat(newCol) * cellWidth)
-        let timeProgress = cellLocalX / cellWidth
+        // Calculate time within the cell based on X position
+        let cellLocalX = newX - (CGFloat(newCol) * cellWidth)
+        let timeProgress = max(0, min(1, cellLocalX / cellWidth)) // Clamp to 0-1
         
-        // Map time progress to our available times
+        // Map time progress to our available times with better distribution
         let timeIndex: Int
-        if timeProgress < 0.35 {
+        if timeProgress < 0.33 {
             timeIndex = 0 // 9am
-        } else if timeProgress < 0.65 {
+        } else if timeProgress < 0.67 {
             timeIndex = 1 // 12pm
         } else {
             timeIndex = 2 // 5pm
@@ -438,62 +454,154 @@ struct HandoffTimelineView: View {
         
         print("Moving handoff from \(originalDateString) to \(newDateString) at \(newTime.display)")
         
-        // Find existing handoff record to update
-        if let existingHandoff = viewModel.handoffTimes.first(where: { $0.date == originalDateString }) {
-            // Get handoff data for the new date to determine parent IDs
-            let newHandoffData = getHandoffDataForDate(newDate)
+        // Check if we have an actual handoff record for the original date
+        if let draggedHandoff = viewModel.handoffTimes.first(where: { $0.date == originalDateString }) {
+            // We have an existing handoff record - update it
+            updateExistingHandoff(draggedHandoff, originalDate, newDate, newDateString, timeString, newTime)
+        } else {
+            // No existing handoff record - this is a "virtual" bubble based on custody change
+            // Create a new handoff record instead
+            print("📝 No existing handoff record for \(originalDateString) - creating new handoff at \(newDateString)")
+            createNewHandoffFromDrag(originalDate, newDate, newDateString, timeString, newTime)
+        }
+        
+    }
+    
+    private func updateExistingHandoff(
+        _ draggedHandoff: HandoffTimeResponse,
+        _ originalDate: Date,
+        _ newDate: Date,
+        _ newDateString: String,
+        _ timeString: String,
+        _ newTime: (hour: Int, minute: Int, display: String)
+    ) {
+        // Check if there's already a handoff at the target date
+        let existingTargetHandoff = viewModel.handoffTimes.first(where: { $0.date == newDateString })
+        
+        if let targetHandoff = existingTargetHandoff {
+            // Target date already has a handoff - try to delete it first, then update the dragged one
+            print("🔄 Target date \(newDateString) already has handoff - attempting to replace with dragged handoff")
             
-            // Update the existing handoff record with new date/time/location
-            APIService.shared.updateHandoffTime(
-                handoffId: existingHandoff.id,
-                date: newDateString,
-                time: timeString,
-                location: existingHandoff.location ?? "daycare",
-                fromParentId: newHandoffData.fromParentId,
-                toParentId: newHandoffData.toParentId
-            ) { result in
+            APIService.shared.deleteHandoffTime(handoffId: String(targetHandoff.id)) { deleteResult in
                 DispatchQueue.main.async {
-                    switch result {
-                    case .success(let updatedHandoff):
-                        print("✅ Updated handoff from \(originalDateString) to \(newDateString) at \(newTime.display)")
+                    switch deleteResult {
+                    case .success:
+                        print("✅ Deleted existing handoff at target date \(newDateString)")
                         
-                        // Update custody for the move if different date
-                        if originalDateString != newDateString {
-                            self.updateCustodyForHandoffMove(originalDate: originalDate, newDate: newDate)
-                        }
-                        
-                        // Refresh handoff times to update the view
-                        self.viewModel.fetchHandoffTimes()
-                        
-                    case .failure(let error):
-                        print("❌ Failed to update handoff time: \(error.localizedDescription)")
+                    case .failure(let deleteError):
+                        print("⚠️ Failed to delete existing handoff at target (may already be gone): \(deleteError.localizedDescription)")
+                        // Remove from local data anyway in case it was already deleted on backend
+                        self.viewModel.handoffTimes.removeAll { $0.id == targetHandoff.id }
                     }
+                    
+                    // Continue with the update regardless of deletion success
+                    print("📍 Proceeding with handoff update regardless of deletion result")
+                    self.performHandoffUpdate(draggedHandoff, newDateString, timeString, newTime, originalDate, newDate)
                 }
             }
         } else {
-            // No existing handoff found, create a new one
-            let handoffData = getHandoffDataForDate(newDate)
-            APIService.shared.saveHandoffTime(
-                date: newDateString,
-                time: timeString,
-                location: handoffData.location,
-                fromParentId: handoffData.fromParentId,
-                toParentId: handoffData.toParentId
-            ) { result in
+            // No existing handoff at target date - simply update the dragged one
+            performHandoffUpdate(draggedHandoff, newDateString, timeString, newTime, originalDate, newDate)
+        }
+    }
+    
+    private func createNewHandoffFromDrag(
+        _ originalDate: Date,
+        _ newDate: Date,
+        _ newDateString: String,
+        _ timeString: String,
+        _ newTime: (hour: Int, minute: Int, display: String)
+    ) {
+        // Check if target date already has a handoff - delete it first if so
+        let existingTargetHandoff = viewModel.handoffTimes.first(where: { $0.date == newDateString })
+        
+        if let targetHandoff = existingTargetHandoff {
+            print("🔄 Target date \(newDateString) already has handoff - deleting before creating new one")
+            
+            APIService.shared.deleteHandoffTime(handoffId: String(targetHandoff.id)) { deleteResult in
                 DispatchQueue.main.async {
-                    switch result {
-                    case .success(_):
-                        print("✅ Created new handoff on \(newDateString) at \(newTime.display)")
-                        
-                        // Update custody for the new handoff
-                        self.updateCustodyForHandoffMove(originalDate: originalDate, newDate: newDate)
-                        
-                        // Refresh handoff times to update the view
-                        self.viewModel.fetchHandoffTimes()
-                        
-                    case .failure(let error):
-                        print("❌ Failed to create handoff time: \(error.localizedDescription)")
+                    switch deleteResult {
+                    case .success:
+                        print("✅ Deleted existing handoff at target date \(newDateString)")
+                    case .failure(let deleteError):
+                        print("⚠️ Failed to delete existing handoff at target: \(deleteError.localizedDescription)")
+                        // Remove from local data anyway
+                        self.viewModel.handoffTimes.removeAll { $0.id == targetHandoff.id }
                     }
+                    
+                    // Proceed with creating new handoff
+                    self.createNewHandoffRecord(newDate, newDateString, timeString, newTime, originalDate)
+                }
+            }
+        } else {
+            // No existing handoff at target - create new one directly
+            createNewHandoffRecord(newDate, newDateString, timeString, newTime, originalDate)
+        }
+    }
+    
+    private func createNewHandoffRecord(
+        _ newDate: Date,
+        _ newDateString: String,
+        _ timeString: String,
+        _ newTime: (hour: Int, minute: Int, display: String),
+        _ originalDate: Date?
+    ) {
+        // Get handoff data for the new date
+        let newHandoffData = getHandoffDataForDate(newDate)
+        
+        // Create new handoff record
+        APIService.shared.saveHandoffTime(
+            date: newDateString,
+            time: timeString,
+            location: newHandoffData.location,
+            fromParentId: newHandoffData.fromParentId,
+            toParentId: newHandoffData.toParentId
+        ) { result in
+            DispatchQueue.main.async {
+                self.handleSaveResult(result, newDate: newDate, newTime: newTime, originalDate: originalDate)
+            }
+        }
+    }
+    
+    private func performHandoffUpdate(
+        _ draggedHandoff: HandoffTimeResponse,
+        _ newDateString: String,
+        _ timeString: String,
+        _ newTime: (hour: Int, minute: Int, display: String),
+        _ originalDate: Date,
+        _ newDate: Date
+    ) {
+        // Get handoff data for the new date to determine parent IDs
+        let newHandoffData = getHandoffDataForDate(newDate)
+        
+        // Update the dragged handoff record with new date/time/location
+        APIService.shared.updateHandoffTime(
+            handoffId: draggedHandoff.id,
+            date: newDateString,
+            time: timeString,
+            location: draggedHandoff.location ?? "daycare",
+            fromParentId: newHandoffData.fromParentId,
+            toParentId: newHandoffData.toParentId
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let updatedHandoff):
+                    print("✅ Updated handoff to \(newDateString) at \(newTime.display)")
+                    
+                    // Update custody for the move if different date
+                    let dateFormatter = DateFormatter()
+                    dateFormatter.dateFormat = "yyyy-MM-dd"
+                    let originalDateString = dateFormatter.string(from: originalDate)
+                    
+                    if originalDateString != newDateString {
+                        self.updateCustodyForHandoffMove(originalDate: originalDate, newDate: newDate)
+                    }
+                    
+                    // Refresh handoff times to update the view
+                    self.viewModel.fetchHandoffTimes()
+                    
+                case .failure(let error):
+                    print("❌ Failed to update handoff time: \(error.localizedDescription)")
                 }
             }
         }

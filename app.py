@@ -1663,6 +1663,14 @@ async def save_handoff_time(handoff_data: HandoffTimeCreate, current_user: User 
 async def update_handoff_time(handoff_id: int, handoff_data: HandoffTimeCreate, current_user: User = Depends(get_current_user)):
     """Update an existing handoff time."""
     try:
+        # Parse date and time (same as POST endpoint)
+        handoff_date = datetime.strptime(handoff_data.date, "%Y-%m-%d").date()
+        handoff_time = datetime.strptime(handoff_data.time, "%H:%M").time()
+        
+        # Parse parent IDs if provided (same as POST endpoint)
+        from_parent_id = uuid.UUID(handoff_data.from_parent_id) if handoff_data.from_parent_id else None
+        to_parent_id = uuid.UUID(handoff_data.to_parent_id) if handoff_data.to_parent_id else None
+        
         # Verify the handoff time belongs to the user's family
         verify_query = handoff_times.select().where(
             (handoff_times.c.id == handoff_id) &
@@ -1677,12 +1685,12 @@ async def update_handoff_time(handoff_id: int, handoff_data: HandoffTimeCreate, 
         update_query = handoff_times.update().where(
             handoff_times.c.id == handoff_id
         ).values(
-            date=handoff_data.date,
-            time=handoff_data.time,
+            date=handoff_date,
+            time=handoff_time,
             location=handoff_data.location,
-            from_parent_id=handoff_data.from_parent_id,
-            to_parent_id=handoff_data.to_parent_id,
-            updated_at=datetime.now(timezone.utc)
+            from_parent_id=from_parent_id,
+            to_parent_id=to_parent_id,
+            updated_at=datetime.now()
         )
         await database.execute(update_query)
         
@@ -1717,18 +1725,21 @@ async def update_handoff_time(handoff_id: int, handoff_data: HandoffTimeCreate, 
         
         return HandoffTimeResponse(
             id=updated_handoff['id'],
-            date=updated_handoff['date'],
-            time=updated_handoff['time'],
+            date=updated_handoff['date'].strftime("%Y-%m-%d"),
+            time=updated_handoff['time'].strftime("%H:%M"),
             location=updated_handoff['location'],
             from_parent_id=str(updated_handoff['from_parent_id']) if updated_handoff['from_parent_id'] else None,
             to_parent_id=str(updated_handoff['to_parent_id']) if updated_handoff['to_parent_id'] else None,
             from_parent_name=updated_handoff['from_parent_name'],
             to_parent_name=updated_handoff['to_parent_name'],
             family_id=str(updated_handoff['family_id']),
-            created_at=str(updated_handoff['created_at']),
-            updated_at=str(updated_handoff['updated_at'])
+            created_at=updated_handoff['created_at'].isoformat(),
+            updated_at=updated_handoff['updated_at'].isoformat()
         )
         
+    except ValueError as e:
+        logger.error(f"Invalid date/time format in update: {e}")
+        raise HTTPException(status_code=400, detail="Invalid date or time format")
     except HTTPException:
         raise
     except Exception as e:
