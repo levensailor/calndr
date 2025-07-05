@@ -86,7 +86,6 @@ struct MainTabView: View {
                         .tag(CalendarViewType.day)
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                .disabled(calendarViewModel.showHandoffTimeline) // Disable TabView gestures during handoff mode
                 .onChange(of: currentView) { newView in
                     // Fetch appropriate data when view changes
                     if newView == .year {
