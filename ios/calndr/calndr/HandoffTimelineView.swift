@@ -27,25 +27,6 @@ struct HandoffTimelineView: View {
             let cellHeight = geometry.size.height / CGFloat(calendarDays.count / gridColumns)
             
             ZStack {
-                // Invisible overlay to capture all gestures and prevent conflicts
-                Rectangle()
-                    .fill(Color.clear)
-                    .contentShape(Rectangle())
-                    .gesture(
-                        TapGesture()
-                            .onEnded { _ in
-                                // Absorb tap gestures to prevent conflicts
-                                print("Handoff mode: Absorbed tap gesture")
-                            }
-                    )
-                    .gesture(
-                        DragGesture()
-                            .onChanged { _ in
-                                // Absorb drag gestures that don't hit bubbles
-                                print("Handoff mode: Absorbed drag gesture")
-                            }
-                    )
-                
                 Canvas { context, size in
                     drawHandoffTimeline(context: context, size: size, cellWidth: cellWidth, cellHeight: cellHeight)
                 }
@@ -64,7 +45,7 @@ struct HandoffTimelineView: View {
                         .offset(draggedBubbleDate == date ? dragOffset : .zero)
                         .scaleEffect(draggedBubbleDate == date ? 1.2 : 1.0)
                         .animation(.easeInOut(duration: 0.2), value: draggedBubbleDate == date)
-                        .zIndex(2000) // Ensure bubbles are above the gesture overlay
+                        .zIndex(2000) // Ensure bubbles are above everything else
                         .gesture(
                             // Combined gesture that handles both drag and tap
                             DragGesture(minimumDistance: 0)

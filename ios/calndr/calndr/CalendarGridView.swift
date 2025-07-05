@@ -56,7 +56,6 @@ struct CalendarGridView: View {
                         .environmentObject(themeManager)
                         .allowsHitTesting(true) // Allow interactions with handoff bubbles
                         .zIndex(1000) // Ensure handoff timeline is above everything else
-                        .background(Color.clear) // Capture all touches
                 }
             }
             .frame(height: fixedCalendarHeight) // Fixed calendar height
