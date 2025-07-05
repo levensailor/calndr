@@ -22,7 +22,7 @@ struct YearView: View {
                                     .font(.caption)
                                     .foregroundColor(themeManager.currentTheme.textColor)
                                 Rectangle()
-                                    .fill(Color(hex: "#FFC2D9"))
+                                    .fill(themeManager.currentTheme.parentOneColor)
                                     .frame(width: 50, height: 12)
                                     .cornerRadius(2)
                             }
@@ -49,7 +49,7 @@ struct YearView: View {
                                     .font(.caption)
                                     .foregroundColor(themeManager.currentTheme.textColor)
                                 Rectangle()
-                                    .fill(Color(hex: "#96CBFC"))
+                                    .fill(themeManager.currentTheme.parentTwoColor)
                                     .frame(width: 50, height: 12)
                                     .cornerRadius(2)
                             }
@@ -62,13 +62,6 @@ struct YearView: View {
                                     .font(.caption2)
                                     .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
                             }
-                            // Text("\(totals.custodianTwoDays)")
-                            //     .font(.title2)
-                            //     .bold()
-                            //     .foregroundColor(themeManager.currentTheme.textColor)
-                            // Text("days")
-                            //     .font(.caption2)
-                            //     .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
                         }
                         
 
@@ -176,9 +169,9 @@ struct MonthMiniView: View {
     
     private func getCustodyColor(custodyID: String) -> Color {
         if custodyID == viewModel.custodianOne?.id {
-            return Color(hex: "#FFC2D9") // Pink for custodian one
+            return themeManager.currentTheme.parentOneColor
         } else if custodyID == viewModel.custodianTwo?.id {
-            return Color(hex: "#96CBFC") // Blue for custodian two
+            return themeManager.currentTheme.parentTwoColor
         } else {
             return Color.gray.opacity(0.3) // Gray for no custody info
         }

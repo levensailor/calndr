@@ -175,9 +175,9 @@ struct HandoffTimelineView: View {
     
     private func getCustodyColor(for custodyID: String) -> Color {
         if custodyID == viewModel.custodianOne?.id {
-            return Color(hex: "#FFC2D9") // Pink for custodian one
+            return themeManager.currentTheme.parentOneColor
         } else {
-            return Color(hex: "#96CBFC") // Blue for custodian two
+            return themeManager.currentTheme.parentTwoColor
         }
     }
     

@@ -62,7 +62,7 @@ struct DayContentView: View {
                     .bold()
                     .foregroundColor(.black) // Always black for good contrast on light backgrounds
                     .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24) // Fixed height
-                    .background(custodyID == viewModel.custodianOne?.id ? Color(hex: "#FFC2D9") : Color(hex: "#96CBFC"))
+                    .background(custodyID == viewModel.custodianOne?.id ? themeManager.currentTheme.parentOneColor : themeManager.currentTheme.parentTwoColor)
             }
         }
     }

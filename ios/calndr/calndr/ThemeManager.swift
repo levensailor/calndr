@@ -15,6 +15,8 @@ struct Theme: Identifiable, Equatable, Hashable {
     let footerBackgroundColor: Color
     let iconColor: Color
     let iconActiveColor: Color
+    let parentOneColor: Color
+    let parentTwoColor: Color
     
     var allColors: [Color] {
         [
@@ -27,7 +29,9 @@ struct Theme: Identifiable, Equatable, Hashable {
             headerBackgroundColor,
             footerBackgroundColor,
             iconColor,
-            iconActiveColor
+            iconActiveColor,
+            parentOneColor,
+            parentTwoColor
         ]
     }
 
@@ -63,7 +67,9 @@ class ThemeManager: ObservableObject {
               headerBackgroundColor: Color(hex: "#e0e0e0"),
               footerBackgroundColor: Color(hex: "#f0f0f0"),
               iconColor: Color(hex: "#555"),
-              iconActiveColor: Color(hex: "#007bff")),
+              iconActiveColor: Color(hex: "#007bff"),
+              parentOneColor: Color(hex: "#FFC2D9"),
+              parentTwoColor: Color(hex: "#96CBFC")),
         Theme(name: "Dracula",
               fontName: "Menlo-Regular",
               todayBorderColor: Color(hex: "#ff79c6"),
@@ -75,7 +81,9 @@ class ThemeManager: ObservableObject {
               headerBackgroundColor: Color(hex: "#191a21"),
               footerBackgroundColor: Color(hex: "#191a21"),
               iconColor: Color(hex: "#bd93f9"),
-              iconActiveColor: Color(hex: "#ff79c6")),
+              iconActiveColor: Color(hex: "#ff79c6"),
+              parentOneColor: Color(hex: "#FFC2D9"),
+              parentTwoColor: Color(hex: "#96CBFC")),
         Theme(name: "Vibe",
               fontName: "Futura-Medium",
               todayBorderColor: Color(hex: "#00fddc"),
@@ -87,7 +95,9 @@ class ThemeManager: ObservableObject {
               headerBackgroundColor: Color(hex: "#12092a"),
               footerBackgroundColor: Color(hex: "#12092a"),
               iconColor: Color(hex: "#b3a5ef"),
-              iconActiveColor: Color(hex: "#00fddc")),
+              iconActiveColor: Color(hex: "#00fddc"),
+              parentOneColor: Color(hex: "#FFC2D9"),
+              parentTwoColor: Color(hex: "#96CBFC")),
         Theme(name: "Crayola",
               fontName: "ChalkboardSE-Regular",
               todayBorderColor: Color(hex: "#32cd32"),
@@ -99,7 +109,9 @@ class ThemeManager: ObservableObject {
               headerBackgroundColor: Color(hex: "#ffd700"),
               footerBackgroundColor: Color(hex: "#ff7f50"),
               iconColor: Color(hex: "#000"),
-              iconActiveColor: Color(hex: "#1e90ff")),
+              iconActiveColor: Color(hex: "#1e90ff"),
+              parentOneColor: Color(hex: "#FFC2D9"),
+              parentTwoColor: Color(hex: "#96CBFC")),
         Theme(name: "Princess",
               fontName: "SnellRoundhand",
               todayBorderColor: Color(hex: "#ffd700"),
@@ -111,7 +123,9 @@ class ThemeManager: ObservableObject {
               headerBackgroundColor: Color(hex: "#fae3f5"),
               footerBackgroundColor: Color(hex: "#fae3f5"),
               iconColor: Color(hex: "#c789a8"),
-              iconActiveColor: Color(hex: "#e6a4b4")),
+              iconActiveColor: Color(hex: "#e6a4b4"),
+              parentOneColor: Color(hex: "#FFC2D9"),
+              parentTwoColor: Color(hex: "#96CBFC")),
         Theme(name: "Vanilla",
               fontName: "-apple-system",
               todayBorderColor: Color(hex: "#007AFF"),
@@ -123,7 +137,9 @@ class ThemeManager: ObservableObject {
               headerBackgroundColor: Color(hex: "#E5E5EA"),
               footerBackgroundColor: Color(hex: "#E5E5EA"),
               iconColor: Color(hex: "#000000"),
-              iconActiveColor: Color(hex: "#007AFF")),
+              iconActiveColor: Color(hex: "#007AFF"),
+              parentOneColor: Color(hex: "#FFC2D9"),
+              parentTwoColor: Color(hex: "#96CBFC")),
     ]
 
     init() {

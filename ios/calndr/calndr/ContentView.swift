@@ -86,6 +86,7 @@ struct MainTabView: View {
                         .tag(CalendarViewType.day)
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                .disabled(calendarViewModel.showHandoffTimeline) // Disable TabView gestures during handoff mode
                 .onChange(of: currentView) { newView in
                     // Fetch appropriate data when view changes
                     if newView == .year {
@@ -97,7 +98,10 @@ struct MainTabView: View {
                 .gesture(
                     DragGesture()
                         .onEnded { value in
-                            handleEnhancedSwipeGesture(value)
+                            // Disable navigation gestures when handoff timeline is active
+                            if !calendarViewModel.showHandoffTimeline {
+                                handleEnhancedSwipeGesture(value)
+                            }
                         }
                 )
 
@@ -107,6 +111,12 @@ struct MainTabView: View {
                     VStack(spacing: 4) {
                         Text(getCustodianOneDisplayText())
                             .font(.headline)
+                            .overlay(
+                                Rectangle()
+                                    .frame(height: 3)
+                                    .foregroundColor(themeManager.currentTheme.parentOneColor)
+                                    .offset(y: 12)
+                            )
                         
                         // Green dots for custodian one's streak
                         HStack(spacing: 2) {
@@ -130,6 +140,12 @@ struct MainTabView: View {
                     VStack(spacing: 4) {
                         Text(getCustodianTwoDisplayText())
                             .font(.headline)
+                            .overlay(
+                                Rectangle()
+                                    .frame(height: 3)
+                                    .foregroundColor(themeManager.currentTheme.parentTwoColor)
+                                    .offset(y: 12)
+                            )
                         
                         // Green dots for custodian two's streak
                         HStack(spacing: 2) {
