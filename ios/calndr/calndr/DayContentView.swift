@@ -55,8 +55,8 @@ struct DayContentView: View {
             
             Spacer()
             
-            // Custody row - fixed height for consistency
-            if !custodyOwner.isEmpty {
+            // Custody row - fixed height for consistency, hidden when handoff timeline is active
+            if !custodyOwner.isEmpty && !viewModel.showHandoffTimeline {
                 Text(custodyOwner.capitalized)
                     .font(.system(size: 9))
                     .bold()
