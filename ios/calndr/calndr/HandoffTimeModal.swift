@@ -8,7 +8,7 @@ struct HandoffTimeModal: View {
     
     @State private var selectedTimeIndex = 2 // Default to 5pm (index 2)
     @State private var selectedLocation = "daycare" // Default location
-    @State private var isInitialized = false
+    @State private var currentInitializedDate: Date? = nil
     
     // Available handoff times
     private let handoffTimes = [
@@ -196,18 +196,22 @@ struct HandoffTimeModal: View {
         .onAppear {
             initializeTimeSelection()
         }
+        .onDisappear {
+            // Reset initialization state when modal is dismissed
+            currentInitializedDate = nil
+        }
     }
     
     private func initializeTimeSelection() {
-        // Ensure we only initialize once to prevent conflicts
-        guard !isInitialized else { return }
+        // Only initialize if the date has changed or this is the first time
+        guard currentInitializedDate != date else { return }
         
         // Set current handoff time for this date
         let currentTime = viewModel.getHandoffTimeForDate(date)
         
         // Find the closest matching time index
         selectedTimeIndex = findClosestTimeIndex(hour: currentTime.hour, minute: currentTime.minute)
-        isInitialized = true
+        currentInitializedDate = date
         
         print("Initialized handoff modal for \(formatDate(date)) with time \(handoffTimes[selectedTimeIndex].display)")
     }

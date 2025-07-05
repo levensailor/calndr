@@ -76,7 +76,10 @@ struct HandoffTimelineView: View {
                                     if abs(value.translation.width) <= 10 && abs(value.translation.height) <= 10 {
                                         // Tap action - show modal
                                         selectedHandoffDate = date
-                                        showingHandoffModal = true
+                                        // Use async to ensure state update completes before presenting modal
+                                        DispatchQueue.main.async {
+                                            showingHandoffModal = true
+                                        }
                                     } else {
                                         // Drag action - update handoff time
                                         updateHandoffTime(
