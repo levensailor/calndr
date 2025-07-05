@@ -651,8 +651,13 @@ struct HandoffTimelineView: View {
         for date in passedOverHandoffs {
             print("Deleting handoff at \(formatDate(date)) due to collision")
             
+            // Convert the date to string format for comparison
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            let dateString = dateFormatter.string(from: date)
+            
             // Find the handoff record for this date to get the ID
-            if let handoffRecord = viewModel.handoffTimes.first(where: { Calendar.current.isDate($0.date, inSameDayAs: date) }) {
+            if let handoffRecord = viewModel.handoffTimes.first(where: { $0.date == dateString }) {
                 let handoffId = String(handoffRecord.id)
                 
                 // Call API to delete the handoff record
