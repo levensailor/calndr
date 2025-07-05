@@ -1125,7 +1125,7 @@ class APIService {
     // MARK: - Handoff Times
     
     func fetchHandoffTimes(year: Int, month: Int, completion: @escaping (Result<[HandoffTimeResponse], Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/api/handoff-times/\(year)/\(month)")
+        let url = baseURL.appendingPathComponent("/handoff-times/\(year)/\(month)")
         let request = createAuthenticatedRequest(url: url)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
@@ -1167,7 +1167,7 @@ class APIService {
     }
     
     func saveHandoffTime(date: String, time: String, completion: @escaping (Result<HandoffTimeResponse, Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/api/handoff-times")
+        let url = baseURL.appendingPathComponent("/handoff-times")
         var request = createAuthenticatedRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")

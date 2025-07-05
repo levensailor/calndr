@@ -14,6 +14,13 @@ struct HandoffTimelineView: View {
     @State private var overlayTime = ""
     @State private var overlayPosition: CGPoint = .zero
     
+    // Available handoff times - same as in modal
+    private let availableHandoffTimes = [
+        (hour: 9, minute: 0, display: "9:00 AM"),
+        (hour: 12, minute: 0, display: "12:00 PM"),
+        (hour: 17, minute: 0, display: "5:00 PM")
+    ]
+
     var body: some View {
         GeometryReader { geometry in
             let cellWidth = geometry.size.width / CGFloat(gridColumns)
@@ -52,17 +59,8 @@ struct HandoffTimelineView: View {
                                     )
                                     
                                     // Calculate and display the new time based on drag position
-                                    let dragProgress = value.translation.width / cellWidth
-                                    let currentTime = viewModel.getHandoffTimeForDate(date)
-                                    let currentMinutes = currentTime.hour * 60 + currentTime.minute
-                                    let dragMinutes = Int(dragProgress * 24 * 60)
-                                    let newTotalMinutes = currentMinutes + dragMinutes
-                                    let snappedMinutes = (newTotalMinutes / 360) * 360 // Snap to 6-hour increments
-                                    let clampedMinutes = max(0, min(1440, snappedMinutes))
-                                    let newHour = (clampedMinutes / 60) % 24
-                                    let newMinute = clampedMinutes % 60
-                                    
-                                    overlayTime = formatTimeString(hour: newHour, minute: newMinute)
+                                    let newTimeIndex = calculateNewTimeIndex(dragOffset: value.translation.width, cellWidth: cellWidth)
+                                    overlayTime = availableHandoffTimes[newTimeIndex].display
                                 }
                                 .onEnded { value in
                                     updateHandoffTime(for: date, dragOffset: value.translation, cellWidth: cellWidth)
@@ -101,6 +99,20 @@ struct HandoffTimelineView: View {
                 .environmentObject(themeManager)
             }
         }
+    }
+    
+    private func calculateNewTimeIndex(dragOffset: CGFloat, cellWidth: CGFloat) -> Int {
+        // Calculate drag progress as a percentage of cell width
+        let dragProgress = dragOffset / cellWidth
+        
+        // Map drag progress to time indices (allowing wrapping)
+        let baseIndex = 1 // Start from 12pm as middle position
+        let indexChange = Int(round(dragProgress * 3)) // Each third of drag changes by one time slot
+        
+        let newIndex = baseIndex + indexChange
+        
+        // Clamp to valid range (0-2)
+        return max(0, min(2, newIndex))
     }
     
     private func drawHandoffTimeline(context: GraphicsContext, size: CGSize, cellWidth: CGFloat, cellHeight: CGFloat) {
@@ -218,12 +230,50 @@ struct HandoffTimelineView: View {
     }
     
     private func calculateTimeProgress(hour: Int, minute: Int) -> CGFloat {
+        // Map the three allowed times to positions within the cell
         let totalMinutes = hour * 60 + minute
-        let totalMinutesInDay = 24 * 60
-        let progress = CGFloat(totalMinutes) / CGFloat(totalMinutesInDay)
         
-        // Clamp between 0.1 and 0.9 to keep bubbles visible within cell boundaries
-        return max(0.1, min(0.9, progress))
+        // Find which of our allowed times this matches
+        for (index, time) in availableHandoffTimes.enumerated() {
+            let timeMinutes = time.hour * 60 + time.minute
+            if totalMinutes == timeMinutes {
+                // Map to positions: 9am->0.2, 12pm->0.5, 5pm->0.8
+                switch index {
+                case 0: return 0.2 // 9am
+                case 1: return 0.5 // 12pm  
+                case 2: return 0.8 // 5pm
+                default: return 0.5
+                }
+            }
+        }
+        
+        // If no exact match, find closest and return its position
+        let closestIndex = findClosestTimeIndex(hour: hour, minute: minute)
+        switch closestIndex {
+        case 0: return 0.2 // 9am
+        case 1: return 0.5 // 12pm
+        case 2: return 0.8 // 5pm
+        default: return 0.5
+        }
+    }
+    
+    private func findClosestTimeIndex(hour: Int, minute: Int) -> Int {
+        let totalMinutes = hour * 60 + minute
+        
+        var closestIndex = 0
+        var smallestDifference = Int.max
+        
+        for (index, time) in availableHandoffTimes.enumerated() {
+            let timeMinutes = time.hour * 60 + time.minute
+            let difference = abs(totalMinutes - timeMinutes)
+            
+            if difference < smallestDifference {
+                smallestDifference = difference
+                closestIndex = index
+            }
+        }
+        
+        return closestIndex
     }
     
     private func formatTimeString(hour: Int, minute: Int) -> String {
@@ -241,36 +291,69 @@ struct HandoffTimelineView: View {
     }
     
     private func updateHandoffTime(for date: Date, dragOffset: CGSize, cellWidth: CGFloat) {
-        // Calculate new time based on drag offset
-        let dragProgress = dragOffset.width / cellWidth
-        let currentTime = viewModel.getHandoffTimeForDate(date)
-        let currentMinutes = currentTime.hour * 60 + currentTime.minute
+        // Calculate which time slot based on drag
+        let newTimeIndex = calculateNewTimeIndex(dragOffset: dragOffset.width, cellWidth: cellWidth)
+        let newTime = availableHandoffTimes[newTimeIndex]
         
-        // Convert drag to minutes (allow full day range)
-        let dragMinutes = Int(dragProgress * 24 * 60)
-        let newTotalMinutes = currentMinutes + dragMinutes
-        
-        // Snap to 6-hour increments (360 minutes)
-        let snappedMinutes = (newTotalMinutes / 360) * 360
-        let clampedMinutes = max(0, min(1440, snappedMinutes)) // 0-24 hours
-        
-        let newHour = (clampedMinutes / 60) % 24
-        let newMinute = clampedMinutes % 60
-        
-        // Save the new handoff time
-        let timeString = String(format: "%02d:%02d", newHour, newMinute)
+        let timeString = String(format: "%02d:%02d", newTime.hour, newTime.minute)
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let dateString = dateFormatter.string(from: date)
+        
+        print("Updating handoff time to: \(newTime.display) for date: \(dateString)")
         
         APIService.shared.saveHandoffTime(date: dateString, time: timeString) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(_):
+                    // Update custody for this date based on handoff time change
+                    self.updateCustodyBasedOnHandoffTimeChange(for: date)
+                    
                     // Refresh handoff times to update the view
                     viewModel.fetchHandoffTimes()
                 case .failure(let error):
                     print("❌ Failed to save handoff time: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    private func updateCustodyBasedOnHandoffTimeChange(for date: Date) {
+        // Determine who should have custody after this handoff
+        let custodyInfo = viewModel.getCustodyInfo(for: date)
+        let currentCustodian = custodyInfo.owner
+        
+        // Toggle to the other parent
+        let newCustodianId: String
+        if currentCustodian == viewModel.custodianOne?.id {
+            newCustodianId = viewModel.custodianTwo?.id ?? ""
+        } else {
+            newCustodianId = viewModel.custodianOne?.id ?? ""
+        }
+        
+        guard !newCustodianId.isEmpty else {
+            print("Error: Could not determine new custodian ID for handoff")
+            return
+        }
+        
+        let dateString = viewModel.isoDateString(from: date)
+        
+        // Update custody record for this date
+        APIService.shared.updateCustodyRecord(for: dateString, custodianId: newCustodianId) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let custodyResponse):
+                    print("✅ Updated custody for handoff date via drag: \(custodyResponse)")
+                    // Update local custody records
+                    if let index = self.viewModel.custodyRecords.firstIndex(where: { $0.event_date == custodyResponse.event_date }) {
+                        self.viewModel.custodyRecords[index] = custodyResponse
+                    } else {
+                        self.viewModel.custodyRecords.append(custodyResponse)
+                    }
+                    self.viewModel.updateCustodyPercentages()
+                    
+                case .failure(let error):
+                    print("❌ Failed to update custody for handoff: \(error.localizedDescription)")
                 }
             }
         }

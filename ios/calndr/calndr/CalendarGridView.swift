@@ -52,6 +52,7 @@ struct CalendarGridView: View {
                 // Handoff Timeline Overlay
                 if viewModel.showHandoffTimeline {
                     HandoffTimelineView(viewModel: viewModel, calendarDays: getDaysForCurrentMonth())
+                        .environmentObject(themeManager)
                         .allowsHitTesting(true) // Allow interactions with handoff bubbles
                 }
             }

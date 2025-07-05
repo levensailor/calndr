@@ -327,7 +327,7 @@ class CalendarViewModel: ObservableObject {
         return (defaultHour, 0)
     }
 
-    private func updateCustodyPercentages() {
+    func updateCustodyPercentages() {
         let calendar = Calendar.current
         guard let monthInterval = calendar.dateInterval(of: .month, for: currentDate),
               let daysInMonth = calendar.dateComponents([.day], from: monthInterval.start, to: monthInterval.end).day else {

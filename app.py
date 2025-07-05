@@ -229,6 +229,17 @@ emergency_contacts = sqlalchemy.Table(
     sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
 )
 
+handoff_times = sqlalchemy.Table(
+    "handoff_times",
+    metadata,
+    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
+    sqlalchemy.Column("family_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("families.id", ondelete="CASCADE"), nullable=False),
+    sqlalchemy.Column("date", sqlalchemy.Date, nullable=False),
+    sqlalchemy.Column("time", sqlalchemy.Time, nullable=False),
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
+    sqlalchemy.Column("updated_at", sqlalchemy.DateTime, nullable=True, default=datetime.now, onupdate=datetime.now),
+)
+
 group_chats = sqlalchemy.Table(
     "group_chats",
     metadata,
@@ -358,6 +369,18 @@ class GroupChatCreate(BaseModel):
     contact_type: str  # 'babysitter' or 'emergency'
     contact_id: int
     group_identifier: Optional[str] = None
+
+class HandoffTimeCreate(BaseModel):
+    date: str  # Format: YYYY-MM-DD
+    time: str  # Format: HH:MM
+
+class HandoffTimeResponse(BaseModel):
+    id: int
+    date: str
+    time: str
+    family_id: str
+    created_at: str
+    updated_at: str
 
 # Add a new Pydantic model for the old format
 class LegacyEvent(BaseModel):
@@ -1461,6 +1484,148 @@ async def delete_emergency_contact(contact_id: int, current_user: User = Depends
         raise HTTPException(status_code=404, detail="Emergency contact not found")
     
     return {"status": "success", "message": "Emergency contact deleted"}
+
+# ---------------------- Handoff Times API ----------------------
+
+@app.get("/api/handoff-times/{year}/{month}", response_model=list[HandoffTimeResponse])
+async def get_handoff_times(year: int, month: int, current_user: User = Depends(get_current_user)):
+    """Get handoff times for a specific month."""
+    try:
+        # Calculate date range for the month
+        start_date = date(year, month, 1)
+        if month == 12:
+            end_date = date(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_date = date(year, month + 1, 1) - timedelta(days=1)
+        
+        query = handoff_times.select().where(
+            (handoff_times.c.family_id == current_user.family_id) &
+            (handoff_times.c.date >= start_date) &
+            (handoff_times.c.date <= end_date)
+        ).order_by(handoff_times.c.date.asc())
+        
+        result = await database.fetch_all(query)
+        
+        handoff_list = []
+        for row in result:
+            handoff_list.append(HandoffTimeResponse(
+                id=row.id,
+                date=row.date.strftime("%Y-%m-%d"),
+                time=row.time.strftime("%H:%M"),
+                family_id=str(row.family_id),
+                created_at=row.created_at.isoformat(),
+                updated_at=row.updated_at.isoformat()
+            ))
+        
+        logger.info(f"Retrieved {len(handoff_list)} handoff times for user {current_user.id} for {year}-{month:02d}")
+        return handoff_list
+    
+    except Exception as e:
+        logger.error(f"Error retrieving handoff times: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve handoff times")
+
+@app.post("/api/handoff-times", response_model=HandoffTimeResponse)
+async def save_handoff_time(handoff_data: HandoffTimeCreate, current_user: User = Depends(get_current_user)):
+    """Create or update a handoff time for a specific date."""
+    try:
+        # Parse date and time
+        handoff_date = datetime.strptime(handoff_data.date, "%Y-%m-%d").date()
+        handoff_time = datetime.strptime(handoff_data.time, "%H:%M").time()
+        
+        # Check if handoff time already exists for this date
+        existing_query = handoff_times.select().where(
+            (handoff_times.c.family_id == current_user.family_id) &
+            (handoff_times.c.date == handoff_date)
+        )
+        existing_handoff = await database.fetch_one(existing_query)
+        
+        if existing_handoff:
+            # Update existing handoff time
+            update_query = handoff_times.update().where(
+                (handoff_times.c.family_id == current_user.family_id) &
+                (handoff_times.c.date == handoff_date)
+            ).values(
+                time=handoff_time,
+                updated_at=datetime.now()
+            )
+            await database.execute(update_query)
+            
+            # Get the updated record
+            updated_query = handoff_times.select().where(
+                (handoff_times.c.family_id == current_user.family_id) &
+                (handoff_times.c.date == handoff_date)
+            )
+            updated_record = await database.fetch_one(updated_query)
+            
+            logger.info(f"Updated handoff time for {handoff_data.date} to {handoff_data.time} for user {current_user.id}")
+            
+            return HandoffTimeResponse(
+                id=updated_record.id,
+                date=updated_record.date.strftime("%Y-%m-%d"),
+                time=updated_record.time.strftime("%H:%M"),
+                family_id=str(updated_record.family_id),
+                created_at=updated_record.created_at.isoformat(),
+                updated_at=updated_record.updated_at.isoformat()
+            )
+        else:
+            # Create new handoff time
+            insert_query = handoff_times.insert().values(
+                family_id=current_user.family_id,
+                date=handoff_date,
+                time=handoff_time,
+                created_at=datetime.now(),
+                updated_at=datetime.now()
+            )
+            handoff_id = await database.execute(insert_query)
+            
+            # Get the created record
+            created_query = handoff_times.select().where(handoff_times.c.id == handoff_id)
+            created_record = await database.fetch_one(created_query)
+            
+            logger.info(f"Created handoff time for {handoff_data.date} at {handoff_data.time} for user {current_user.id}")
+            
+            return HandoffTimeResponse(
+                id=created_record.id,
+                date=created_record.date.strftime("%Y-%m-%d"),
+                time=created_record.time.strftime("%H:%M"),
+                family_id=str(created_record.family_id),
+                created_at=created_record.created_at.isoformat(),
+                updated_at=created_record.updated_at.isoformat()
+            )
+    
+    except ValueError as e:
+        logger.error(f"Invalid date/time format: {e}")
+        raise HTTPException(status_code=400, detail="Invalid date or time format")
+    except Exception as e:
+        logger.error(f"Error saving handoff time: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save handoff time")
+
+@app.delete("/api/handoff-times/{handoff_id}")
+async def delete_handoff_time(handoff_id: int, current_user: User = Depends(get_current_user)):
+    """Delete a handoff time."""
+    try:
+        # Verify the handoff time belongs to the user's family
+        verify_query = handoff_times.select().where(
+            (handoff_times.c.id == handoff_id) &
+            (handoff_times.c.family_id == current_user.family_id)
+        )
+        existing_handoff = await database.fetch_one(verify_query)
+        
+        if not existing_handoff:
+            raise HTTPException(status_code=404, detail="Handoff time not found")
+        
+        # Delete the handoff time
+        delete_query = handoff_times.delete().where(handoff_times.c.id == handoff_id)
+        await database.execute(delete_query)
+        
+        logger.info(f"Deleted handoff time {handoff_id} for user {current_user.id}")
+        return {"message": "Handoff time deleted successfully"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting handoff time: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete handoff time")
 
 # ---------------------- Group Chat API ----------------------
 
