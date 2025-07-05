@@ -5,6 +5,7 @@ import UIKit
 class CalendarViewModel: ObservableObject {
     @Published var events: [Event] = []
     @Published var custodyRecords: [CustodyResponse] = [] // New: custody data from dedicated API
+    @Published var handoffTimes: [HandoffTimeResponse] = [] // New: handoff time data from API
     @Published var schoolEvents: [SchoolEvent] = []
     @Published var showSchoolEvents: Bool = false
     @Published var weatherData: [String: WeatherInfo] = [:]
@@ -20,6 +21,7 @@ class CalendarViewModel: ObservableObject {
     @Published var custodianTwoPercentage: Double = 0.0
     @Published var notificationEmails: [NotificationEmail] = []
     @Published var isOffline: Bool = false
+    @Published var showHandoffTimeline: Bool = false // Toggle for handoff timeline view
     
     // Password Update
     @Published var currentPassword = ""
@@ -68,9 +70,10 @@ class CalendarViewModel: ObservableObject {
         // Also fetch weather for the visible range
         fetchWeather(from: firstDateString, to: lastDateString)
         
-        // Fetch both regular events and custody records
+        // Fetch both regular events, custody records, and handoff times
         fetchRegularEvents(from: firstDateString, to: lastDateString)
         fetchCustodyRecords()
+        fetchHandoffTimes()
     }
     
     private func fetchRegularEvents(from startDate: String, to endDate: String) {
@@ -115,6 +118,34 @@ class CalendarViewModel: ObservableObject {
                     print("Error fetching custody records: \(error.localizedDescription)")
                     // Fall back to empty custody records
                     self?.custodyRecords = []
+                }
+            }
+        }
+    }
+    
+    func fetchHandoffTimes() {
+        guard !isOffline else {
+            print("Offline, not fetching handoff times.")
+            return
+        }
+        
+        let calendar = Calendar.current
+        let year = calendar.component(.year, from: currentDate)
+        let month = calendar.component(.month, from: currentDate)
+        
+        APIService.shared.fetchHandoffTimes(year: year, month: month) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let handoffTimes):
+                    self?.handoffTimes = handoffTimes
+                    print("Successfully fetched \(handoffTimes.count) handoff times for \(year)-\(month).")
+                case .failure(let error):
+                    if (error as NSError).code == 401 {
+                        self?.authManager.logout()
+                    }
+                    print("Error fetching handoff times: \(error.localizedDescription)")
+                    // Fall back to empty handoff times
+                    self?.handoffTimes = []
                 }
             }
         }
@@ -268,11 +299,32 @@ class CalendarViewModel: ObservableObject {
             }
         }
         
-        // Default logic: Jeff (custodian one) has Sun (1), Mon (2), Sat (7)
+        // Default logic: Parent1 (custodian one) has Sun (1), Mon (2), Sat (7)
         let isCustodianOneDay = [1, 2, 7].contains(dayOfWeek)
         let ownerID = isCustodianOneDay ? self.custodianOne?.id ?? "" : self.custodianTwo?.id ?? ""
         let ownerName = isCustodianOneDay ? self.custodianOneName : self.custodianTwoName
         return (ownerID, ownerName)
+    }
+    
+    func getHandoffTimeForDate(_ date: Date) -> (hour: Int, minute: Int) {
+        let dateString = isoDateString(from: date)
+        let dayOfWeek = Calendar.current.component(.weekday, from: date) // 1=Sun, 2=Mon, 7=Sat
+        
+        // Check for stored handoff time first
+        if let handoffTime = handoffTimes.first(where: { $0.date == dateString }) {
+            // Parse the time string (format: "HH:MM")
+            let components = handoffTime.time.split(separator: ":")
+            if components.count == 2,
+               let hour = Int(components[0]),
+               let minute = Int(components[1]) {
+                return (hour, minute)
+            }
+        }
+        
+        // Default logic: Noon (12:00) for weekends, 5:00 PM for weekdays
+        let isWeekend = dayOfWeek == 1 || dayOfWeek == 7 // Sunday or Saturday
+        let defaultHour = isWeekend ? 12 : 17
+        return (defaultHour, 0)
     }
 
     private func updateCustodyPercentages() {

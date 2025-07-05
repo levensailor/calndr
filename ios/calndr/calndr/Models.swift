@@ -208,4 +208,19 @@ struct GroupChatResponse: Codable {
     let group_identifier: String
     let exists: Bool
     let created_at: String
+}
+
+// Handoff Time Models
+struct HandoffTimeCreate: Codable {
+    let date: String
+    let time: String
+}
+
+struct HandoffTimeResponse: Codable, Identifiable {
+    let id: Int
+    let date: String
+    let time: String
+    let family_id: String
+    let created_at: String
+    let updated_at: String
 } 

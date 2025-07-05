@@ -152,7 +152,7 @@ struct MainTabView: View {
                 .padding()
 
                 // Menu Bar
-                HStack(alignment: .top, spacing: 60) {
+                HStack(alignment: .top, spacing: 40) {
                     VStack(spacing: 4) {
                         Button(action: {
                             calendarViewModel.toggleWeather()
@@ -175,6 +175,19 @@ struct MainTabView: View {
                                 .foregroundColor(getSchoolIconColor())
                         }
                         Text("School")
+                            .font(.caption2)
+                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                    }
+                    
+                    VStack(spacing: 4) {
+                        Button(action: {
+                            calendarViewModel.showHandoffTimeline.toggle()
+                        }) {
+                            Image(systemName: getHandoffIconName())
+                                .font(.title2)
+                                .foregroundColor(getHandoffIconColor())
+                        }
+                        Text("Handoff")
                             .font(.caption2)
                             .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
                     }
@@ -507,6 +520,14 @@ struct MainTabView: View {
     
     private func getSchoolIconColor() -> Color {
         return calendarViewModel.showSchoolEvents ? themeManager.currentTheme.iconActiveColor : themeManager.currentTheme.iconColor
+    }
+    
+    private func getHandoffIconName() -> String {
+        return calendarViewModel.showHandoffTimeline ? "clock.fill" : "clock"
+    }
+    
+    private func getHandoffIconColor() -> Color {
+        return calendarViewModel.showHandoffTimeline ? Color.purple : themeManager.currentTheme.iconColor
     }
 }
 

@@ -26,27 +26,36 @@ struct CalendarGridView: View {
             let fixedCalendarHeight: CGFloat = 510 // Fixed height for consistent layout
             let rowHeight = fixedCalendarHeight / CGFloat(numberOfWeeks)
             
-            let columns = Array(repeating: GridItem(.flexible(), spacing: 1), count: 7)
-            LazyVGrid(columns: columns, spacing: 1) {
-                ForEach(getDaysForCurrentMonth(), id: \.self) { date in
-                    DayCellView(
-                        viewModel: viewModel,
-                        focusedDate: $focusedDate,
-                        namespace: namespace,
-                        date: date,
-                        events: viewModel.eventsForDate(date),
-                        schoolEvent: viewModel.schoolEventForDate(date),
-                        weatherInfo: viewModel.weatherInfoForDate(date),
-                        isCurrentMonth: isDateInCurrentMonth(date),
-                        isToday: isToday(date),
-                        custodyOwner: viewModel.getCustodyInfo(for: date).text,
-                        custodyID: viewModel.getCustodyInfo(for: date).owner
-                    )
-                    .frame(height: rowHeight) // Adaptive height based on number of weeks
+            ZStack {
+                let columns = Array(repeating: GridItem(.flexible(), spacing: 1), count: 7)
+                LazyVGrid(columns: columns, spacing: 1) {
+                    ForEach(getDaysForCurrentMonth(), id: \.self) { date in
+                        DayCellView(
+                            viewModel: viewModel,
+                            focusedDate: $focusedDate,
+                            namespace: namespace,
+                            date: date,
+                            events: viewModel.eventsForDate(date),
+                            schoolEvent: viewModel.schoolEventForDate(date),
+                            weatherInfo: viewModel.weatherInfoForDate(date),
+                            isCurrentMonth: isDateInCurrentMonth(date),
+                            isToday: isToday(date),
+                            custodyOwner: viewModel.getCustodyInfo(for: date).text,
+                            custodyID: viewModel.getCustodyInfo(for: date).owner
+                        )
+                        .frame(height: rowHeight) // Adaptive height based on number of weeks
+                        .opacity(viewModel.showHandoffTimeline ? 0.3 : 1.0) // Dim calendar when handoff timeline is active
+                    }
+                }
+                .background(themeManager.currentTheme.gridLinesColor)
+                
+                // Handoff Timeline Overlay
+                if viewModel.showHandoffTimeline {
+                    HandoffTimelineView(viewModel: viewModel, calendarDays: getDaysForCurrentMonth())
+                        .allowsHitTesting(true) // Allow interactions with handoff bubbles
                 }
             }
             .frame(height: fixedCalendarHeight) // Fixed calendar height
-            .background(themeManager.currentTheme.gridLinesColor)
         }
     }
     

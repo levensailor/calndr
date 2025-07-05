@@ -1121,4 +1121,101 @@ class APIService {
             }
         }.resume()
     }
+    
+    // MARK: - Handoff Times
+    
+    func fetchHandoffTimes(year: Int, month: Int, completion: @escaping (Result<[HandoffTimeResponse], Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/api/handoff-times/\(year)/\(month)")
+        let request = createAuthenticatedRequest(url: url)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server - not HTTP"])))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received for handoff times"])))
+                return
+            }
+
+            // Log the raw data for debugging
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("--- Raw JSON for fetchHandoffTimes (Status: \(httpResponse.statusCode)) ---")
+                print(jsonString)
+                print("--------------------------------------------------------------------")
+            }
+
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            do {
+                let handoffTimes = try JSONDecoder().decode([HandoffTimeResponse].self, from: data)
+                completion(.success(handoffTimes))
+            } catch {
+                print("Failed to decode handoff times: \(error)")
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func saveHandoffTime(date: String, time: String, completion: @escaping (Result<HandoffTimeResponse, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/api/handoff-times")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let handoffTimeRequest = HandoffTimeCreate(date: date, time: time)
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(handoffTimeRequest)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server - not HTTP"])))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received on handoff time save"])))
+                return
+            }
+
+            // Log the raw data for debugging
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("--- Raw JSON for saveHandoffTime (Status: \(httpResponse.statusCode)) ---")
+                print(jsonString)
+                print("--------------------------------------------------------------------")
+            }
+
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            do {
+                let savedHandoffTime = try JSONDecoder().decode(HandoffTimeResponse.self, from: data)
+                completion(.success(savedHandoffTime))
+            } catch {
+                print("Failed to decode saved handoff time: \(error)")
+                completion(.failure(error))
+            }
+        }.resume()
+    }
 } 
