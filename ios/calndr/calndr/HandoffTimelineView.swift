@@ -58,12 +58,25 @@ struct HandoffTimelineView: View {
                                         y: position.y - 50 // Position above the bubble
                                     )
                                     
-                                    // Calculate and display the new time based on drag position
-                                    let newTimeIndex = calculateNewTimeIndex(dragOffset: value.translation.width, cellWidth: cellWidth)
-                                    overlayTime = availableHandoffTimes[newTimeIndex].display
+                                    // Calculate the new date and time based on drag position
+                                    let newDateAndTime = calculateNewDateAndTime(
+                                        originalDate: date,
+                                        dragOffset: value.translation,
+                                        cellWidth: cellWidth,
+                                        cellHeight: cellHeight,
+                                        originalPosition: position
+                                    )
+                                    
+                                    overlayTime = "\(formatDate(newDateAndTime.date)) \(newDateAndTime.time.display)"
                                 }
                                 .onEnded { value in
-                                    updateHandoffTime(for: date, dragOffset: value.translation, cellWidth: cellWidth)
+                                    updateHandoffTime(
+                                        originalDate: date,
+                                        dragOffset: value.translation,
+                                        cellWidth: cellWidth,
+                                        cellHeight: cellHeight,
+                                        originalPosition: position
+                                    )
                                     draggedBubbleDate = nil
                                     dragOffset = .zero
                                     showTimeOverlay = false
@@ -113,6 +126,56 @@ struct HandoffTimelineView: View {
         
         // Clamp to valid range (0-2)
         return max(0, min(2, newIndex))
+    }
+    
+    private func calculateNewDateAndTime(
+        originalDate: Date,
+        dragOffset: CGSize,
+        cellWidth: CGFloat,
+        cellHeight: CGFloat,
+        originalPosition: CGPoint
+    ) -> (date: Date, time: (hour: Int, minute: Int, display: String)) {
+        
+        // Calculate the new position
+        let newPosition = CGPoint(
+            x: originalPosition.x + dragOffset.width,
+            y: originalPosition.y + dragOffset.height
+        )
+        
+        // Calculate which day this corresponds to
+        let newCol = Int(newPosition.x / cellWidth)
+        let newRow = Int(newPosition.y / cellHeight)
+        
+        // Calculate the calendar index
+        let newIndex = newRow * gridColumns + newCol
+        
+        // Ensure we're within bounds
+        let clampedIndex = max(0, min(calendarDays.count - 1, newIndex))
+        let newDate = calendarDays[clampedIndex]
+        
+        // Calculate time within the cell
+        let cellLocalX = newPosition.x - (CGFloat(newCol) * cellWidth)
+        let timeProgress = cellLocalX / cellWidth
+        
+        // Map time progress to our available times
+        let timeIndex: Int
+        if timeProgress < 0.35 {
+            timeIndex = 0 // 9am
+        } else if timeProgress < 0.65 {
+            timeIndex = 1 // 12pm
+        } else {
+            timeIndex = 2 // 5pm
+        }
+        
+        let selectedTime = availableHandoffTimes[timeIndex]
+        
+        return (date: newDate, time: selectedTime)
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d"
+        return formatter.string(from: date)
     }
     
     private func drawHandoffTimeline(context: GraphicsContext, size: CGSize, cellWidth: CGFloat, cellHeight: CGFloat) {
@@ -290,29 +353,86 @@ struct HandoffTimelineView: View {
         return "\(hour):\(String(format: "%02d", minute))"
     }
     
-    private func updateHandoffTime(for date: Date, dragOffset: CGSize, cellWidth: CGFloat) {
-        // Calculate which time slot based on drag
-        let newTimeIndex = calculateNewTimeIndex(dragOffset: dragOffset.width, cellWidth: cellWidth)
-        let newTime = availableHandoffTimes[newTimeIndex]
+    private func updateHandoffTime(
+        originalDate: Date,
+        dragOffset: CGSize,
+        cellWidth: CGFloat,
+        cellHeight: CGFloat,
+        originalPosition: CGPoint
+    ) {
+        // Calculate the new date and time based on drag position
+        let newDateAndTime = calculateNewDateAndTime(
+            originalDate: originalDate,
+            dragOffset: dragOffset,
+            cellWidth: cellWidth,
+            cellHeight: cellHeight,
+            originalPosition: originalPosition
+        )
         
+        let newDate = newDateAndTime.date
+        let newTime = newDateAndTime.time
         let timeString = String(format: "%02d:%02d", newTime.hour, newTime.minute)
+        
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
-        let dateString = dateFormatter.string(from: date)
+        let originalDateString = dateFormatter.string(from: originalDate)
+        let newDateString = dateFormatter.string(from: newDate)
         
-        print("Updating handoff time to: \(newTime.display) for date: \(dateString)")
+        print("Moving handoff from \(originalDateString) to \(newDateString) at \(newTime.display)")
         
-        APIService.shared.saveHandoffTime(date: dateString, time: timeString) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(_):
-                    // Update custody for this date based on handoff time change
-                    self.updateCustodyBasedOnHandoffTimeChange(for: date)
-                    
-                    // Refresh handoff times to update the view
-                    viewModel.fetchHandoffTimes()
-                case .failure(let error):
-                    print("❌ Failed to save handoff time: \(error.localizedDescription)")
+        // If moving to a different date, we need to handle this differently
+        if originalDateString != newDateString {
+            // Find the handoff record for the original date to get its ID
+            guard let originalHandoff = viewModel.handoffTimes.first(where: { $0.date == originalDateString }) else {
+                print("❌ Could not find handoff record for \(originalDateString)")
+                return
+            }
+            
+            // Remove the old handoff using the proper ID
+            APIService.shared.deleteHandoffTime(handoffId: "\(originalHandoff.id)") { [weak self] deleteResult in
+                DispatchQueue.main.async {
+                    switch deleteResult {
+                    case .success(_):
+                        print("✅ Deleted old handoff from \(originalDateString)")
+                        
+                        // Create new handoff on the new date
+                        APIService.shared.saveHandoffTime(date: newDateString, time: timeString) { saveResult in
+                            DispatchQueue.main.async {
+                                switch saveResult {
+                                case .success(_):
+                                    print("✅ Created new handoff on \(newDateString) at \(newTime.display)")
+                                    
+                                    // Update custody for both dates
+                                    self?.updateCustodyForHandoffMove(originalDate: originalDate, newDate: newDate)
+                                    
+                                    // Refresh handoff times to update the view
+                                    self?.viewModel.fetchHandoffTimes()
+                                    
+                                case .failure(let error):
+                                    print("❌ Failed to create new handoff: \(error.localizedDescription)")
+                                }
+                            }
+                        }
+                        
+                    case .failure(let error):
+                        print("❌ Failed to delete old handoff: \(error.localizedDescription)")
+                    }
+                }
+            }
+        } else {
+            // Same date, just update the time
+            APIService.shared.saveHandoffTime(date: newDateString, time: timeString) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(_):
+                        print("✅ Updated handoff time to \(newTime.display) on \(newDateString)")
+                        
+                        // Refresh handoff times to update the view
+                        self.viewModel.fetchHandoffTimes()
+                        
+                    case .failure(let error):
+                        print("❌ Failed to save handoff time: \(error.localizedDescription)")
+                    }
                 }
             }
         }
@@ -357,6 +477,61 @@ struct HandoffTimelineView: View {
                 }
             }
         }
+    }
+    
+    private func updateCustodyForHandoffMove(originalDate: Date, newDate: Date) {
+        // When moving a handoff, we need to update custody logic for the affected dates
+        // The handoff represents a custody change, so both dates may need updates
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let originalDateString = dateFormatter.string(from: originalDate)
+        let newDateString = dateFormatter.string(from: newDate)
+        
+        print("Updating custody for handoff move from \(originalDateString) to \(newDateString)")
+        
+        // Get current custody info for both dates
+        let originalCustodyInfo = viewModel.getCustodyInfo(for: originalDate)
+        let newCustodyInfo = viewModel.getCustodyInfo(for: newDate)
+        
+        // For the new handoff date, determine who should have custody after the handoff
+        // This follows the same logic as a normal handoff - toggle custody to the other parent
+        let newDateCustodianId: String
+        if newCustodyInfo.owner == viewModel.custodianOne?.id {
+            newDateCustodianId = viewModel.custodianTwo?.id ?? ""
+        } else {
+            newDateCustodianId = viewModel.custodianOne?.id ?? ""
+        }
+        
+        guard !newDateCustodianId.isEmpty else {
+            print("Error: Could not determine new custodian ID for moved handoff")
+            return
+        }
+        
+        // Update custody for the new handoff date
+        APIService.shared.updateCustodyRecord(for: newDateString, custodianId: newDateCustodianId) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let custodyResponse):
+                    print("✅ Updated custody for new handoff date \(newDateString): \(custodyResponse)")
+                    // Update local custody records
+                    if let index = self?.viewModel.custodyRecords.firstIndex(where: { $0.event_date == custodyResponse.event_date }) {
+                        self?.viewModel.custodyRecords[index] = custodyResponse
+                    } else {
+                        self?.viewModel.custodyRecords.append(custodyResponse)
+                    }
+                    self?.viewModel.updateCustodyPercentages()
+                    
+                case .failure(let error):
+                    print("❌ Failed to update custody for new handoff date: \(error.localizedDescription)")
+                }
+            }
+        }
+        
+        // Note: We don't need to explicitly update the original date's custody here
+        // because removing the handoff from that date means custody reverts to 
+        // whatever the pattern was before that handoff existed
+        // The custody system will naturally handle this when handoffs are refreshed
     }
 }
 
