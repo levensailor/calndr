@@ -26,12 +26,33 @@ struct HandoffTimelineView: View {
             let cellWidth = geometry.size.width / CGFloat(gridColumns)
             let cellHeight = geometry.size.height / CGFloat(calendarDays.count / gridColumns)
             
-            Canvas { context, size in
-                drawHandoffTimeline(context: context, size: size, cellWidth: cellWidth, cellHeight: cellHeight)
-            }
-            .background(Color.clear)
-            .overlay(
-                // Draggable handoff bubbles
+            ZStack {
+                // Invisible overlay to capture all gestures and prevent conflicts
+                Rectangle()
+                    .fill(Color.clear)
+                    .contentShape(Rectangle())
+                    .gesture(
+                        TapGesture()
+                            .onEnded { _ in
+                                // Absorb tap gestures to prevent conflicts
+                                print("Handoff mode: Absorbed tap gesture")
+                            }
+                    )
+                    .gesture(
+                        DragGesture()
+                            .onChanged { _ in
+                                // Absorb drag gestures that don't hit bubbles
+                                print("Handoff mode: Absorbed drag gesture")
+                            }
+                    )
+                
+                Canvas { context, size in
+                    drawHandoffTimeline(context: context, size: size, cellWidth: cellWidth, cellHeight: cellHeight)
+                }
+                .background(Color.clear)
+                .allowsHitTesting(false) // Canvas doesn't need to capture gestures
+                
+                // Draggable handoff bubbles with highest priority
                 ForEach(getHandoffDays(), id: \.self) { date in
                     let position = getBubblePosition(for: date, cellWidth: cellWidth, cellHeight: cellHeight, size: geometry.size)
                     
@@ -43,6 +64,7 @@ struct HandoffTimelineView: View {
                         .offset(draggedBubbleDate == date ? dragOffset : .zero)
                         .scaleEffect(draggedBubbleDate == date ? 1.2 : 1.0)
                         .animation(.easeInOut(duration: 0.2), value: draggedBubbleDate == date)
+                        .zIndex(2000) // Ensure bubbles are above the gesture overlay
                         .gesture(
                             // Combined gesture that handles both drag and tap
                             DragGesture(minimumDistance: 0)
@@ -98,23 +120,23 @@ struct HandoffTimelineView: View {
                                 }
                         )
                 }
-            )
-            
-            // Time overlay during dragging
-            if showTimeOverlay {
-                Text(overlayTime)
-                    .font(.title2.bold())
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.purple)
-                            .shadow(radius: 8)
-                    )
-                    .position(overlayPosition)
-                    .zIndex(100) // Ensure it appears above other elements
-                    .animation(.easeInOut(duration: 0.1), value: overlayPosition)
+                
+                // Time overlay during dragging
+                if showTimeOverlay {
+                    Text(overlayTime)
+                        .font(.title2.bold())
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.purple)
+                                .shadow(radius: 8)
+                        )
+                        .position(overlayPosition)
+                        .zIndex(3000) // Ensure overlay is above everything
+                        .animation(.easeInOut(duration: 0.1), value: overlayPosition)
+                }
             }
         }
         .sheet(isPresented: $showingHandoffModal) {

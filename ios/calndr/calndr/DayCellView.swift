@@ -51,17 +51,21 @@ struct DayCellView: View {
                     .contentShape(Rectangle())
                     .frame(height: 24) // Match the fixed custody rectangle height
                     .onLongPressGesture(minimumDuration: 0.25, maximumDistance: .infinity, pressing: { isPressing in
-                        if isPressing {
+                        // Disable custody toggle when handoff timeline is active
+                        if !viewModel.showHandoffTimeline && isPressing {
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         }
                     }, perform: {
-                        viewModel.toggleCustodian(for: date)
-                        withAnimation(.spring()) {
-                            showToggleFeedback = true
-                        }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        // Disable custody toggle when handoff timeline is active
+                        if !viewModel.showHandoffTimeline {
+                            viewModel.toggleCustodian(for: date)
                             withAnimation(.spring()) {
-                                showToggleFeedback = false
+                                showToggleFeedback = true
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                                withAnimation(.spring()) {
+                                    showToggleFeedback = false
+                                }
                             }
                         }
                     })
@@ -79,8 +83,11 @@ struct DayCellView: View {
         .scaleEffect(showToggleFeedback ? 1.05 : 1.0)
         .matchedGeometryEffect(id: date, in: namespace, isSource: focusedDate != date)
         .onTapGesture {
-            withAnimation(.interactiveSpring(response: 0.3, dampingFraction: 0.8, blendDuration: 0.8)) {
-                focusedDate = date
+            // Disable tap gesture when handoff timeline is active
+            if !viewModel.showHandoffTimeline {
+                withAnimation(.interactiveSpring(response: 0.3, dampingFraction: 0.8, blendDuration: 0.8)) {
+                    focusedDate = date
+                }
             }
         }
         .opacity(focusedDate == date ? 0 : 1)

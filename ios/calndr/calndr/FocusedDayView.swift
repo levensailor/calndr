@@ -14,9 +14,12 @@ struct FocusedDayView: View {
                 .fill(.ultraThinMaterial)
                 .edgesIgnoringSafeArea(.all)
                 .onTapGesture {
-                    saveChanges()
-                    withAnimation(.interactiveSpring(response: 0.3, dampingFraction: 0.8, blendDuration: 0.8)) {
-                        focusedDate = nil
+                    // Disable focused day closing when handoff timeline is active
+                    if !viewModel.showHandoffTimeline {
+                        saveChanges()
+                        withAnimation(.interactiveSpring(response: 0.3, dampingFraction: 0.8, blendDuration: 0.8)) {
+                            focusedDate = nil
+                        }
                     }
                 }
                 .transition(.opacity)
@@ -61,7 +64,10 @@ struct FocusedDayView: View {
                             .cornerRadius(10)
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                viewModel.toggleCustodian(for: date)
+                                // Disable custody toggle when handoff timeline is active
+                                if !viewModel.showHandoffTimeline {
+                                    viewModel.toggleCustodian(for: date)
+                                }
                             }
                             .disabled(isDateInPast(date) && !UserDefaults.standard.bool(forKey: "allowPastCustodyEditing"))
                             .opacity((isDateInPast(date) && !UserDefaults.standard.bool(forKey: "allowPastCustodyEditing")) ? 0.5 : 1.0)

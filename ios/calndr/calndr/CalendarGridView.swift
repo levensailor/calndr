@@ -48,12 +48,15 @@ struct CalendarGridView: View {
                     }
                 }
                 .background(themeManager.currentTheme.gridLinesColor)
+                .allowsHitTesting(!viewModel.showHandoffTimeline) // Disable all interactions when handoff timeline is active
                 
                 // Handoff Timeline Overlay
                 if viewModel.showHandoffTimeline {
                     HandoffTimelineView(viewModel: viewModel, calendarDays: getDaysForCurrentMonth())
                         .environmentObject(themeManager)
                         .allowsHitTesting(true) // Allow interactions with handoff bubbles
+                        .zIndex(1000) // Ensure handoff timeline is above everything else
+                        .background(Color.clear) // Capture all touches
                 }
             }
             .frame(height: fixedCalendarHeight) // Fixed calendar height
