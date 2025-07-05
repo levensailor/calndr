@@ -94,6 +94,11 @@ struct YearView: View {
     }
 }
 
+struct CalendarItem: Identifiable {
+    let id: String
+    let day: Int? // nil for empty cells
+}
+
 struct MonthMiniView: View {
     @ObservedObject var viewModel: CalendarViewModel
     let themeManager: ThemeManager
@@ -114,27 +119,27 @@ struct MonthMiniView: View {
             let firstWeekday = getFirstWeekdayOfMonth()
             
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 1), count: 7), spacing: 1) {
-                // Empty cells for days before the first day of the month
-                ForEach(0..<firstWeekday, id: \.self) { _ in
-                    Rectangle()
-                        .fill(Color.clear)
-                        .frame(height: 12)
-                }
-                
-                // Days of the month
-                ForEach(1...daysInMonth, id: \.self) { day in
-                    let date = createDate(year: year, month: month, day: day)
-                    let custodyInfo = viewModel.getCustodyInfo(for: date)
-                    
-                    Rectangle()
-                        .fill(getCustodyColor(custodyID: custodyInfo.owner))
-                        .frame(height: 12)
-                        .cornerRadius(1)
-                        .overlay(
-                            Rectangle()
-                                .stroke(isToday(date) ? Color.green : Color.clear, lineWidth: isToday(date) ? 2 : 0)
-                                .cornerRadius(1)
-                        )
+                ForEach(getCalendarItems(), id: \.id) { item in
+                    if let day = item.day {
+                        // Day cell
+                        let date = createDate(year: year, month: month, day: day)
+                        let custodyInfo = viewModel.getCustodyInfo(for: date)
+                        
+                        Rectangle()
+                            .fill(getCustodyColor(custodyID: custodyInfo.owner))
+                            .frame(height: 12)
+                            .cornerRadius(1)
+                            .overlay(
+                                Rectangle()
+                                    .stroke(isToday(date) ? Color.green : Color.clear, lineWidth: isToday(date) ? 2 : 0)
+                                    .cornerRadius(1)
+                            )
+                    } else {
+                        // Empty cell
+                        Rectangle()
+                            .fill(Color.clear)
+                            .frame(height: 12)
+                    }
                 }
             }
         }
@@ -179,6 +184,24 @@ struct MonthMiniView: View {
     
     private func isToday(_ date: Date) -> Bool {
         return Calendar.current.isDateInToday(date)
+    }
+    
+    private func getCalendarItems() -> [CalendarItem] {
+        var items: [CalendarItem] = []
+        let firstWeekday = getFirstWeekdayOfMonth()
+        let daysInMonth = getDaysInMonth()
+        
+        // Add empty cells for days before the first day of the month
+        for i in 0..<firstWeekday {
+            items.append(CalendarItem(id: "empty-\(year)-\(month)-\(i)", day: nil))
+        }
+        
+        // Add days of the month
+        for day in 1...daysInMonth {
+            items.append(CalendarItem(id: "day-\(year)-\(month)-\(day)", day: day))
+        }
+        
+        return items
     }
 }
 
