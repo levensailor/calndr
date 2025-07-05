@@ -380,66 +380,67 @@ struct HandoffTimelineView: View {
         
         print("Moving handoff from \(originalDateString) to \(newDateString) at \(newTime.display)")
         
+        // Get or create handoff data based on custody information
+        let originalHandoffData = getHandoffDataForDate(originalDate)
+        
         // If moving to a different date, we need to handle this differently
         if originalDateString != newDateString {
-            // Find the handoff record for the original date to get its ID
-            guard let originalHandoff = viewModel.handoffTimes.first(where: { $0.date == originalDateString }) else {
-                print("❌ Could not find handoff record for \(originalDateString)")
-                return
-            }
-            
-            // Remove the old handoff using the proper ID
-            APIService.shared.deleteHandoffTime(handoffId: "\(originalHandoff.id)") { deleteResult in
-                DispatchQueue.main.async {
-                    switch deleteResult {
-                    case .success(_):
-                        print("✅ Deleted old handoff from \(originalDateString)")
-                        
-                        // Create new handoff on the new date
-                                                    APIService.shared.saveHandoffTime(
+            // Try to find existing handoff record to delete it
+            if let existingHandoff = viewModel.handoffTimes.first(where: { $0.date == originalDateString }) {
+                // Delete existing handoff record
+                APIService.shared.deleteHandoffTime(handoffId: "\(existingHandoff.id)") { deleteResult in
+                    DispatchQueue.main.async {
+                        switch deleteResult {
+                        case .success(_):
+                            print("✅ Deleted old handoff from \(originalDateString)")
+                            
+                            // Create new handoff on the new date
+                            let newHandoffData = self.getHandoffDataForDate(newDate)
+                            APIService.shared.saveHandoffTime(
                                 date: newDateString, 
                                 time: timeString,
-                                location: handoffRecord.location ?? "daycare",
-                                fromParentId: handoffRecord.from_parent_id,
-                                toParentId: handoffRecord.to_parent_id
+                                location: originalHandoffData.location,
+                                fromParentId: newHandoffData.fromParentId,
+                                toParentId: newHandoffData.toParentId
                             ) { saveResult in
-                            DispatchQueue.main.async {
-                                switch saveResult {
-                                case .success(_):
-                                    print("✅ Created new handoff on \(newDateString) at \(newTime.display)")
-                                    
-                                    // Update custody for both dates
-                                    self.updateCustodyForHandoffMove(originalDate: originalDate, newDate: newDate)
-                                    
-                                    // Refresh handoff times to update the view
-                                    self.viewModel.fetchHandoffTimes()
-                                    
-                                case .failure(let error):
-                                    print("❌ Failed to create new handoff: \(error.localizedDescription)")
+                                DispatchQueue.main.async {
+                                    self.handleSaveResult(saveResult, newDate: newDate, newTime: newTime, originalDate: originalDate)
                                 }
                             }
+                            
+                        case .failure(let error):
+                            print("❌ Failed to delete old handoff: \(error.localizedDescription)")
                         }
-                        
-                    case .failure(let error):
-                        print("❌ Failed to delete old handoff: \(error.localizedDescription)")
+                    }
+                }
+            } else {
+                // No existing handoff to delete, just create new one
+                let newHandoffData = getHandoffDataForDate(newDate)
+                APIService.shared.saveHandoffTime(
+                    date: newDateString, 
+                    time: timeString,
+                    location: originalHandoffData.location,
+                    fromParentId: newHandoffData.fromParentId,
+                    toParentId: newHandoffData.toParentId
+                ) { saveResult in
+                    DispatchQueue.main.async {
+                        self.handleSaveResult(saveResult, newDate: newDate, newTime: newTime, originalDate: originalDate)
                     }
                 }
             }
         } else {
             // Same date, just update the time
-                                        APIService.shared.saveHandoffTime(
-                                date: newDateString, 
-                                time: timeString,
-                                location: handoff.location ?? "daycare",
-                                fromParentId: handoff.from_parent_id,
-                                toParentId: handoff.to_parent_id
-                            ) { result in
+            APIService.shared.saveHandoffTime(
+                date: newDateString, 
+                time: timeString,
+                location: originalHandoffData.location,
+                fromParentId: originalHandoffData.fromParentId,
+                toParentId: originalHandoffData.toParentId
+            ) { result in
                 DispatchQueue.main.async {
                     switch result {
                     case .success(_):
                         print("✅ Updated handoff time to \(newTime.display) on \(newDateString)")
-                        
-                        // Refresh handoff times to update the view
                         self.viewModel.fetchHandoffTimes()
                         
                     case .failure(let error):
@@ -447,6 +448,69 @@ struct HandoffTimelineView: View {
                     }
                 }
             }
+        }
+    }
+    
+    private func getHandoffDataForDate(_ date: Date) -> (location: String, fromParentId: String?, toParentId: String?) {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: date)
+        
+        // Try to get existing handoff data first
+        if let existingHandoff = viewModel.handoffTimes.first(where: { $0.date == dateString }) {
+            return (
+                location: existingHandoff.location ?? "daycare",
+                fromParentId: existingHandoff.from_parent_id,
+                toParentId: existingHandoff.to_parent_id
+            )
+        }
+        
+        // Generate handoff data based on custody information
+        let custodyInfo = viewModel.getCustodyInfo(for: date)
+        let currentCustodian = custodyInfo.owner
+        
+        let fromParentId: String?
+        let toParentId: String?
+        
+        if currentCustodian == viewModel.custodianOne?.id {
+            fromParentId = viewModel.custodianOne?.id
+            toParentId = viewModel.custodianTwo?.id
+        } else {
+            fromParentId = viewModel.custodianTwo?.id
+            toParentId = viewModel.custodianOne?.id
+        }
+        
+        // Determine default location based on day of week
+        let dayOfWeek = Calendar.current.component(.weekday, from: date)
+        let isWeekend = dayOfWeek == 1 || dayOfWeek == 7 // Sunday or Saturday
+        let defaultLocation = isWeekend ? "\(toParentId == viewModel.custodianOne?.id ? viewModel.custodianOne?.first_name.lowercased() ?? "parent" : viewModel.custodianTwo?.first_name.lowercased() ?? "parent")'s home" : "daycare"
+        
+        return (
+            location: defaultLocation,
+            fromParentId: fromParentId,
+            toParentId: toParentId
+        )
+    }
+    
+    private func handleSaveResult(_ result: Result<HandoffTimeResponse, Error>, newDate: Date, newTime: (hour: Int, minute: Int, display: String), originalDate: Date?) {
+        switch result {
+        case .success(_):
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            print("✅ Created new handoff on \(dateFormatter.string(from: newDate)) at \(newTime.display)")
+            
+            // Update custody for both dates if moving
+            if let originalDate = originalDate {
+                self.updateCustodyForHandoffMove(originalDate: originalDate, newDate: newDate)
+            } else {
+                self.updateCustodyBasedOnHandoffTimeChange(for: newDate)
+            }
+            
+            // Refresh handoff times to update the view
+            self.viewModel.fetchHandoffTimes()
+            
+        case .failure(let error):
+            print("❌ Failed to create new handoff: \(error.localizedDescription)")
         }
     }
     
