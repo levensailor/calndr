@@ -389,7 +389,7 @@ struct HandoffTimelineView: View {
             }
             
             // Remove the old handoff using the proper ID
-            APIService.shared.deleteHandoffTime(handoffId: "\(originalHandoff.id)") { [weak self] deleteResult in
+            APIService.shared.deleteHandoffTime(handoffId: "\(originalHandoff.id)") { deleteResult in
                 DispatchQueue.main.async {
                     switch deleteResult {
                     case .success(_):
@@ -403,10 +403,10 @@ struct HandoffTimelineView: View {
                                     print("✅ Created new handoff on \(newDateString) at \(newTime.display)")
                                     
                                     // Update custody for both dates
-                                    self?.updateCustodyForHandoffMove(originalDate: originalDate, newDate: newDate)
+                                    self.updateCustodyForHandoffMove(originalDate: originalDate, newDate: newDate)
                                     
                                     // Refresh handoff times to update the view
-                                    self?.viewModel.fetchHandoffTimes()
+                                    self.viewModel.fetchHandoffTimes()
                                     
                                 case .failure(let error):
                                     print("❌ Failed to create new handoff: \(error.localizedDescription)")
@@ -509,18 +509,18 @@ struct HandoffTimelineView: View {
         }
         
         // Update custody for the new handoff date
-        APIService.shared.updateCustodyRecord(for: newDateString, custodianId: newDateCustodianId) { [weak self] result in
+        APIService.shared.updateCustodyRecord(for: newDateString, custodianId: newDateCustodianId) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let custodyResponse):
                     print("✅ Updated custody for new handoff date \(newDateString): \(custodyResponse)")
                     // Update local custody records
-                    if let index = self?.viewModel.custodyRecords.firstIndex(where: { $0.event_date == custodyResponse.event_date }) {
-                        self?.viewModel.custodyRecords[index] = custodyResponse
+                    if let index = self.viewModel.custodyRecords.firstIndex(where: { $0.event_date == custodyResponse.event_date }) {
+                        self.viewModel.custodyRecords[index] = custodyResponse
                     } else {
-                        self?.viewModel.custodyRecords.append(custodyResponse)
+                        self.viewModel.custodyRecords.append(custodyResponse)
                     }
-                    self?.viewModel.updateCustodyPercentages()
+                    self.viewModel.updateCustodyPercentages()
                     
                 case .failure(let error):
                     print("❌ Failed to update custody for new handoff date: \(error.localizedDescription)")
