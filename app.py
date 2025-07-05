@@ -1509,26 +1509,33 @@ async def get_handoff_times(year: int, month: int, current_user: User = Depends(
         else:
             end_date = date(year, month + 1, 1) - timedelta(days=1)
         
-        # Join with users table to get parent names
-        query = sqlalchemy.text("""
-            SELECT h.id, h.date, h.time, h.location, h.from_parent_id, h.to_parent_id,
-                   h.family_id, h.created_at, h.updated_at,
-                   fp.first_name as from_parent_name,
-                   tp.first_name as to_parent_name
-            FROM handoff_times h
-            LEFT JOIN users fp ON h.from_parent_id = fp.id
-            LEFT JOIN users tp ON h.to_parent_id = tp.id
-            WHERE h.family_id = :family_id 
-              AND h.date >= :start_date 
-              AND h.date <= :end_date
-            ORDER BY h.date ASC
-        """)
+        # Use SQLAlchemy Core join instead of raw SQL
+        from_parent = users.alias('fp')
+        to_parent = users.alias('tp')
         
-        result = await database.fetch_all(query, {
-            "family_id": current_user.family_id,
-            "start_date": start_date,
-            "end_date": end_date
-        })
+        query = sqlalchemy.select(
+            handoff_times.c.id,
+            handoff_times.c.date,
+            handoff_times.c.time,
+            handoff_times.c.location,
+            handoff_times.c.from_parent_id,
+            handoff_times.c.to_parent_id,
+            handoff_times.c.family_id,
+            handoff_times.c.created_at,
+            handoff_times.c.updated_at,
+            from_parent.c.first_name.label('from_parent_name'),
+            to_parent.c.first_name.label('to_parent_name')
+        ).select_from(
+            handoff_times
+            .outerjoin(from_parent, handoff_times.c.from_parent_id == from_parent.c.id)
+            .outerjoin(to_parent, handoff_times.c.to_parent_id == to_parent.c.id)
+        ).where(
+            (handoff_times.c.family_id == current_user.family_id) &
+            (handoff_times.c.date >= start_date) &
+            (handoff_times.c.date <= end_date)
+        ).order_by(handoff_times.c.date.asc())
+        
+        result = await database.fetch_all(query)
         
         handoff_list = []
         for row in result:
@@ -1604,22 +1611,32 @@ async def save_handoff_time(handoff_data: HandoffTimeCreate, current_user: User 
             
             logger.info(f"Created handoff time for {handoff_data.date} at {handoff_data.time} at {handoff_data.location} for user {current_user.id}")
         
-        # Get the final record with parent names
-        final_query = sqlalchemy.text("""
-            SELECT h.id, h.date, h.time, h.location, h.from_parent_id, h.to_parent_id,
-                   h.family_id, h.created_at, h.updated_at,
-                   fp.first_name as from_parent_name,
-                   tp.first_name as to_parent_name
-            FROM handoff_times h
-            LEFT JOIN users fp ON h.from_parent_id = fp.id
-            LEFT JOIN users tp ON h.to_parent_id = tp.id
-            WHERE h.family_id = :family_id AND h.date = :date
-        """)
+        # Get the final record with parent names using SQLAlchemy Core instead of raw SQL
+        from_parent = users.alias('fp')
+        to_parent = users.alias('tp')
         
-        final_record = await database.fetch_one(final_query, {
-            "family_id": current_user.family_id,
-            "date": handoff_date
-        })
+        final_query = sqlalchemy.select(
+            handoff_times.c.id,
+            handoff_times.c.date,
+            handoff_times.c.time,
+            handoff_times.c.location,
+            handoff_times.c.from_parent_id,
+            handoff_times.c.to_parent_id,
+            handoff_times.c.family_id,
+            handoff_times.c.created_at,
+            handoff_times.c.updated_at,
+            from_parent.c.first_name.label('from_parent_name'),
+            to_parent.c.first_name.label('to_parent_name')
+        ).select_from(
+            handoff_times
+            .outerjoin(from_parent, handoff_times.c.from_parent_id == from_parent.c.id)
+            .outerjoin(to_parent, handoff_times.c.to_parent_id == to_parent.c.id)
+        ).where(
+            (handoff_times.c.family_id == current_user.family_id) &
+            (handoff_times.c.date == handoff_date)
+        )
+        
+        final_record = await database.fetch_one(final_query)
         
         return HandoffTimeResponse(
             id=final_record.id,
