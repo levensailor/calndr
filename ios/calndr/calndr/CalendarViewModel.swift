@@ -22,6 +22,7 @@ class CalendarViewModel: ObservableObject {
     @Published var notificationEmails: [NotificationEmail] = []
     @Published var isOffline: Bool = false
     @Published var showHandoffTimeline: Bool = false // Toggle for handoff timeline view
+    @Published var custodiansLoaded: Bool = false // Track if custodian data has been loaded
     
     // Password Update
     @Published var currentPassword = ""
@@ -225,9 +226,17 @@ class CalendarViewModel: ObservableObject {
                     // After fetching names, we might need to recalculate percentages
                     self?.updateCustodyPercentages()
                     self?.updateCustodyStreak()
+                    self?.custodiansLoaded = true // Set to true after names are fetched
                 case .failure(let error):
                     print("Error fetching custodian names: \(error.localizedDescription)")
                     // Keep default names
+                    self?.custodiansLoaded = false // Mark as failed to load
+                    
+                    // Retry after a short delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        print("Retrying custodian names fetch...")
+                        self?.fetchCustodianNames()
+                    }
                 }
             }
         }
@@ -279,6 +288,12 @@ class CalendarViewModel: ObservableObject {
     func getCustodyInfo(for date: Date) -> (owner: String, text: String) {
         let dateString = isoDateString(from: date)
         let dayOfWeek = Calendar.current.component(.weekday, from: date) // 1=Sun, 2=Mon, 7=Sat
+        
+        // If custodian data isn't loaded yet, return empty info to avoid race conditions
+        guard custodiansLoaded else {
+            print("Custodian data not loaded yet for date \(dateString)")
+            return ("", "")
+        }
         
         // NEW: Check custody records first (from dedicated custody API)
         if let custodyRecord = custodyRecords.first(where: { $0.event_date == dateString }) {

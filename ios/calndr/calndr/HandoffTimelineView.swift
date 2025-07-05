@@ -23,6 +23,31 @@ struct HandoffTimelineView: View {
     ]
 
     var body: some View {
+        VStack {
+            // Check if custodian data is loaded
+            if !viewModel.custodiansLoaded {
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                    Text("Loading parent information...")
+                        .font(.headline)
+                        .foregroundColor(themeManager.currentTheme.textColor)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(themeManager.currentTheme.mainBackgroundColor)
+                .onAppear {
+                    // Trigger custodian fetch if not loaded
+                    print("Custodians not loaded in timeline, triggering fetch...")
+                    viewModel.fetchCustodianNames()
+                }
+            } else {
+                // Existing timeline content
+                timelineContent
+            }
+        }
+    }
+    
+    private var timelineContent: some View {
         GeometryReader { geometry in
             let cellWidth = geometry.size.width / CGFloat(gridColumns)
             let cellHeight = geometry.size.height / CGFloat(calendarDays.count / gridColumns)

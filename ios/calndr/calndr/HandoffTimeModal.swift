@@ -33,6 +33,60 @@ struct HandoffTimeModal: View {
     }
 
     var body: some View {
+        NavigationView {
+            VStack(spacing: 20) {
+                // Check if custodian data is loaded
+                if !viewModel.custodiansLoaded {
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.2)
+                        Text("Loading parent information...")
+                            .font(.headline)
+                            .foregroundColor(themeManager.currentTheme.textColor)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(themeManager.currentTheme.mainBackgroundColor)
+                } else {
+                    // Existing modal content
+                    modalContent
+                }
+            }
+            .navigationTitle("Handoff Time")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        isPresented = false
+                    }
+                    .foregroundColor(themeManager.currentTheme.textColor)
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        saveHandoffTime()
+                    }
+                    .foregroundColor(themeManager.currentTheme.accentColor)
+                    .disabled(!viewModel.custodiansLoaded) // Disable save until data is loaded
+                }
+            }
+        }
+        .background(themeManager.currentTheme.mainBackgroundColor)
+        .onAppear {
+            initializeTimeSelection()
+            
+            // Trigger custodian fetch if not loaded
+            if !viewModel.custodiansLoaded {
+                print("Custodians not loaded, triggering fetch...")
+                viewModel.fetchCustodianNames()
+            }
+        }
+        .onDisappear {
+            // Reset initialization state when modal is dismissed
+            currentInitializedDate = nil
+        }
+    }
+    
+    private var modalContent: some View {
         VStack(spacing: 20) {
             // Header
             VStack {
@@ -191,14 +245,6 @@ struct HandoffTimeModal: View {
                 )
             }
             .padding()
-        }
-        .background(themeManager.currentTheme.mainBackgroundColor)
-        .onAppear {
-            initializeTimeSelection()
-        }
-        .onDisappear {
-            // Reset initialization state when modal is dismissed
-            currentInitializedDate = nil
         }
     }
     
