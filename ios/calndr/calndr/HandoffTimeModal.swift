@@ -65,7 +65,7 @@ struct HandoffTimeModal: View {
                     Button("Save") {
                         saveHandoffTime()
                     }
-                    .foregroundColor(themeManager.currentTheme.accentColor)
+                    .foregroundColor(themeManager.currentTheme.iconActiveColor)
                     .disabled(!viewModel.custodiansLoaded) // Disable save until data is loaded
                 }
             }
