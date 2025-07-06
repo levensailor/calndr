@@ -435,51 +435,62 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
 
 @app.get("/api/custody/{year}/{month}")
 async def get_custody_records(year: int, month: int, current_user: User = Depends(get_current_user)):
+    logger.info(f"Getting custody records for {year}/{month}")
     """
     Returns custody records for the specified month in a format compatible with the frontend.
     """
-    # Calculate start and end dates for the month
-    start_date = date(year, month, 1)
-    if month == 12:
-        end_date = date(year + 1, 1, 1) - timedelta(days=1)
-    else:
-        end_date = date(year, month + 1, 1) - timedelta(days=1)
+    try:
+        # Calculate start and end dates for the month
+        start_date = date(year, month, 1)
+        if month == 12:
+            end_date = date(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_date = date(year, month + 1, 1) - timedelta(days=1)
+        logging.info(f"Start date: {start_date}, End date: {end_date}")
         
-    query = custody.select().where(
-        (custody.c.family_id == current_user.family_id) &
-        (custody.c.date.between(start_date, end_date))
-    )
-    custody_records = await database.fetch_all(query)
-    
-    # Get family members to map custodian IDs to names
-    family_query = users.select().where(users.c.family_id == current_user.family_id).order_by(users.c.first_name)
-    family_members = await database.fetch_all(family_query)
-    
-    # Create a mapping from custodian ID to name
-    custodian_map = {}
-    if len(family_members) >= 2:
-        custodian_map[str(family_members[0]['id'])] = family_members[0]['first_name'].lower()
-        custodian_map[str(family_members[1]['id'])] = family_members[1]['first_name'].lower()
-    
-    # Convert custody records to frontend format (compatible with events position 4)
-    frontend_custody = []
-    for record in custody_records:
-        custodian_name = custodian_map.get(str(record['custodian_id']), 'unknown')
-        frontend_custody.append({
-            'id': record['id'],
-            'event_date': str(record['date']),
-            'content': custodian_name,
-            'position': 4,  # For frontend compatibility
-            'custodian_id': str(record['custodian_id']),
-            'handoff_day': record.get('handoff_day', False),
-            'handoff_time': str(record['handoff_time']) if record.get('handoff_time') else None,
-            'handoff_location': record.get('handoff_location')
-        })
+        query = custody.select().where(
+            (custody.c.family_id == current_user.family_id) &
+            (custody.c.date.between(start_date, end_date))
+        )
         
-    return frontend_custody
+        custody_records = await database.fetch_all(query)
+        logging.info(f"Custody records: {custody_records}")
+        
+        # Get family members to map custodian IDs to names
+        family_query = users.select().where(users.c.family_id == current_user.family_id).order_by(users.c.first_name)
+        family_members = await database.fetch_all(family_query)
+        
+        # Create a mapping from custodian ID to name
+        custodian_map = {}
+        if len(family_members) >= 2:
+            custodian_map[str(family_members[0]['id'])] = family_members[0]['first_name'].lower()
+            custodian_map[str(family_members[1]['id'])] = family_members[1]['first_name'].lower()
+        
+        # Convert custody records to frontend format (compatible with events position 4)
+        frontend_custody = []
+        for record in custody_records:
+            custodian_name = custodian_map.get(str(record['custodian_id']), 'unknown')
+            frontend_custody.append({
+                'id': record['id'],
+                'event_date': str(record['date']),
+                'content': custodian_name,
+                'position': 4,  # For frontend compatibility
+                'custodian_id': str(record['custodian_id']),
+                'handoff_day': record.get('handoff_day', False),
+                'handoff_time': str(record['handoff_time']) if record.get('handoff_time') else None,
+                'handoff_location': record.get('handoff_location')
+            })
+            
+        return frontend_custody
+        
+    except Exception as e:
+        logger.error(f"Error fetching custody records for {year}/{month}: {e}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @app.post("/api/custody")
 async def set_custody(custody_data: CustodyRecord, current_user: User = Depends(get_current_user)):
+    logging.info(f"Setting custody: date={custody_data.date}, custodian_id={custody_data.custodian_id}")
     """
     Sets or updates custody for a specific date.
     """
@@ -513,6 +524,7 @@ async def set_custody(custody_data: CustodyRecord, current_user: User = Depends(
                 actor_id=current_user.id,
                 custodian_id=custody_data.custodian_id
             )
+            logging.info(f"Inserting new custody record: {insert_query}")
             record_id = await database.execute(insert_query)
         
         # Send notification

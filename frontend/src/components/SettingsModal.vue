@@ -17,6 +17,61 @@
           </button>
         </div>
 
+        <div v-if="activeTab === 'Account'" class="tab-content">
+          <h3>User Profile</h3>
+          
+          <!-- Profile Loading State -->
+          <div v-if="profileLoading" class="profile-loading">
+            <p>Loading profile...</p>
+          </div>
+          
+          <!-- Profile Error State -->
+          <div v-else-if="profileError" class="profile-error">
+            <p class="error-message">Unable to load profile</p>
+            <p class="error-details">{{ profileError }}</p>
+            <div class="error-actions">
+              <button @click="fetchUserProfile" class="retry-button">Retry</button>
+              <button @click="showLoginModal = true" class="login-button" v-if="profileError.includes('authentication') || profileError.includes('token')">Login</button>
+              <button @click="logout" class="logout-button">Logout</button>
+            </div>
+          </div>
+          
+          <!-- Profile Success State -->
+          <div v-else-if="userProfile" class="profile-info">
+            <div class="form-group">
+              <label>Name</label>
+              <p>{{ userProfile.first_name }} {{ userProfile.last_name }}</p>
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <p>{{ userProfile.email }}</p>
+            </div>
+            <div class="form-group" v-if="userProfile.phone_number">
+              <label>Phone</label>
+              <p>{{ userProfile.phone_number }}</p>
+            </div>
+            <div class="form-group" v-if="userProfile.subscription_type">
+              <label>Subscription</label>
+              <p>{{ userProfile.subscription_type }} ({{ userProfile.subscription_status }})</p>
+            </div>
+            <div class="form-group" v-if="userProfile.created_at">
+              <label>Member Since</label>
+              <p>{{ formatDate(userProfile.created_at) }}</p>
+            </div>
+            <button @click="logout" class="logout-button">Logout</button>
+          </div>
+          
+          <!-- No Profile State -->
+          <div v-else class="profile-empty">
+            <p>No profile information available</p>
+            <div class="error-actions">
+              <button @click="fetchUserProfile" class="retry-button">Load Profile</button>
+              <button @click="showLoginModal = true" class="login-button">Login</button>
+              <button @click="logout" class="logout-button">Logout</button>
+            </div>
+          </div>
+        </div>
+
         <div v-if="activeTab === 'Appearance'" class="tab-content">
           <div class="form-group">
             <label>Theme</label>
@@ -100,6 +155,54 @@
       @cancel="cancelThemeCreation"
       @save="saveNewTheme"
     />
+    
+    <!-- Login Modal -->
+    <div v-if="showLoginModal" class="modal-overlay" @click.self="showLoginModal = false">
+      <div class="login-modal">
+        <div class="modal-header">
+          <h3>Login Required</h3>
+          <button class="close-button" @click="showLoginModal = false">&times;</button>
+        </div>
+        <div class="modal-content">
+          <p>Please login to access your profile information.</p>
+          
+          <div v-if="loginError" class="login-error">
+            <p>{{ loginError }}</p>
+          </div>
+          
+          <div class="form-group">
+            <label for="login-email">Email</label>
+            <input 
+              type="email" 
+              id="login-email" 
+              v-model="loginEmail" 
+              placeholder="Enter your email"
+              :disabled="loginLoading"
+              @keyup.enter="login"
+            >
+          </div>
+          
+          <div class="form-group">
+            <label for="login-password">Password</label>
+            <input 
+              type="password" 
+              id="login-password" 
+              v-model="loginPassword" 
+              placeholder="Enter your password"
+              :disabled="loginLoading"
+              @keyup.enter="login"
+            >
+          </div>
+          
+          <div class="login-actions">
+            <button @click="login" :disabled="loginLoading" class="login-submit-button">
+              {{ loginLoading ? 'Logging in...' : 'Login' }}
+            </button>
+            <button @click="showLoginModal = false" class="cancel-button">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -121,8 +224,8 @@ export default {
   emits: ['close', 'set-theme', 'toggle-labels', 'save-custom-theme', 'delete-custom-theme'],
   data() {
     return {
-      activeTab: 'Appearance',
-      tabs: ['Appearance', 'Notifications', 'Security'],
+      activeTab: 'Account',
+      tabs: ['Account', 'Appearance', 'Notifications', 'Security'],
       emails: [],
       newEmail: '',
       newPassword: '',
@@ -131,6 +234,14 @@ export default {
       hoverTimeout: null,
       hoveredThemeName: null,
       editingThemeName: null,
+      userProfile: null,
+      profileLoading: false,
+      profileError: null,
+      showLoginModal: false,
+      loginEmail: '',
+      loginPassword: '',
+      loginLoading: false,
+      loginError: null,
     };
   },
   computed: {
@@ -217,10 +328,131 @@ export default {
     cancelThemeCreation() {
       this.showThemeCreator = false;
       this.editingThemeName = null;
+    },
+    async fetchUserProfile() {
+      this.profileLoading = true;
+      this.profileError = null;
+      
+      try {
+        // Check if we have an authentication token
+        const authToken = localStorage.getItem('authToken') || localStorage.getItem('jwtToken') || localStorage.getItem('accessToken');
+        
+        if (!authToken) {
+          this.profileError = 'No authentication token found. Please login to view your profile.';
+          this.profileLoading = false;
+          return;
+        }
+        
+        // Set the authorization header for this request
+        const headers = {
+          'Authorization': `Bearer ${authToken}`
+        };
+        
+        const response = await axios.get('/api/user/profile', { headers });
+        this.userProfile = response.data;
+        console.log('Profile loaded successfully:', this.userProfile);
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+        
+        if (error.response && error.response.status === 401) {
+          this.profileError = 'Authentication failed. Your session may have expired.';
+        } else if (error.response && error.response.status === 404) {
+          this.profileError = 'User profile not found.';
+        } else if (error.response) {
+          this.profileError = `Server error (${error.response.status}): ${error.response.data?.detail || error.response.statusText}`;
+        } else {
+          this.profileError = error.message || 'Failed to load profile. Please check your connection.';
+        }
+      } finally {
+        this.profileLoading = false;
+      }
+    },
+    logout() {
+      if (confirm('Are you sure you want to logout?')) {
+        // Clear any stored authentication tokens and session data
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('jwtToken');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('lastSuccessfulLogin');
+        localStorage.removeItem('loginAttempts');
+        localStorage.removeItem('lockoutEndTime');
+        
+        // Clear axios default headers
+        delete axios.defaults.headers.common['Authorization'];
+        
+        // Reload the page to reset the app state and return to lock screen
+        window.location.reload();
+      }
+    },
+    async login() {
+      if (!this.loginEmail || !this.loginPassword) {
+        this.loginError = 'Please enter both email and password.';
+        return;
+      }
+      
+      this.loginLoading = true;
+      this.loginError = null;
+      
+      try {
+        // Create form data for the OAuth2 token endpoint
+        const formData = new URLSearchParams();
+        formData.append('username', this.loginEmail);
+        formData.append('password', this.loginPassword);
+        
+        const response = await axios.post('/api/auth/token', formData, {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
+        });
+        
+        const { access_token } = response.data;
+        
+        // Store the token
+        localStorage.setItem('authToken', access_token);
+        
+        // Set default authorization header for future requests
+        axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+        
+        // Close login modal and reset form
+        this.showLoginModal = false;
+        this.loginEmail = '';
+        this.loginPassword = '';
+        this.loginError = null;
+        
+        // Fetch the user profile now that we're authenticated
+        this.fetchUserProfile();
+        
+      } catch (error) {
+        console.error('Login error:', error);
+        
+        if (error.response && error.response.status === 401) {
+          this.loginError = 'Invalid email or password.';
+        } else if (error.response) {
+          this.loginError = `Login failed: ${error.response.data?.detail || error.response.statusText}`;
+        } else {
+          this.loginError = 'Login failed. Please check your connection and try again.';
+        }
+      } finally {
+        this.loginLoading = false;
+      }
+    },
+    formatDate(dateString) {
+      if (!dateString) return '';
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      } catch (error) {
+        return dateString;
+      }
     }
   },
   created() {
     this.fetchEmails();
+    this.fetchUserProfile();
   },
 };
 </script>
@@ -425,6 +657,152 @@ export default {
   flex-grow: 1;
 }
 
+.profile-loading {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+
+.profile-error {
+  text-align: center;
+  padding: 20px;
+}
+
+.error-message {
+  color: #d9534f;
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+
+.error-details {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 15px;
+}
+
+.error-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.retry-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.retry-button:hover {
+  background-color: #0056b3;
+}
+
+.logout-button {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.logout-button:hover {
+  background-color: #c82333;
+}
+
+.login-button {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.login-button:hover {
+  background-color: #218838;
+}
+
+.profile-info .form-group p {
+  margin: 0;
+  padding: 8px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
+
+.profile-empty {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+
+.login-modal {
+  background: white;
+  color: #333;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  width: 90%;
+  max-width: 400px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.login-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  border: 1px solid #f5c6cb;
+}
+
+.login-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.login-submit-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.login-submit-button:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.login-submit-button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.cancel-button {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.cancel-button:hover {
+  background-color: #5a6268;
+}
+
 .theme-actions {
   position: absolute;
   top: 5px;
@@ -547,6 +925,39 @@ export default {
 
   .add-email-form input {
     margin-bottom: 0;
+  }
+
+  .error-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .retry-button,
+  .logout-button,
+  .login-button {
+    padding: 12px 16px;
+    font-size: 16px;
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  .login-modal {
+    width: 95%;
+    max-width: none;
+    margin: 10px;
+  }
+
+  .login-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .login-submit-button,
+  .cancel-button {
+    padding: 12px 16px;
+    font-size: 16px;
+    min-height: 44px;
+    touch-action: manipulation;
   }
 
   .theme-actions {

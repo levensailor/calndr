@@ -11,6 +11,12 @@ axios.defaults.baseURL = 'https://calndr.club'
 // Remove the ngrok header since we're using your production domain
 // axios.defaults.headers.common['ngrok-skip-browser-warning'] = 'true'
 
+// Check for existing auth token and set it as default header
+const authToken = localStorage.getItem('authToken') || localStorage.getItem('jwtToken') || localStorage.getItem('accessToken');
+if (authToken) {
+  axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+}
+
 const app = createApp(App)
 
 // Make axios available globally

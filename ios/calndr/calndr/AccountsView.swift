@@ -32,10 +32,19 @@ struct AccountsView: View {
                         .font(.caption)
                         .multilineTextAlignment(.center)
                         .foregroundColor(.secondary)
-                    Button("Retry") {
-                        fetchUserProfile()
+                    
+                    HStack(spacing: 12) {
+                        Button("Retry") {
+                            fetchUserProfile()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        
+                        Button("Logout") {
+                            authManager.logout()
+                        }
+                        .buttonStyle(.bordered)
+                        .foregroundColor(.red)
                     }
-                    .buttonStyle(.borderedProminent)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let profile = userProfile {
