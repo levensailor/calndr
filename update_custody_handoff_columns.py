@@ -5,8 +5,8 @@ Database script to update the custody table with handoff information.
 This script:
 1. Adds handoff_day, handoff_time, and handoff_location columns to the custody table
 2. Sets handoff_day to true when the custodian_id is different from the previous day
-3. Sets handoff_time to 5pm (17:00) on handoff days that fall on weekends
-4. Sets handoff_location to the custodian's house on handoff days that fall on weekends
+3. For weekend handoffs: sets handoff_time to noon (12:00) and handoff_location to the other custodian's home
+4. For weekday handoffs: sets handoff_time to 5pm (17:00) and handoff_location to daycare
 5. Sets all other handoff_day records to false
 
 Usage:
@@ -160,13 +160,18 @@ def update_handoff_data(conn, dry_run=False):
                     is_handoff_day = True
                     handoff_count += 1
                     
-                    # If it's a weekend handoff, set time and location
+                    # Set time and location based on weekend vs weekday
                     if is_weekend(record['date']):
-                        handoff_time_val = time(17, 0)  # 5:00 PM
+                        # Weekend handoffs: noon at the other custodian's home (the one giving up custody)
+                        handoff_time_val = time(12, 0)  # 12:00 PM (noon)
                         
-                        # Get the custodian's name for location
-                        custodian_name = users.get(record['custodian_id'], 'unknown')
-                        handoff_location_val = f"{custodian_name.lower()}'s home"
+                        # Get the previous custodian's name for location (the one giving up custody)
+                        previous_custodian_name = users.get(previous_custodian, 'unknown')
+                        handoff_location_val = f"{previous_custodian_name.lower()}'s home"
+                    else:
+                        # Weekday handoffs: 5pm at daycare
+                        handoff_time_val = time(17, 0)  # 5:00 PM
+                        handoff_location_val = "daycare"
                 
                 updates.append({
                     'id': record['id'],
