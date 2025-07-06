@@ -68,6 +68,8 @@ class CalendarViewModel: ObservableObject {
         let firstDateString = isoDateString(from: firstDate)
         let lastDateString = isoDateString(from: lastDate)
 
+        print("🗓️ fetchEvents() called - visible dates: \(firstDateString) to \(lastDateString)")
+
         // Also fetch weather for the visible range
         fetchWeather(from: firstDateString, to: lastDateString)
         
@@ -110,8 +112,21 @@ class CalendarViewModel: ObservableObject {
         let startDate = visibleDateRange.start
         let endDate = visibleDateRange.end
         
+        // Compare with getVisibleDates() method for consistency check
+        let visibleDates = getVisibleDates()
+        let visibleDatesStart = visibleDates.first!
+        let visibleDatesEnd = visibleDates.last!
+        
         print("🗓️ Current date: \(isoDateString(from: currentDate))")
-        print("🗓️ Visible date range: \(isoDateString(from: startDate)) to \(isoDateString(from: endDate))")
+        print("🗓️ Visible date range (custody): \(isoDateString(from: startDate)) to \(isoDateString(from: endDate))")
+        print("🗓️ Visible date range (events): \(isoDateString(from: visibleDatesStart)) to \(isoDateString(from: visibleDatesEnd))")
+        
+        if isoDateString(from: startDate) != isoDateString(from: visibleDatesStart) || 
+           isoDateString(from: endDate) != isoDateString(from: visibleDatesEnd) {
+            print("⚠️ DATE RANGE MISMATCH detected!")
+        } else {
+            print("✅ Date ranges match perfectly")
+        }
         
         // Get unique year-month combinations for the visible range
         var monthsToFetch: Set<String> = []
@@ -128,6 +143,10 @@ class CalendarViewModel: ObservableObject {
         }
         
         print("Fetching custody records for months: \(monthsToFetch)")
+        
+        // Log which specific dates we're expecting to have custody data for
+        let expectedDates = visibleDates.map { isoDateString(from: $0) }
+        print("📅 Expected custody dates: \(expectedDates.prefix(5))...\(expectedDates.suffix(5))")
         
         var allCustodyRecords: [CustodyResponse] = []
         let dispatchGroup = DispatchGroup()
@@ -167,6 +186,21 @@ class CalendarViewModel: ObservableObject {
             print("📊 Total custody records in memory: \(self?.custodyRecords.count ?? 0)")
             if let records = self?.custodyRecords, !records.isEmpty {
                 print("📊 Date range of records: \(records.first?.event_date ?? "none") to \(records.last?.event_date ?? "none")")
+            }
+            
+            // Verify we have custody data for the expected dates
+            if let self = self {
+                let visibleDates = self.getVisibleDates()
+                let missingDates = visibleDates.filter { date in
+                    let dateString = self.isoDateString(from: date)
+                    return !allCustodyRecords.contains { $0.event_date == dateString }
+                }
+                if !missingDates.isEmpty {
+                    print("⚠️ Missing custody data for \(missingDates.count) dates:")
+                    missingDates.prefix(10).forEach { date in
+                        print("   Missing: \(self.isoDateString(from: date))")
+                    }
+                }
             }
         }
     }
@@ -942,6 +976,8 @@ class CalendarViewModel: ObservableObject {
                 dates.append(date)
             }
         }
+        
+        print("🗓️ getVisibleDates() - first: \(isoDateString(from: dates.first!)), last: \(isoDateString(from: dates.last!))")
         return dates
     }
 
