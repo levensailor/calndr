@@ -230,7 +230,7 @@ class APIService {
 
     // Placeholder for fetching school events
     func fetchSchoolEvents(completion: @escaping (Result<[SchoolEvent], Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/school-events")
+        let url = baseURL.appendingPathComponent("/api/school-events")
         let request = createAuthenticatedRequest(url: url)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
@@ -633,7 +633,7 @@ class APIService {
     }
 
     func fetchCustodianNames(completion: @escaping (Result<CustodianResponse, Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/family/custodians")
+        let url = baseURL.appendingPathComponent("/api/family/custodians")
         let request = createAuthenticatedRequest(url: url)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
