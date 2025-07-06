@@ -1500,7 +1500,7 @@ async def delete_emergency_contact(contact_id: int, current_user: User = Depends
 
 @app.get("/api/handoff-times/{year}/{month}", response_model=list[HandoffTimeResponse])
 async def get_handoff_times(year: int, month: int, current_user: User = Depends(get_current_user)):
-    """Get handoff times for a specific month with parent names."""
+    """Get handoff times for a specific month from custody table where handoff_day = true."""
     try:
         # Calculate date range for the month
         start_date = date(year, month, 1)
@@ -1509,48 +1509,64 @@ async def get_handoff_times(year: int, month: int, current_user: User = Depends(
         else:
             end_date = date(year, month + 1, 1) - timedelta(days=1)
         
-        # Use SQLAlchemy Core join instead of raw SQL
-        from_parent = users.alias('fp')
-        to_parent = users.alias('tp')
-        
+        # Use custody table instead of handoff_times table
+        # Get custody records for this family and month where handoff_day = true
         query = sqlalchemy.select(
-            handoff_times.c.id,
-            handoff_times.c.date,
-            handoff_times.c.time,
-            handoff_times.c.location,
-            handoff_times.c.from_parent_id,
-            handoff_times.c.to_parent_id,
-            handoff_times.c.family_id,
-            handoff_times.c.created_at,
-            handoff_times.c.updated_at,
-            from_parent.c.first_name.label('from_parent_name'),
-            to_parent.c.first_name.label('to_parent_name')
-        ).select_from(
-            handoff_times
-            .outerjoin(from_parent, handoff_times.c.from_parent_id == from_parent.c.id)
-            .outerjoin(to_parent, handoff_times.c.to_parent_id == to_parent.c.id)
+            custody.c.id,
+            custody.c.date,
+            custody.c.handoff_time,
+            custody.c.handoff_location,
+            custody.c.family_id,
+            custody.c.created_at,
+            custody.c.custodian_id  # This is the "to_parent_id" (receiving custody)
         ).where(
-            (handoff_times.c.family_id == current_user.family_id) &
-            (handoff_times.c.date >= start_date) &
-            (handoff_times.c.date <= end_date)
-        ).order_by(handoff_times.c.date.asc())
+            (custody.c.family_id == current_user.family_id) &
+            (custody.c.date >= start_date) &
+            (custody.c.date <= end_date) &
+            (custody.c.handoff_day == True)
+        ).order_by(custody.c.date.asc())
         
         result = await database.fetch_all(query)
         
+        # Get all family members to map IDs to names and determine from/to parents
+        family_query = users.select().where(users.c.family_id == current_user.family_id).order_by(users.c.first_name)
+        family_members = await database.fetch_all(family_query)
+        
+        user_map = {str(user['id']): user['first_name'] for user in family_members}
+        
         handoff_list = []
         for row in result:
+            to_parent_id = str(row.custodian_id)
+            to_parent_name = user_map.get(to_parent_id, "Unknown")
+            
+            # Determine from_parent_id by getting previous day's custody
+            from_parent_id = None
+            from_parent_name = None
+            
+            # Get the previous day's custody to determine who is handing off
+            prev_day = row.date - timedelta(days=1)
+            prev_custody_query = custody.select().where(
+                (custody.c.family_id == current_user.family_id) &
+                (custody.c.date == prev_day)
+            )
+            prev_custody = await database.fetch_one(prev_custody_query)
+            
+            if prev_custody:
+                from_parent_id = str(prev_custody['custodian_id'])
+                from_parent_name = user_map.get(from_parent_id, "Unknown")
+            
             handoff_list.append(HandoffTimeResponse(
                 id=row.id,
                 date=row.date.strftime("%Y-%m-%d"),
-                time=row.time.strftime("%H:%M"),
-                location=row.location,
-                from_parent_id=str(row.from_parent_id) if row.from_parent_id else None,
-                to_parent_id=str(row.to_parent_id) if row.to_parent_id else None,
-                from_parent_name=row.from_parent_name,
-                to_parent_name=row.to_parent_name,
+                time=row.handoff_time.strftime("%H:%M") if row.handoff_time else "00:00",
+                location=row.handoff_location or "",
+                from_parent_id=from_parent_id,
+                to_parent_id=to_parent_id,
+                from_parent_name=from_parent_name,
+                to_parent_name=to_parent_name,
                 family_id=str(row.family_id),
-                created_at=row.created_at.isoformat(),
-                updated_at=row.updated_at.isoformat()
+                created_at=row.created_at.isoformat() if row.created_at else datetime.now().isoformat(),
+                updated_at=row.created_at.isoformat() if row.created_at else datetime.now().isoformat()
             ))
         
         logger.info(f"Retrieved {len(handoff_list)} handoff times for user {current_user.id} for {year}-{month:02d}")
@@ -1562,94 +1578,103 @@ async def get_handoff_times(year: int, month: int, current_user: User = Depends(
 
 @app.post("/api/handoff-times", response_model=HandoffTimeResponse)
 async def save_handoff_time(handoff_data: HandoffTimeCreate, current_user: User = Depends(get_current_user)):
-    """Create or update a handoff time for a specific date."""
+    """Create or update a handoff time by updating custody table handoff columns."""
     try:
         # Parse date and time
         handoff_date = datetime.strptime(handoff_data.date, "%Y-%m-%d").date()
         handoff_time = datetime.strptime(handoff_data.time, "%H:%M").time()
         
         # Parse parent IDs if provided
-        from_parent_id = uuid.UUID(handoff_data.from_parent_id) if handoff_data.from_parent_id else None
         to_parent_id = uuid.UUID(handoff_data.to_parent_id) if handoff_data.to_parent_id else None
         
-        # Check if handoff time already exists for this date
-        existing_query = handoff_times.select().where(
-            (handoff_times.c.family_id == current_user.family_id) &
-            (handoff_times.c.date == handoff_date)
+        # Find or create custody record for this date
+        existing_query = custody.select().where(
+            (custody.c.family_id == current_user.family_id) &
+            (custody.c.date == handoff_date)
         )
-        existing_handoff = await database.fetch_one(existing_query)
+        existing_custody = await database.fetch_one(existing_query)
         
-        if existing_handoff:
-            # Update existing handoff time
-            update_query = handoff_times.update().where(
-                (handoff_times.c.family_id == current_user.family_id) &
-                (handoff_times.c.date == handoff_date)
+        if existing_custody:
+            # Update existing custody record with handoff information
+            update_query = custody.update().where(
+                (custody.c.family_id == current_user.family_id) &
+                (custody.c.date == handoff_date)
             ).values(
-                time=handoff_time,
-                location=handoff_data.location,
-                from_parent_id=from_parent_id,
-                to_parent_id=to_parent_id,
-                updated_at=datetime.now()
+                handoff_day=True,
+                handoff_time=handoff_time,
+                handoff_location=handoff_data.location,
+                custodian_id=to_parent_id or existing_custody['custodian_id']  # Use existing if not provided
             )
             await database.execute(update_query)
             
-            logger.info(f"Updated handoff time for {handoff_data.date} to {handoff_data.time} at {handoff_data.location} for user {current_user.id}")
+            logger.info(f"Updated custody handoff for {handoff_data.date} to {handoff_data.time} at {handoff_data.location} for user {current_user.id}")
+            custody_id = existing_custody['id']
             
         else:
-            # Create new handoff time
-            insert_query = handoff_times.insert().values(
+            # Create new custody record with handoff information
+            if not to_parent_id:
+                raise HTTPException(status_code=400, detail="to_parent_id is required for new handoff records")
+            
+            insert_query = custody.insert().values(
                 family_id=current_user.family_id,
                 date=handoff_date,
-                time=handoff_time,
-                location=handoff_data.location,
-                from_parent_id=from_parent_id,
-                to_parent_id=to_parent_id,
-                created_at=datetime.now(),
-                updated_at=datetime.now()
+                actor_id=current_user.id,
+                custodian_id=to_parent_id,
+                handoff_day=True,
+                handoff_time=handoff_time,
+                handoff_location=handoff_data.location,
+                created_at=datetime.now()
             )
-            handoff_id = await database.execute(insert_query)
+            custody_id = await database.execute(insert_query)
             
-            logger.info(f"Created handoff time for {handoff_data.date} at {handoff_data.time} at {handoff_data.location} for user {current_user.id}")
+            logger.info(f"Created custody handoff for {handoff_data.date} at {handoff_data.time} at {handoff_data.location} for user {current_user.id}")
         
-        # Get the final record with parent names using SQLAlchemy Core instead of raw SQL
-        from_parent = users.alias('fp')
-        to_parent = users.alias('tp')
-        
+        # Get the final record with parent names
         final_query = sqlalchemy.select(
-            handoff_times.c.id,
-            handoff_times.c.date,
-            handoff_times.c.time,
-            handoff_times.c.location,
-            handoff_times.c.from_parent_id,
-            handoff_times.c.to_parent_id,
-            handoff_times.c.family_id,
-            handoff_times.c.created_at,
-            handoff_times.c.updated_at,
-            from_parent.c.first_name.label('from_parent_name'),
-            to_parent.c.first_name.label('to_parent_name')
-        ).select_from(
-            handoff_times
-            .outerjoin(from_parent, handoff_times.c.from_parent_id == from_parent.c.id)
-            .outerjoin(to_parent, handoff_times.c.to_parent_id == to_parent.c.id)
-        ).where(
-            (handoff_times.c.family_id == current_user.family_id) &
-            (handoff_times.c.date == handoff_date)
-        )
+            custody.c.id,
+            custody.c.date,
+            custody.c.handoff_time,
+            custody.c.handoff_location,
+            custody.c.family_id,
+            custody.c.created_at,
+            custody.c.custodian_id
+        ).where(custody.c.id == custody_id)
         
         final_record = await database.fetch_one(final_query)
+        
+        # Get family members to map IDs to names
+        family_query = users.select().where(users.c.family_id == current_user.family_id).order_by(users.c.first_name)
+        family_members = await database.fetch_all(family_query)
+        user_map = {str(user['id']): user['first_name'] for user in family_members}
+        
+        # Determine from_parent by looking at previous day
+        from_parent_id = handoff_data.from_parent_id
+        from_parent_name = None
+        if not from_parent_id:
+            prev_day = handoff_date - timedelta(days=1)
+            prev_custody_query = custody.select().where(
+                (custody.c.family_id == current_user.family_id) &
+                (custody.c.date == prev_day)
+            )
+            prev_custody = await database.fetch_one(prev_custody_query)
+            if prev_custody:
+                from_parent_id = str(prev_custody['custodian_id'])
+        
+        from_parent_name = user_map.get(from_parent_id, "Unknown") if from_parent_id else None
+        to_parent_name = user_map.get(str(final_record.custodian_id), "Unknown")
         
         return HandoffTimeResponse(
             id=final_record.id,
             date=final_record.date.strftime("%Y-%m-%d"),
-            time=final_record.time.strftime("%H:%M"),
-            location=final_record.location,
-            from_parent_id=str(final_record.from_parent_id) if final_record.from_parent_id else None,
-            to_parent_id=str(final_record.to_parent_id) if final_record.to_parent_id else None,
-            from_parent_name=final_record.from_parent_name,
-            to_parent_name=final_record.to_parent_name,
+            time=final_record.handoff_time.strftime("%H:%M") if final_record.handoff_time else "00:00",
+            location=final_record.handoff_location or "",
+            from_parent_id=from_parent_id,
+            to_parent_id=str(final_record.custodian_id),
+            from_parent_name=from_parent_name,
+            to_parent_name=to_parent_name,
             family_id=str(final_record.family_id),
-            created_at=final_record.created_at.isoformat(),
-            updated_at=final_record.updated_at.isoformat()
+            created_at=final_record.created_at.isoformat() if final_record.created_at else datetime.now().isoformat(),
+            updated_at=final_record.created_at.isoformat() if final_record.created_at else datetime.now().isoformat()
         )
     
     except ValueError as e:
@@ -1661,80 +1686,79 @@ async def save_handoff_time(handoff_data: HandoffTimeCreate, current_user: User 
 
 @app.put("/api/handoff-times/{handoff_id}", response_model=HandoffTimeResponse)
 async def update_handoff_time(handoff_id: int, handoff_data: HandoffTimeCreate, current_user: User = Depends(get_current_user)):
-    """Update an existing handoff time."""
+    """Update an existing handoff time in custody table."""
     try:
-        # Parse date and time (same as POST endpoint)
+        # Parse date and time
         handoff_date = datetime.strptime(handoff_data.date, "%Y-%m-%d").date()
         handoff_time = datetime.strptime(handoff_data.time, "%H:%M").time()
         
-        # Parse parent IDs if provided (same as POST endpoint)
-        from_parent_id = uuid.UUID(handoff_data.from_parent_id) if handoff_data.from_parent_id else None
+        # Parse parent IDs if provided
         to_parent_id = uuid.UUID(handoff_data.to_parent_id) if handoff_data.to_parent_id else None
         
-        # Verify the handoff time belongs to the user's family
-        verify_query = handoff_times.select().where(
-            (handoff_times.c.id == handoff_id) &
-            (handoff_times.c.family_id == current_user.family_id)
+        # Verify the custody record belongs to the user's family
+        verify_query = custody.select().where(
+            (custody.c.id == handoff_id) &
+            (custody.c.family_id == current_user.family_id)
         )
-        existing_handoff = await database.fetch_one(verify_query)
+        existing_custody = await database.fetch_one(verify_query)
         
-        if not existing_handoff:
-            raise HTTPException(status_code=404, detail="Handoff time not found")
+        if not existing_custody:
+            raise HTTPException(status_code=404, detail="Handoff record not found")
         
-        # Update the handoff time record
-        update_query = handoff_times.update().where(
-            handoff_times.c.id == handoff_id
+        # Update the custody record with handoff information
+        update_query = custody.update().where(
+            custody.c.id == handoff_id
         ).values(
             date=handoff_date,
-            time=handoff_time,
-            location=handoff_data.location,
-            from_parent_id=from_parent_id,
-            to_parent_id=to_parent_id,
-            updated_at=datetime.now()
+            handoff_day=True,
+            handoff_time=handoff_time,
+            handoff_location=handoff_data.location,
+            custodian_id=to_parent_id or existing_custody['custodian_id']
         )
         await database.execute(update_query)
         
-        # Return the updated handoff time with parent names
-        from_parent = users.alias('fp')
-        to_parent = users.alias('tp')
+        # Get the updated record
+        select_query = custody.select().where(custody.c.id == handoff_id)
+        updated_custody = await database.fetch_one(select_query)
         
-        select_query = sqlalchemy.select(
-            handoff_times.c.id,
-            handoff_times.c.date,
-            handoff_times.c.time,
-            handoff_times.c.location,
-            handoff_times.c.from_parent_id,
-            handoff_times.c.to_parent_id,
-            from_parent.c.first_name.label('from_parent_name'),
-            to_parent.c.first_name.label('to_parent_name'),
-            handoff_times.c.family_id,
-            handoff_times.c.created_at,
-            handoff_times.c.updated_at
-        ).select_from(
-            handoff_times
-            .outerjoin(from_parent, handoff_times.c.from_parent_id == from_parent.c.id)
-            .outerjoin(to_parent, handoff_times.c.to_parent_id == to_parent.c.id)
-        ).where(handoff_times.c.id == handoff_id)
+        if not updated_custody:
+            raise HTTPException(status_code=404, detail="Updated handoff record not found")
         
-        updated_handoff = await database.fetch_one(select_query)
+        # Get family members to map IDs to names
+        family_query = users.select().where(users.c.family_id == current_user.family_id).order_by(users.c.first_name)
+        family_members = await database.fetch_all(family_query)
+        user_map = {str(user['id']): user['first_name'] for user in family_members}
         
-        if not updated_handoff:
-            raise HTTPException(status_code=404, detail="Updated handoff time not found")
+        # Determine from_parent by looking at previous day
+        from_parent_id = handoff_data.from_parent_id
+        from_parent_name = None
+        if not from_parent_id:
+            prev_day = handoff_date - timedelta(days=1)
+            prev_custody_query = custody.select().where(
+                (custody.c.family_id == current_user.family_id) &
+                (custody.c.date == prev_day)
+            )
+            prev_custody = await database.fetch_one(prev_custody_query)
+            if prev_custody:
+                from_parent_id = str(prev_custody['custodian_id'])
         
-        logger.info(f"Updated handoff time {handoff_id} for {handoff_data.date} to {handoff_data.time} at {handoff_data.location} for user {current_user.id}")
+        from_parent_name = user_map.get(from_parent_id, "Unknown") if from_parent_id else None
+        to_parent_name = user_map.get(str(updated_custody['custodian_id']), "Unknown")
+        
+        logger.info(f"Updated custody handoff {handoff_id} for {handoff_data.date} to {handoff_data.time} at {handoff_data.location} for user {current_user.id}")
         
         return HandoffTimeResponse(
-            id=updated_handoff['id'],
-            date=updated_handoff['date'].strftime("%Y-%m-%d"),
-            time=updated_handoff['time'].strftime("%H:%M"),
-            location=updated_handoff['location'],
-            from_parent_id=str(updated_handoff['from_parent_id']) if updated_handoff['from_parent_id'] else None,
-            to_parent_id=str(updated_handoff['to_parent_id']) if updated_handoff['to_parent_id'] else None,
-            from_parent_name=updated_handoff['from_parent_name'],
-            to_parent_name=updated_handoff['to_parent_name'],
-            family_id=str(updated_handoff['family_id']),
-            created_at=updated_handoff['created_at'].isoformat(),
-            updated_at=updated_handoff['updated_at'].isoformat()
+            id=updated_custody['id'],
+            date=updated_custody['date'].strftime("%Y-%m-%d"),
+            time=updated_custody['handoff_time'].strftime("%H:%M") if updated_custody['handoff_time'] else "00:00",
+            location=updated_custody['handoff_location'] or "",
+            from_parent_id=from_parent_id,
+            to_parent_id=str(updated_custody['custodian_id']),
+            from_parent_name=from_parent_name,
+            to_parent_name=to_parent_name,
+            family_id=str(updated_custody['family_id']),
+            created_at=updated_custody['created_at'].isoformat() if updated_custody['created_at'] else datetime.now().isoformat(),
+            updated_at=updated_custody['created_at'].isoformat() if updated_custody['created_at'] else datetime.now().isoformat()
         )
         
     except ValueError as e:
@@ -1748,30 +1772,34 @@ async def update_handoff_time(handoff_id: int, handoff_data: HandoffTimeCreate, 
 
 @app.delete("/api/handoff-times/{handoff_id}")
 async def delete_handoff_time(handoff_id: int, current_user: User = Depends(get_current_user)):
-    """Delete a handoff time."""
+    """Remove handoff information from custody record (set handoff_day = false)."""
     try:
-        # Verify the handoff time belongs to the user's family
-        verify_query = handoff_times.select().where(
-            (handoff_times.c.id == handoff_id) &
-            (handoff_times.c.family_id == current_user.family_id)
+        # Verify the custody record belongs to the user's family
+        verify_query = custody.select().where(
+            (custody.c.id == handoff_id) &
+            (custody.c.family_id == current_user.family_id)
         )
-        existing_handoff = await database.fetch_one(verify_query)
+        existing_custody = await database.fetch_one(verify_query)
         
-        if not existing_handoff:
-            raise HTTPException(status_code=404, detail="Handoff time not found")
+        if not existing_custody:
+            raise HTTPException(status_code=404, detail="Handoff record not found")
         
-        # Delete the handoff time
-        delete_query = handoff_times.delete().where(handoff_times.c.id == handoff_id)
-        await database.execute(delete_query)
+        # Remove handoff information (set handoff_day = false, clear time and location)
+        update_query = custody.update().where(custody.c.id == handoff_id).values(
+            handoff_day=False,
+            handoff_time=None,
+            handoff_location=None
+        )
+        await database.execute(update_query)
         
-        logger.info(f"Deleted handoff time {handoff_id} for user {current_user.id}")
-        return {"message": "Handoff time deleted successfully"}
+        logger.info(f"Removed handoff information from custody record {handoff_id} for user {current_user.id}")
+        return {"message": "Handoff information removed successfully"}
     
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error deleting handoff time: {e}")
-        raise HTTPException(status_code=500, detail="Failed to delete handoff time")
+        logger.error(f"Error removing handoff information: {e}")
+        raise HTTPException(status_code=500, detail="Failed to remove handoff information")
 
 # ---------------------- Group Chat API ----------------------
 
