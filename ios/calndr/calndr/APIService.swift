@@ -1,4 +1,4 @@
-import Foundation
+THIS SHOULD BE A LINTER ERRORimport Foundation
 import UIKit
 
 enum APIError: Error, LocalizedError {
@@ -230,7 +230,7 @@ class APIService {
 
     // Placeholder for fetching school events
     func fetchSchoolEvents(completion: @escaping (Result<[SchoolEvent], Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/school-events")
+        let url = baseURL.appendingPathComponent("/api/school-events")
         let request = createAuthenticatedRequest(url: url)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
@@ -259,7 +259,7 @@ class APIService {
     // MARK: - Custody API (New dedicated custody endpoints)
     
     func fetchCustodyRecords(year: Int, month: Int, completion: @escaping (Result<[CustodyResponse], Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/custody/\(year)/\(month)")
+        let url = baseURL.appendingPathComponent("/api/custody/\(year)/\(month)")
         let request = createAuthenticatedRequest(url: url)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
@@ -295,7 +295,7 @@ class APIService {
     }
     
     func updateCustodyRecord(for date: String, custodianId: String, completion: @escaping (Result<CustodyResponse, Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/custody")
+        let url = baseURL.appendingPathComponent("/api/custody")
         var request = createAuthenticatedRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -628,7 +628,7 @@ class APIService {
     }
 
     func fetchCustodianNames(completion: @escaping (Result<CustodianResponse, Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/family/custodians")
+        let url = baseURL.appendingPathComponent("/api/family/custodians")
         let request = createAuthenticatedRequest(url: url)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
