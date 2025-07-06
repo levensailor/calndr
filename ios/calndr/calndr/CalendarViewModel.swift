@@ -24,10 +24,6 @@ class CalendarViewModel: ObservableObject {
     @Published var showHandoffTimeline: Bool = false // Toggle for handoff timeline view
     @Published var custodiansLoaded: Bool = false // Track if custodian data has been loaded
     
-    // Cache for custody data to persist across month changes
-    private var custodyDataCache: [String: [CustodyResponse]] = [:] // Key: "year-month", Value: custody records
-    private var handoffDataCache: [String: [HandoffTimeResponse]] = [:] // Key: "year-month", Value: handoff records
-    
     // Password Update
     @Published var currentPassword = ""
     @Published var newPassword = ""
@@ -130,34 +126,11 @@ class CalendarViewModel: ObservableObject {
         
         print("Fetching custody records for months: \(monthsToFetch)")
         
-        // Check cache first and only fetch missing months
         var allCustodyRecords: [CustodyResponse] = []
-        var monthsToActuallyFetch: Set<String> = []
-        
-        for monthKey in monthsToFetch {
-            if let cachedRecords = custodyDataCache[monthKey] {
-                print("📦 Using cached custody data for \(monthKey): \(cachedRecords.count) records")
-                allCustodyRecords.append(contentsOf: cachedRecords)
-            } else {
-                monthsToActuallyFetch.insert(monthKey)
-            }
-        }
-        
-        // If we have all data cached, update immediately
-        if monthsToActuallyFetch.isEmpty {
-            print("✅ All custody data available from cache")
-            self.custodyRecords = allCustodyRecords.sorted { $0.event_date < $1.event_date }
-            self.updateCustodyStreak()
-            self.updateCustodyPercentages()
-            return
-        }
-        
-        print("🌐 Need to fetch custody data for months: \(monthsToActuallyFetch)")
-        
         let dispatchGroup = DispatchGroup()
         
-        // Fetch custody data for missing months
-        for monthKey in monthsToActuallyFetch {
+        // Fetch custody data for all required months
+        for monthKey in monthsToFetch {
             let components = monthKey.split(separator: "-")
             guard components.count == 2,
                   let year = Int(components[0]),
@@ -168,17 +141,11 @@ class CalendarViewModel: ObservableObject {
                 switch result {
                 case .success(let custodyRecords):
                     DispatchQueue.main.async {
-                        // Cache the fetched data
-                        self?.custodyDataCache[monthKey] = custodyRecords
                         allCustodyRecords.append(contentsOf: custodyRecords)
-                        print("📦 Cached custody data for \(monthKey): \(custodyRecords.count) records")
+                        print("📦 Fetched custody data for \(monthKey): \(custodyRecords.count) records")
                     }
                 case .failure(let error):
                     print("Error fetching custody records for \(year)-\(month): \(error.localizedDescription)")
-                    // Cache empty array to avoid refetching failed requests
-                    DispatchQueue.main.async {
-                        self?.custodyDataCache[monthKey] = []
-                    }
                 }
                 dispatchGroup.leave()
             }
@@ -247,32 +214,11 @@ class CalendarViewModel: ObservableObject {
         
         print("Fetching handoff times for months: \(monthsToFetch)")
         
-        // Check cache first and only fetch missing months
         var allHandoffTimes: [HandoffTimeResponse] = []
-        var monthsToActuallyFetch: Set<String> = []
-        
-        for monthKey in monthsToFetch {
-            if let cachedHandoffs = handoffDataCache[monthKey] {
-                print("📦 Using cached handoff data for \(monthKey): \(cachedHandoffs.count) records")
-                allHandoffTimes.append(contentsOf: cachedHandoffs)
-            } else {
-                monthsToActuallyFetch.insert(monthKey)
-            }
-        }
-        
-        // If we have all data cached, update immediately
-        if monthsToActuallyFetch.isEmpty {
-            print("✅ All handoff data available from cache")
-            self.handoffTimes = allHandoffTimes.sorted { $0.date < $1.date }
-            return
-        }
-        
-        print("🌐 Need to fetch handoff data for months: \(monthsToActuallyFetch)")
-        
         let dispatchGroup = DispatchGroup()
         
-        // Fetch handoff data for missing months
-        for monthKey in monthsToActuallyFetch {
+        // Fetch handoff data for all required months
+        for monthKey in monthsToFetch {
             let components = monthKey.split(separator: "-")
             guard components.count == 2,
                   let year = Int(components[0]),
@@ -283,17 +229,11 @@ class CalendarViewModel: ObservableObject {
                 switch result {
                 case .success(let handoffTimes):
                     DispatchQueue.main.async {
-                        // Cache the fetched data
-                        self?.handoffDataCache[monthKey] = handoffTimes
                         allHandoffTimes.append(contentsOf: handoffTimes)
-                        print("📦 Cached handoff data for \(monthKey): \(handoffTimes.count) records")
+                        print("📦 Fetched handoff data for \(monthKey): \(handoffTimes.count) records")
                     }
                 case .failure(let error):
                     print("Error fetching handoff times for \(year)-\(month): \(error.localizedDescription)")
-                    // Cache empty array to avoid refetching failed requests
-                    DispatchQueue.main.async {
-                        self?.handoffDataCache[monthKey] = []
-                    }
                 }
                 dispatchGroup.leave()
             }
@@ -694,9 +634,6 @@ class CalendarViewModel: ObservableObject {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let custodyResponse):
-                    // Invalidate cache for this month since custody data changed
-                    self?.invalidateCustodyCache(for: date)
-                    
                     // Update the local custody records array
                     if let index = self?.custodyRecords.firstIndex(where: { $0.event_date == custodyResponse.event_date }) {
                         self?.custodyRecords[index] = custodyResponse
@@ -1044,32 +981,5 @@ class CalendarViewModel: ObservableObject {
                 }
             }
         }
-    }
-
-    // Cache invalidation methods
-    private func invalidateCustodyCache(for date: Date) {
-        let calendar = Calendar.current
-        let year = calendar.component(.year, from: date)
-        let month = calendar.component(.month, from: date)
-        let monthKey = "\(year)-\(month)"
-        
-        print("🗑️ Invalidating custody cache for \(monthKey)")
-        custodyDataCache.removeValue(forKey: monthKey)
-    }
-    
-    private func invalidateHandoffCache(for date: Date) {
-        let calendar = Calendar.current
-        let year = calendar.component(.year, from: date)
-        let month = calendar.component(.month, from: date)
-        let monthKey = "\(year)-\(month)"
-        
-        print("🗑️ Invalidating handoff cache for \(monthKey)")
-        handoffDataCache.removeValue(forKey: monthKey)
-    }
-    
-    private func clearAllCaches() {
-        print("🗑️ Clearing all data caches")
-        custodyDataCache.removeAll()
-        handoffDataCache.removeAll()
     }
 } 

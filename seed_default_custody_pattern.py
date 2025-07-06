@@ -69,8 +69,8 @@ def get_custody_owner_for_date(date, custodians):
     Determine custody owner based on day of week.
     
     Default pattern:
-    - Sunday (0), Monday (1), Saturday (6): custodian_one
-    - Tuesday (2), Wednesday (3), Thursday (4), Friday (5): custodian_two
+    - Sunday, Monday, Saturday: custodian_two (Deanna - pink)
+    - Tuesday, Wednesday, Thursday, Friday: custodian_one (Jeff - blue)
     """
     day_of_week = date.weekday()  # Monday = 0, Sunday = 6
     
@@ -79,11 +79,11 @@ def get_custody_owner_for_date(date, custodians):
     if ios_weekday == 0:
         ios_weekday = 7
     
-    # Default logic: Parent1 (custodian one) has Sun (1), Mon (2), Sat (7)
+    # Revised logic: Parent1 (Jeff - blue) has Tue-Fri, Parent2 (Deanna - pink) has Sun, Mon, Sat
     if ios_weekday in [1, 2, 7]:  # Sunday, Monday, Saturday
-        return custodians['custodian_one']
+        return custodians['custodian_one']  # Deanna (pink)
     else:  # Tuesday, Wednesday, Thursday, Friday
-        return custodians['custodian_two']
+        return custodians['custodian_two']  # Jeff (blue)
 
 def seed_custody_pattern(family_id, start_date, end_date, dry_run=False, force=False):
     """Seed the database with default custody pattern for the specified date range."""
