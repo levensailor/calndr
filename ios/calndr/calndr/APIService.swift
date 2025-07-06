@@ -1,4 +1,4 @@
-THIS SHOULD BE A LINTER ERRORimport Foundation
+import Foundation
 import UIKit
 
 enum APIError: Error, LocalizedError {
@@ -259,7 +259,7 @@ class APIService {
     // MARK: - Custody API (New dedicated custody endpoints)
     
     func fetchCustodyRecords(year: Int, month: Int, completion: @escaping (Result<[CustodyResponse], Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/api/custody/\(year)/\(month)")
+        let url = baseURL.appendingPathComponent("/custody/\(year)/\(month)")
         let request = createAuthenticatedRequest(url: url)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
@@ -295,7 +295,7 @@ class APIService {
     }
     
     func updateCustodyRecord(for date: String, custodianId: String, completion: @escaping (Result<CustodyResponse, Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/api/custody")
+        let url = baseURL.appendingPathComponent("/custody")
         var request = createAuthenticatedRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -650,7 +650,7 @@ class APIService {
     }
 
     func fetchFamilyMemberEmails(completion: @escaping (Result<[FamilyMemberEmail], Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/family/emails")
+        let url = baseURL.appendingPathComponent("/api/family/emails")
         let request = createAuthenticatedRequest(url: url)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
