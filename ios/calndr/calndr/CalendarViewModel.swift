@@ -130,16 +130,19 @@ class CalendarViewModel: ObservableObject {
         
         // Get unique year-month combinations for the visible range
         var monthsToFetch: Set<String> = []
-        var currentFetchDate = startDate
         
-        while currentFetchDate <= endDate {
-            let year = calendar.component(.year, from: currentFetchDate)
-            let month = calendar.component(.month, from: currentFetchDate)
-            monthsToFetch.insert("\(year)-\(month)")
+        print("🔍 Calculating months to fetch from \(isoDateString(from: startDate)) to \(isoDateString(from: endDate))")
+        
+        // Instead of jumping by months, iterate through each visible date to ensure we capture all months
+        let visibleDates = getVisibleDates()
+        for date in visibleDates {
+            let year = calendar.component(.year, from: date)
+            let month = calendar.component(.month, from: date)
+            let monthKey = "\(year)-\(month)"
             
-            // Move to next month
-            guard let nextMonth = calendar.date(byAdding: .month, value: 1, to: currentFetchDate) else { break }
-            currentFetchDate = nextMonth
+            if monthsToFetch.insert(monthKey).inserted {
+                print("   📅 Found new month to fetch: \(monthKey) (from date \(isoDateString(from: date)))")
+            }
         }
         
         print("Fetching custody records for months: \(monthsToFetch)")
