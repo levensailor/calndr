@@ -110,6 +110,9 @@ class CalendarViewModel: ObservableObject {
         let startDate = visibleDateRange.start
         let endDate = visibleDateRange.end
         
+        print("🗓️ Current date: \(isoDateString(from: currentDate))")
+        print("🗓️ Visible date range: \(isoDateString(from: startDate)) to \(isoDateString(from: endDate))")
+        
         // Get unique year-month combinations for the visible range
         var monthsToFetch: Set<String> = []
         var currentFetchDate = startDate
@@ -143,6 +146,11 @@ class CalendarViewModel: ObservableObject {
                     DispatchQueue.main.async {
                         allCustodyRecords.append(contentsOf: custodyRecords)
                         print("📦 Fetched custody data for \(monthKey): \(custodyRecords.count) records")
+                        // Log first few records for debugging
+                        if !custodyRecords.isEmpty {
+                            let firstFew = custodyRecords.prefix(3)
+                            print("   Sample records: \(firstFew.map { "\($0.event_date):\($0.content)" })")
+                        }
                     }
                 case .failure(let error):
                     print("Error fetching custody records for \(year)-\(month): \(error.localizedDescription)")
@@ -156,6 +164,10 @@ class CalendarViewModel: ObservableObject {
             self?.updateCustodyStreak()
             self?.updateCustodyPercentages()
             print("Successfully fetched \(allCustodyRecords.count) custody records for visible date range.")
+            print("📊 Total custody records in memory: \(self?.custodyRecords.count ?? 0)")
+            if let records = self?.custodyRecords, !records.isEmpty {
+                print("📊 Date range of records: \(records.first?.event_date ?? "none") to \(records.last?.event_date ?? "none")")
+            }
         }
     }
     
@@ -169,20 +181,19 @@ class CalendarViewModel: ObservableObject {
         }
         
         let firstDayOfMonth = monthInterval.start
-        let lastDayOfMonth = calendar.date(byAdding: .day, value: -1, to: monthInterval.end) ?? monthInterval.end
+        let lastDayOfMonth = monthInterval.end
         
         // Find the first day of the week containing the first day of the month
-        guard let firstDayOfWeek = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: firstDayOfMonth)) else {
+        guard let firstDayOfWeek = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: firstDayOfMonth)),
+              let lastDayOfMonthWithTime = calendar.date(byAdding: .day, value: -1, to: lastDayOfMonth),
+              let lastDayOfWeek = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: lastDayOfMonthWithTime)) else {
             return (start: firstDayOfMonth, end: lastDayOfMonth)
         }
         
-        // Find the last day of the week containing the last day of the month
-        guard let lastWeekStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: lastDayOfMonth)),
-              let lastDayOfWeek = calendar.date(byAdding: .day, value: 6, to: lastWeekStart) else {
-            return (start: firstDayOfWeek, end: lastDayOfMonth)
-        }
+        let startDate = firstDayOfWeek
+        let endDate = calendar.date(byAdding: .day, value: 6, to: lastDayOfWeek)!
         
-        return (start: firstDayOfWeek, end: lastDayOfWeek)
+        return (start: startDate, end: endDate)
     }
     
     func fetchHandoffTimes() {
@@ -411,7 +422,14 @@ class CalendarViewModel: ObservableObject {
         }
         
         // No custody record found - this should not happen after onboarding seeding
-        print("❌ No custody record found for \(dateString) - database may need seeding")
+        print("❌ No custody record found for \(dateString) - checking if date is in fetched range")
+        let totalRecords = custodyRecords.count
+        let recordsForMonth = custodyRecords.filter { record in
+            let recordDate = record.event_date
+            return recordDate.prefix(7) == dateString.prefix(7) // Same year-month
+        }.count
+        print("   Total records: \(totalRecords), Records for month \(dateString.prefix(7)): \(recordsForMonth)")
+        
         return ("", "No custody assigned")
     }
     
