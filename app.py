@@ -470,16 +470,32 @@ async def get_custody_records(year: int, month: int, current_user: User = Depend
         frontend_custody = []
         for record in custody_records:
             custodian_name = custodian_map.get(str(record['custodian_id']), 'unknown')
-            frontend_custody.append({
+            
+            # Handle handoff_day as optional bool to match iOS model
+            handoff_day_value = record.get('handoff_day')
+            if handoff_day_value is None:
+                handoff_day_value = False
+                
+            # Handle handoff_time conversion properly
+            handoff_time_value = None
+            if record.get('handoff_time') is not None:
+                handoff_time_value = str(record['handoff_time'])
+            
+            custody_item = {
                 'id': record['id'],
                 'event_date': str(record['date']),
                 'content': custodian_name,
                 'position': 4,  # For frontend compatibility
                 'custodian_id': str(record['custodian_id']),
-                'handoff_day': record.get('handoff_day', False),
-                'handoff_time': str(record['handoff_time']) if record.get('handoff_time') else None,
+                'handoff_day': handoff_day_value,
+                'handoff_time': handoff_time_value,
                 'handoff_location': record.get('handoff_location')
-            })
+            }
+            frontend_custody.append(custody_item)
+            
+        logger.info(f"Returning {len(frontend_custody)} custody records to iOS app")
+        if frontend_custody:
+            logger.info(f"Sample custody record: {frontend_custody[0]}")
             
         return frontend_custody
         

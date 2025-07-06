@@ -287,8 +287,13 @@ class APIService {
 
             do {
                 let custodyRecords = try JSONDecoder().decode([CustodyResponse].self, from: data)
+                print("✅ Successfully decoded \(custodyRecords.count) custody records")
                 completion(.success(custodyRecords))
             } catch {
+                print("❌ JSON Decoding Error: \(error)")
+                if let decodingError = error as? DecodingError {
+                    print("❌ Detailed Decoding Error: \(decodingError)")
+                }
                 completion(.failure(error))
             }
         }.resume()
