@@ -179,6 +179,9 @@ custody = sqlalchemy.Table(
     sqlalchemy.Column("date", sqlalchemy.Date, nullable=False),
     sqlalchemy.Column("actor_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("users.id"), nullable=False),
     sqlalchemy.Column("custodian_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("users.id"), nullable=False),
+    sqlalchemy.Column("handoff_day", sqlalchemy.Boolean, default=False, nullable=True),
+    sqlalchemy.Column("handoff_time", sqlalchemy.Time, nullable=True),
+    sqlalchemy.Column("handoff_location", sqlalchemy.String(255), nullable=True),
     sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
 )
 
@@ -466,7 +469,11 @@ async def get_custody_records(year: int, month: int, current_user: User = Depend
             'id': record['id'],
             'event_date': str(record['date']),
             'content': custodian_name,
-            'position': 4  # For frontend compatibility
+            'position': 4,  # For frontend compatibility
+            'custodian_id': str(record['custodian_id']),
+            'handoff_day': record.get('handoff_day', False),
+            'handoff_time': str(record['handoff_time']) if record.get('handoff_time') else None,
+            'handoff_location': record.get('handoff_location')
         })
         
     return frontend_custody
@@ -532,7 +539,11 @@ async def set_custody(custody_data: CustodyRecord, current_user: User = Depends(
             'id': final_record['id'],
             'event_date': str(final_record['date']),
             'content': custodian_name,
-            'position': 4  # For frontend compatibility
+            'position': 4,  # For frontend compatibility
+            'custodian_id': str(final_record['custodian_id']),
+            'handoff_day': final_record.get('handoff_day', False),
+            'handoff_time': str(final_record['handoff_time']) if final_record.get('handoff_time') else None,
+            'handoff_location': final_record.get('handoff_location')
         }
         
     except Exception as e:
