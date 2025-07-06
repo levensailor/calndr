@@ -535,16 +535,35 @@ export default {
       }
     },
     getCustodyInfo(date) {
-      const event = (this.events[date] && this.events[date][4]) ? this.events[date][4].content : null;
+      const custodyEvent = (this.events[date] && this.events[date][4]) ? this.events[date][4] : null;
       // Adding 'T00:00:00' avoids timezone issues when getting the day
       const dayOfWeek = new Date(date + 'T00:00:00').getUTCDay();
 
       let owner;
 
-      if (event === 'jeff' || event === 'deanna') {
-        owner = event;
+      if (custodyEvent && custodyEvent.custodian_id) {
+        // Use custodian_id to determine ownership
+        if (this.custodianOne && custodyEvent.custodian_id === this.custodianOne.id) {
+          owner = 'jeff';
+        } else if (this.custodianTwo && custodyEvent.custodian_id === this.custodianTwo.id) {
+          owner = 'deanna';
+        } else {
+          // Fallback: try to match by content (first name)
+          const content = custodyEvent.content ? custodyEvent.content.toLowerCase() : '';
+          const custodianOneName = this.custodianOne ? this.custodianOne.first_name.toLowerCase() : 'jeff';
+          const custodianTwoName = this.custodianTwo ? this.custodianTwo.first_name.toLowerCase() : 'deanna';
+          
+          if (content === custodianOneName) {
+            owner = 'jeff';
+          } else if (content === custodianTwoName) {
+            owner = 'deanna';
+          } else {
+            // Default logic: 0=Sun, 1=Mon, 6=Sat
+            owner = [0, 1, 6].includes(dayOfWeek) ? 'jeff' : 'deanna';
+          }
+        }
       } else {
-        // Default logic: 0=Sun, 1=Mon, 6=Sat
+        // No custody event found, use default logic
         owner = [0, 1, 6].includes(dayOfWeek) ? 'jeff' : 'deanna';
       }
 
