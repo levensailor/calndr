@@ -759,50 +759,71 @@ struct HandoffTimelineView: View {
         let originalDateString = dateFormatter.string(from: originalDate)
         let newDateString = dateFormatter.string(from: newDate)
         
-        print("Moving handoff from \(originalDateString) to \(newDateString)")
+        print("🔄 Moving handoff from \(originalDateString) to \(newDateString)")
         
-        // Calculate all dates in the range from original to new date
-        let dateRange = generateDateRange(from: originalDate, to: newDate)
-        
-        if dateRange.count == 1 {
-            // Same day move - just update that day
+        // Same day move - just update that day's custody
+        if originalDate == newDate {
             updateSingleDayCustody(date: newDate) {
                 completion()
             }
-        } else {
-            // Multi-day move - update custody for entire range
-            print("📅 Updating custody for \(dateRange.count) days in range")
-            updateCustodyForDateRange(dateRange) {
-                completion()
-            }
+            return
+        }
+        
+        // Different day move - need to update custody for the affected range
+        // The key insight: whoever had custody AFTER the original handoff 
+        // should now have custody starting from the new handoff date
+        
+        // Get who had custody after the original handoff (this is who should get the extended custody)
+        let calendar = Calendar.current
+        let dayAfterOriginal = calendar.date(byAdding: .day, value: 1, to: originalDate) ?? originalDate
+        let custodyAfterOriginalHandoff = viewModel.getCustodyInfo(for: dayAfterOriginal)
+        
+        guard !custodyAfterOriginalHandoff.owner.isEmpty else {
+            print("❌ Could not determine who had custody after original handoff")
+            completion()
+            return
+        }
+        
+        print("📋 Parent who had custody after original handoff: \(custodyAfterOriginalHandoff.text)")
+        
+        // Determine the date range that needs to be updated
+        let updateRange = determineUpdateRange(originalDate: originalDate, newDate: newDate)
+        
+        if updateRange.isEmpty {
+            print("📋 No dates need custody updates")
+            completion()
+            return
+        }
+        
+        print("📋 Updating custody for \(updateRange.count) days: \(updateRange.map { dateFormatter.string(from: $0) })")
+        print("📋 Setting custody to: \(custodyAfterOriginalHandoff.text)")
+        
+        // Update custody for the affected range
+        updateCustodyForDateRange(updateRange, toParentId: custodyAfterOriginalHandoff.owner) {
+            completion()
         }
     }
     
-    private func generateDateRange(from startDate: Date, to endDate: Date) -> [Date] {
-        var dates: [Date] = []
+    private func determineUpdateRange(originalDate: Date, newDate: Date) -> [Date] {
         let calendar = Calendar.current
         
-        // Ensure we always go from earlier to later date
-        let earlierDate = min(startDate, endDate)
-        let laterDate = max(startDate, endDate)
-        
-        var currentDate = earlierDate
-        
-        while currentDate <= laterDate {
-            dates.append(currentDate)
-            guard let nextDate = calendar.date(byAdding: .day, value: 1, to: currentDate) else { break }
-            currentDate = nextDate
+        // If moving handoff earlier (e.g., Thursday to Tuesday)
+        // Update Tuesday and Wednesday to have the custody that Thursday had
+        if newDate < originalDate {
+            return generateDateRange(from: newDate, to: calendar.date(byAdding: .day, value: -1, to: originalDate) ?? originalDate)
+        }
+        // If moving handoff later (e.g., Tuesday to Thursday)
+        // Update Wednesday and Thursday to have the custody that Tuesday had
+        else if newDate > originalDate {
+            return generateDateRange(from: calendar.date(byAdding: .day, value: 1, to: originalDate) ?? originalDate, to: newDate)
         }
         
-        return dates
+        return []
     }
     
-    private func updateCustodyForDateRange(_ dates: [Date], completion: @escaping () -> Void) {
-        // Get the handoff data to determine who gets custody after the handoff
-        let handoffData = getHandoffDataForDate(dates.last ?? dates[0])
-        
-        guard let toParentId = handoffData.toParentId else {
-            print("Error: Could not determine 'to parent' ID for handoff transition")
+    private func updateCustodyForDateRange(_ dates: [Date], toParentId: String, completion: @escaping () -> Void) {
+        guard !dates.isEmpty else {
+            completion()
             return
         }
         
@@ -832,6 +853,25 @@ struct HandoffTimelineView: View {
             print("✅ All custody updates completed for range")
             completion()
         }
+    }
+    
+    private func generateDateRange(from startDate: Date, to endDate: Date) -> [Date] {
+        var dates: [Date] = []
+        let calendar = Calendar.current
+        
+        // Ensure we always go from earlier to later date
+        let earlierDate = min(startDate, endDate)
+        let laterDate = max(startDate, endDate)
+        
+        var currentDate = earlierDate
+        
+        while currentDate <= laterDate {
+            dates.append(currentDate)
+            guard let nextDate = calendar.date(byAdding: .day, value: 1, to: currentDate) else { break }
+            currentDate = nextDate
+        }
+        
+        return dates
     }
     
     private func updateSingleDayCustody(date: Date, completion: @escaping () -> Void) {
