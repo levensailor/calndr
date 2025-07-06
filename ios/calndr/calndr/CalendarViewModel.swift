@@ -5,7 +5,7 @@ import UIKit
 class CalendarViewModel: ObservableObject {
     @Published var events: [Event] = []
     @Published var custodyRecords: [CustodyResponse] = [] // New: custody data from dedicated API
-    @Published var handoffTimes: [HandoffTimeResponse] = [] // New: handoff time data from API
+
     @Published var schoolEvents: [SchoolEvent] = []
     @Published var showSchoolEvents: Bool = false
     @Published var weatherData: [String: WeatherInfo] = [:]
@@ -70,10 +70,9 @@ class CalendarViewModel: ObservableObject {
         // Also fetch weather for the visible range
         fetchWeather(from: firstDateString, to: lastDateString)
         
-        // Fetch both regular events, custody records, and handoff times
+        // Fetch both regular events and custody records
         fetchRegularEvents(from: firstDateString, to: lastDateString)
         fetchCustodyRecords()
-        fetchHandoffTimes()
     }
     
     private func fetchRegularEvents(from startDate: String, to endDate: String) {
@@ -174,95 +173,7 @@ class CalendarViewModel: ObservableObject {
         return (start: startDate, end: endDate)
     }
     
-    func fetchHandoffTimes() {
-        guard !isOffline else {
-            print("🔄 Offline, not fetching handoff times.")
-            return
-        }
-        
-        let calendar = Calendar.current
-        
-        // Get the date range that includes all dates shown in the calendar view
-        let visibleDateRange = getVisibleCalendarDateRange()
-        let startDate = visibleDateRange.start
-        let endDate = visibleDateRange.end
-        
-        print("🔄 Fetching handoff times for date range: \(isoDateString(from: startDate)) to \(isoDateString(from: endDate))")
-        
-        // Get unique year-month combinations for the visible range
-        var monthsToFetch: Set<String> = []
-        var currentFetchDate = startDate
-        
-        while currentFetchDate <= endDate {
-            let year = calendar.component(.year, from: currentFetchDate)
-            let month = calendar.component(.month, from: currentFetchDate)
-            let monthKey = "\(year)-\(month)"
-            
-            if monthsToFetch.insert(monthKey).inserted {
-                print("   📅 Found month to fetch: \(monthKey)")
-            }
-            
-            // Move to next month
-            guard let nextMonth = calendar.date(byAdding: .month, value: 1, to: currentFetchDate) else { break }
-            currentFetchDate = nextMonth
-        }
-        
-        print("🔄 Fetching handoff data for \(monthsToFetch.count) months: \(monthsToFetch.sorted())")
-        
-        var allHandoffTimes: [HandoffTimeResponse] = []
-        let dispatchGroup = DispatchGroup()
-        
-        // Fetch handoff data for all required months
-        for monthKey in monthsToFetch {
-            let components = monthKey.split(separator: "-")
-            guard components.count == 2,
-                  let year = Int(components[0]),
-                  let month = Int(components[1]) else { continue }
-            
-            dispatchGroup.enter()
-            APIService.shared.fetchHandoffTimes(year: year, month: month) { [weak self] result in
-                switch result {
-                case .success(let handoffTimes):
-                    DispatchQueue.main.async {
-                        allHandoffTimes.append(contentsOf: handoffTimes)
-                        print("📦 Fetched handoff data for \(monthKey): \(handoffTimes.count) records")
-                        
-                        // Log sample handoff records for debugging
-                        if !handoffTimes.isEmpty {
-                            let sampleRecords = handoffTimes.prefix(3)
-                            for record in sampleRecords {
-                                print("   🔄 Sample: \(record.date) at \(record.time) - \(record.from_parent_name ?? "Unknown") → \(record.to_parent_name ?? "Unknown") @ \(record.location ?? "Unknown")")
-                            }
-                        }
-                    }
-                case .failure(let error):
-                    print("❌ Error fetching handoff times for \(year)-\(month): \(error.localizedDescription)")
-                }
-                dispatchGroup.leave()
-            }
-        }
-        
-        dispatchGroup.notify(queue: .main) { [weak self] in
-            self?.handoffTimes = allHandoffTimes.sorted { $0.date < $1.date }
-            print("✅ Successfully fetched \(allHandoffTimes.count) handoff times for visible date range")
-            
-            // Log handoff summary
-            if !allHandoffTimes.isEmpty {
-                let dateRange = "\(allHandoffTimes.first?.date ?? "none") to \(allHandoffTimes.last?.date ?? "none")"
-                print("📊 Handoff records date range: \(dateRange)")
-                
-                // Log handoff locations breakdown
-                let locationCounts = Dictionary(grouping: allHandoffTimes, by: { $0.location ?? "Unknown" })
-                    .mapValues { $0.count }
-                print("📊 Handoff locations: \(locationCounts)")
-                
-                // Log handoff times breakdown
-                let timeCounts = Dictionary(grouping: allHandoffTimes, by: { $0.time })
-                    .mapValues { $0.count }
-                print("📊 Handoff times: \(timeCounts)")
-            }
-        }
-    }
+
     
     func fetchCustodyRecordsForYear() {
         guard !isOffline else {
@@ -432,20 +343,20 @@ class CalendarViewModel: ObservableObject {
         let dateString = isoDateString(from: date)
         let dayOfWeek = Calendar.current.component(.weekday, from: date) // 1=Sun, 2=Mon, 7=Sat
         
-        // Check for stored handoff time first
-        if let handoffTime = handoffTimes.first(where: { $0.date == dateString }) {
-            // Parse the time string (format: "HH:MM")
-            let components = handoffTime.time.split(separator: ":")
-            if components.count == 2,
-               let hour = Int(components[0]),
-               let minute = Int(components[1]) {
-                print("🔄 Found stored handoff time for \(dateString): \(hour):\(String(format: "%02d", minute)) (\(handoffTime.location ?? "Unknown") location)")
-                return (hour, minute)
-            } else {
-                print("⚠️ Invalid time format in handoff record for \(dateString): '\(handoffTime.time)'")
+        // Check custody record for handoff time
+        if let custodyRecord = custodyRecords.first(where: { $0.event_date == dateString && $0.handoff_day == true }) {
+            // Parse the handoff time if available
+            if let handoffTime = custodyRecord.handoff_time {
+                let components = handoffTime.split(separator: ":")
+                if components.count == 2,
+                   let hour = Int(components[0]),
+                   let minute = Int(components[1]) {
+                    print("🔄 Found custody handoff time for \(dateString): \(hour):\(String(format: "%02d", minute)) (\(custodyRecord.handoff_location ?? "Unknown") location)")
+                    return (hour, minute)
+                } else {
+                    print("⚠️ Invalid time format in custody handoff record for \(dateString): '\(handoffTime)'")
+                }
             }
-        } else {
-            print("🔄 No stored handoff time for \(dateString), using default")
         }
         
         // Default logic: Noon (12:00) for weekends, 5:00 PM for weekdays

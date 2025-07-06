@@ -14,17 +14,17 @@ source venv/bin/activate
 echo "Installing backend dependencies..."
 pip install -r requirements.txt
 
-# Install frontend dependencies
-echo "Installing frontend dependencies..."
-cd frontend
-# Clean install to avoid issues with previous dependencies
-rm -rf node_modules
-npm install
+# # Install frontend dependencies
+# echo "Installing frontend dependencies..."
+# cd frontend
+# # Clean install to avoid issues with previous dependencies
+# rm -rf node_modules
+# npm install
 
-# Build frontend
-echo "Building frontend..."
-npm run build -- --stats-error-details
-cd ..
+# # Build frontend
+# echo "Building frontend..."
+# npm run build -- --stats-error-details
+# cd ..
 
 # Run the application
 echo "Starting application on http://localhost:3000"

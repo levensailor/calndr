@@ -21,16 +21,16 @@ sudo mkdir -p $APP_DIR
 [ -f /home/$APP_USER/app.py ] && sudo mv -f /home/$APP_USER/app.py $APP_DIR/
 [ -f /home/$APP_USER/requirements.txt ] && sudo mv -f /home/$APP_USER/requirements.txt $APP_DIR/
 [ -f /home/$APP_USER/.env ] && sudo mv -f /home/$APP_USER/.env $APP_DIR/.env
-[ -f /home/$APP_USER/send_weekly_email.py ] && sudo mv -f /home/$APP_USER/send_weekly_email.py $APP_DIR/
+# [ -f /home/$APP_USER/send_weekly_email.py ] && sudo mv -f /home/$APP_USER/send_weekly_email.py $APP_DIR/
 [ -f /home/$APP_USER/setup.sh ] && sudo mv -f /home/$APP_USER/setup.sh $APP_DIR/
-[ -f /home/$APP_USER/initial_setup.py ] && sudo mv -f /home/$APP_USER/initial_setup.py $APP_DIR/
-[ -f /home/$APP_USER/migrate_user_profile.py ] && sudo mv -f /home/$APP_USER/migrate_user_profile.py $APP_DIR/
-[ -f /home/$APP_USER/migrate_notification_emails.py ] && sudo mv -f /home/$APP_USER/migrate_notification_emails.py $APP_DIR/
-[ -f /home/$APP_USER/migrate_custody_table.py ] && sudo mv -f /home/$APP_USER/migrate_custody_table.py $APP_DIR/
-[ -f /home/$APP_USER/migrate_events_table.py ] && sudo mv -f /home/$APP_USER/migrate_events_table.py $APP_DIR/
+# [ -f /home/$APP_USER/initial_setup.py ] && sudo mv -f /home/$APP_USER/initial_setup.py $APP_DIR/
+# [ -f /home/$APP_USER/migrate_user_profile.py ] && sudo mv -f /home/$APP_USER/migrate_user_profile.py $APP_DIR/
+# [ -f /home/$APP_USER/migrate_notification_emails.py ] && sudo mv -f /home/$APP_USER/migrate_notification_emails.py $APP_DIR/
+# [ -f /home/$APP_USER/migrate_custody_table.py ] && sudo mv -f /home/$APP_USER/migrate_custody_table.py $APP_DIR/
+# [ -f /home/$APP_USER/migrate_events_table.py ] && sudo mv -f /home/$APP_USER/migrate_events_table.py $APP_DIR/
 
 # Remove old directory before moving the new one
-[ -d /home/$APP_USER/dist ] && sudo rm -rf $APP_DIR/dist && sudo mv /home/$APP_USER/dist $APP_DIR/
+# [ -d /home/$APP_USER/dist ] && sudo rm -rf $APP_DIR/dist && sudo mv /home/$APP_USER/dist $APP_DIR/
 
 sudo chown -R $APP_USER:$APP_USER $APP_DIR
 cd $APP_DIR
@@ -138,16 +138,16 @@ sudo systemctl enable certbot-renew.timer
 # EOF
 
 # Make our script executable
-chmod +x /var/www/cal-app/send_weekly_email.py
+# chmod +x /var/www/cal-app/send_weekly_email.py
 
 # Set up cron job for weekly email summary
 # This will run the script every Sunday at 18:00 UTC (2 PM EST / 1 PM EDT)
 # Note: cron jobs run in a minimal environment, so we source the .env file to get credentials.
 # The output (stdout & stderr) is logged to /var/log/cron_weekly_email.log
-CRON_JOB="0 18 * * 0 source /var/www/cal-app/.env; /var/www/cal-app/venv/bin/python3 /var/www/cal-app/send_weekly_email.py >> /var/log/cron_weekly_email.log 2>&1"
-(sudo /usr/bin/crontab -l -u $APP_USER 2>/dev/null | grep -Fv "send_weekly_email.py" || true; echo "$CRON_JOB") | sudo /usr/bin/crontab -u $APP_USER -
+# CRON_JOB="0 18 * * 0 source /var/www/cal-app/.env; /var/www/cal-app/venv/bin/python3 /var/www/cal-app/send_weekly_email.py >> /var/log/cron_weekly_email.log 2>&1"
+# (sudo /usr/bin/crontab -l -u $APP_USER 2>/dev/null | grep -Fv "send_weekly_email.py" || true; echo "$CRON_JOB") | sudo /usr/bin/crontab -u $APP_USER -
 
-echo "Cron job for weekly email set up."
+# echo "Cron job for weekly email set up."
 
 # 9. Run the initial data seeding script (DISABLED to prevent data loss on deployments)
 # echo "--- Running initial database setup script ---"
@@ -157,17 +157,17 @@ echo "Cron job for weekly email set up."
 # echo "--- Running user profile migration script ---"
 # sudo -u $APP_USER $APP_DIR/venv/bin/python3 $APP_DIR/migrate_user_profile.py
 
-# 11. Run notification emails migration script
-echo "--- Running notification emails migration script ---"
-sudo -u $APP_USER $APP_DIR/venv/bin/python3 $APP_DIR/migrate_notification_emails.py
+# # 11. Run notification emails migration script
+# echo "--- Running notification emails migration script ---"
+# sudo -u $APP_USER $APP_DIR/venv/bin/python3 $APP_DIR/migrate_notification_emails.py
 
-# 12. Run custody table migration script
-echo "--- Running custody table migration script ---"
-sudo -u $APP_USER $APP_DIR/venv/bin/python3 $APP_DIR/migrate_custody_table.py
+# # 12. Run custody table migration script
+# echo "--- Running custody table migration script ---"
+# sudo -u $APP_USER $APP_DIR/venv/bin/python3 $APP_DIR/migrate_custody_table.py
 
-# 13. Run events table migration script
-echo "--- Running events table migration script ---"
-sudo -u $APP_USER $APP_DIR/venv/bin/python3 $APP_DIR/migrate_events_table.py
+# # 13. Run events table migration script
+# echo "--- Running events table migration script ---"
+# sudo -u $APP_USER $APP_DIR/venv/bin/python3 $APP_DIR/migrate_events_table.py
 
 sudo systemctl restart cal-app
 echo "--- Deployment to EC2 finished successfully! ---"

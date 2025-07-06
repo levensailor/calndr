@@ -29,7 +29,6 @@ FILES_TO_DEPLOY=(
     "migrate_custody_table.py"
     "migrate_events_table.py"
     "fix_events_date_column.py"
-    "dist"
 )
 
 echo "--- Building frontend assets (SKIPPED) ---"

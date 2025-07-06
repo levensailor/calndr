@@ -312,32 +312,15 @@ struct HandoffTimeModal: View {
         print("Saving handoff time: \(timeString) at \(selectedLocation) for date: \(dateString)")
         print("From: \(fromParentId ?? "unknown") To: \(toParentId ?? "unknown")")
         
-        APIService.shared.saveHandoffTime(
-            date: dateString, 
-            time: timeString,
-            location: selectedLocation,
-            fromParentId: fromParentId,
-            toParentId: toParentId
-        ) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let handoffTime):
-                    print("✅ Successfully saved handoff time: \(handoffTime)")
-                    
-                    // Update custody for this date based on handoff time
-                    self.updateCustodyBasedOnHandoffTime()
-                    
-                    // Refresh handoff times to update the view
-                    self.viewModel.fetchHandoffTimes()
-                    self.isPresented = false
-                    
-                case .failure(let error):
-                    print("❌ Failed to save handoff time: \(error.localizedDescription)")
-                    // Still close the modal for now
-                    self.isPresented = false
-                }
-            }
-        }
+        // Since we're now using custody table, update custody record with handoff info
+        print("✅ Saving handoff time to custody record: \(timeString) at \(selectedLocation)")
+        
+        // Update custody for this date based on handoff time
+        self.updateCustodyBasedOnHandoffTime()
+        
+        // Refresh custody records to update the view
+        self.viewModel.fetchCustodyRecords()
+        self.isPresented = false
     }
     
     private func updateCustodyBasedOnHandoffTime() {

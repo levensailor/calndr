@@ -328,24 +328,18 @@ struct HandoffTimelineView: View {
     }
     
     private func getHandoffDays() -> [Date] {
-        // Get days that have ACTUAL handoff records first
+        // Get days that have handoff records from custody table
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         
         var handoffDays: [Date] = []
         
-        // First, add all dates that have actual handoff records
-        // Only include records where the custody actually changes (from != to).
-        for handoffRecord in viewModel.handoffTimes {
-            // If both parent IDs are present and identical, this is not a real handoff.
-            if let fromId = handoffRecord.from_parent_id,
-               let toId = handoffRecord.to_parent_id,
-               fromId == toId {
-                continue // Skip invalid handoff record
-            }
-
-            if let date = dateFormatter.date(from: handoffRecord.date) {
-                handoffDays.append(date)
+        // First, add all dates that have actual handoff records in custody table
+        for custodyRecord in viewModel.custodyRecords {
+            if custodyRecord.handoff_day == true {
+                if let date = dateFormatter.date(from: custodyRecord.event_date) {
+                    handoffDays.append(date)
+                }
             }
         }
         
@@ -358,18 +352,11 @@ struct HandoffTimelineView: View {
             if let prev = previousOwner, prev != currentOwner {
                 // Only add if no actual handoff record exists for this date
                 let dateString = dateFormatter.string(from: date)
-                // Check for a *valid* handoff record on this date (parents must differ)
-                let hasValidHandoffRecord = viewModel.handoffTimes.contains { record in
-                    guard record.date == dateString else { return false }
-                    if let fromId = record.from_parent_id,
-                       let toId = record.to_parent_id,
-                       fromId == toId {
-                        return false // Same parent – not a valid handoff
-                    }
-                    return true
+                let hasHandoffRecord = viewModel.custodyRecords.contains { record in
+                    record.event_date == dateString && record.handoff_day == true
                 }
                 
-                if !hasValidHandoffRecord && !handoffDays.contains(date) {
+                if !hasHandoffRecord && !handoffDays.contains(date) {
                     handoffDays.append(date)
                 }
             }
@@ -486,162 +473,43 @@ struct HandoffTimelineView: View {
         
         print("Moving handoff from \(originalDateString) to \(newDateString) at \(newTime.display)")
         
-        // Check if we have an actual handoff record for the original date
-        if let draggedHandoff = viewModel.handoffTimes.first(where: { $0.date == originalDateString }) {
-            // We have an existing handoff record - update it
-            updateExistingHandoff(draggedHandoff, originalDate, newDate, newDateString, timeString, newTime)
-        } else {
-            // No existing handoff record - this is a "virtual" bubble based on custody change
-            // Create a new handoff record instead
-            print("📝 No existing handoff record for \(originalDateString) - creating new handoff at \(newDateString)")
-            createNewHandoffFromDrag(originalDate, newDate, newDateString, timeString, newTime)
-        }
+        // Since we're now using custody table, we just need to update the custody record
+        // with handoff information
+        updateCustodyWithHandoffInfo(originalDate, newDate, newDateString, timeString, newTime)
         
     }
     
-    private func updateExistingHandoff(
-        _ draggedHandoff: HandoffTimeResponse,
+    private func updateCustodyWithHandoffInfo(
         _ originalDate: Date,
         _ newDate: Date,
         _ newDateString: String,
         _ timeString: String,
         _ newTime: (hour: Int, minute: Int, display: String)
-    ) {
-        // Check if there's already a handoff at the target date
-        let existingTargetHandoff = viewModel.handoffTimes.first(where: { $0.date == newDateString })
-        
-        if let targetHandoff = existingTargetHandoff {
-            // Target date already has a handoff - try to delete it first, then update the dragged one
-            print("🔄 Target date \(newDateString) already has handoff - attempting to replace with dragged handoff")
-            
-            APIService.shared.deleteHandoffTime(handoffId: String(targetHandoff.id)) { deleteResult in
-                DispatchQueue.main.async {
-                    switch deleteResult {
-                    case .success:
-                        print("✅ Deleted existing handoff at target date \(newDateString)")
-                        
-                    case .failure(let deleteError):
-                        print("⚠️ Failed to delete existing handoff at target (may already be gone): \(deleteError.localizedDescription)")
-                        // Remove from local data anyway in case it was already deleted on backend
-                        self.viewModel.handoffTimes.removeAll { $0.id == targetHandoff.id }
-                    }
-                    
-                    // Continue with the update regardless of deletion success
-                    print("📍 Proceeding with handoff update regardless of deletion result")
-                    self.performHandoffUpdate(draggedHandoff, newDateString, timeString, newTime, originalDate, newDate)
-                }
-            }
-        } else {
-            // No existing handoff at target date - simply update the dragged one
-            performHandoffUpdate(draggedHandoff, newDateString, timeString, newTime, originalDate, newDate)
-        }
-    }
-    
-    private func createNewHandoffFromDrag(
-        _ originalDate: Date,
-        _ newDate: Date,
-        _ newDateString: String,
-        _ timeString: String,
-        _ newTime: (hour: Int, minute: Int, display: String)
-    ) {
-        // Check if target date already has a handoff - delete it first if so
-        let existingTargetHandoff = viewModel.handoffTimes.first(where: { $0.date == newDateString })
-        
-        if let targetHandoff = existingTargetHandoff {
-            print("🔄 Target date \(newDateString) already has handoff - deleting before creating new one")
-            
-            APIService.shared.deleteHandoffTime(handoffId: String(targetHandoff.id)) { deleteResult in
-                DispatchQueue.main.async {
-                    switch deleteResult {
-                    case .success:
-                        print("✅ Deleted existing handoff at target date \(newDateString)")
-                    case .failure(let deleteError):
-                        print("⚠️ Failed to delete existing handoff at target: \(deleteError.localizedDescription)")
-                        // Remove from local data anyway
-                        self.viewModel.handoffTimes.removeAll { $0.id == targetHandoff.id }
-                    }
-                    
-                    // Proceed with creating new handoff
-                    self.createNewHandoffRecord(newDate, newDateString, timeString, newTime, originalDate)
-                }
-            }
-        } else {
-            // No existing handoff at target - create new one directly
-            createNewHandoffRecord(newDate, newDateString, timeString, newTime, originalDate)
-        }
-    }
-    
-    private func createNewHandoffRecord(
-        _ newDate: Date,
-        _ newDateString: String,
-        _ timeString: String,
-        _ newTime: (hour: Int, minute: Int, display: String),
-        _ originalDate: Date?
     ) {
         // Get handoff data for the new date
         let newHandoffData = getHandoffDataForDate(newDate)
         
-        // Create new handoff record
-        APIService.shared.saveHandoffTime(
-            date: newDateString,
-            time: timeString,
-            location: newHandoffData.location,
-            fromParentId: newHandoffData.fromParentId,
-            toParentId: newHandoffData.toParentId
-        ) { result in
-            DispatchQueue.main.async {
-                self.handleSaveResult(result, newDate: newDate, newTime: newTime, originalDate: originalDate)
-            }
-        }
-    }
-    
-    private func performHandoffUpdate(
-        _ draggedHandoff: HandoffTimeResponse,
-        _ newDateString: String,
-        _ timeString: String,
-        _ newTime: (hour: Int, minute: Int, display: String),
-        _ originalDate: Date,
-        _ newDate: Date
-    ) {
-        // Get handoff data for the new date to determine parent IDs
-        let newHandoffData = getHandoffDataForDate(newDate)
+        // Update custody records directly through the custody API
+        print("📝 Updating custody with handoff info for \(newDateString) at \(newTime.display)")
         
-        // Update the dragged handoff record with new date/time/location
-        APIService.shared.updateHandoffTime(
-            handoffId: draggedHandoff.id,
-            date: newDateString,
-            time: timeString,
-            location: draggedHandoff.location ?? "daycare",
-            fromParentId: newHandoffData.fromParentId,
-            toParentId: newHandoffData.toParentId
-        ) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let updatedHandoff):
-                    print("✅ Updated handoff to \(newDateString) at \(newTime.display)")
-                    
-                    // Update custody for the move if different date
-                    let dateFormatter = DateFormatter()
-                    dateFormatter.dateFormat = "yyyy-MM-dd"
-                    let originalDateString = dateFormatter.string(from: originalDate)
-                    
-                    if originalDateString != newDateString {
-                        // Update custody first, then refresh UI when complete
-                        self.updateCustodyForHandoffMove(originalDate: originalDate, newDate: newDate) {
-                            // Refresh handoff times after custody update completes
-                            DispatchQueue.main.async {
-                                self.viewModel.fetchHandoffTimes()
-                            }
-                        }
-                    } else {
-                        // Same day move - refresh immediately
-                        self.viewModel.fetchHandoffTimes()
-                    }
-                    
-                case .failure(let error):
-                    print("❌ Failed to update handoff time: \(error.localizedDescription)")
+        // Update custody for the move if different date
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let originalDateString = dateFormatter.string(from: originalDate)
+        
+        if originalDateString != newDateString {
+            // Update custody first, then refresh UI when complete
+            self.updateCustodyForHandoffMove(originalDate: originalDate, newDate: newDate) {
+                // Refresh custody records after update completes
+                DispatchQueue.main.async {
+                    self.viewModel.fetchCustodyRecords()
                 }
             }
+        } else {
+            // Same day move - update custody with handoff info
+            self.updateCustodyBasedOnHandoffTimeChange(for: newDate)
+            // Refresh custody records to update the view
+            self.viewModel.fetchCustodyRecords()
         }
     }
     
@@ -650,12 +518,12 @@ struct HandoffTimelineView: View {
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let dateString = dateFormatter.string(from: date)
         
-        // Try to get existing handoff data first
-        if let existingHandoff = viewModel.handoffTimes.first(where: { $0.date == dateString }) {
+        // Try to get existing handoff data from custody records first
+        if let existingCustody = viewModel.custodyRecords.first(where: { $0.event_date == dateString && $0.handoff_day == true }) {
             return (
-                location: existingHandoff.location ?? "daycare",
-                fromParentId: existingHandoff.from_parent_id,
-                toParentId: existingHandoff.to_parent_id
+                location: existingCustody.handoff_location ?? "daycare",
+                fromParentId: nil, // We'll determine this from previous day's custody
+                toParentId: existingCustody.custodian_id
             )
         }
         
@@ -667,11 +535,11 @@ struct HandoffTimelineView: View {
         let toParentId: String?
         
         if currentCustodian == viewModel.custodianOne?.id {
-            fromParentId = viewModel.custodianOne?.id
-            toParentId = viewModel.custodianTwo?.id
+            fromParentId = viewModel.custodianTwo?.id // Previous custodian
+            toParentId = viewModel.custodianOne?.id   // New custodian
         } else {
-            fromParentId = viewModel.custodianTwo?.id
-            toParentId = viewModel.custodianOne?.id
+            fromParentId = viewModel.custodianOne?.id // Previous custodian
+            toParentId = viewModel.custodianTwo?.id   // New custodian
         }
         
         // Determine default location based on day of week
@@ -686,31 +554,7 @@ struct HandoffTimelineView: View {
         )
     }
     
-    private func handleSaveResult(_ result: Result<HandoffTimeResponse, Error>, newDate: Date, newTime: (hour: Int, minute: Int, display: String), originalDate: Date?) {
-        switch result {
-        case .success(_):
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "yyyy-MM-dd"
-            print("✅ Created new handoff on \(dateFormatter.string(from: newDate)) at \(newTime.display)")
-            
-            // Update custody for both dates if moving
-            if let originalDate = originalDate {
-                self.updateCustodyForHandoffMove(originalDate: originalDate, newDate: newDate) {
-                    // Refresh handoff times after custody update completes
-                    DispatchQueue.main.async {
-                        self.viewModel.fetchHandoffTimes()
-                    }
-                }
-            } else {
-                self.updateCustodyBasedOnHandoffTimeChange(for: newDate)
-                // Refresh handoff times to update the view
-                self.viewModel.fetchHandoffTimes()
-            }
-            
-        case .failure(let error):
-            print("❌ Failed to create new handoff: \(error.localizedDescription)")
-        }
-    }
+
     
     private func updateCustodyBasedOnHandoffTimeChange(for date: Date) {
         // Determine who should have custody after this handoff
@@ -953,32 +797,30 @@ struct HandoffTimelineView: View {
     
     private func deletePassedOverHandoffs() {
         for date in passedOverHandoffs {
-            print("Deleting handoff at \(formatDate(date)) due to collision")
+            print("Removing handoff at \(formatDate(date)) due to collision")
             
             // Convert the date to string format for comparison
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "yyyy-MM-dd"
             let dateString = dateFormatter.string(from: date)
             
-            // Find the handoff record for this date to get the ID
-            if let handoffRecord = viewModel.handoffTimes.first(where: { $0.date == dateString }) {
-                let handoffId = String(handoffRecord.id)
+            // Find the custody record for this date and remove handoff info
+            if let custodyRecord = viewModel.custodyRecords.first(where: { $0.event_date == dateString && $0.handoff_day == true }) {
+                // Update custody record to remove handoff information
+                // This would require a custody API call to update the record
+                // For now, we'll just update the local data
+                print("Removing handoff info from custody record at \(formatDate(date))")
                 
-                // Call API to delete the handoff record
-                APIService.shared.deleteHandoffTime(handoffId: handoffId) { result in
-                    DispatchQueue.main.async {
-                        switch result {
-                        case .success:
-                            // Remove from viewModel data
-                            self.viewModel.handoffTimes.removeAll { $0.id == handoffRecord.id }
-                            print("Successfully deleted handoff at \(self.formatDate(date))")
-                        case .failure(let error):
-                            print("Failed to delete handoff at \(self.formatDate(date)): \(error)")
-                        }
-                    }
+                // Update local custody records
+                if let index = viewModel.custodyRecords.firstIndex(where: { $0.event_date == dateString }) {
+                    var updatedRecord = viewModel.custodyRecords[index]
+                    updatedRecord.handoff_day = false
+                    updatedRecord.handoff_time = nil
+                    updatedRecord.handoff_location = nil
+                    viewModel.custodyRecords[index] = updatedRecord
                 }
             } else {
-                print("No handoff record found for date \(formatDate(date))")
+                print("No custody handoff record found for date \(formatDate(date))")
             }
         }
         
