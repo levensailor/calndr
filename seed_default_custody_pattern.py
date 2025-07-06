@@ -85,7 +85,7 @@ def get_custody_owner_for_date(date, custodians):
     else:  # Tuesday, Wednesday, Thursday, Friday
         return custodians['custodian_two']
 
-def seed_custody_pattern(family_id, start_date, end_date, dry_run=False):
+def seed_custody_pattern(family_id, start_date, end_date, dry_run=False, force=False):
     """Seed the database with default custody pattern for the specified date range."""
     
     conn = get_connection()
@@ -134,36 +134,41 @@ def seed_custody_pattern(family_id, start_date, end_date, dry_run=False):
         print(f"\n💾 Inserting custody records into database...")
         
         with conn.cursor() as cur:
-            # Check for existing records first
-            date_list = [record['date'] for record in custody_records]
-            cur.execute("""
-                SELECT event_date 
-                FROM custody 
-                WHERE family_id = %s AND event_date = ANY(%s)
-            """, (family_id, date_list))
+            # Check for existing records first (unless force is specified)
+            if not force:
+                date_list = [record['date'] for record in custody_records]
+                cur.execute("""
+                    SELECT date 
+                    FROM custody 
+                    WHERE family_id = %s AND date = ANY(%s)
+                """, (family_id, date_list))
+                
+                existing_dates = {row[0] for row in cur.fetchall()}
+                
+                if existing_dates:
+                    print(f"⚠️  Found {len(existing_dates)} existing custody records")
+                    print("   Use --force to overwrite existing records")
+                    return
             
-            existing_dates = {row[0] for row in cur.fetchall()}
-            
-            if existing_dates:
-                print(f"⚠️  Found {len(existing_dates)} existing custody records")
-                print("   Use --force to overwrite existing records")
-                return
-            
-            # Insert new records using the events table format for compatibility
+            # Insert new records into the custody table
             insert_count = 0
             for record in custody_records:
                 try:
+                    # Use the first parent as the actor_id (the one who "set" the initial schedule)
+                    actor_id = custodians['custodian_one']['id']
+                    
                     cur.execute("""
-                        INSERT INTO events (family_id, event_date, content, position, created_at, updated_at)
-                        VALUES (%s, %s, %s, 4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                        ON CONFLICT (family_id, event_date, position) 
+                        INSERT INTO custody (family_id, date, actor_id, custodian_id, created_at)
+                        VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
+                        ON CONFLICT (family_id, date) 
                         DO UPDATE SET 
-                            content = EXCLUDED.content,
-                            updated_at = CURRENT_TIMESTAMP
+                            custodian_id = EXCLUDED.custodian_id,
+                            actor_id = EXCLUDED.actor_id
                     """, (
                         family_id,
                         record['date'],
-                        record['custodian_name']
+                        actor_id,
+                        record['custodian_id']
                     ))
                     insert_count += 1
                 except Exception as e:
@@ -217,7 +222,7 @@ def main():
     print()
     
     try:
-        seed_custody_pattern(args.family_id, start_date, end_date, args.dry_run)
+        seed_custody_pattern(args.family_id, start_date, end_date, args.dry_run, args.force)
     except Exception as e:
         sys.exit(f"❌ Failed to seed custody pattern: {e}")
 
