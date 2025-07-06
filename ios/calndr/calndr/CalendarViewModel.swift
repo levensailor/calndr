@@ -440,7 +440,6 @@ class CalendarViewModel: ObservableObject {
     
     func getCustodyInfo(for date: Date) -> (owner: String, text: String) {
         let dateString = isoDateString(from: date)
-        let dayOfWeek = Calendar.current.component(.weekday, from: date) // 1=Sun, 2=Mon, 7=Sat
         
         // If custodian data isn't loaded yet, return empty info to avoid race conditions
         guard custodiansLoaded else {
@@ -471,12 +470,9 @@ class CalendarViewModel: ObservableObject {
             }
         }
         
-        // Default logic: Parent1 (custodian one) has Sun (1), Mon (2), Sat (7)
-        let isCustodianOneDay = [1, 2, 7].contains(dayOfWeek)
-        let ownerID = isCustodianOneDay ? self.custodianOne?.id ?? "" : self.custodianTwo?.id ?? ""
-        let ownerName = isCustodianOneDay ? self.custodianOneName : self.custodianTwoName
-        print("⚠️ No custody record found for \(dateString) (day \(dayOfWeek)), using default: \(ownerName)")
-        return (ownerID, ownerName)
+        // No custody record found - this should not happen after onboarding seeding
+        print("❌ No custody record found for \(dateString) - database may need seeding")
+        return ("", "No custody assigned")
     }
     
     func getHandoffTimeForDate(_ date: Date) -> (hour: Int, minute: Int) {
