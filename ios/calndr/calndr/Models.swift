@@ -72,8 +72,6 @@ struct CustodyResponse: Codable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case id, event_date, content, position, custodian_id, handoff_day, handoff_time, handoff_location
     }
-<<<<<<< HEAD
-=======
     
     // Custom memberwise initializer
     init(id: Int, event_date: String, content: String, position: Int, custodian_id: String, handoff_day: Bool?, handoff_time: String?, handoff_location: String?) {
@@ -102,7 +100,6 @@ struct CustodyResponse: Codable, Identifiable {
         handoff_time = try container.decodeIfPresent(String.self, forKey: .handoff_time)
         handoff_location = try container.decodeIfPresent(String.self, forKey: .handoff_location)
     }
->>>>>>> 60c5e42 (Add custom memberwise initializer to CustodyResponse struct)
 }
 
 // Represents a school event
