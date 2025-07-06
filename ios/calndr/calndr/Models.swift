@@ -72,6 +72,34 @@ struct CustodyResponse: Codable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case id, event_date, content, position, custodian_id, handoff_day, handoff_time, handoff_location
     }
+    
+    // Custom memberwise initializer
+    init(id: Int, event_date: String, content: String, position: Int, custodian_id: String, handoff_day: Bool?, handoff_time: String?, handoff_location: String?) {
+        self.id = id
+        self.event_date = event_date
+        self.content = content
+        self.position = position
+        self.custodian_id = custodian_id
+        self.handoff_day = handoff_day
+        self.handoff_time = handoff_time
+        self.handoff_location = handoff_location
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        event_date = try container.decode(String.self, forKey: .event_date)
+        content = try container.decode(String.self, forKey: .content)
+        position = try container.decode(Int.self, forKey: .position)
+        custodian_id = try container.decode(String.self, forKey: .custodian_id)
+        
+        // Handle handoff_day more robustly - it could be bool or null
+        handoff_day = try container.decodeIfPresent(Bool.self, forKey: .handoff_day)
+        
+        // Handle nullable string fields
+        handoff_time = try container.decodeIfPresent(String.self, forKey: .handoff_time)
+        handoff_location = try container.decodeIfPresent(String.self, forKey: .handoff_location)
+    }
 }
 
 // Represents a school event
