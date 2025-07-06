@@ -139,7 +139,7 @@ def seed_custody_pattern(family_id, start_date, end_date, dry_run=False, force=F
             cur.execute("""
                 SELECT date 
                 FROM custody 
-                WHERE family_id = %s AND date = ANY(%s)
+                WHERE family_id = %s AND date = ANY(%s::date[])
             """, (family_id, date_list))
             
             existing_dates = {row[0] for row in cur.fetchall()}
@@ -154,7 +154,7 @@ def seed_custody_pattern(family_id, start_date, end_date, dry_run=False, force=F
                 print(f"🗑️  Deleting {len(existing_dates)} existing custody records...")
                 cur.execute("""
                     DELETE FROM custody 
-                    WHERE family_id = %s AND date = ANY(%s)
+                    WHERE family_id = %s AND date = ANY(%s::date[])
                 """, (family_id, date_list))
             
             # Insert new records into the custody table
