@@ -134,8 +134,8 @@ class CalendarViewModel: ObservableObject {
         print("🔍 Calculating months to fetch from \(isoDateString(from: startDate)) to \(isoDateString(from: endDate))")
         
         // Instead of jumping by months, iterate through each visible date to ensure we capture all months
-        let visibleDates = getVisibleDates()
-        for date in visibleDates {
+        let allVisibleDates = getVisibleDates()
+        for date in allVisibleDates {
             let year = calendar.component(.year, from: date)
             let month = calendar.component(.month, from: date)
             let monthKey = "\(year)-\(month)"
@@ -148,7 +148,7 @@ class CalendarViewModel: ObservableObject {
         print("Fetching custody records for months: \(monthsToFetch)")
         
         // Log which specific dates we're expecting to have custody data for
-        let expectedDates = visibleDates.map { isoDateString(from: $0) }
+        let expectedDates = allVisibleDates.map { isoDateString(from: $0) }
         print("📅 Expected custody dates: \(expectedDates.prefix(5))...\(expectedDates.suffix(5))")
         
         var allCustodyRecords: [CustodyResponse] = []
@@ -193,8 +193,8 @@ class CalendarViewModel: ObservableObject {
             
             // Verify we have custody data for the expected dates
             if let self = self {
-                let visibleDates = self.getVisibleDates()
-                let missingDates = visibleDates.filter { date in
+                let allVisibleDates = self.getVisibleDates()
+                let missingDates = allVisibleDates.filter { date in
                     let dateString = self.isoDateString(from: date)
                     return !allCustodyRecords.contains { $0.event_date == dateString }
                 }
