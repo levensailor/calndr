@@ -134,36 +134,39 @@ def seed_custody_pattern(family_id, start_date, end_date, dry_run=False, force=F
         print(f"\n💾 Inserting custody records into database...")
         
         with conn.cursor() as cur:
-            # Check for existing records first (unless force is specified)
-            if not force:
-                date_list = [record['date'] for record in custody_records]
+            # Check for existing records first
+            date_list = [record['date'] for record in custody_records]
+            cur.execute("""
+                SELECT date 
+                FROM custody 
+                WHERE family_id = %s AND date = ANY(%s)
+            """, (family_id, date_list))
+            
+            existing_dates = {row[0] for row in cur.fetchall()}
+            
+            if existing_dates and not force:
+                print(f"⚠️  Found {len(existing_dates)} existing custody records")
+                print("   Use --force to overwrite existing records")
+                return
+            
+            # Delete existing records if force is enabled
+            if existing_dates and force:
+                print(f"🗑️  Deleting {len(existing_dates)} existing custody records...")
                 cur.execute("""
-                    SELECT date 
-                    FROM custody 
+                    DELETE FROM custody 
                     WHERE family_id = %s AND date = ANY(%s)
                 """, (family_id, date_list))
-                
-                existing_dates = {row[0] for row in cur.fetchall()}
-                
-                if existing_dates:
-                    print(f"⚠️  Found {len(existing_dates)} existing custody records")
-                    print("   Use --force to overwrite existing records")
-                    return
             
             # Insert new records into the custody table
             insert_count = 0
             for record in custody_records:
                 try:
-                    # Use the first parent as the actor_id (the one who "set" the initial schedule)
+                    # Use the first custodian as the actor (the one setting up the pattern)
                     actor_id = custodians['custodian_one']['id']
                     
                     cur.execute("""
                         INSERT INTO custody (family_id, date, actor_id, custodian_id, created_at)
                         VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
-                        ON CONFLICT (family_id, date) 
-                        DO UPDATE SET 
-                            custodian_id = EXCLUDED.custodian_id,
-                            actor_id = EXCLUDED.actor_id
                     """, (
                         family_id,
                         record['date'],
