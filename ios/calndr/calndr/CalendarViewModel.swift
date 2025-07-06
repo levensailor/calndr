@@ -101,27 +101,85 @@ class CalendarViewModel: ObservableObject {
         }
         
         let calendar = Calendar.current
-        let year = calendar.component(.year, from: currentDate)
-        let month = calendar.component(.month, from: currentDate)
+        let currentYear = calendar.component(.year, from: currentDate)
+        let currentMonth = calendar.component(.month, from: currentDate)
         
-        APIService.shared.fetchCustodyRecords(year: year, month: month) { [weak self] result in
-            DispatchQueue.main.async {
+        // Get the date range that includes all dates shown in the calendar view
+        // This includes dates from previous and next month that fill out the grid
+        let visibleDateRange = getVisibleCalendarDateRange()
+        let startDate = visibleDateRange.start
+        let endDate = visibleDateRange.end
+        
+        // Get unique year-month combinations for the visible range
+        var monthsToFetch: Set<String> = []
+        var currentFetchDate = startDate
+        
+        while currentFetchDate <= endDate {
+            let year = calendar.component(.year, from: currentFetchDate)
+            let month = calendar.component(.month, from: currentFetchDate)
+            monthsToFetch.insert("\(year)-\(month)")
+            
+            // Move to next month
+            guard let nextMonth = calendar.date(byAdding: .month, value: 1, to: currentFetchDate) else { break }
+            currentFetchDate = nextMonth
+        }
+        
+        print("Fetching custody records for months: \(monthsToFetch)")
+        
+        var allCustodyRecords: [CustodyResponse] = []
+        let dispatchGroup = DispatchGroup()
+        
+        // Fetch custody data for all required months
+        for monthKey in monthsToFetch {
+            let components = monthKey.split(separator: "-")
+            guard components.count == 2,
+                  let year = Int(components[0]),
+                  let month = Int(components[1]) else { continue }
+            
+            dispatchGroup.enter()
+            APIService.shared.fetchCustodyRecords(year: year, month: month) { result in
                 switch result {
                 case .success(let custodyRecords):
-                    self?.custodyRecords = custodyRecords
-                    self?.updateCustodyStreak()
-                    self?.updateCustodyPercentages()
-                    print("Successfully fetched \(custodyRecords.count) custody records for \(year)-\(month).")
+                    allCustodyRecords.append(contentsOf: custodyRecords)
                 case .failure(let error):
-                    if (error as NSError).code == 401 {
-                        self?.authManager.logout()
-                    }
-                    print("Error fetching custody records: \(error.localizedDescription)")
-                    // Fall back to empty custody records
-                    self?.custodyRecords = []
+                    print("Error fetching custody records for \(year)-\(month): \(error.localizedDescription)")
                 }
+                dispatchGroup.leave()
             }
         }
+        
+        dispatchGroup.notify(queue: .main) { [weak self] in
+            self?.custodyRecords = allCustodyRecords.sorted { $0.event_date < $1.event_date }
+            self?.updateCustodyStreak()
+            self?.updateCustodyPercentages()
+            print("Successfully fetched \(allCustodyRecords.count) custody records for visible date range.")
+        }
+    }
+    
+    // Helper function to get the full date range visible in the calendar view
+    private func getVisibleCalendarDateRange() -> (start: Date, end: Date) {
+        let calendar = Calendar.current
+        
+        // Get the month interval for the current date
+        guard let monthInterval = calendar.dateInterval(of: .month, for: currentDate) else {
+            return (start: currentDate, end: currentDate)
+        }
+        
+        let firstDayOfMonth = monthInterval.start
+        let lastDayOfMonth = calendar.date(byAdding: .day, value: -1, to: monthInterval.end) ?? monthInterval.end
+        
+        // Find the first day of the week containing the first day of the month
+        guard let firstDayOfWeek = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: firstDayOfMonth)) else {
+            return (start: firstDayOfMonth, end: lastDayOfMonth)
+        }
+        
+        // Find the last day of the week containing the last day of the month
+        guard let lastWeekStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: lastDayOfMonth)),
+              let lastDayOfWeek = calendar.date(byAdding: .day, value: 6, to: lastWeekStart) else {
+            return (start: firstDayOfWeek, end: lastDayOfMonth)
+        }
+        
+        return (start: firstDayOfWeek, end: lastDayOfWeek)
     }
     
     func fetchHandoffTimes() {
@@ -131,24 +189,53 @@ class CalendarViewModel: ObservableObject {
         }
         
         let calendar = Calendar.current
-        let year = calendar.component(.year, from: currentDate)
-        let month = calendar.component(.month, from: currentDate)
         
-        APIService.shared.fetchHandoffTimes(year: year, month: month) { [weak self] result in
-            DispatchQueue.main.async {
+        // Get the date range that includes all dates shown in the calendar view
+        let visibleDateRange = getVisibleCalendarDateRange()
+        let startDate = visibleDateRange.start
+        let endDate = visibleDateRange.end
+        
+        // Get unique year-month combinations for the visible range
+        var monthsToFetch: Set<String> = []
+        var currentFetchDate = startDate
+        
+        while currentFetchDate <= endDate {
+            let year = calendar.component(.year, from: currentFetchDate)
+            let month = calendar.component(.month, from: currentFetchDate)
+            monthsToFetch.insert("\(year)-\(month)")
+            
+            // Move to next month
+            guard let nextMonth = calendar.date(byAdding: .month, value: 1, to: currentFetchDate) else { break }
+            currentFetchDate = nextMonth
+        }
+        
+        print("Fetching handoff times for months: \(monthsToFetch)")
+        
+        var allHandoffTimes: [HandoffTimeResponse] = []
+        let dispatchGroup = DispatchGroup()
+        
+        // Fetch handoff data for all required months
+        for monthKey in monthsToFetch {
+            let components = monthKey.split(separator: "-")
+            guard components.count == 2,
+                  let year = Int(components[0]),
+                  let month = Int(components[1]) else { continue }
+            
+            dispatchGroup.enter()
+            APIService.shared.fetchHandoffTimes(year: year, month: month) { result in
                 switch result {
                 case .success(let handoffTimes):
-                    self?.handoffTimes = handoffTimes
-                    print("Successfully fetched \(handoffTimes.count) handoff times for \(year)-\(month).")
+                    allHandoffTimes.append(contentsOf: handoffTimes)
                 case .failure(let error):
-                    if (error as NSError).code == 401 {
-                        self?.authManager.logout()
-                    }
-                    print("Error fetching handoff times: \(error.localizedDescription)")
-                    // Fall back to empty handoff times
-                    self?.handoffTimes = []
+                    print("Error fetching handoff times for \(year)-\(month): \(error.localizedDescription)")
                 }
+                dispatchGroup.leave()
             }
+        }
+        
+        dispatchGroup.notify(queue: .main) { [weak self] in
+            self?.handoffTimes = allHandoffTimes.sorted { $0.date < $1.date }
+            print("Successfully fetched \(allHandoffTimes.count) handoff times for visible date range.")
         }
     }
     
