@@ -472,13 +472,13 @@ async def get_custody_records(year: int, month: int, current_user: User = Depend
             custodian_name = custodian_map.get(str(record['custodian_id']), 'unknown')
             
             # Handle handoff_day as optional bool to match iOS model
-            handoff_day_value = record.get('handoff_day')
-            if handoff_day_value is None:
-                handoff_day_value = False
+
+            handoff_day_value = record['handoff_day'] if record['handoff_day'] is not None else False
                 
             # Handle handoff_time conversion properly
             handoff_time_value = None
-            if record.get('handoff_time') is not None:
+            if record['handoff_time'] is not None:
+
                 handoff_time_value = str(record['handoff_time'])
             
             custody_item = {
@@ -489,7 +489,8 @@ async def get_custody_records(year: int, month: int, current_user: User = Depend
                 'custodian_id': str(record['custodian_id']),
                 'handoff_day': handoff_day_value,
                 'handoff_time': handoff_time_value,
-                'handoff_location': record.get('handoff_location')
+
+                'handoff_location': record['handoff_location']
             }
             frontend_custody.append(custody_item)
             
@@ -569,9 +570,9 @@ async def set_custody(custody_data: CustodyRecord, current_user: User = Depends(
             'content': custodian_name,
             'position': 4,  # For frontend compatibility
             'custodian_id': str(final_record['custodian_id']),
-            'handoff_day': final_record.get('handoff_day', False),
-            'handoff_time': str(final_record['handoff_time']) if final_record.get('handoff_time') else None,
-            'handoff_location': final_record.get('handoff_location')
+            'handoff_day': final_record['handoff_day'] if final_record['handoff_day'] is not None else False,
+            'handoff_time': str(final_record['handoff_time']) if final_record['handoff_time'] is not None else None,
+            'handoff_location': final_record['handoff_location']
         }
         
     except Exception as e:
