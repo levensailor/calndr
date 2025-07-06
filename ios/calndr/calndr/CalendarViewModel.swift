@@ -57,7 +57,6 @@ class CalendarViewModel: ObservableObject {
 
     func fetchEvents() {
         guard !isOffline else {
-            print("Offline, not fetching events.")
             return
         }
         let visibleDates = getVisibleDates()
@@ -67,8 +66,6 @@ class CalendarViewModel: ObservableObject {
 
         let firstDateString = isoDateString(from: firstDate)
         let lastDateString = isoDateString(from: lastDate)
-
-        print("🗓️ fetchEvents() called - visible dates: \(firstDateString) to \(lastDateString)")
 
         // Also fetch weather for the visible range
         fetchWeather(from: firstDateString, to: lastDateString)
@@ -98,13 +95,10 @@ class CalendarViewModel: ObservableObject {
     
     func fetchCustodyRecords() {
         guard !isOffline else {
-            print("Offline, not fetching custody records.")
             return
         }
         
         let calendar = Calendar.current
-        let currentYear = calendar.component(.year, from: currentDate)
-        let currentMonth = calendar.component(.month, from: currentDate)
         
         // Get the date range that includes all dates shown in the calendar view
         // This includes dates from previous and next month that fill out the grid
@@ -112,26 +106,8 @@ class CalendarViewModel: ObservableObject {
         let startDate = visibleDateRange.start
         let endDate = visibleDateRange.end
         
-        // Compare with getVisibleDates() method for consistency check
-        let visibleDates = getVisibleDates()
-        let visibleDatesStart = visibleDates.first!
-        let visibleDatesEnd = visibleDates.last!
-        
-        print("🗓️ Current date: \(isoDateString(from: currentDate))")
-        print("🗓️ Visible date range (custody): \(isoDateString(from: startDate)) to \(isoDateString(from: endDate))")
-        print("🗓️ Visible date range (events): \(isoDateString(from: visibleDatesStart)) to \(isoDateString(from: visibleDatesEnd))")
-        
-        if isoDateString(from: startDate) != isoDateString(from: visibleDatesStart) || 
-           isoDateString(from: endDate) != isoDateString(from: visibleDatesEnd) {
-            print("⚠️ DATE RANGE MISMATCH detected!")
-        } else {
-            print("✅ Date ranges match perfectly")
-        }
-        
         // Get unique year-month combinations for the visible range
         var monthsToFetch: Set<String> = []
-        
-        print("🔍 Calculating months to fetch from \(isoDateString(from: startDate)) to \(isoDateString(from: endDate))")
         
         // Instead of jumping by months, iterate through each visible date to ensure we capture all months
         let allVisibleDates = getVisibleDates()
@@ -139,17 +115,8 @@ class CalendarViewModel: ObservableObject {
             let year = calendar.component(.year, from: date)
             let month = calendar.component(.month, from: date)
             let monthKey = "\(year)-\(month)"
-            
-            if monthsToFetch.insert(monthKey).inserted {
-                print("   📅 Found new month to fetch: \(monthKey) (from date \(isoDateString(from: date)))")
-            }
+            monthsToFetch.insert(monthKey)
         }
-        
-        print("Fetching custody records for months: \(monthsToFetch)")
-        
-        // Log which specific dates we're expecting to have custody data for
-        let expectedDates = allVisibleDates.map { isoDateString(from: $0) }
-        print("📅 Expected custody dates: \(expectedDates.prefix(5))...\(expectedDates.suffix(5))")
         
         var allCustodyRecords: [CustodyResponse] = []
         let dispatchGroup = DispatchGroup()
@@ -167,12 +134,6 @@ class CalendarViewModel: ObservableObject {
                 case .success(let custodyRecords):
                     DispatchQueue.main.async {
                         allCustodyRecords.append(contentsOf: custodyRecords)
-                        print("📦 Fetched custody data for \(monthKey): \(custodyRecords.count) records")
-                        // Log first few records for debugging
-                        if !custodyRecords.isEmpty {
-                            let firstFew = custodyRecords.prefix(3)
-                            print("   Sample records: \(firstFew.map { "\($0.event_date):\($0.content)" })")
-                        }
                     }
                 case .failure(let error):
                     print("Error fetching custody records for \(year)-\(month): \(error.localizedDescription)")
@@ -185,26 +146,6 @@ class CalendarViewModel: ObservableObject {
             self?.custodyRecords = allCustodyRecords.sorted { $0.event_date < $1.event_date }
             self?.updateCustodyStreak()
             self?.updateCustodyPercentages()
-            print("Successfully fetched \(allCustodyRecords.count) custody records for visible date range.")
-            print("📊 Total custody records in memory: \(self?.custodyRecords.count ?? 0)")
-            if let records = self?.custodyRecords, !records.isEmpty {
-                print("📊 Date range of records: \(records.first?.event_date ?? "none") to \(records.last?.event_date ?? "none")")
-            }
-            
-            // Verify we have custody data for the expected dates
-            if let self = self {
-                let allVisibleDates = self.getVisibleDates()
-                let missingDates = allVisibleDates.filter { date in
-                    let dateString = self.isoDateString(from: date)
-                    return !allCustodyRecords.contains { $0.event_date == dateString }
-                }
-                if !missingDates.isEmpty {
-                    print("⚠️ Missing custody data for \(missingDates.count) dates:")
-                    missingDates.prefix(10).forEach { date in
-                        print("   Missing: \(self.isoDateString(from: date))")
-                    }
-                }
-            }
         }
     }
     
@@ -235,7 +176,7 @@ class CalendarViewModel: ObservableObject {
     
     func fetchHandoffTimes() {
         guard !isOffline else {
-            print("Offline, not fetching handoff times.")
+            print("🔄 Offline, not fetching handoff times.")
             return
         }
         
@@ -246,6 +187,8 @@ class CalendarViewModel: ObservableObject {
         let startDate = visibleDateRange.start
         let endDate = visibleDateRange.end
         
+        print("🔄 Fetching handoff times for date range: \(isoDateString(from: startDate)) to \(isoDateString(from: endDate))")
+        
         // Get unique year-month combinations for the visible range
         var monthsToFetch: Set<String> = []
         var currentFetchDate = startDate
@@ -253,14 +196,18 @@ class CalendarViewModel: ObservableObject {
         while currentFetchDate <= endDate {
             let year = calendar.component(.year, from: currentFetchDate)
             let month = calendar.component(.month, from: currentFetchDate)
-            monthsToFetch.insert("\(year)-\(month)")
+            let monthKey = "\(year)-\(month)"
+            
+            if monthsToFetch.insert(monthKey).inserted {
+                print("   📅 Found month to fetch: \(monthKey)")
+            }
             
             // Move to next month
             guard let nextMonth = calendar.date(byAdding: .month, value: 1, to: currentFetchDate) else { break }
             currentFetchDate = nextMonth
         }
         
-        print("Fetching handoff times for months: \(monthsToFetch)")
+        print("🔄 Fetching handoff data for \(monthsToFetch.count) months: \(monthsToFetch.sorted())")
         
         var allHandoffTimes: [HandoffTimeResponse] = []
         let dispatchGroup = DispatchGroup()
@@ -279,9 +226,17 @@ class CalendarViewModel: ObservableObject {
                     DispatchQueue.main.async {
                         allHandoffTimes.append(contentsOf: handoffTimes)
                         print("📦 Fetched handoff data for \(monthKey): \(handoffTimes.count) records")
+                        
+                        // Log sample handoff records for debugging
+                        if !handoffTimes.isEmpty {
+                            let sampleRecords = handoffTimes.prefix(3)
+                            for record in sampleRecords {
+                                print("   🔄 Sample: \(record.date) at \(record.time) - \(record.from_parent_name ?? "Unknown") → \(record.to_parent_name ?? "Unknown") @ \(record.location ?? "Unknown")")
+                            }
+                        }
                     }
                 case .failure(let error):
-                    print("Error fetching handoff times for \(year)-\(month): \(error.localizedDescription)")
+                    print("❌ Error fetching handoff times for \(year)-\(month): \(error.localizedDescription)")
                 }
                 dispatchGroup.leave()
             }
@@ -289,7 +244,23 @@ class CalendarViewModel: ObservableObject {
         
         dispatchGroup.notify(queue: .main) { [weak self] in
             self?.handoffTimes = allHandoffTimes.sorted { $0.date < $1.date }
-            print("Successfully fetched \(allHandoffTimes.count) handoff times for visible date range.")
+            print("✅ Successfully fetched \(allHandoffTimes.count) handoff times for visible date range")
+            
+            // Log handoff summary
+            if !allHandoffTimes.isEmpty {
+                let dateRange = "\(allHandoffTimes.first?.date ?? "none") to \(allHandoffTimes.last?.date ?? "none")"
+                print("📊 Handoff records date range: \(dateRange)")
+                
+                // Log handoff locations breakdown
+                let locationCounts = Dictionary(grouping: allHandoffTimes, by: { $0.location ?? "Unknown" })
+                    .mapValues { $0.count }
+                print("📊 Handoff locations: \(locationCounts)")
+                
+                // Log handoff times breakdown
+                let timeCounts = Dictionary(grouping: allHandoffTimes, by: { $0.time })
+                    .mapValues { $0.count }
+                print("📊 Handoff times: \(timeCounts)")
+            }
         }
     }
     
@@ -431,7 +402,6 @@ class CalendarViewModel: ObservableObject {
         
         // If custodian data isn't loaded yet, return empty info to avoid race conditions
         guard custodiansLoaded else {
-            print("Custodian data not loaded yet for date \(dateString)")
             return ("", "")
         }
         
@@ -439,10 +409,8 @@ class CalendarViewModel: ObservableObject {
         if let custodyRecord = custodyRecords.first(where: { $0.event_date == dateString }) {
             // Map the content back to custodian names and IDs
             if custodyRecord.content.lowercased() == self.custodianOneName.lowercased() {
-                print("📋 Custody record found for \(dateString): \(self.custodianOneName)")
                 return (self.custodianOne?.id ?? "", self.custodianOneName)
             } else if custodyRecord.content.lowercased() == self.custodianTwoName.lowercased() {
-                print("📋 Custody record found for \(dateString): \(self.custodianTwoName)")
                 return (self.custodianTwo?.id ?? "", self.custodianTwoName)
             }
         }
@@ -450,23 +418,13 @@ class CalendarViewModel: ObservableObject {
         // LEGACY: Check for old custody events in events array (position 4) for backward compatibility
         if let custodyEvent = events.first(where: { $0.event_date == dateString && $0.position == 4 }) {
             if custodyEvent.content.lowercased() == self.custodianOneName.lowercased() {
-                print("📋 Legacy custody event found for \(dateString): \(self.custodianOneName)")
                 return (self.custodianOne?.id ?? "", self.custodianOneName)
             } else if custodyEvent.content.lowercased() == self.custodianTwoName.lowercased() {
-                print("📋 Legacy custody event found for \(dateString): \(self.custodianTwoName)")
                 return (self.custodianTwo?.id ?? "", self.custodianTwoName)
             }
         }
         
-        // No custody record found - this should not happen after onboarding seeding
-        print("❌ No custody record found for \(dateString) - checking if date is in fetched range")
-        let totalRecords = custodyRecords.count
-        let recordsForMonth = custodyRecords.filter { record in
-            let recordDate = record.event_date
-            return recordDate.prefix(7) == dateString.prefix(7) // Same year-month
-        }.count
-        print("   Total records: \(totalRecords), Records for month \(dateString.prefix(7)): \(recordsForMonth)")
-        
+        // No custody record found
         return ("", "No custody assigned")
     }
     
@@ -481,13 +439,19 @@ class CalendarViewModel: ObservableObject {
             if components.count == 2,
                let hour = Int(components[0]),
                let minute = Int(components[1]) {
+                print("🔄 Found stored handoff time for \(dateString): \(hour):\(String(format: "%02d", minute)) (\(handoffTime.location ?? "Unknown") location)")
                 return (hour, minute)
+            } else {
+                print("⚠️ Invalid time format in handoff record for \(dateString): '\(handoffTime.time)'")
             }
+        } else {
+            print("🔄 No stored handoff time for \(dateString), using default")
         }
         
         // Default logic: Noon (12:00) for weekends, 5:00 PM for weekdays
         let isWeekend = dayOfWeek == 1 || dayOfWeek == 7 // Sunday or Saturday
         let defaultHour = isWeekend ? 12 : 17
+        print("🔄 Using default handoff time for \(dateString): \(defaultHour):00 (\(isWeekend ? "weekend" : "weekday") default)")
         return (defaultHour, 0)
     }
 
