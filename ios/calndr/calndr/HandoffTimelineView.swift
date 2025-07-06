@@ -811,12 +811,19 @@ struct HandoffTimelineView: View {
                 // For now, we'll just update the local data
                 print("Removing handoff info from custody record at \(formatDate(date))")
                 
-                // Update local custody records
+                // Update local custody records - create new record since struct is immutable
                 if let index = viewModel.custodyRecords.firstIndex(where: { $0.event_date == dateString }) {
-                    var updatedRecord = viewModel.custodyRecords[index]
-                    updatedRecord.handoff_day = false
-                    updatedRecord.handoff_time = nil
-                    updatedRecord.handoff_location = nil
+                    let originalRecord = viewModel.custodyRecords[index]
+                    let updatedRecord = CustodyResponse(
+                        id: originalRecord.id,
+                        event_date: originalRecord.event_date,
+                        content: originalRecord.content,
+                        position: originalRecord.position,
+                        custodian_id: originalRecord.custodian_id,
+                        handoff_day: false,
+                        handoff_time: nil,
+                        handoff_location: nil
+                    )
                     viewModel.custodyRecords[index] = updatedRecord
                 }
             } else {

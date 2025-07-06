@@ -64,9 +64,13 @@ struct CustodyResponse: Codable, Identifiable {
     let event_date: String
     let content: String
     let position: Int
+    let custodian_id: String
+    let handoff_day: Bool?
+    let handoff_time: String?
+    let handoff_location: String?
     
     enum CodingKeys: String, CodingKey {
-        case id, event_date, content, position
+        case id, event_date, content, position, custodian_id, handoff_day, handoff_time, handoff_location
     }
 }
 
