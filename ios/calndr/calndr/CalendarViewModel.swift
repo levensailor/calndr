@@ -211,17 +211,24 @@ class CalendarViewModel: ObservableObject {
         }
         
         APIService.shared.fetchFamilyCustodians { [weak self] result in
+            // Perform the switch on the result in the background thread first
+            let custodiansResult = result // Hold the result
+            
             DispatchQueue.main.async {
+                // Now, on the main thread, use the captured result
                 defer {
                     completion?() // Ensure completion is always called
                 }
-                switch result {
+                
+                guard let self = self else { return }
+                
+                switch custodiansResult {
                 case .success(let custodians):
-                    self?.custodianOne = custodians.custodian_one
-                    self?.custodianTwo = custodians.custodian_two
-                    self?.custodianOneName = custodians.custodian_one.first_name
-                    self?.custodianTwoName = custodians.custodian_two.first_name
-                    self?.custodiansLoaded = true // Keep for any legacy checks if needed
+                    self.custodianOne = custodians.custodian_one
+                    self.custodianTwo = custodians.custodian_two
+                    self.custodianOneName = custodians.custodian_one.first_name
+                    self.custodianTwoName = custodians.custodian_two.first_name
+                    self.custodiansLoaded = true // Keep for any legacy checks if needed
                 case .failure(let error):
                     print("Error fetching custodian names: \(error.localizedDescription)")
                     // Handle error, maybe set custodiansLoaded to false or show an error message
@@ -490,7 +497,7 @@ class CalendarViewModel: ObservableObject {
         
         // Determine handoff time based on day of week
         let handoffTimeInMinutes: Int
-        if weekday == 1 || weekday == 7 { // Sunday or Saturday (weekends)
+        if weekday == 1 || weekday == 7 { // Weekend
             handoffTimeInMinutes = 12 * 60 // Noon (12:00 PM)
         } else { // Monday through Friday (weekdays)
             handoffTimeInMinutes = 17 * 60 // 5:00 PM
