@@ -15,6 +15,8 @@ class CalendarViewModel: ObservableObject {
     @Published var custodianWithStreak: Int = 0 // 1 for custodian one, 2 for custodian two, 0 for none
     @Published var custodianOneName: String = "Parent 1"
     @Published var custodianTwoName: String = "Parent 2"
+    @Published var custodianOneId: String?
+    @Published var custodianTwoId: String?
     @Published var custodianOnePercentage: Double = 0.0
     @Published var custodianTwoPercentage: Double = 0.0
     @Published var notificationEmails: [NotificationEmail] = []
@@ -94,6 +96,8 @@ class CalendarViewModel: ObservableObject {
                 case .success(let response):
                     self?.custodianOneName = response.custodian_one.first_name
                     self?.custodianTwoName = response.custodian_two.first_name
+                    self?.custodianOneId = response.custodian_one.id
+                    self?.custodianTwoId = response.custodian_two.id
                     print("✅ Successfully fetched custodian names: \(response.custodian_one.first_name), \(response.custodian_two.first_name)")
                 case .failure(let error):
                     print("❌ Error fetching custodian names: \(error.localizedDescription)")
@@ -287,9 +291,9 @@ class CalendarViewModel: ObservableObject {
             for dayOffset in 0..<daysInMonth {
                 if let date = calendar.date(byAdding: .day, value: dayOffset, to: monthInterval.start) {
                     let owner = getCustodyInfo(for: date).owner
-                    if owner == self.custodianOne?.id {
+                    if owner == self.custodianOneId {
                         custodianOneDays += 1
-                    } else if owner == self.custodianTwo?.id {
+                    } else if owner == self.custodianTwoId {
                         custodianTwoDays += 1
                     }
                 }
@@ -354,18 +358,18 @@ class CalendarViewModel: ObservableObject {
         if let custodyRecord = custodyRecords.first(where: { $0.event_date == dateString }) {
             // Map the content back to custodian names and IDs
             if custodyRecord.content.lowercased() == self.custodianOneName.lowercased() {
-                return (self.custodianOne?.id ?? "", self.custodianOneName)
+                return (self.custodianOneId ?? "", self.custodianOneName)
             } else if custodyRecord.content.lowercased() == self.custodianTwoName.lowercased() {
-                return (self.custodianTwo?.id ?? "", self.custodianTwoName)
+                return (self.custodianTwoId ?? "", self.custodianTwoName)
             }
         }
         
         // LEGACY: Check for old custody events in events array (position 4) for backward compatibility
         if let custodyEvent = events.first(where: { $0.event_date == dateString && $0.position == 4 }) {
             if custodyEvent.content.lowercased() == self.custodianOneName.lowercased() {
-                return (self.custodianOne?.id ?? "", self.custodianOneName)
+                return (self.custodianOneId ?? "", self.custodianOneName)
             } else if custodyEvent.content.lowercased() == self.custodianTwoName.lowercased() {
-                return (self.custodianTwo?.id ?? "", self.custodianTwoName)
+                return (self.custodianTwoId ?? "", self.custodianTwoName)
             }
         }
         
@@ -425,9 +429,9 @@ class CalendarViewModel: ObservableObject {
         for dayOffset in 0..<daysInMonth {
             if let date = calendar.date(byAdding: .day, value: dayOffset, to: monthInterval.start) {
                 let owner = getCustodyInfo(for: date).owner
-                if owner == self.custodianOne?.id {
+                if owner == self.custodianOneId {
                     custodianOneDays += 1
-                } else if owner == self.custodianTwo?.id {
+                } else if owner == self.custodianTwoId {
                     custodianTwoDays += 1
                 }
             }
@@ -475,9 +479,9 @@ class CalendarViewModel: ObservableObject {
         self.custodyStreak = streak
         
         // Determine which custodian has the streak
-        if currentOwner == self.custodianOne?.id {
+        if currentOwner == self.custodianOneId {
             self.custodianWithStreak = 1
-        } else if currentOwner == self.custodianTwo?.id {
+        } else if currentOwner == self.custodianTwoId {
             self.custodianWithStreak = 2
         } else {
             self.custodianWithStreak = 0
@@ -592,10 +596,10 @@ class CalendarViewModel: ObservableObject {
         
         // Determine the new custodian and their ID
         let newCustodianId: String
-        if currentOwner == self.custodianOne?.id {
-            newCustodianId = self.custodianTwo?.id ?? ""
+        if currentOwner == self.custodianOneId {
+            newCustodianId = self.custodianTwoId ?? ""
         } else {
-            newCustodianId = self.custodianOne?.id ?? ""
+            newCustodianId = self.custodianOneId ?? ""
         }
         
         guard !newCustodianId.isEmpty else {

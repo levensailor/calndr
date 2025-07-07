@@ -22,12 +22,12 @@ struct HandoffTimeModal: View {
         var locations = ["daycare", "grocery store", "other"]
         
         // Add parent homes based on actual parent names
-        if let parent1Name = viewModel.custodianOne?.first_name.lowercased() {
+        let parent1Name = viewModel.custodianOneName.lowercased()
             locations.insert("\(parent1Name)'s home", at: 1)
-        }
-        if let parent2Name = viewModel.custodianTwo?.first_name.lowercased() {
+        
+        let parent2Name = viewModel.custodianTwoName.lowercased()
             locations.insert("\(parent2Name)'s home", at: 2)
-        }
+        
         
         return locations
     }

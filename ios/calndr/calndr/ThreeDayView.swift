@@ -164,7 +164,7 @@ struct ThreeDayView: View {
     
     private func getCustodyBackgroundColor(for day: Date) -> Color {
         let custodyInfo = viewModel.getCustodyInfo(for: day)
-        if custodyInfo.owner == viewModel.custodianOne?.id {
+        if custodyInfo.owner == viewModel.custodianOneId {
             return themeManager.currentTheme.parentOneColor
         } else {
             return themeManager.currentTheme.parentTwoColor

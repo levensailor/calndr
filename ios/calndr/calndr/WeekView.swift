@@ -54,7 +54,7 @@ struct WeekView: View {
                                     .foregroundColor(.black)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 12)
-                                    .background(ownerId == viewModel.custodianOne?.id ? themeManager.currentTheme.parentOneColor : themeManager.currentTheme.parentTwoColor)
+                                    .background(ownerId == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColor : themeManager.currentTheme.parentTwoColor)
                                     .cornerRadius(8)
                             }
                             .disabled(isDateInPast(day) && !UserDefaults.standard.bool(forKey: "allowPastCustodyEditing"))

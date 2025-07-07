@@ -173,9 +173,9 @@ struct MonthMiniView: View {
     }
     
     private func getCustodyColor(custodyID: String) -> Color {
-        if custodyID == viewModel.custodianOne?.id {
+        if custodyID == viewModel.custodianOneId {
             return themeManager.currentTheme.parentOneColor
-        } else if custodyID == viewModel.custodianTwo?.id {
+        } else if custodyID == viewModel.custodianTwoId {
             return themeManager.currentTheme.parentTwoColor
         } else {
             return Color.gray.opacity(0.3) // Gray for no custody info

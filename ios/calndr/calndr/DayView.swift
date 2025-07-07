@@ -54,7 +54,7 @@ struct DayView: View {
                             .foregroundColor(.black)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                            .background(ownerId == viewModel.custodianOne?.id ? themeManager.currentTheme.parentOneColor : themeManager.currentTheme.parentTwoColor)
+                            .background(ownerId == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColor : themeManager.currentTheme.parentTwoColor)
                             .cornerRadius(10)
                     }
                     .disabled(isDateInPast(viewModel.currentDate) && !UserDefaults.standard.bool(forKey: "allowPastCustodyEditing"))
