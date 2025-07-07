@@ -236,37 +236,6 @@ class CalendarViewModel: ObservableObject {
         return (start: startDate, end: endDate)
     }
     
-    func fetchCustodianNames(completion: (() -> Void)? = nil) {
-        guard !isOffline else {
-            print("Offline, not fetching custodian names.")
-            completion?()
-            return
-        }
-        
-        APIService.shared.fetchCustodianNameStrings { [weak self] result in
-            // Perform the switch on the result in the background thread first
-            let custodiansResult = result // Hold the result
-            
-            DispatchQueue.main.async {
-                // Now, on the main thread, use the captured result
-                defer {
-                    completion?() // Ensure completion is always called
-                }
-                
-                guard let self = self else { return }
-                
-                switch custodiansResult {
-                case .success(let custodians):
-                    self.custodianOneName = custodians.custodian_one
-                    self.custodianTwoName = custodians.custodian_two
-                    self.custodiansLoaded = true // Keep for any legacy checks if needed
-                case .failure(let error):
-                    print("Error fetching custodian names: \(error.localizedDescription)")
-                    // Handle error, maybe set custodiansLoaded to false or show an error message
-                }
-            }
-        }
-    }
     
     func fetchCustodyRecordsForYear() {
         guard !isOffline else {
