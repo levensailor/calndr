@@ -166,6 +166,9 @@ class CalendarViewModel: ObservableObject {
                 self.isHandoffDataReady = false
             }
             self.isDataLoading = false // End loading state
+            
+            // Calculate custody percentages after all data is loaded
+            self.updateCustodyPercentages()
         }
     }
 
