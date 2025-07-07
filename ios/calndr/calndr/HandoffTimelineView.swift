@@ -230,21 +230,27 @@ struct HandoffTimelineView: View {
         var targetCol = originalCol + cellsMovedX
         var targetRow = originalRow + cellsMovedY
         
+        print("   Before boundary handling: targetCol=\(targetCol), targetRow=\(targetRow)")
+        
         // Handle negative column (left drag across row boundaries)
         while targetCol < 0 && targetRow > 0 {
             targetCol += gridColumns
             targetRow -= 1
+            print("   Adjusted for negative col: targetCol=\(targetCol), targetRow=\(targetRow)")
         }
         
         // Handle column overflow (right drag across row boundaries)
         while targetCol >= gridColumns && targetRow < (calendarDays.count / gridColumns) {
             targetCol -= gridColumns
             targetRow += 1
+            print("   Adjusted for col overflow: targetCol=\(targetCol), targetRow=\(targetRow)")
         }
         
         // Clamp to valid ranges
         targetCol = max(0, min(gridColumns - 1, targetCol))
         targetRow = max(0, min((calendarDays.count / gridColumns) - 1, targetRow))
+        
+        print("   After clamping: targetCol=\(targetCol), targetRow=\(targetRow)")
         
         // Calculate the new calendar index
         let newIndex = targetRow * gridColumns + targetCol
