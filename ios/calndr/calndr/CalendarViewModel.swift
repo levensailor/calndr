@@ -55,7 +55,7 @@ class CalendarViewModel: ObservableObject {
             .map { !$0 }
             .assign(to: \.isOffline, on: self)
             .store(in: &cancellables)
-        fetchInitialData()
+        setupBindings()
         setupHandoffTimer()
         setupAppLifecycleObservers()
     }
@@ -79,6 +79,10 @@ class CalendarViewModel: ObservableObject {
 
     func fetchInitialData() {
         guard !isDataLoaded else { return }
+        guard AuthenticationService.shared.isLoggedIn else {
+            print("User not logged in, aborting initial data fetch.")
+            return
+        }
         print("--- Starting initial data fetch ---")
         fetchHandoffsAndCustody()
     }
