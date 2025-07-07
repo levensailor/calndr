@@ -151,14 +151,32 @@ struct HandoffTimeModal: View {
     
     private func saveHandoffTime() {
         let selectedTime = handoffTimes[selectedTimeIndex]
+        let timeString = String(format: "%02d:%02d", selectedTime.hour, selectedTime.minute)
+        let dateString = viewModel.isoDateFormatter.string(from: date)
         
+        // Get the current custodian for this date
+        let currentCustodianId = viewModel.getCustodyInfo(for: date).owner
+
         // Use a background queue for API calls
         DispatchQueue.global(qos: .userInitiated).async {
-            viewModel.updateHandoff(
-                for: date,
-                time: selectedTime,
-                location: selectedLocation
-            )
+            APIService.shared.updateCustodyRecord(
+                for: dateString,
+                custodianId: currentCustodianId,
+                handoffTime: timeString,
+                handoffLocation: self.selectedLocation
+            ) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let updatedRecord):
+                        // Optionally, you can update your local model here
+                        if let index = self.viewModel.custodyRecords.firstIndex(where: { $0.id == updatedRecord.id }) {
+                            self.viewModel.custodyRecords[index] = updatedRecord
+                        }
+                    case .failure(let error):
+                        print("Failed to update handoff: \(error.localizedDescription)")
+                    }
+                }
+            }
         }
         
         // Dismiss the modal
