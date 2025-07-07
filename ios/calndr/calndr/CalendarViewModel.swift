@@ -56,19 +56,53 @@ class CalendarViewModel: ObservableObject {
         NotificationCenter.default.removeObserver(self)
     }
 
-    func fetchInitialData() {
-        let dispatchGroup = DispatchGroup()
-        
-        // Reset readiness flag
-        self.isHandoffDataReady = false
+    private func setupBindings() {
+        // When the user logs in, fetch initial data
+        AuthenticationManager.shared.$isLoggedIn
+            .filter { $0 }
+            .first()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.fetchInitialData()
+            }
+            .store(in: &cancellables)
+    }
 
-        // Fetch custodians
-        dispatchGroup.enter()
-        fetchCustodianNames {
-            dispatchGroup.leave()
+    func fetchInitialData() {
+        guard !isDataLoaded else { return }
+        print("--- Starting initial data fetch ---")
+        fetchHandoffsAndCustody()
+    }
+
+    func fetchHandoffsAndCustody() {
+        guard let familyId = AuthenticationManager.shared.familyId else {
+            print("No family ID, cannot fetch handoffs or custody.")
+            return
         }
 
-        // Fetch custody records for the current view
+        self.isDataLoading = true
+        self.isHandoffDataReady = false
+        
+        let dispatchGroup = DispatchGroup()
+
+        // Fetch custodian names
+        dispatchGroup.enter()
+        APIService.shared.fetchCustodianNames { [weak self] result in
+            defer { dispatchGroup.leave() }
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    self?.custodianOneName = response.custodian_one
+                    self?.custodianTwoName = response.custodian_two
+                    print("✅ Successfully fetched custodian names: \(response.custodian_one), \(response.custodian_two)")
+                case .failure(let error):
+                    print("❌ Error fetching custodian names: \(error.localizedDescription)")
+                    // Handle error appropriately, maybe with a retry mechanism
+                }
+            }
+        }
+
+        // Fetch custody records
         dispatchGroup.enter()
         fetchCustodyRecords {
             dispatchGroup.leave()
@@ -156,9 +190,11 @@ class CalendarViewModel: ObservableObject {
             
             dispatchGroup.enter()
             APIService.shared.fetchCustodyRecords(year: year, month: month) { [weak self] result in
+                // Process result in the background
                 switch result {
                 case .success(let custodyRecords):
                     DispatchQueue.main.async {
+                        // Update on main thread
                         allCustodyRecords.append(contentsOf: custodyRecords)
                     }
                 case .failure(let error):
