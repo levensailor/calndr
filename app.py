@@ -472,6 +472,7 @@ async def get_custody_records(year: int, month: int, current_user: User = Depend
             custodian_name = custodian_map.get(str(record['custodian_id']), 'unknown')
             
             # Handle handoff_day as optional bool to match iOS model
+
             handoff_day_value = record['handoff_day'] if record['handoff_day'] is not None else False
                 
             # Handle handoff_time conversion properly - format as HH:MM
@@ -496,6 +497,7 @@ async def get_custody_records(year: int, month: int, current_user: User = Depend
                 'custodian_id': str(record['custodian_id']),
                 'handoff_day': handoff_day_value,
                 'handoff_time': handoff_time_value,
+
                 'handoff_location': record['handoff_location']
             }
             frontend_custody.append(custody_item)
