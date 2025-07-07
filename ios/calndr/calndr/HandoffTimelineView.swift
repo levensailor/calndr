@@ -536,8 +536,8 @@ struct HandoffTimelineView: View {
         let originalDateString = dateFormatter.string(from: originalDate)
         
         if originalDateString != newDateString {
-            // Update custody first, then refresh UI when complete
-            self.updateCustodyForHandoffMove(originalDate: originalDate, newDate: newDate) {
+            // Different day move - simply update custody for the new handoff day
+            self.updateCustodyForNewHandoffDay(newDate: newDate) {
                 // Refresh custody records after update completes
                 DispatchQueue.main.async {
                     self.viewModel.fetchCustodyRecords()
@@ -630,6 +630,49 @@ struct HandoffTimelineView: View {
                     
                 case .failure(let error):
                     print("❌ Failed to update custody for handoff: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    private func updateCustodyForNewHandoffDay(newDate: Date, completion: @escaping () -> Void = {}) {
+        // Simple logic: when handoff moves to a new day, update custody for that day
+        // The handoff day gets custody assigned to whoever should have it after the handoff
+        let custodyInfo = viewModel.getCustodyInfo(for: newDate)
+        let currentCustodian = custodyInfo.owner
+        
+        // Toggle to the other parent (whoever should get custody after this handoff)
+        let newCustodianId: String
+        if currentCustodian == viewModel.custodianOne?.id {
+            newCustodianId = viewModel.custodianTwo?.id ?? ""
+        } else {
+            newCustodianId = viewModel.custodianOne?.id ?? ""
+        }
+        
+        guard !newCustodianId.isEmpty else {
+            print("❌ Could not determine new custodian ID for handoff")
+            completion()
+            return
+        }
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: newDate)
+        
+        print("📋 Updating custody for handoff day: \(dateString)")
+        
+        // Update custody for the handoff day
+        APIService.shared.updateCustodyRecord(for: dateString, custodianId: newCustodianId) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let custodyResponse):
+                    print("✅ Updated custody for handoff day: \(custodyResponse.content)")
+                    self.updateLocalCustodyRecord(custodyResponse)
+                    completion()
+                    
+                case .failure(let error):
+                    print("❌ Failed to update custody for handoff day: \(error.localizedDescription)")
+                    completion()
                 }
             }
         }
