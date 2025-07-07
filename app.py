@@ -269,7 +269,7 @@ class CustodyRecord(BaseModel):
 
 class CustodyResponse(BaseModel):
     id: int
-    date: str
+    event_date: str # Field renamed from 'date' to 'event_date'
     custodian_id: str
     custodian_name: str
 
@@ -417,232 +417,171 @@ def create_access_token(data: dict):
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
 
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
-    credentials_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = payload.get("sub")
-        if user_id is None: raise credentials_exception
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
     except JWTError:
         raise credentials_exception
-
+    
     query = users.select().where(users.c.id == user_id)
-    user_record = await database.fetch_one(query)
-    if user_record is None: raise credentials_exception
-    return User(**user_record)
+    user = await database.fetch_one(query)
+    
+    if user is None:
+        raise credentials_exception
+    return user
 
-# --- Endpoints ---
+@app.post("/api/auth/token", response_model=Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    query = users.select().where(users.c.email == form_data.username)
+    user = await database.fetch_one(query)
+    if not user or not verify_password(form_data.password, user["password_hash"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    access_token = create_access_token(
+        data={"sub": str(user["id"]), "family_id": str(user["family_id"])}
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
-@app.get("/api/custody/{year}/{month}")
-async def get_custody_records(year: int, month: int, current_user: User = Depends(get_current_user)):
-    logger.info(f"Getting custody records for {year}/{month}")
+@app.get("/api/custody/{year}/{month}", response_model=List[CustodyResponse])
+async def get_custody_records(year: int, month: int, current_user = Depends(get_current_user)):
     """
-    Returns custody records for the specified month in a format compatible with the frontend.
+    Returns custody records for the specified month.
     """
     try:
+        family_id = current_user['family_id']
         # Calculate start and end dates for the month
         start_date = date(year, month, 1)
         if month == 12:
-            end_date = date(year + 1, 1, 1) - timedelta(days=1)
+            end_date = date(year, 1, 1) + timedelta(days=31)
+            end_date = end_date.replace(day=1) - timedelta(days=1)
         else:
             end_date = date(year, month + 1, 1) - timedelta(days=1)
-        logging.info(f"Start date: {start_date}, End date: {end_date}")
         
+        # Query custody records for the given month and family
         query = custody.select().where(
-            (custody.c.family_id == current_user.family_id) &
+            (custody.c.family_id == family_id) &
             (custody.c.date.between(start_date, end_date))
         )
         
-        custody_records = await database.fetch_all(query)
-        logging.info(f"Custody records: {custody_records}")
+        db_records = await database.fetch_all(query)
         
-        # Get family members to map custodian IDs to names
-        family_query = users.select().where(users.c.family_id == current_user.family_id).order_by(users.c.first_name)
-        family_members = await database.fetch_all(family_query)
+        # Get all user data for the family in a single query
+        user_query = users.select().where(users.c.family_id == family_id)
+        family_users = await database.fetch_all(user_query)
+        user_map = {str(user['id']): user['first_name'] for user in family_users}
         
-        # Create a mapping from custodian ID to name
-        custodian_map = {}
-        if len(family_members) >= 2:
-            custodian_map[str(family_members[0]['id'])] = family_members[0]['first_name'].lower()
-            custodian_map[str(family_members[1]['id'])] = family_members[1]['first_name'].lower()
+        # Convert records to CustodyResponse format
+        custody_responses = [
+            CustodyResponse(
+                id=record['id'],
+                event_date=str(record['date']), # Use renamed field
+                custodian_id=str(record['custodian_id']),
+                custodian_name=user_map.get(str(record['custodian_id']), "Unknown")
+            ) for record in db_records
+        ]
         
-        # Convert custody records to frontend format (compatible with events position 4)
-        frontend_custody = []
-        for record in custody_records:
-            custodian_name = custodian_map.get(str(record['custodian_id']), 'unknown')
-            
-            # Handle handoff_day as optional bool to match iOS model
-
-            handoff_day_value = record['handoff_day'] if record['handoff_day'] is not None else False
-                
-            # Handle handoff_time conversion properly - format as HH:MM
-            handoff_time_value = None
-            if record['handoff_time'] is not None:
-                # Convert TIME object to HH:MM format (remove seconds)
-                time_str = str(record['handoff_time'])
-                if ':' in time_str:
-                    time_parts = time_str.split(':')
-                    if len(time_parts) >= 2:
-                        handoff_time_value = f"{time_parts[0]}:{time_parts[1]}"
-                    else:
-                        handoff_time_value = time_str
-                else:
-                    handoff_time_value = time_str
-            
-            custody_item = {
-                'id': record['id'],
-                'event_date': str(record['date']),
-                'content': custodian_name,
-                'position': 4,  # For frontend compatibility
-                'custodian_id': str(record['custodian_id']),
-                'handoff_day': handoff_day_value,
-                'handoff_time': handoff_time_value,
-
-                'handoff_location': record['handoff_location']
-            }
-            frontend_custody.append(custody_item)
-            
-        logger.info(f"Returning {len(frontend_custody)} custody records to iOS app")
-        if frontend_custody:
-            logger.info(f"Sample custody record: {frontend_custody[0]}")
-            
-        return frontend_custody
-        
+        logger.info(f"Returning {len(custody_responses)} custody records for {year}-{month}")
+        return custody_responses
     except Exception as e:
-        logger.error(f"Error fetching custody records for {year}/{month}: {e}")
+        logger.error(f"Error fetching custody records: {e}")
         logger.error(f"Full traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
-@app.post("/api/custody")
-async def set_custody(custody_data: CustodyRecord, current_user: User = Depends(get_current_user)):
-    logging.info(f"Setting custody: date={custody_data.date}, custodian_id={custody_data.custodian_id}")
+@app.post("/api/custody", response_model=CustodyResponse)
+async def set_custody(custody_data: CustodyRecord, current_user = Depends(get_current_user)):
     """
-    Sets or updates custody for a specific date.
+    Creates or updates a custody record for a specific date.
     """
+    family_id = current_user['family_id']
+    actor_id = current_user['id']
+    
     try:
-        logger.info(f"Setting custody: date={custody_data.date}, custodian_id={custody_data.custodian_id}")
-        
-        # Check for existing custody record for this date
-        existing_query = custody.select().where(
-            (custody.c.family_id == current_user.family_id) & 
+        # Check if a record already exists for this date
+        existing_record_query = custody.select().where(
+            (custody.c.family_id == family_id) &
             (custody.c.date == custody_data.date)
         )
-        existing_record = await database.fetch_one(existing_query)
-
+        existing_record = await database.fetch_one(existing_record_query)
+        
         if existing_record:
             # Update existing record
-            logger.info(f"Updating existing custody record with ID: {existing_record['id']}")
-            update_values = {
-                'custodian_id': custody_data.custodian_id,
-                'actor_id': current_user.id
-            }
-            
-            # Only update handoff_time and handoff_location if provided
-            if custody_data.handoff_time is not None:
-                update_values['handoff_time'] = custody_data.handoff_time
-                logger.info(f"Updating handoff_time: {custody_data.handoff_time}")
-            if custody_data.handoff_location is not None:
-                update_values['handoff_location'] = custody_data.handoff_location
-                logger.info(f"Updating handoff_location: {custody_data.handoff_location}")
-                
-            update_query = custody.update().where(
-                custody.c.id == existing_record['id']
-            ).values(**update_values)
+            update_query = custody.update().where(custody.c.id == existing_record['id']).values(
+                custodian_id=custody_data.custodian_id,
+                actor_id=actor_id,
+                handoff_time=datetime.strptime(custody_data.handoff_time, '%H:%M').time() if custody_data.handoff_time else None,
+                handoff_location=custody_data.handoff_location
+            )
             await database.execute(update_query)
             record_id = existing_record['id']
         else:
-            # Create new record
-            logger.info("Creating new custody record")
-            insert_values = {
-                'family_id': current_user.family_id,
-                'date': custody_data.date,
-                'actor_id': current_user.id,
-                'custodian_id': custody_data.custodian_id
-            }
-            
-            # Only include handoff_time and handoff_location if provided
-            if custody_data.handoff_time is not None:
-                insert_values['handoff_time'] = custody_data.handoff_time
-                logger.info(f"Inserting handoff_time: {custody_data.handoff_time}")
-            if custody_data.handoff_location is not None:
-                insert_values['handoff_location'] = custody_data.handoff_location
-                logger.info(f"Inserting handoff_location: {custody_data.handoff_location}")
-                
-            insert_query = custody.insert().values(**insert_values)
-            logging.info(f"Inserting new custody record: {insert_query}")
+            # Insert new record
+            insert_query = custody.insert().values(
+                family_id=family_id,
+                date=custody_data.date,
+                custodian_id=custody_data.custodian_id,
+                actor_id=actor_id,
+                handoff_time=datetime.strptime(custody_data.handoff_time, '%H:%M').time() if custody_data.handoff_time else None,
+                handoff_location=custody_data.handoff_location,
+                created_at=datetime.now()
+            )
             record_id = await database.execute(insert_query)
-        
-        # Send notification
-        await send_custody_change_notification(current_user.id, current_user.family_id, custody_data.date)
-        
-        # Return the updated record in frontend format
-        final_query = custody.select().where(custody.c.id == record_id)
-        final_record = await database.fetch_one(final_query)
-        
+            
+        # Send push notification to the other parent
+        await send_custody_change_notification(sender_id=actor_id, family_id=family_id, event_date=custody_data.date)
+            
         # Get custodian name for response
-        family_query = users.select().where(users.c.family_id == current_user.family_id).order_by(users.c.first_name)
-        family_members = await database.fetch_all(family_query)
-        
-        custodian_map = {}
-        if len(family_members) >= 2:
-            custodian_map[str(family_members[0]['id'])] = family_members[0]['first_name'].lower()
-            custodian_map[str(family_members[1]['id'])] = family_members[1]['first_name'].lower()
-        
-        custodian_name = custodian_map.get(str(final_record['custodian_id']), 'unknown')
-        
-        logger.info(f"Custody set successfully: {custodian_name} for {custody_data.date}")
-        
-        # Format handoff_time as HH:MM for consistency
-        handoff_time_formatted = None
-        if final_record['handoff_time'] is not None:
-            time_str = str(final_record['handoff_time'])
-            if ':' in time_str:
-                time_parts = time_str.split(':')
-                if len(time_parts) >= 2:
-                    handoff_time_formatted = f"{time_parts[0]}:{time_parts[1]}"
-                else:
-                    handoff_time_formatted = time_str
-            else:
-                handoff_time_formatted = time_str
-        
-        return {
-            'id': final_record['id'],
-            'event_date': str(final_record['date']),
-            'content': custodian_name,
-            'position': 4,  # For frontend compatibility
-            'custodian_id': str(final_record['custodian_id']),
-            'handoff_day': final_record['handoff_day'] if final_record['handoff_day'] is not None else False,
-            'handoff_time': handoff_time_formatted,
-            'handoff_location': final_record['handoff_location']
-        }
-        
+        custodian_user = await database.fetch_one(users.select().where(users.c.id == custody_data.custodian_id))
+        custodian_name = custodian_user['first_name'] if custodian_user else "Unknown"
+
+        return CustodyResponse(
+            id=record_id,
+            event_date=str(custody_data.date), # Use renamed field
+            custodian_id=str(custody_data.custodian_id),
+            custodian_name=custodian_name
+        )
     except Exception as e:
         logger.error(f"Error setting custody: {e}")
         logger.error(f"Full traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error while setting custody: {e}")
 
 @app.get("/api/family/custodians")
-async def get_family_custodians(current_user: User = Depends(get_current_user)):
+async def get_family_custodians(current_user = Depends(get_current_user)):
     """
-    Returns the first names and IDs of the two custodians in the current user's family.
+    Returns the two primary custodians (parents) for the current user's family.
     """
-    query = users.select().where(users.c.family_id == current_user.family_id).order_by(users.c.first_name)
-    family_members = await database.fetch_all(query)
+    family_id = current_user['family_id']
+    family_members = await database.fetch_all(users.select().where(users.c.family_id == family_id).order_by(users.c.created_at))
     
-    if not family_members or len(family_members) < 2:
-        # Fallback or error for incomplete families
-        return {
-            "custodian_one": {"id": "placeholder1", "first_name": "Parent 1"},
-            "custodian_two": {"id": "placeholder2", "first_name": "Parent 2"}
-        }
+    if len(family_members) < 2:
+        raise HTTPException(status_code=404, detail="Family must have at least two members to determine custodians")
         
-    # Assuming the first two members found are the two primary custodians
-    # FIX: Ensure consistent UUID string formatting for iOS compatibility
+    custodian_one = family_members[0]
+    custodian_two = family_members[1]
+    
     return {
-        "custodian_one": {"id": str(family_members[0]['id']).lower(), "first_name": family_members[0]['first_name']},
-        "custodian_two": {"id": str(family_members[1]['id']).lower(), "first_name": family_members[1]['first_name']},
+        "custodian_one": {
+            "id": str(custodian_one['id']),
+            "first_name": custodian_one['first_name']
+        },
+        "custodian_two": {
+            "id": str(custodian_two['id']),
+            "first_name": custodian_two['first_name']
+        }
     }
 
 @app.get("/api/weather/{latitude}/{longitude}", response_model=WeatherAPIResponse)
@@ -651,96 +590,37 @@ async def get_weather(
     longitude: float, 
     start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
     end_date: str = Query(..., description="End date in YYYY-MM-DD format"),
-    current_user: User = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
     """
-    Fetches weather forecast data from Open-Meteo API for the specified coordinates and date range.
-    Returns temperature, precipitation probability, and cloud cover data.
+    Fetches weather data from Open-Meteo API.
     """
+    logger.info(f"Fetching weather data for {start_date} to {end_date}")
+    cache_key = get_cache_key(latitude, longitude, start_date, end_date, "forecast")
+    
+    cached_data = get_cached_weather(cache_key)
+    if cached_data:
+        logger.info(f"Returning cached weather data for forecast: {start_date} to {end_date}")
+        return cached_data
+    
+    api_url = f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&daily=temperature_2m_max,precipitation_probability_mean,cloudcover_mean&timezone=auto&start_date={start_date}&end_date={end_date}"
+    
     try:
-        logger.info(f"Fetching forecast weather for coordinates {latitude}, {longitude} from {start_date} to {end_date}")
-        
-        # Validate date format
-        try:
-            datetime.strptime(start_date, '%Y-%m-%d')
-            datetime.strptime(end_date, '%Y-%m-%d')
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
-        
-        # Check cache first
-        cache_key = get_cache_key(latitude, longitude, start_date, end_date, "forecast")
-        cached_data = get_cached_weather(cache_key)
-        if cached_data:
-            logger.info(f"Returning cached forecast weather data for {latitude}, {longitude}")
-            return WeatherAPIResponse(**cached_data)
-        
-        # Build Open-Meteo API URL
-        weather_url = (
-            f"https://api.open-meteo.com/v1/forecast?"
-            f"latitude={latitude}&longitude={longitude}"
-            f"&start_date={start_date}&end_date={end_date}"
-            f"&daily=temperature_2m_max,precipitation_probability_mean,cloudcover_mean"
-            f"&temperature_unit=fahrenheit"
-            f"&timezone=auto"
-        )
-        
-        # Make request to Open-Meteo API
         async with httpx.AsyncClient() as client:
-            response = await client.get(weather_url, timeout=10.0)
+            response = await client.get(api_url)
+            response.raise_for_status()
+            data = response.json()
             
-        if response.status_code != 200:
-            logger.error(f"Open-Meteo API error: {response.status_code} - {response.text}")
-            raise HTTPException(status_code=500, detail="Failed to fetch weather data from external API")
-        
-        weather_data = response.json()
-        
-        # Validate and transform the response
-        if 'daily' not in weather_data:
-            logger.error(f"Unexpected weather API response format: {weather_data}")
-            raise HTTPException(status_code=500, detail="Invalid weather data format")
-        
-        daily_data = weather_data['daily']
-        
-        # Ensure we have all required fields
-        required_fields = ['time', 'temperature_2m_max', 'precipitation_probability_mean', 'cloudcover_mean']
-        for field in required_fields:
-            if field not in daily_data:
-                logger.error(f"Missing field '{field}' in weather response")
-                raise HTTPException(status_code=500, detail=f"Missing weather data field: {field}")
-        
-        # Convert temperature from Celsius to Fahrenheit if needed (Open-Meteo should return Fahrenheit based on our request)
-        temperatures = daily_data['temperature_2m_max']
-        precipitation = daily_data['precipitation_probability_mean']
-        cloudcover = daily_data['cloudcover_mean']
-        
-        # Handle None values by replacing with reasonable defaults
-        temperatures = [temp if temp is not None else 70.0 for temp in temperatures]
-        precipitation = [precip if precip is not None else 0.0 for precip in precipitation]
-        cloudcover = [cloud if cloud is not None else 0.0 for cloud in cloudcover]
-        
-        logger.info(f"Successfully fetched forecast weather data for {len(daily_data['time'])} days")
-        
-        # Prepare response
-        response_data = {
-            "daily": {
-                "time": daily_data['time'],
-                "temperature_2m_max": temperatures,
-                "precipitation_probability_mean": precipitation,
-                "cloudcover_mean": cloudcover
-            }
-        }
-        
-        # Cache the response
-        cache_weather_data(cache_key, response_data)
-        
-        return WeatherAPIResponse(**response_data)
-        
-    except HTTPException:
-        raise
+            # Cache the response
+            cache_weather_data(cache_key, data)
+            
+            return data
+    except httpx.HTTPStatusError as e:
+        logger.error(f"HTTP error fetching weather data: {e.response.status_code} - {e.response.text}")
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from weather API: {e.response.text}")
     except Exception as e:
         logger.error(f"Error fetching weather data: {e}")
-        logger.error(f"Full traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error while fetching weather data")
 
 @app.get("/api/weather/historic/{latitude}/{longitude}", response_model=WeatherAPIResponse)
 async def get_historic_weather(
@@ -748,122 +628,46 @@ async def get_historic_weather(
     longitude: float, 
     start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
     end_date: str = Query(..., description="End date in YYYY-MM-DD format"),
-    current_user: User = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
     """
-    Fetches historic weather data from Open-Meteo Archive API for the specified coordinates and date range.
-    Returns temperature, precipitation probability, and cloud cover data for past dates.
+    Fetches historic weather data from Open-Meteo API.
     """
-    try:
-        logger.info(f"Fetching historic weather for coordinates {latitude}, {longitude} from {start_date} to {end_date}")
+    logger.info(f"Fetching historic weather data for {start_date} to {end_date}")
+    cache_key = get_cache_key(latitude, longitude, start_date, end_date, "historic")
+    
+    cached_data = get_cached_weather(cache_key)
+    if cached_data:
+        logger.info(f"Returning cached weather data for historic: {start_date} to {end_date}")
+        return cached_data
         
-        # Validate date format
-        try:
-            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
-            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
-        
-        # Validate that dates are in the past
-        today = datetime.now().date()
-        if start_dt.date() >= today or end_dt.date() >= today:
-            raise HTTPException(status_code=400, detail="Historic weather endpoint is only for past dates")
-        
-        # Check cache first
-        cache_key = get_cache_key(latitude, longitude, start_date, end_date, "historic")
-        cached_data = get_cached_weather(cache_key)
-        if cached_data:
-            logger.info(f"Returning cached historic weather data for {latitude}, {longitude}")
-            return WeatherAPIResponse(**cached_data)
-        
-        # Build Open-Meteo Archive API URL
-        weather_url = (
-            f"https://archive-api.open-meteo.com/v1/archive?"
-            f"latitude={latitude}&longitude={longitude}"
-            f"&start_date={start_date}&end_date={end_date}"
-            f"&daily=temperature_2m_max,precipitation_sum,cloudcover_mean"
-            f"&temperature_unit=fahrenheit"
-            f"&timezone=auto"
-        )
-        
-        # Make request to Open-Meteo Archive API
-        async with httpx.AsyncClient() as client:
-            response = await client.get(weather_url, timeout=15.0)
-            
-        if response.status_code != 200:
-            logger.error(f"Open-Meteo Archive API error: {response.status_code} - {response.text}")
-            raise HTTPException(status_code=500, detail="Failed to fetch historic weather data from external API")
-        
-        weather_data = response.json()
-        
-        # Validate and transform the response
-        if 'daily' not in weather_data:
-            logger.error(f"Unexpected historic weather API response format: {weather_data}")
-            raise HTTPException(status_code=500, detail="Invalid historic weather data format")
-        
-        daily_data = weather_data['daily']
-        
-        # Ensure we have all required fields (note: historic API uses different field names)
-        required_fields = ['time', 'temperature_2m_max', 'precipitation_sum', 'cloudcover_mean']
-        for field in required_fields:
-            if field not in daily_data:
-                logger.error(f"Missing field '{field}' in historic weather response")
-                raise HTTPException(status_code=500, detail=f"Missing historic weather data field: {field}")
-        
-        # Convert temperature from Celsius to Fahrenheit if needed (Open-Meteo should return Fahrenheit based on our request)
-        temperatures = daily_data['temperature_2m_max']
-        precipitation_sum = daily_data['precipitation_sum']
-        cloudcover = daily_data['cloudcover_mean']
-        
-        # Handle None values by replacing with reasonable defaults
-        temperatures = [temp if temp is not None else 70.0 for temp in temperatures]
-        precipitation_sum = [precip if precip is not None else 0.0 for precip in precipitation_sum]
-        cloudcover = [cloud if cloud is not None else 0.0 for cloud in cloudcover]
-        
-        # Convert precipitation_sum to precipitation_probability_mean (approximate)
-        # Historic API returns precipitation amount, forecast API returns probability
-        # We'll estimate probability based on precipitation amount
-        precipitation_probability = [min(100.0, precip * 10) if precip > 0 else 0.0 for precip in precipitation_sum]
-        
-        logger.info(f"Successfully fetched historic weather data for {len(daily_data['time'])} days")
-        
-        # Prepare response
-        response_data = {
-            "daily": {
-                "time": daily_data['time'],
-                "temperature_2m_max": temperatures,
-                "precipitation_probability_mean": precipitation_probability,
-                "cloudcover_mean": cloudcover
-            }
-        }
-        
-        # Cache the response
-        cache_weather_data(cache_key, response_data)
-        
-        return WeatherAPIResponse(**response_data)
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error fetching historic weather data: {e}")
-        logger.error(f"Full traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    api_url = f"https://archive-api.open-meteo.com/v1/archive?latitude={latitude}&longitude={longitude}&start_date={start_date}&end_date={end_date}&daily=temperature_2m_max,precipitation_probability_mean,cloudcover_mean&timezone=auto"
 
-@app.post("/api/auth/token", response_model=Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = await database.fetch_one(users.select().where(users.c.email == form_data.username))
-    if not user or not verify_password(form_data.password, user['password_hash']):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect username or password")
-    return {"access_token": create_access_token(data={"sub": str(user['id'])}), "token_type": "bearer"}
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(api_url)
+            response.raise_for_status()
+            data = response.json()
+            
+            # Cache the response
+            cache_weather_data(cache_key, data)
+            
+            return data
+    except httpx.HTTPStatusError as e:
+        logger.error(f"HTTP error fetching historic weather: {e.response.status_code} - {e.response.text}")
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from historic weather API: {e.response.text}")
+    except Exception as e:
+        logger.error(f"Error fetching historic weather: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error while fetching historic weather")
 
 @app.get("/api/user/profile", response_model=UserProfile)
-async def get_user_profile(current_user: User = Depends(get_current_user)):
+async def get_user_profile(current_user = Depends(get_current_user)):
     """
     Fetch the current user's profile information.
     """
     try:
         # Get user data from database
-        user_record = await database.fetch_one(users.select().where(users.c.id == current_user.id))
+        user_record = await database.fetch_one(users.select().where(users.c.id == current_user['id']))
         if not user_record:
             raise HTTPException(status_code=404, detail="User not found")
             
@@ -884,13 +688,13 @@ async def get_user_profile(current_user: User = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/users/me", response_model=UserProfile)
-async def get_user_profile_legacy(current_user: User = Depends(get_current_user)):
+async def get_user_profile_legacy(current_user = Depends(get_current_user)):
     """
     Legacy endpoint for backward compatibility.
     """
     try:
         # Get user data from database
-        user_record = await database.fetch_one(users.select().where(users.c.id == current_user.id))
+        user_record = await database.fetch_one(users.select().where(users.c.id == current_user['id']))
         if not user_record:
             raise HTTPException(status_code=404, detail="User not found")
             
@@ -911,32 +715,32 @@ async def get_user_profile_legacy(current_user: User = Depends(get_current_user)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.put("/api/users/me/password")
-async def update_user_password(password_update: PasswordUpdate, current_user: User = Depends(get_current_user)):
+async def update_user_password(password_update: PasswordUpdate, current_user = Depends(get_current_user)):
     """
     Updates the password for the current authenticated user.
     """
     # Verify current password
-    user_record = await database.fetch_one(users.select().where(users.c.id == current_user.id))
+    user_record = await database.fetch_one(users.select().where(users.c.id == current_user['id']))
     if not user_record or not verify_password(password_update.current_password, user_record['password_hash']):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid current password")
     
     # Hash new password and update
     new_password_hash = pwd_context.hash(password_update.new_password)
     await database.execute(
-        users.update().where(users.c.id == current_user.id).values(password_hash=new_password_hash)
+        users.update().where(users.c.id == current_user['id']).values(password_hash=new_password_hash)
     )
     
     return {"status": "success", "message": "Password updated successfully"}
 
 @app.post("/api/users/me/device-token")
-async def update_device_token(token: str = Form(...), current_user: User = Depends(get_current_user)):
-    await database.execute(users.update().where(users.c.id == current_user.id).values(apns_token=token))
+async def update_device_token(token: str = Form(...), current_user = Depends(get_current_user)):
+    await database.execute(users.update().where(users.c.id == current_user['id']).values(apns_token=token))
     return {"status": "success"}
 
 @app.post("/api/user/profile/photo", response_model=UserProfile)
 async def upload_profile_photo(
     photo: UploadFile = File(...),
-    current_user: User = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
     """
     Uploads a profile photo for the current user.
@@ -976,11 +780,11 @@ async def upload_profile_photo(
 
         # Update user's profile_photo_url in the database
         await database.execute(
-            users.update().where(users.c.id == current_user.id).values(profile_photo_url=s3_url)
+            users.update().where(users.c.id == current_user['id']).values(profile_photo_url=s3_url)
         )
 
         # Re-fetch user to get updated profile_photo_url
-        user_record = await database.fetch_one(users.select().where(users.c.id == current_user.id))
+        user_record = await database.fetch_one(users.select().where(users.c.id == current_user['id']))
         return UserProfile(
             id=str(user_record['id']),
             first_name=user_record['first_name'],
@@ -1001,7 +805,7 @@ async def upload_profile_photo(
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @app.get("/api/events/{year}/{month}")
-async def get_events_by_month(year: int, month: int, current_user: User = Depends(get_current_user)):
+async def get_events_by_month(year: int, month: int, current_user = Depends(get_current_user)):
     """
     Returns non-custody events for the specified month.
     Custody events are now handled by the separate custody API.
@@ -1015,7 +819,7 @@ async def get_events_by_month(year: int, month: int, current_user: User = Depend
         end_date = date(year, month + 1, 1) - timedelta(days=1)
         
     query = events.select().where(
-        (events.c.family_id == current_user.family_id) &
+        (events.c.family_id == current_user['family_id']) &
         (events.c.date.between(start_date, end_date)) &
         (events.c.event_type != 'custody')  # Exclude custody events
     )
@@ -1041,7 +845,7 @@ async def get_events_by_month(year: int, month: int, current_user: User = Depend
     return frontend_events
 
 @app.get("/api/events")
-async def get_events_by_date_range(start_date: str = None, end_date: str = None, current_user: User = Depends(get_current_user)):
+async def get_events_by_date_range(start_date: str = None, end_date: str = None, current_user = Depends(get_current_user)):
     """
     Returns non-custody events for the specified date range (iOS app compatibility).
     Custody events are now handled by the separate custody API.
@@ -1058,7 +862,7 @@ async def get_events_by_date_range(start_date: str = None, end_date: str = None,
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
         
     query = events.select().where(
-        (events.c.family_id == current_user.family_id) &
+        (events.c.family_id == current_user['family_id']) &
         (events.c.date.between(start_date_obj, end_date_obj)) &
         (events.c.event_type != 'custody')  # Exclude custody events
     )
@@ -1091,7 +895,7 @@ async def get_events_by_date_range(start_date: str = None, end_date: str = None,
     return frontend_events
 
 @app.post("/api/events")
-async def save_event(request: dict, current_user: User = Depends(get_current_user)):
+async def save_event(request: dict, current_user = Depends(get_current_user)):
     """
     Handles non-custody events only. Custody events should use the /api/custody endpoint.
     """
@@ -1114,14 +918,14 @@ async def save_event(request: dict, current_user: User = Depends(get_current_use
             logger.info(f"[Line 601] Parsed event_date: {event_date}")
             
             logger.info(f"[Line 603] Creating insert query with values:")
-            logger.info(f"[Line 604]   - family_id: {current_user.family_id}")
+            logger.info(f"[Line 604]   - family_id: {current_user['family_id']}")
             logger.info(f"[Line 605]   - date: {event_date}")
             logger.info(f"[Line 606]   - content: {legacy_event.content}")
             logger.info(f"[Line 607]   - position: {legacy_event.position}")
             logger.info(f"[Line 608]   - event_type: 'regular'")
             
             insert_query = events.insert().values(
-                family_id=current_user.family_id,
+                family_id=current_user['family_id'],
                 date=event_date,
                 content=legacy_event.content,
                 position=legacy_event.position,
@@ -1155,7 +959,7 @@ async def save_event(request: dict, current_user: User = Depends(get_current_use
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @app.put("/api/events/{event_id}")
-async def update_event(event_id: int, request: dict, current_user: User = Depends(get_current_user)):
+async def update_event(event_id: int, request: dict, current_user = Depends(get_current_user)):
     """
     Updates an existing non-custody event.
     """
@@ -1169,7 +973,7 @@ async def update_event(event_id: int, request: dict, current_user: User = Depend
         # Verify the event exists and belongs to the user's family
         verify_query = events.select().where(
             (events.c.id == event_id) & 
-            (events.c.family_id == current_user.family_id) &
+            (events.c.family_id == current_user['family_id']) &
             (events.c.event_type != 'custody')
         )
         existing_event = await database.fetch_one(verify_query)
@@ -1209,7 +1013,7 @@ async def update_event(event_id: int, request: dict, current_user: User = Depend
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @app.delete("/api/events/{event_id}")
-async def delete_event(event_id: int, current_user: User = Depends(get_current_user)):
+async def delete_event(event_id: int, current_user = Depends(get_current_user)):
     """
     Deletes an existing non-custody event.
     """
@@ -1218,7 +1022,7 @@ async def delete_event(event_id: int, current_user: User = Depends(get_current_u
         # Verify the event exists and belongs to the user's family
         verify_query = events.select().where(
             (events.c.id == event_id) & 
-            (events.c.family_id == current_user.family_id) &
+            (events.c.family_id == current_user['family_id']) &
             (events.c.event_type != 'custody')
         )
         existing_event = await database.fetch_one(verify_query)
@@ -1243,56 +1047,56 @@ async def delete_event(event_id: int, current_user: User = Depends(get_current_u
 # MARK: - Notification Email Endpoints
 
 @app.get("/api/notifications/emails", response_model=list[NotificationEmail])
-async def get_notification_emails(current_user: User = Depends(get_current_user)):
+async def get_notification_emails(current_user = Depends(get_current_user)):
     """
     Returns all notification emails for the current user's family.
     """
-    query = notification_emails.select().where(notification_emails.c.family_id == current_user.family_id)
+    query = notification_emails.select().where(notification_emails.c.family_id == current_user['family_id'])
     emails = await database.fetch_all(query)
     return [NotificationEmail(id=email['id'], email=email['email']) for email in emails]
 
 @app.post("/api/notifications/emails", response_model=NotificationEmail)
-async def add_notification_email(email_data: AddNotificationEmail, current_user: User = Depends(get_current_user)):
+async def add_notification_email(email_data: AddNotificationEmail, current_user = Depends(get_current_user)):
     """
     Adds a new notification email for the current user's family.
     """
     query = notification_emails.insert().values(
-        family_id=current_user.family_id,
+        family_id=current_user['family_id'],
         email=email_data.email
     )
     email_id = await database.execute(query)
     return NotificationEmail(id=email_id, email=email_data.email)
 
 @app.put("/api/notifications/emails/{email_id}")
-async def update_notification_email(email_id: int, email_data: AddNotificationEmail, current_user: User = Depends(get_current_user)):
+async def update_notification_email(email_id: int, email_data: AddNotificationEmail, current_user = Depends(get_current_user)):
     """
     Updates an existing notification email for the current user's family.
     """
     query = notification_emails.update().where(
         (notification_emails.c.id == email_id) & 
-        (notification_emails.c.family_id == current_user.family_id)
+        (notification_emails.c.family_id == current_user['family_id'])
     ).values(email=email_data.email)
     await database.execute(query)
     return {"status": "success"}
 
 @app.delete("/api/notifications/emails/{email_id}")
-async def delete_notification_email(email_id: int, current_user: User = Depends(get_current_user)):
+async def delete_notification_email(email_id: int, current_user = Depends(get_current_user)):
     """
     Deletes a notification email for the current user's family.
     """
     query = notification_emails.delete().where(
         (notification_emails.c.id == email_id) & 
-        (notification_emails.c.family_id == current_user.family_id)
+        (notification_emails.c.family_id == current_user['family_id'])
     )
     await database.execute(query)
     return {"status": "success"}
 
 @app.get("/api/family/emails", response_model=list[FamilyMemberEmail])
-async def get_family_member_emails(current_user: User = Depends(get_current_user)):
+async def get_family_member_emails(current_user = Depends(get_current_user)):
     """
     Returns the email addresses of all family members (parents) for automatic population in alerts.
     """
-    query = users.select().where(users.c.family_id == current_user.family_id).order_by(users.c.first_name)
+    query = users.select().where(users.c.family_id == current_user['family_id']).order_by(users.c.first_name)
     family_members = await database.fetch_all(query)
     
     return [
@@ -1307,7 +1111,7 @@ async def get_family_member_emails(current_user: User = Depends(get_current_user
 # ---------------------- Babysitters API ----------------------
 
 @app.get("/api/babysitters", response_model=list[BabysitterResponse])
-async def get_babysitters(current_user: User = Depends(get_current_user)):
+async def get_babysitters(current_user = Depends(get_current_user)):
     """
     Get all babysitters associated with the current user's family.
     """
@@ -1315,7 +1119,7 @@ async def get_babysitters(current_user: User = Depends(get_current_user)):
     query = babysitters.select().select_from(
         babysitters.join(babysitter_families, babysitters.c.id == babysitter_families.c.babysitter_id)
     ).where(
-        babysitter_families.c.family_id == current_user.family_id
+        babysitter_families.c.family_id == current_user['family_id']
     ).order_by(babysitters.c.first_name, babysitters.c.last_name)
     
     babysitter_records = await database.fetch_all(query)
@@ -1335,7 +1139,7 @@ async def get_babysitters(current_user: User = Depends(get_current_user)):
     ]
 
 @app.post("/api/babysitters", response_model=BabysitterResponse)
-async def create_babysitter(babysitter_data: BabysitterCreate, current_user: User = Depends(get_current_user)):
+async def create_babysitter(babysitter_data: BabysitterCreate, current_user = Depends(get_current_user)):
     """
     Create a new babysitter and associate with the current user's family.
     """
@@ -1347,15 +1151,15 @@ async def create_babysitter(babysitter_data: BabysitterCreate, current_user: Use
             phone_number=babysitter_data.phone_number,
             rate=babysitter_data.rate,
             notes=babysitter_data.notes,
-            created_by_user_id=current_user.id
+            created_by_user_id=current_user['id']
         )
         babysitter_id = await database.execute(babysitter_insert)
         
         # Associate with family
         family_insert = babysitter_families.insert().values(
             babysitter_id=babysitter_id,
-            family_id=current_user.family_id,
-            added_by_user_id=current_user.id
+            family_id=current_user['family_id'],
+            added_by_user_id=current_user['id']
         )
         await database.execute(family_insert)
         
@@ -1377,7 +1181,7 @@ async def create_babysitter(babysitter_data: BabysitterCreate, current_user: Use
         raise HTTPException(status_code=500, detail="Failed to create babysitter")
 
 @app.put("/api/babysitters/{babysitter_id}", response_model=BabysitterResponse)
-async def update_babysitter(babysitter_id: int, babysitter_data: BabysitterCreate, current_user: User = Depends(get_current_user)):
+async def update_babysitter(babysitter_id: int, babysitter_data: BabysitterCreate, current_user = Depends(get_current_user)):
     """
     Update a babysitter that belongs to the current user's family.
     """
@@ -1386,7 +1190,7 @@ async def update_babysitter(babysitter_id: int, babysitter_data: BabysitterCreat
         babysitters.join(babysitter_families, babysitters.c.id == babysitter_families.c.babysitter_id)
     ).where(
         (babysitters.c.id == babysitter_id) & 
-        (babysitter_families.c.family_id == current_user.family_id)
+        (babysitter_families.c.family_id == current_user['family_id'])
     )
     existing = await database.fetch_one(check_query)
     if not existing:
@@ -1417,14 +1221,14 @@ async def update_babysitter(babysitter_id: int, babysitter_data: BabysitterCreat
     )
 
 @app.delete("/api/babysitters/{babysitter_id}")
-async def delete_babysitter(babysitter_id: int, current_user: User = Depends(get_current_user)):
+async def delete_babysitter(babysitter_id: int, current_user = Depends(get_current_user)):
     """
     Remove a babysitter from the current user's family (deletes the association, not the babysitter).
     """
     # Delete the family association
     delete_query = babysitter_families.delete().where(
         (babysitter_families.c.babysitter_id == babysitter_id) &
-        (babysitter_families.c.family_id == current_user.family_id)
+        (babysitter_families.c.family_id == current_user['family_id'])
     )
     result = await database.execute(delete_query)
     
@@ -1436,12 +1240,12 @@ async def delete_babysitter(babysitter_id: int, current_user: User = Depends(get
 # ---------------------- Emergency Contacts API ----------------------
 
 @app.get("/api/emergency-contacts", response_model=list[EmergencyContactResponse])
-async def get_emergency_contacts(current_user: User = Depends(get_current_user)):
+async def get_emergency_contacts(current_user = Depends(get_current_user)):
     """
     Get all emergency contacts for the current user's family.
     """
     query = emergency_contacts.select().where(
-        emergency_contacts.c.family_id == current_user.family_id
+        emergency_contacts.c.family_id == current_user['family_id']
     ).order_by(emergency_contacts.c.first_name, emergency_contacts.c.last_name)
     
     contact_records = await database.fetch_all(query)
@@ -1461,19 +1265,19 @@ async def get_emergency_contacts(current_user: User = Depends(get_current_user))
     ]
 
 @app.post("/api/emergency-contacts", response_model=EmergencyContactResponse)
-async def create_emergency_contact(contact_data: EmergencyContactCreate, current_user: User = Depends(get_current_user)):
+async def create_emergency_contact(contact_data: EmergencyContactCreate, current_user = Depends(get_current_user)):
     """
     Create a new emergency contact for the current user's family.
     """
     try:
         insert_query = emergency_contacts.insert().values(
-            family_id=current_user.family_id,
+            family_id=current_user['family_id'],
             first_name=contact_data.first_name,
             last_name=contact_data.last_name,
             phone_number=contact_data.phone_number,
             relationship=contact_data.relationship,
             notes=contact_data.notes,
-            created_by_user_id=current_user.id
+            created_by_user_id=current_user['id']
         )
         contact_id = await database.execute(insert_query)
         
@@ -1495,7 +1299,7 @@ async def create_emergency_contact(contact_data: EmergencyContactCreate, current
         raise HTTPException(status_code=500, detail="Failed to create emergency contact")
 
 @app.put("/api/emergency-contacts/{contact_id}", response_model=EmergencyContactResponse)
-async def update_emergency_contact(contact_id: int, contact_data: EmergencyContactCreate, current_user: User = Depends(get_current_user)):
+async def update_emergency_contact(contact_id: int, contact_data: EmergencyContactCreate, current_user = Depends(get_current_user)):
     """
     Update an emergency contact that belongs to the current user's family.
     """
@@ -1503,7 +1307,7 @@ async def update_emergency_contact(contact_id: int, contact_data: EmergencyConta
     existing = await database.fetch_one(
         emergency_contacts.select().where(
             (emergency_contacts.c.id == contact_id) &
-            (emergency_contacts.c.family_id == current_user.family_id)
+            (emergency_contacts.c.family_id == current_user['family_id'])
         )
     )
     if not existing:
@@ -1534,13 +1338,13 @@ async def update_emergency_contact(contact_id: int, contact_data: EmergencyConta
     )
 
 @app.delete("/api/emergency-contacts/{contact_id}")
-async def delete_emergency_contact(contact_id: int, current_user: User = Depends(get_current_user)):
+async def delete_emergency_contact(contact_id: int, current_user = Depends(get_current_user)):
     """
     Delete an emergency contact that belongs to the current user's family.
     """
     delete_query = emergency_contacts.delete().where(
         (emergency_contacts.c.id == contact_id) &
-        (emergency_contacts.c.family_id == current_user.family_id)
+        (emergency_contacts.c.family_id == current_user['family_id'])
     )
     result = await database.execute(delete_query)
     
@@ -1554,14 +1358,14 @@ async def delete_emergency_contact(contact_id: int, current_user: User = Depends
 # ---------------------- Group Chat API ----------------------
 
 @app.post("/api/group-chat")
-async def create_or_get_group_chat(chat_data: GroupChatCreate, current_user: User = Depends(get_current_user)):
+async def create_or_get_group_chat(chat_data: GroupChatCreate, current_user = Depends(get_current_user)):
     """
     Create a group chat identifier or return existing one for the given contact.
     This prevents duplicate group chats for the same contact.
     """
     # Check if group chat already exists
     existing_query = group_chats.select().where(
-        (group_chats.c.family_id == current_user.family_id) &
+        (group_chats.c.family_id == current_user['family_id']) &
         (group_chats.c.contact_type == chat_data.contact_type) &
         (group_chats.c.contact_id == chat_data.contact_id)
     )
@@ -1579,16 +1383,16 @@ async def create_or_get_group_chat(chat_data: GroupChatCreate, current_user: Use
     import time
     
     # Generate unique group identifier
-    unique_string = f"{current_user.family_id}-{chat_data.contact_type}-{chat_data.contact_id}-{time.time()}"
+    unique_string = f"{current_user['family_id']}-{chat_data.contact_type}-{chat_data.contact_id}-{time.time()}"
     group_identifier = hashlib.md5(unique_string.encode()).hexdigest()[:16]
     
     try:
         insert_query = group_chats.insert().values(
-            family_id=current_user.family_id,
+            family_id=current_user['family_id'],
             contact_type=chat_data.contact_type,
             contact_id=chat_data.contact_id,
             group_identifier=group_identifier,
-            created_by_user_id=current_user.id
+            created_by_user_id=current_user['id']
         )
         await database.execute(insert_query)
         
@@ -1754,7 +1558,7 @@ async def fetch_school_events() -> List[Dict[str, str]]:
 # -------------------------------------------------------------------
 
 @app.get("/api/school-events")
-async def get_school_events(current_user: User = Depends(get_current_user)):
+async def get_school_events(current_user = Depends(get_current_user)):
     """Returns a JSON array of school events scraped from the Learning Tree website."""
     try:
         events = await fetch_school_events()
