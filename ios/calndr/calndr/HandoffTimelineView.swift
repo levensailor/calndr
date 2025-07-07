@@ -177,16 +177,18 @@ struct HandoffTimelineView: View {
                         .zIndex(3000) // Ensure overlay is above everything
                         .animation(.easeInOut(duration: 0.1), value: overlayPosition)
                 }
-            }
-        }
-        .sheet(isPresented: $showingHandoffModal) {
-            if let selectedDate = selectedHandoffDate {
-                HandoffTimeModal(
-                    date: selectedDate,
-                    viewModel: viewModel,
-                    isPresented: $showingHandoffModal
-                )
-                .environmentObject(themeManager)
+
+                // Conditionally render HandoffTimeModal as an overlay
+                if showingHandoffModal, let selectedDate = selectedHandoffDate {
+                    HandoffTimeModal(
+                        date: selectedDate,
+                        viewModel: viewModel,
+                        isPresented: $showingHandoffModal
+                    )
+                    .environmentObject(themeManager)
+                    .zIndex(4000) // Ensure modal is on top of everything
+                    .transition(.opacity.animation(.easeInOut))
+                }
             }
         }
     }
