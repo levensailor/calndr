@@ -25,8 +25,8 @@ struct AuthTokenResponse: Codable {
 }
 
 struct CustodianNamesResponse: Codable {
-    let custodian_one: String
-    let custodian_two: String
+    let custodian_one: Custodian
+    let custodian_two: Custodian
 }
 
 class APIService {
@@ -632,7 +632,7 @@ class APIService {
         task.resume()
     }
 
-    func fetchCustodianNames(completion: @escaping (Result<CustodianResponse, Error>) -> Void) {
+    func fetchCustodianNames(completion: @escaping (Result<CustodianNamesResponse, Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/family/custodians")
         let request = createAuthenticatedRequest(url: url)
         
@@ -649,7 +649,6 @@ class APIService {
                 return
             }
             
-            // Log the raw response for debugging
             if let data = data, let jsonString = String(data: data, encoding: .utf8) {
                 print("--- Raw JSON for fetchCustodianNames ---")
                 print("Status Code: \(httpResponse.statusCode)")
@@ -678,8 +677,7 @@ class APIService {
             }
             
             do {
-                let custodianResponse = try JSONDecoder().decode(CustodianResponse.self, from: data)
-//                print("✅ Successfully decoded custodian names")
+                let custodianResponse = try JSONDecoder().decode(CustodianNamesResponse.self, from: data)
                 completion(.success(custodianResponse))
             } catch {
                 print("❌ JSON decoding error for custodian names: \(error)")
@@ -689,17 +687,6 @@ class APIService {
                 completion(.failure(error))
             }
         }.resume()
-    }
-
-    func fetchCustodianNameStrings(completion: @escaping (Result<(String, String), Error>) -> Void) {
-        fetchCustodianNames { result in
-            switch result {
-            case .success(let response):
-                completion(.success((response.custodian_one.first_name, response.custodian_two.first_name)))
-            case .failure(let error):
-                completion(.failure(error))
-            }
-        }
     }
 
     func fetchFamilyMemberEmails(completion: @escaping (Result<[FamilyMemberEmail], Error>) -> Void) {

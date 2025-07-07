@@ -87,14 +87,14 @@ class CalendarViewModel: ObservableObject {
 
         // Fetch custodian names
         dispatchGroup.enter()
-        APIService.shared.fetchCustodianNameStrings { [weak self] result in
+        APIService.shared.fetchCustodianNames { [weak self] result in
             defer { dispatchGroup.leave() }
             DispatchQueue.main.async {
                 switch result {
-                case .success(let (custodianOneName, custodianTwoName)):
-                    self?.custodianOneName = custodianOneName
-                    self?.custodianTwoName = custodianTwoName
-                    print("✅ Successfully fetched custodian names: \(custodianOneName), \(custodianTwoName)")
+                case .success(let response):
+                    self?.custodianOneName = response.custodian_one.first_name
+                    self?.custodianTwoName = response.custodian_two.first_name
+                    print("✅ Successfully fetched custodian names: \(response.custodian_one.first_name), \(response.custodian_two.first_name)")
                 case .failure(let error):
                     print("❌ Error fetching custodian names: \(error.localizedDescription)")
                 }
@@ -243,7 +243,7 @@ class CalendarViewModel: ObservableObject {
             return
         }
         
-        APIService.shared.fetchFamilyCustodians { [weak self] result in
+        APIService.shared.fetchCustodianNameStrings { [weak self] result in
             // Perform the switch on the result in the background thread first
             let custodiansResult = result // Hold the result
             
