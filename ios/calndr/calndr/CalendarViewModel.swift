@@ -966,4 +966,31 @@ class CalendarViewModel: ObservableObject {
             }
         }
     }
+    
+    // Custody update for a single day
+    func updateCustodyForSingleDay(date: Date, newCustodianId: String, completion: @escaping () -> Void) {
+        let dateString = isoDateString(from: date)
+        
+        if let index = custodyRecords.firstIndex(where: { $0.event_date == dateString }) {
+            custodyRecords[index].custodian_id = newCustodianId
+            updateCustodyPercentages()
+            objectWillChange.send()
+        }
+        
+        APIService.shared.updateCustodyRecord(for: dateString, custodianId: newCustodianId) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let custodyResponse):
+                    if let index = self.custodyRecords.firstIndex(where: { $0.event_date == custodyResponse.event_date }) {
+                        self.custodyRecords[index] = custodyResponse
+                    } else {
+                        self.custodyRecords.append(custodyResponse)
+                    }
+                case .failure(let error):
+                    print("Error updating custody record: \(error.localizedDescription)")
+                }
+                completion()
+            }
+        }
+    }
 } 

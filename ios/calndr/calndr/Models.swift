@@ -69,14 +69,14 @@ struct CustodyRequest: Codable {
 
 // Response model from custody API (compatible with frontend format)
 struct CustodyResponse: Codable, Identifiable {
-    let id: Int
-    let event_date: String
-    let content: String
-    let position: Int
-    let custodian_id: String
-    let handoff_day: Bool?
-    let handoff_time: String?
-    let handoff_location: String?
+    var id: Int
+    var event_date: String
+    var content: String
+    var position: Int
+    var custodian_id: String
+    var handoff_day: Bool?
+    var handoff_time: String?
+    var handoff_location: String?
     
     enum CodingKeys: String, CodingKey {
         case id, event_date, content, position, custodian_id, handoff_day, handoff_time, handoff_location
