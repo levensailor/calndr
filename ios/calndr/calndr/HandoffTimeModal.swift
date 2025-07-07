@@ -40,6 +40,7 @@ struct HandoffTimeModal: View {
                     VStack(spacing: 16) {
                         ProgressView()
                             .scaleEffect(1.2)
+                            .progressViewStyle(CircularProgressViewStyle(tint: themeManager.currentTheme.iconActiveColor))
                         Text("Loading parent information...")
                             .font(.headline)
                             .foregroundColor(themeManager.currentTheme.textColor)
@@ -69,9 +70,13 @@ struct HandoffTimeModal: View {
                     .disabled(!viewModel.custodiansLoaded) // Disable save until data is loaded
                 }
             }
+            .toolbarBackground(themeManager.currentTheme.headerBackgroundColor, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
         }
         .background(themeManager.currentTheme.mainBackgroundColor)
+        .preferredColorScheme(themeManager.currentTheme.mainBackgroundColor.isLight ? .light : .dark)
         .onAppear {
+            configureNavigationBarAppearance()
             initializeTimeSelection()
             
             // Trigger custodian fetch if not loaded
@@ -84,6 +89,18 @@ struct HandoffTimeModal: View {
             // Reset initialization state when modal is dismissed
             currentInitializedDate = nil
         }
+    }
+    
+    private func configureNavigationBarAppearance() {
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = UIColor(themeManager.currentTheme.headerBackgroundColor)
+        appearance.titleTextAttributes = [.foregroundColor: UIColor(themeManager.currentTheme.textColor)]
+        appearance.largeTitleTextAttributes = [.foregroundColor: UIColor(themeManager.currentTheme.textColor)]
+        
+        UINavigationBar.appearance().standardAppearance = appearance
+        UINavigationBar.appearance().scrollEdgeAppearance = appearance
+        UINavigationBar.appearance().compactAppearance = appearance
     }
     
     private var modalContent: some View {
@@ -114,7 +131,7 @@ struct HandoffTimeModal: View {
                         }) {
                             HStack {
                                 Image(systemName: selectedTimeIndex == index ? "checkmark.circle.fill" : "circle")
-                                    .foregroundColor(selectedTimeIndex == index ? Color.purple : themeManager.currentTheme.textColor.opacity(0.6))
+                                    .foregroundColor(selectedTimeIndex == index ? themeManager.currentTheme.iconActiveColor : themeManager.currentTheme.textColor.opacity(0.6))
                                     .font(.title2)
                                 
                                 Text(handoffTimes[index].display)
@@ -126,8 +143,8 @@ struct HandoffTimeModal: View {
                             .padding()
                             .background(
                                 RoundedRectangle(cornerRadius: 10)
-                                    .fill(selectedTimeIndex == index ? Color.purple.opacity(0.1) : themeManager.currentTheme.bubbleBackgroundColor.opacity(0.1))
-                                    .stroke(selectedTimeIndex == index ? Color.purple : Color.clear, lineWidth: 2)
+                                    .fill(selectedTimeIndex == index ? themeManager.currentTheme.iconActiveColor.opacity(0.1) : themeManager.currentTheme.bubbleBackgroundColor.opacity(0.1))
+                                    .stroke(selectedTimeIndex == index ? themeManager.currentTheme.iconActiveColor : Color.clear, lineWidth: 2)
                             )
                         }
                     }
@@ -148,10 +165,11 @@ struct HandoffTimeModal: View {
                         }) {
                             HStack {
                                 Text(location.capitalized)
+                                    .foregroundColor(themeManager.currentTheme.textColor)
                                 if selectedLocation == location {
                                     Spacer()
                                     Image(systemName: "checkmark")
-                                        .foregroundColor(.purple)
+                                        .foregroundColor(themeManager.currentTheme.iconActiveColor)
                                 }
                             }
                         }
@@ -159,7 +177,7 @@ struct HandoffTimeModal: View {
                 } label: {
                     HStack {
                         Image(systemName: "location.fill")
-                            .foregroundColor(.purple)
+                            .foregroundColor(themeManager.currentTheme.iconActiveColor)
                         
                         Text(selectedLocation.capitalized)
                             .font(.title3)
@@ -174,7 +192,7 @@ struct HandoffTimeModal: View {
                     .background(
                         RoundedRectangle(cornerRadius: 10)
                             .fill(themeManager.currentTheme.bubbleBackgroundColor.opacity(0.1))
-                            .stroke(Color.purple.opacity(0.3), lineWidth: 1)
+                            .stroke(themeManager.currentTheme.iconActiveColor.opacity(0.3), lineWidth: 1)
                     )
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -190,7 +208,7 @@ struct HandoffTimeModal: View {
                 VStack(spacing: 8) {
                     HStack {
                         Image(systemName: "clock.fill")
-                            .foregroundColor(.purple)
+                            .foregroundColor(themeManager.currentTheme.iconActiveColor)
                         Text(handoffTimes[selectedTimeIndex].display)
                             .font(.title2)
                             .fontWeight(.bold)
@@ -200,7 +218,7 @@ struct HandoffTimeModal: View {
                     
                     HStack {
                         Image(systemName: "location.fill")
-                            .foregroundColor(.purple)
+                            .foregroundColor(themeManager.currentTheme.iconActiveColor)
                         Text(selectedLocation.capitalized)
                             .font(.title2)
                             .fontWeight(.bold)
@@ -241,11 +259,12 @@ struct HandoffTimeModal: View {
                 .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.purple)
+                        .fill(themeManager.currentTheme.iconActiveColor)
                 )
             }
             .padding()
         }
+        .background(themeManager.currentTheme.mainBackgroundColor)
     }
     
     private func initializeTimeSelection() {
