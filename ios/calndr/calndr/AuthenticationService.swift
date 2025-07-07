@@ -6,21 +6,25 @@ class AuthenticationService: ObservableObject {
     static let shared = AuthenticationService()
     
     @Published var isLoggedIn: Bool = false
+    @Published var familyId: String?
+
     private var cancellables = Set<AnyCancellable>()
     
     private(set) var authManager: AuthenticationManager! {
         didSet {
             // Once the auth manager is configured, subscribe to its state
             authManager.$isAuthenticated
-                .assign(to: \.isLoggedIn, on: self)
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] isAuthenticated in
+                    self?.isLoggedIn = isAuthenticated
+                    if isAuthenticated {
+                        self?.updateFamilyId()
+                    } else {
+                        self?.familyId = nil
+                    }
+                }
                 .store(in: &cancellables)
         }
-    }
-    
-    var familyId: String? {
-        guard let token = KeychainManager.shared.loadToken(for: "currentUser") else { return nil }
-        let decodedToken = decode(jwtToken: token)
-        return decodedToken["family_id"] as? String
     }
     
     private init() {
@@ -29,6 +33,15 @@ class AuthenticationService: ObservableObject {
 
     static func configure(with authManager: AuthenticationManager) {
         shared.authManager = authManager
+    }
+    
+    private func updateFamilyId() {
+        guard let token = KeychainManager.shared.loadToken(for: "currentUser") else {
+            self.familyId = nil
+            return
+        }
+        let decodedToken = decode(jwtToken: token)
+        self.familyId = decodedToken["family_id"] as? String
     }
     
     private func decode(jwtToken jwt: String) -> [String: Any] {

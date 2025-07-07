@@ -66,9 +66,12 @@ class CalendarViewModel: ObservableObject {
     }
 
     private func setupBindings() {
-        // When the user logs in, fetch initial data
+        // When the user logs in AND has a family ID, fetch initial data.
         AuthenticationService.shared.$isLoggedIn
-            .filter { $0 }
+            .combineLatest(AuthenticationService.shared.$familyId)
+            .filter { isLoggedIn, familyId in
+                return isLoggedIn && familyId != nil
+            }
             .first()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
