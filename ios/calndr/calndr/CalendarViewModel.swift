@@ -41,7 +41,14 @@ class CalendarViewModel: ObservableObject {
     var currentUserID: String? {
         authManager.userID
     }
-
+    
+    let isoDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = TimeZone(secondsFromGMT: 0) // Use UTC for consistency
+        return formatter
+    }()
+    
     init(authManager: AuthenticationManager) {
         self.authManager = authManager
         networkMonitor.$isConnected
@@ -572,10 +579,7 @@ class CalendarViewModel: ObservableObject {
      }
     
     func isoDateString(from date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = TimeZone.current // Use user's local timezone
-        return formatter.string(from: date)
+        return isoDateFormatter.string(from: date)
     }
 
     func toggleCustodian(for date: Date) {
