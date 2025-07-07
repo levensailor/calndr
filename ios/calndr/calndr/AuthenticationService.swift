@@ -2,14 +2,19 @@
 import Foundation
 import Combine
 
-class AuthenticationService {
+class AuthenticationService: ObservableObject {
     static let shared = AuthenticationService()
     
-    private(set) var authManager: AuthenticationManager!
+    @Published var isLoggedIn: Bool = false
+    private var cancellables = Set<AnyCancellable>()
     
-    var isLoggedIn: Bool {
-        guard authManager != nil else { return false }
-        return authManager.isAuthenticated
+    private(set) var authManager: AuthenticationManager! {
+        didSet {
+            // Once the auth manager is configured, subscribe to its state
+            authManager.$isAuthenticated
+                .assign(to: \.isLoggedIn, on: self)
+                .store(in: &cancellables)
+        }
     }
     
     var familyId: String? {

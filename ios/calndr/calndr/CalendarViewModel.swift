@@ -58,7 +58,7 @@ class CalendarViewModel: ObservableObject {
 
     private func setupBindings() {
         // When the user logs in, fetch initial data
-        AuthenticationService.shared.$isLoggedIn
+        AuthenticationService.shared.isLoggedInPublisher
             .filter { $0 }
             .first()
             .receive(on: DispatchQueue.main)
