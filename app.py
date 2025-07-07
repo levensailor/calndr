@@ -271,7 +271,7 @@ class CustodyResponse(BaseModel):
     id: int
     event_date: str # Field renamed from 'date' to 'event_date'
     custodian_id: str
-    custodian_name: str
+    content: str # Renamed from custodian_name to content
 
 class Token(BaseModel):
     access_token: str
@@ -491,7 +491,7 @@ async def get_custody_records(year: int, month: int, current_user = Depends(get_
                 id=record['id'],
                 event_date=str(record['date']), # Use renamed field
                 custodian_id=str(record['custodian_id']),
-                custodian_name=user_map.get(str(record['custodian_id']), "Unknown")
+                content=user_map.get(str(record['custodian_id']), "Unknown") # Use content field
             ) for record in db_records
         ]
         
@@ -552,7 +552,7 @@ async def set_custody(custody_data: CustodyRecord, current_user = Depends(get_cu
             id=record_id,
             event_date=str(custody_data.date), # Use renamed field
             custodian_id=str(custody_data.custodian_id),
-            custodian_name=custodian_name
+            content=custodian_name # Use content field
         )
     except Exception as e:
         logger.error(f"Error setting custody: {e}")
