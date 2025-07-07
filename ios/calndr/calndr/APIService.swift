@@ -69,12 +69,12 @@ class APIService {
                 return
             }
             
-            // Log the raw data as a string for debugging
-            if let jsonString = String(data: data, encoding: .utf8) {
-                print("--- Raw JSON for fetchEvents ---")
-                print(jsonString)
-                print("------------------------------")
-            }
+//            // Log the raw data as a string for debugging
+//            if let jsonString = String(data: data, encoding: .utf8) {
+//                print("--- Raw JSON for fetchEvents ---")
+//                print(jsonString)
+//                print("------------------------------")
+//            }
 
             if httpResponse.statusCode == 401 {
                 // Unauthorized, likely bad token
@@ -120,12 +120,12 @@ class APIService {
                 return
             }
             
-            // Log the raw data as a string for debugging
-            if let jsonString = String(data: data, encoding: .utf8) {
-                print("--- Raw JSON for fetchWeather (Status: \(httpResponse.statusCode)) ---")
-                print(jsonString)
-                print("----------------------------------------------------------")
-            }
+//            // Log the raw data as a string for debugging
+//            if let jsonString = String(data: data, encoding: .utf8) {
+//                print("--- Raw JSON for fetchWeather (Status: \(httpResponse.statusCode)) ---")
+//                print(jsonString)
+//                print("----------------------------------------------------------")
+//            }
             
             if httpResponse.statusCode == 401 {
                 print("Weather API: Unauthorized (401)")
@@ -180,12 +180,12 @@ class APIService {
                 return
             }
             
-            // Log the raw data as a string for debugging
-            if let jsonString = String(data: data, encoding: .utf8) {
-                print("--- Raw JSON for fetchHistoricWeather (Status: \(httpResponse.statusCode)) ---")
-                print(jsonString)
-                print("----------------------------------------------------------------")
-            }
+//            // Log the raw data as a string for debugging
+//            if let jsonString = String(data: data, encoding: .utf8) {
+//                print("--- Raw JSON for fetchHistoricWeather (Status: \(httpResponse.statusCode)) ---")
+//                print(jsonString)
+//                print("----------------------------------------------------------------")
+//            }
             
             if httpResponse.statusCode == 401 {
                 print("Historic Weather API: Unauthorized (401)")

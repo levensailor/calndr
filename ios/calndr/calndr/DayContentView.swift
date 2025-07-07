@@ -58,12 +58,11 @@ struct DayContentView: View {
             // Custody row - fixed height for consistency, with placeholder when hidden
             if !custodyOwner.isEmpty && !viewModel.showHandoffTimeline {
                 Text(custodyOwner.capitalized)
-                    .font(.system(size: 14))
-                    .foregroundColor(themeManager.currentTheme.textColor)
-                    .frame(width: 30, height: 30)
-                    .background(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColor : themeManager.currentTheme.parentTwoColor)
-                    .clipShape(Circle())
-            } else if !custodyOwner.isEmpty && viewModel.showHandoffTimeline {
+                    .font(.system(size: 9))
+                    .bold()
+                    .foregroundColor(.black) // Always black for good contrast on light backgrounds
+                    .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24) // Fixed height
+                .background(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColor : themeManager.currentTheme.parentTwoColor)            } else if !custodyOwner.isEmpty && viewModel.showHandoffTimeline {
                 // Invisible placeholder to maintain layout space when handoff timeline is active
                 Text("")
                     .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24) // Same dimensions as custody badge

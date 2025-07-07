@@ -461,7 +461,7 @@ class CalendarViewModel: ObservableObject {
         let defaultHour = isWeekend ? 12 : 17
         let defaultLocation = isWeekend ? "neutral ground" : "daycare" // Example default locations
         
-        print("🔄 Using default handoff time for \(dateString): \(defaultHour):00 at \(defaultLocation)")
+//        print("🔄 Using default handoff time for \(dateString): \(defaultHour):00 at \(defaultLocation)")
         return (defaultHour, 0, defaultLocation)
     }
 
