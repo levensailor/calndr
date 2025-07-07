@@ -127,6 +127,13 @@ struct HandoffTimelineView: View {
                                 // If we didn't drag much horizontally, treat as a tap
                                 if abs(value.translation.width) <= 5 {
                                     selectedHandoffDate = date
+                                    
+                                    // Ensure handoff data is loaded before showing modal
+                                    if !viewModel.isHandoffDataReady {
+                                        // Trigger data loading if not ready
+                                        viewModel.fetchHandoffsAndCustody()
+                                    }
+                                    
                                     // Use async to ensure state update completes before presenting modal
                                     DispatchQueue.main.async {
                                         showingHandoffModal = true

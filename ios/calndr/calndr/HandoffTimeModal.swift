@@ -36,13 +36,33 @@ struct HandoffTimeModal: View {
             VStack(spacing: 20) {
                 // Check if custodian data is loaded
                 if !viewModel.isHandoffDataReady {
-                    VStack(spacing: 16) {
-                        ProgressView()
-                            .scaleEffect(1.2)
-                            .progressViewStyle(CircularProgressViewStyle(tint: themeManager.currentTheme.iconActiveColor))
-                        Text("Loading handoff information...")
-                            .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                    VStack(spacing: 20) {
+                        // Header while loading
+                        VStack {
+                            Text("Custody Handoff")
+                                .font(.largeTitle)
+                                .fontWeight(.bold)
+                                .foregroundColor(themeManager.currentTheme.textColor)
+                            
+                            Text(formatDate(date))
+                                .font(.title2)
+                                .foregroundColor(themeManager.currentTheme.textColor.opacity(0.8))
+                        }
+                        .padding()
+                        
+                        Spacer()
+                        
+                        VStack(spacing: 16) {
+                            ProgressView()
+                                .scaleEffect(1.5)
+                                .progressViewStyle(CircularProgressViewStyle(tint: themeManager.currentTheme.iconActiveColor))
+                            Text("Loading handoff information...")
+                                .font(.headline)
+                                .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                        }
+                        
+                        Spacer()
+                        Spacer()
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(themeManager.currentTheme.mainBackgroundColor)
@@ -76,8 +96,13 @@ struct HandoffTimeModal: View {
         .preferredColorScheme(themeManager.currentTheme.mainBackgroundColor.isLight ? .light : .dark)
         .onAppear {
             configureNavigationBarAppearance()
-            // Defer initialization until all data is ready
-            if viewModel.isHandoffDataReady {
+            
+            // Ensure handoff data is loaded
+            if !viewModel.isHandoffDataReady {
+                // Trigger data loading if not ready
+                viewModel.fetchHandoffsAndCustody()
+            } else {
+                // Defer initialization until all data is ready
                 initializeTimeAndLocation()
             }
         }
