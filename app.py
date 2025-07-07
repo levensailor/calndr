@@ -264,6 +264,8 @@ class CustodyRecord(BaseModel):
     id: Optional[int] = None
     date: date
     custodian_id: uuid.UUID
+    handoff_time: Optional[str] = None
+    handoff_location: Optional[str] = None
 
 class CustodyResponse(BaseModel):
     id: int
@@ -532,23 +534,39 @@ async def set_custody(custody_data: CustodyRecord, current_user: User = Depends(
         if existing_record:
             # Update existing record
             logger.info(f"Updating existing custody record with ID: {existing_record['id']}")
+            update_values = {
+                'custodian_id': custody_data.custodian_id,
+                'actor_id': current_user.id
+            }
+            
+            # Only update handoff_time and handoff_location if provided
+            if custody_data.handoff_time is not None:
+                update_values['handoff_time'] = custody_data.handoff_time
+            if custody_data.handoff_location is not None:
+                update_values['handoff_location'] = custody_data.handoff_location
+                
             update_query = custody.update().where(
                 custody.c.id == existing_record['id']
-            ).values(
-                custodian_id=custody_data.custodian_id,
-                actor_id=current_user.id
-            )
+            ).values(**update_values)
             await database.execute(update_query)
             record_id = existing_record['id']
         else:
             # Create new record
             logger.info("Creating new custody record")
-            insert_query = custody.insert().values(
-                family_id=current_user.family_id,
-                date=custody_data.date,
-                actor_id=current_user.id,
-                custodian_id=custody_data.custodian_id
-            )
+            insert_values = {
+                'family_id': current_user.family_id,
+                'date': custody_data.date,
+                'actor_id': current_user.id,
+                'custodian_id': custody_data.custodian_id
+            }
+            
+            # Only include handoff_time and handoff_location if provided
+            if custody_data.handoff_time is not None:
+                insert_values['handoff_time'] = custody_data.handoff_time
+            if custody_data.handoff_location is not None:
+                insert_values['handoff_location'] = custody_data.handoff_location
+                
+            insert_query = custody.insert().values(**insert_values)
             logging.info(f"Inserting new custody record: {insert_query}")
             record_id = await database.execute(insert_query)
         

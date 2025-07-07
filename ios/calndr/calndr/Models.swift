@@ -56,6 +56,15 @@ struct CustodyRecord: Codable, Identifiable {
 struct CustodyRequest: Codable {
     let date: String
     let custodian_id: String
+    let handoff_time: String?
+    let handoff_location: String?
+    
+    init(date: String, custodian_id: String, handoff_time: String? = nil, handoff_location: String? = nil) {
+        self.date = date
+        self.custodian_id = custodian_id
+        self.handoff_time = handoff_time
+        self.handoff_location = handoff_location
+    }
 }
 
 // Response model from custody API (compatible with frontend format)

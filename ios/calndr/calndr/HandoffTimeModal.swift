@@ -313,75 +313,50 @@ struct HandoffTimeModal: View {
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let dateString = dateFormatter.string(from: date)
         
-        // Determine parent IDs based on current custody
-        let custodyInfo = viewModel.getCustodyInfo(for: date)
-        let currentCustodian = custodyInfo.owner
-        
-        let fromParentId: String?
-        let toParentId: String?
-        
-        if currentCustodian == viewModel.custodianOne?.id {
-            fromParentId = viewModel.custodianOne?.id
-            toParentId = viewModel.custodianTwo?.id
-        } else {
-            fromParentId = viewModel.custodianTwo?.id
-            toParentId = viewModel.custodianOne?.id
-        }
-        
         print("Saving handoff time: \(timeString) at \(selectedLocation) for date: \(dateString)")
-        print("From: \(fromParentId ?? "unknown") To: \(toParentId ?? "unknown")")
+        print("✅ Modal only updates handoff time and location, not custody")
         
-        // Since we're now using custody table, update custody record with handoff info
-        print("✅ Saving handoff time to custody record: \(timeString) at \(selectedLocation)")
+        // Get current custody info to preserve the custodian
+        let custodyInfo = viewModel.getCustodyInfo(for: date)
+        let currentCustodianId = custodyInfo.owner
         
-        // Update custody for this date based on handoff time
-        self.updateCustodyBasedOnHandoffTime()
+        // Update the custody record with new handoff time/location but keep same custodian
+        updateHandoffTimeAndLocation(
+            date: dateString,
+            custodianId: currentCustodianId,
+            handoffTime: timeString,
+            handoffLocation: selectedLocation
+        )
         
-        // Refresh custody records to update the view
-        self.viewModel.fetchCustodyRecords()
         self.isPresented = false
     }
     
-    private func updateCustodyBasedOnHandoffTime() {
-        // Determine who should have custody after this handoff
-        let custodyInfo = viewModel.getCustodyInfo(for: date)
-        let currentCustodian = custodyInfo.owner
+    private func updateHandoffTimeAndLocation(date: String, custodianId: String, handoffTime: String, handoffLocation: String) {
+        // This method updates the custody record with new handoff time/location
+        // but keeps the same custodian (unlike dragging which changes custody)
         
-        // Toggle to the other parent
-        let newCustodianId: String
-        if currentCustodian == viewModel.custodianOne?.id {
-            newCustodianId = viewModel.custodianTwo?.id ?? ""
-        } else {
-            newCustodianId = viewModel.custodianOne?.id ?? ""
-        }
+        print("📝 Updating handoff info for \(date): time=\(handoffTime), location=\(handoffLocation), custodian=\(custodianId)")
         
-        guard !newCustodianId.isEmpty else {
-            print("Error: Could not determine new custodian ID for handoff")
-            return
-        }
-        
-        let dateString = viewModel.isoDateString(from: date)
-        
-        // Update custody record for this date
-        APIService.shared.updateCustodyRecord(for: dateString, custodianId: newCustodianId) { result in
+        APIService.shared.updateCustodyRecord(for: date, custodianId: custodianId, handoffTime: handoffTime, handoffLocation: handoffLocation) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let custodyResponse):
-                    print("✅ Updated custody for handoff date: \(custodyResponse)")
+                    print("✅ Updated handoff info: \(custodyResponse)")
                     // Update local custody records
                     if let index = self.viewModel.custodyRecords.firstIndex(where: { $0.event_date == custodyResponse.event_date }) {
                         self.viewModel.custodyRecords[index] = custodyResponse
                     } else {
                         self.viewModel.custodyRecords.append(custodyResponse)
                     }
-                    self.viewModel.updateCustodyPercentages()
                     
                 case .failure(let error):
-                    print("❌ Failed to update custody for handoff: \(error.localizedDescription)")
+                    print("❌ Failed to update handoff info: \(error.localizedDescription)")
                 }
             }
         }
     }
+    
+
 }
 
 struct HandoffTimeModal_Previews: PreviewProvider {
