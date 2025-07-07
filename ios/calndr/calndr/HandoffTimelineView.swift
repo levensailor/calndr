@@ -703,12 +703,19 @@ struct HandoffTimelineView: View {
         // If moving handoff earlier (e.g., Thursday to Tuesday)
         // Update Tuesday and Wednesday to have the custody that Thursday had
         if newDate < originalDate {
-            return generateDateRange(from: newDate, to: calendar.date(byAdding: .day, value: -1, to: originalDate) ?? originalDate)
+            let endDate = calendar.date(byAdding: .day, value: -1, to: originalDate) ?? originalDate
+            return generateDateRange(from: newDate, to: endDate)
         }
         // If moving handoff later (e.g., Tuesday to Thursday)
         // Update Wednesday up to (but NOT including) Thursday to have the custody that Tuesday had
         else if newDate > originalDate {
-            return generateDateRange(from: calendar.date(byAdding: .day, value: 1, to: originalDate) ?? originalDate, to: calendar.date(byAdding: .day, value: -1, to: newDate) ?? newDate)
+            let startDate = calendar.date(byAdding: .day, value: 1, to: originalDate) ?? originalDate
+            let endDate = calendar.date(byAdding: .day, value: -1, to: newDate) ?? newDate
+            
+            // Only return range if there are actually days between original and new date
+            if startDate <= endDate {
+                return generateDateRange(from: startDate, to: endDate)
+            }
         }
         
         return []
