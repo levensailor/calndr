@@ -546,10 +546,12 @@ struct HandoffTimelineView: View {
         if originalDateString != newDateString {
             // Different day move - custody logic depends on direction
             if newDate > originalDate {
-                // Moving RIGHT: Toggle custody of the original day
-                print("📋 Moving handoff RIGHT: Toggle custody of original day (\(originalDateString))")
-                self.updateCustodyForOriginalHandoffDay(originalDate: originalDate) {
-                    // After original day is updated, create handoff for new day
+                // Moving RIGHT: Toggle custody from original day to day before destination
+                print("📋 Moving handoff RIGHT: Toggle custody from \(originalDateString) to day before \(newDateString)")
+                let endDate = Calendar.current.date(byAdding: .day, value: -1, to: newDate) ?? newDate
+                let rangeDates = generateDateRange(from: originalDate, to: endDate)
+                self.toggleCustodyForDateRange(rangeDates) {
+                    // After range is updated, create handoff for new day
                     self.createHandoffForNewDay(newDate: newDate, time: newTime) {
                         // Refresh custody records after both updates complete
                         DispatchQueue.main.async {
@@ -558,11 +560,13 @@ struct HandoffTimelineView: View {
                     }
                 }
             } else {
-                // Moving LEFT: Toggle custody of the destination day
-                print("📋 Moving handoff LEFT: Toggle custody of destination day (\(newDateString))")
-                self.createHandoffForNewDay(newDate: newDate, time: newTime) {
-                    // After destination day is updated, update original day
-                    self.updateCustodyForDestinationHandoffDay(destinationDate: newDate) {
+                // Moving LEFT: Toggle custody from original day to day before destination
+                print("📋 Moving handoff LEFT: Toggle custody from \(originalDateString) to day before \(newDateString)")
+                let endDate = Calendar.current.date(byAdding: .day, value: -1, to: newDate) ?? newDate
+                let rangeDates = generateDateRange(from: originalDate, to: endDate)
+                self.toggleCustodyForDateRange(rangeDates) {
+                    // After range is updated, create handoff for new day
+                    self.createHandoffForNewDay(newDate: newDate, time: newTime) {
                         // Refresh custody records after both updates complete
                         DispatchQueue.main.async {
                             self.viewModel.fetchCustodyRecords()
@@ -782,6 +786,56 @@ struct HandoffTimelineView: View {
                     completion()
                 }
             }
+        }
+    }
+    
+    private func toggleCustodyForDateRange(_ dates: [Date], completion: @escaping () -> Void = {}) {
+        guard !dates.isEmpty else {
+            completion()
+            return
+        }
+        
+        print("📋 Toggling custody for \(dates.count) days")
+        
+        // Track completion of all updates
+        let dispatchGroup = DispatchGroup()
+        
+        // Update custody for each date in the range
+        for (index, date) in dates.enumerated() {
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            let dateString = dateFormatter.string(from: date)
+            
+            // Get current custody and toggle to the other parent
+            let custodyInfo = viewModel.getCustodyInfo(for: date)
+            let currentCustodian = custodyInfo.owner
+            
+            let newCustodianId: String
+            if currentCustodian == viewModel.custodianOne?.id {
+                newCustodianId = viewModel.custodianTwo?.id ?? ""
+            } else {
+                newCustodianId = viewModel.custodianOne?.id ?? ""
+            }
+            
+            guard !newCustodianId.isEmpty else {
+                print("❌ Could not determine new custodian ID for \(dateString)")
+                continue
+            }
+            
+            dispatchGroup.enter()
+            
+            // Add a small delay between requests to avoid overwhelming the API
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.1) {
+                self.updateCustodyRecordWithRetry(dateString: dateString, custodianId: newCustodianId, retryCount: 0) {
+                    dispatchGroup.leave()
+                }
+            }
+        }
+        
+        // Call completion when all updates finish
+        dispatchGroup.notify(queue: .main) {
+            print("✅ All custody toggles completed for range")
+            completion()
         }
     }
     
