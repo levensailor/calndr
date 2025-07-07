@@ -474,10 +474,19 @@ async def get_custody_records(year: int, month: int, current_user: User = Depend
             # Handle handoff_day as optional bool to match iOS model
             handoff_day_value = record['handoff_day'] if record['handoff_day'] is not None else False
                 
-            # Handle handoff_time conversion properly
+            # Handle handoff_time conversion properly - format as HH:MM
             handoff_time_value = None
             if record['handoff_time'] is not None:
-                handoff_time_value = str(record['handoff_time'])
+                # Convert TIME object to HH:MM format (remove seconds)
+                time_str = str(record['handoff_time'])
+                if ':' in time_str:
+                    time_parts = time_str.split(':')
+                    if len(time_parts) >= 2:
+                        handoff_time_value = f"{time_parts[0]}:{time_parts[1]}"
+                    else:
+                        handoff_time_value = time_str
+                else:
+                    handoff_time_value = time_str
             
             custody_item = {
                 'id': record['id'],
@@ -561,6 +570,19 @@ async def set_custody(custody_data: CustodyRecord, current_user: User = Depends(
         
         logger.info(f"Custody set successfully: {custodian_name} for {custody_data.date}")
         
+        # Format handoff_time as HH:MM for consistency
+        handoff_time_formatted = None
+        if final_record['handoff_time'] is not None:
+            time_str = str(final_record['handoff_time'])
+            if ':' in time_str:
+                time_parts = time_str.split(':')
+                if len(time_parts) >= 2:
+                    handoff_time_formatted = f"{time_parts[0]}:{time_parts[1]}"
+                else:
+                    handoff_time_formatted = time_str
+            else:
+                handoff_time_formatted = time_str
+        
         return {
             'id': final_record['id'],
             'event_date': str(final_record['date']),
@@ -568,7 +590,7 @@ async def set_custody(custody_data: CustodyRecord, current_user: User = Depends(
             'position': 4,  # For frontend compatibility
             'custodian_id': str(final_record['custodian_id']),
             'handoff_day': final_record['handoff_day'] if final_record['handoff_day'] is not None else False,
-            'handoff_time': str(final_record['handoff_time']) if final_record['handoff_time'] is not None else None,
+            'handoff_time': handoff_time_formatted,
             'handoff_location': final_record['handoff_location']
         }
         
