@@ -281,7 +281,9 @@ struct HandoffTimelineView: View {
         print("   Original: col=\(originalCol), row=\(originalRow), index=\(originalIndex), date=\(formatDate(originalDate))")
         print("   Drag: offsetX=\(Int(dragOffset.width)), cellsMovedX=\(cellsMovedX), cellWidth=\(Int(cellWidth))")
         print("   Target: col=\(targetCol), row=\(targetRow), index=\(newIndex), date=\(formatDate(newDate))")
-        print("   Movement: \(cellsMovedX) cells right, \(cellsMovedY) cells down")
+        let horizontalDirection = cellsMovedX > 0 ? "right" : cellsMovedX < 0 ? "left" : "none"
+        let verticalDirection = cellsMovedY > 0 ? "down" : cellsMovedY < 0 ? "up" : "none"
+        print("   Movement: \(abs(cellsMovedX)) cells \(horizontalDirection), \(abs(cellsMovedY)) cells \(verticalDirection)")
         print("   Time: \(selectedTime.display)")
         
         return (date: newDate, time: selectedTime)
