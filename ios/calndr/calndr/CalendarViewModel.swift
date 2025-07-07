@@ -13,8 +13,6 @@ class CalendarViewModel: ObservableObject {
     @Published var currentDate: Date = Date()
     @Published var custodyStreak: Int = 0
     @Published var custodianWithStreak: Int = 0 // 1 for custodian one, 2 for custodian two, 0 for none
-    @Published var custodianOne: Custodian?
-    @Published var custodianTwo: Custodian?
     @Published var custodianOneName: String = "Parent 1"
     @Published var custodianTwoName: String = "Parent 2"
     @Published var custodianOnePercentage: Double = 0.0
@@ -24,6 +22,7 @@ class CalendarViewModel: ObservableObject {
     @Published var showHandoffTimeline: Bool = false // Toggle for handoff timeline view
     @Published var custodiansLoaded: Bool = false // DEPRECATED: Use isHandoffDataReady instead
     @Published var isHandoffDataReady: Bool = false // NEW: True when all handoff data is loaded
+    @Published var isDataLoading: Bool = false
     
     // Password Update
     @Published var currentPassword = ""
@@ -88,17 +87,16 @@ class CalendarViewModel: ObservableObject {
 
         // Fetch custodian names
         dispatchGroup.enter()
-        APIService.shared.fetchCustodianNames { [weak self] result in
+        APIService.shared.fetchCustodianNameStrings { [weak self] result in
             defer { dispatchGroup.leave() }
             DispatchQueue.main.async {
                 switch result {
-                case .success(let response):
-                    self?.custodianOneName = response.custodian_one
-                    self?.custodianTwoName = response.custodian_two
-                    print("✅ Successfully fetched custodian names: \(response.custodian_one), \(response.custodian_two)")
+                case .success(let (custodianOneName, custodianTwoName)):
+                    self?.custodianOneName = custodianOneName
+                    self?.custodianTwoName = custodianTwoName
+                    print("✅ Successfully fetched custodian names: \(custodianOneName), \(custodianTwoName)")
                 case .failure(let error):
                     print("❌ Error fetching custodian names: \(error.localizedDescription)")
-                    // Handle error appropriately, maybe with a retry mechanism
                 }
             }
         }
@@ -238,8 +236,6 @@ class CalendarViewModel: ObservableObject {
         return (start: startDate, end: endDate)
     }
     
-
-    
     func fetchCustodianNames(completion: (() -> Void)? = nil) {
         guard !isOffline else {
             print("Offline, not fetching custodian names.")
@@ -261,10 +257,8 @@ class CalendarViewModel: ObservableObject {
                 
                 switch custodiansResult {
                 case .success(let custodians):
-                    self.custodianOne = custodians.custodian_one
-                    self.custodianTwo = custodians.custodian_two
-                    self.custodianOneName = custodians.custodian_one.first_name
-                    self.custodianTwoName = custodians.custodian_two.first_name
+                    self.custodianOneName = custodians.custodian_one
+                    self.custodianTwoName = custodians.custodian_two
                     self.custodiansLoaded = true // Keep for any legacy checks if needed
                 case .failure(let error):
                     print("Error fetching custodian names: \(error.localizedDescription)")

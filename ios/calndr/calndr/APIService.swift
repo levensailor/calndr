@@ -691,6 +691,17 @@ class APIService {
         }.resume()
     }
 
+    func fetchCustodianNameStrings(completion: @escaping (Result<(String, String), Error>) -> Void) {
+        fetchCustodianNames { result in
+            switch result {
+            case .success(let response):
+                completion(.success((response.custodian_one.first_name, response.custodian_two.first_name)))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
     func fetchFamilyMemberEmails(completion: @escaping (Result<[FamilyMemberEmail], Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/family/emails")
         let request = createAuthenticatedRequest(url: url)
