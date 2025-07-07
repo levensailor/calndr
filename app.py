@@ -379,12 +379,13 @@ class LegacyEvent(BaseModel):
     content: str
     position: int
 
-# Weather API models
+
 class DailyWeather(BaseModel):
     time: List[str]
-    temperature_2m_max: List[float]
-    precipitation_probability_mean: List[float]
-    cloudcover_mean: List[float]
+    temperature_2m_max: List[Optional[float]]
+    precipitation_probability_mean: List[Optional[float]]
+    cloudcover_mean: List[Optional[float]]
+
 
 class WeatherAPIResponse(BaseModel):
     daily: DailyWeather
@@ -657,6 +658,12 @@ async def get_historic_weather(
             response = await client.get(api_url)
             response.raise_for_status()
             data = response.json()
+            
+            # Replace None with 0.0 for robust handling
+            daily_data = data.get("daily", {})
+            for key in ['temperature_2m_max', 'precipitation_probability_mean', 'cloudcover_mean']:
+                if key in daily_data:
+                    daily_data[key] = [v if v is not None else 0.0 for v in daily_data[key]]
             
             # Cache the response
             cache_weather_data(cache_key, data)
