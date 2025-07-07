@@ -89,6 +89,7 @@ struct HandoffTimelineView: View {
                                 
                                 // Only start dragging if we've moved horizontally beyond threshold (reduced to 5px for better sensitivity)
                                 if abs(value.translation.width) > 5 {
+                                    print("🎯 Drag started: translation.width=\(value.translation.width)")
                                     draggedBubbleDate = date
                                     dragOffset = horizontalTranslation // Only horizontal movement
                                     
@@ -123,8 +124,10 @@ struct HandoffTimelineView: View {
                                 }
                             }
                             .onEnded { value in
+                                print("🎯 Drag ended: translation.width=\(value.translation.width)")
                                 // If we didn't drag much horizontally, treat as a tap
                                 if abs(value.translation.width) <= 5 {
+                                    print("🎯 Tap detected")
                                     // Tap action - show modal
                                     selectedHandoffDate = date
                                     // Use async to ensure state update completes before presenting modal
@@ -132,6 +135,7 @@ struct HandoffTimelineView: View {
                                         showingHandoffModal = true
                                     }
                                 } else {
+                                    print("🎯 Drag action detected")
                                     // Drag action - update handoff time (X-axis only)
                                     let horizontalTranslation = CGSize(width: value.translation.width, height: 0)
                                     updateHandoffTime(
@@ -211,15 +215,34 @@ struct HandoffTimelineView: View {
         let newY = originalPosition.y + dragOffset.height
         
         // Calculate which grid cell this position corresponds to
-        let newCol = max(0, min(gridColumns - 1, Int(newX / cellWidth)))
-        let newRow = max(0, Int(newY / cellHeight))
+        // Handle negative positions for left drag by allowing movement across row boundaries
+        var targetCol = Int(newX / cellWidth)
+        var targetRow = Int(newY / cellHeight)
         
-        // Calculate the new calendar index allowing movement across rows
-        let newIndex = newRow * gridColumns + newCol
+        // Handle negative column (left drag across row boundaries)
+        while targetCol < 0 && targetRow > 0 {
+            targetCol += gridColumns
+            targetRow -= 1
+        }
         
-        // Ensure we're within bounds of the calendar days
+        // Handle column overflow (right drag across row boundaries)
+        while targetCol >= gridColumns && targetRow < (calendarDays.count / gridColumns) {
+            targetCol -= gridColumns
+            targetRow += 1
+        }
+        
+        // Clamp to valid ranges
+        targetCol = max(0, min(gridColumns - 1, targetCol))
+        targetRow = max(0, min((calendarDays.count / gridColumns) - 1, targetRow))
+        
+        // Calculate the new calendar index
+        let newIndex = targetRow * gridColumns + targetCol
         let clampedIndex = max(0, min(calendarDays.count - 1, newIndex))
         let newDate = calendarDays[clampedIndex]
+        
+        // Use calculated positions for time calculation
+        let newCol = targetCol
+        let newRow = targetRow
         
         // Calculate time within the cell based on X position within that specific cell
         let cellLocalX = newX - (CGFloat(newCol) * cellWidth)
@@ -237,8 +260,8 @@ struct HandoffTimelineView: View {
         
         let selectedTime = availableHandoffTimes[timeIndex]
         
-        print("🎯 Drag calculation: newX=\(Int(newX)), newY=\(Int(newY)), col=\(newCol), row=\(newRow), index=\(clampedIndex)")
-        print("📅 Target date: \(formatDate(newDate)), time: \(selectedTime.display)")
+        print("🎯 Drag calculation: newX=\(Int(newX)), newY=\(Int(newY)), targetCol=\(targetCol), targetRow=\(targetRow), newIndex=\(newIndex)")
+        print("📅 Target date: \(formatDate(newDate)), time: \(selectedTime.display), clampedIndex=\(clampedIndex)")
         
         return (date: newDate, time: selectedTime)
     }
@@ -614,21 +637,32 @@ struct HandoffTimelineView: View {
         }
         
         // Different day move - need to update custody for the affected range
-        // The key insight: whoever had custody AFTER the original handoff 
-        // should now have custody starting from the new handoff date
-        
-        // Get who had custody after the original handoff (this is who should get the extended custody)
         let calendar = Calendar.current
-        let dayAfterOriginal = calendar.date(byAdding: .day, value: 1, to: originalDate) ?? originalDate
-        let custodyAfterOriginalHandoff = viewModel.getCustodyInfo(for: dayAfterOriginal)
         
-        guard !custodyAfterOriginalHandoff.owner.isEmpty else {
-            print("❌ Could not determine who had custody after original handoff")
+        // Determine who should get custody for the days between original and new handoff
+        let custodianToAssign: (owner: String, text: String)
+        
+        if newDate > originalDate {
+            // Moving handoff RIGHT (to future): 
+            // Assign custody to whoever had it the day BEFORE the original handoff
+            let dayBeforeOriginal = calendar.date(byAdding: .day, value: -1, to: originalDate) ?? originalDate
+            custodianToAssign = viewModel.getCustodyInfo(for: dayBeforeOriginal)
+            print("📋 Moving handoff RIGHT: Using custody from day before original (\(dateFormatter.string(from: dayBeforeOriginal)))")
+        } else {
+            // Moving handoff LEFT (to past):
+            // Assign custody to whoever had it the day AFTER the original handoff
+            let dayAfterOriginal = calendar.date(byAdding: .day, value: 1, to: originalDate) ?? originalDate
+            custodianToAssign = viewModel.getCustodyInfo(for: dayAfterOriginal)
+            print("📋 Moving handoff LEFT: Using custody from day after original (\(dateFormatter.string(from: dayAfterOriginal)))")
+        }
+        
+        guard !custodianToAssign.owner.isEmpty else {
+            print("❌ Could not determine custodian to assign for handoff move")
             completion()
             return
         }
         
-        print("📋 Parent who had custody after original handoff: \(custodyAfterOriginalHandoff.text)")
+        print("📋 Custodian to assign: \(custodianToAssign.text)")
         
         // Determine the date range that needs to be updated
         let updateRange = determineUpdateRange(originalDate: originalDate, newDate: newDate)
@@ -640,10 +674,10 @@ struct HandoffTimelineView: View {
         }
         
         print("📋 Updating custody for \(updateRange.count) days: \(updateRange.map { dateFormatter.string(from: $0) })")
-        print("📋 Setting custody to: \(custodyAfterOriginalHandoff.text)")
+        print("📋 Setting custody to: \(custodianToAssign.text)")
         
         // Update custody for the affected range
-        updateCustodyForDateRange(updateRange, toParentId: custodyAfterOriginalHandoff.owner) {
+        updateCustodyForDateRange(updateRange, toParentId: custodianToAssign.owner) {
             completion()
         }
     }
@@ -657,9 +691,9 @@ struct HandoffTimelineView: View {
             return generateDateRange(from: newDate, to: calendar.date(byAdding: .day, value: -1, to: originalDate) ?? originalDate)
         }
         // If moving handoff later (e.g., Tuesday to Thursday)
-        // Update Wednesday and Thursday to have the custody that Tuesday had
+        // Update Wednesday up to (but NOT including) Thursday to have the custody that Tuesday had
         else if newDate > originalDate {
-            return generateDateRange(from: calendar.date(byAdding: .day, value: 1, to: originalDate) ?? originalDate, to: newDate)
+            return generateDateRange(from: calendar.date(byAdding: .day, value: 1, to: originalDate) ?? originalDate, to: calendar.date(byAdding: .day, value: -1, to: newDate) ?? newDate)
         }
         
         return []
