@@ -69,25 +69,50 @@ class CalendarViewModel: ObservableObject {
         // When the user logs in AND has a family ID, fetch initial data.
         AuthenticationService.shared.$isLoggedIn
             .combineLatest(AuthenticationService.shared.$familyId)
-            .filter { isLoggedIn, familyId in
-                return isLoggedIn && familyId != nil
-            }
-            .first()
+            // .first() // This was causing the subscription to terminate after one successful fetch.
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.fetchInitialData()
+            .sink { [weak self] isLoggedIn, familyId in
+                guard let self = self else { return }
+
+                if isLoggedIn, familyId != nil {
+                    // Only fetch data if it hasn't been loaded yet for this session.
+                    if !self.isDataLoaded {
+                        print("Login detected and data not loaded. Fetching initial data...")
+                        self.fetchInitialData()
+                    }
+                } else {
+                    // User logged out or familyId is nil
+                    print("Logout detected or missing familyId. Resetting data.")
+                    self.resetData()
+                }
             }
             .store(in: &cancellables)
     }
 
     func fetchInitialData() {
-        guard !isDataLoaded else { return }
+        // isDataLoaded guard is now handled in setupBindings to allow re-fetch on new login
         guard AuthenticationService.shared.isLoggedIn else {
             print("User not logged in, aborting initial data fetch.")
             return
         }
         print("--- Starting initial data fetch ---")
+        self.isDataLoaded = true // Set this immediately to prevent re-entry for the same session
         fetchHandoffsAndCustody()
+    }
+    
+    func resetData() {
+        print("Resetting all local data.")
+        isDataLoaded = false
+        events = []
+        custodyRecords = []
+        schoolEvents = []
+        weatherData = [:]
+        custodianOneName = "Parent 1"
+        custodianTwoName = "Parent 2"
+        custodianOneId = nil
+        custodianTwoId = nil
+        isHandoffDataReady = false
+        isDataLoading = false
     }
 
     func fetchHandoffsAndCustody() {
@@ -127,8 +152,20 @@ class CalendarViewModel: ObservableObject {
 
         // When both are done, update the UI
         dispatchGroup.notify(queue: .main) { [weak self] in
-            print("✅ All initial handoff data is ready.")
-            self?.isHandoffDataReady = true
+            guard let self = self else { return }
+
+            // Check if we have the essential data before flagging as ready
+            if self.custodianOneId != nil && self.custodianTwoId != nil && !self.custodyRecords.isEmpty {
+                print("✅ All initial handoff data is ready.")
+                self.isHandoffDataReady = true
+            } else {
+                print("❌ Failed to fetch all necessary handoff data. Custodian IDs or records are missing.")
+                print("   - Custodian 1 ID: \(self.custodianOneId ?? "nil")")
+                print("   - Custodian 2 ID: \(self.custodianTwoId ?? "nil")")
+                print("   - Custody Records count: \(self.custodyRecords.count)")
+                self.isHandoffDataReady = false
+            }
+            self.isDataLoading = false // End loading state
         }
     }
 
