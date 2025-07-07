@@ -8,7 +8,7 @@ from datetime import date, datetime, timedelta, timezone
 from fastapi import FastAPI, Depends, HTTPException, status, Form, Query, Request, File, UploadFile
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List, Dict, Any
 import logging
 from logging.handlers import RotatingFileHandler
@@ -269,9 +269,13 @@ class CustodyRecord(BaseModel):
 
 class CustodyResponse(BaseModel):
     id: int
-    event_date: str # Field renamed from 'date' to 'event_date'
+    event_date: str
+    content: str
+    position: int = 4  # Always 4 for custody
     custodian_id: str
-    content: str # Renamed from custodian_name to content
+    handoff_day: Optional[bool] = None
+    handoff_time: Optional[str] = None
+    handoff_location: Optional[str] = None
 
 class Token(BaseModel):
     access_token: str
@@ -489,9 +493,12 @@ async def get_custody_records(year: int, month: int, current_user = Depends(get_
         custody_responses = [
             CustodyResponse(
                 id=record['id'],
-                event_date=str(record['date']), # Use renamed field
+                event_date=str(record['date']),
+                content=user_map.get(str(record['custodian_id']), "Unknown"),
                 custodian_id=str(record['custodian_id']),
-                content=user_map.get(str(record['custodian_id']), "Unknown") # Use content field
+                handoff_day=record['handoff_day'],
+                handoff_time=str(record['handoff_time']) if record['handoff_time'] else None,
+                handoff_location=record['handoff_location']
             ) for record in db_records
         ]
         
@@ -550,9 +557,11 @@ async def set_custody(custody_data: CustodyRecord, current_user = Depends(get_cu
 
         return CustodyResponse(
             id=record_id,
-            event_date=str(custody_data.date), # Use renamed field
+            event_date=str(custody_data.date),
+            content=custodian_name,
             custodian_id=str(custody_data.custodian_id),
-            content=custodian_name # Use content field
+            handoff_time=custody_data.handoff_time,
+            handoff_location=custody_data.handoff_location
         )
     except Exception as e:
         logger.error(f"Error setting custody: {e}")
