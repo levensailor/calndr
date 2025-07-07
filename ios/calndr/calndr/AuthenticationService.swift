@@ -41,6 +41,10 @@ class AuthenticationService: ObservableObject {
             return
         }
         let decodedToken = decode(jwtToken: token)
+        
+        // Log the entire decoded profile for debugging
+        print("👤 User Profile from Token: \(decodedToken)")
+        
         self.familyId = decodedToken["family_id"] as? String
     }
     
