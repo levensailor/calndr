@@ -351,7 +351,7 @@ class CalendarViewModel: ObservableObject {
                 if components.count == 2,
                    let hour = Int(components[0]),
                    let minute = Int(components[1]) {
-                    print("🔄 Found custody handoff time for \(dateString): \(hour):\(String(format: "%02d", minute)) (\(custodyRecord.handoff_location ?? "Unknown") location)")
+//                    print("🔄 Found custody handoff time for \(dateString): \(hour):\(String(format: "%02d", minute)) (\(custodyRecord.handoff_location ?? "Unknown") location)")
                     return (hour, minute)
                 } else {
                     print("⚠️ Invalid time format in custody handoff record for \(dateString): '\(handoffTime)'")

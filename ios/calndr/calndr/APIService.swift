@@ -274,11 +274,11 @@ class APIService {
             }
             
             // Log the raw data as a string for debugging
-            if let jsonString = String(data: data, encoding: .utf8) {
-                print("--- Raw JSON for fetchCustodyRecords ---")
-                print(jsonString)
-                print("--------------------------------------")
-            }
+//            if let jsonString = String(data: data, encoding: .utf8) {
+//                print("--- Raw JSON for fetchCustodyRecords ---")
+//                print(jsonString)
+//                print("--------------------------------------")
+//            }
 
             if httpResponse.statusCode == 401 {
                 completion(.failure(NSError(domain: "APIService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Unauthorized"])))
@@ -287,7 +287,7 @@ class APIService {
 
             do {
                 let custodyRecords = try JSONDecoder().decode([CustodyResponse].self, from: data)
-                print("✅ Successfully decoded \(custodyRecords.count) custody records")
+//                print("✅ Successfully decoded \(custodyRecords.count) custody records")
                 completion(.success(custodyRecords))
             } catch {
                 print("❌ JSON Decoding Error: \(error)")
@@ -679,7 +679,7 @@ class APIService {
             
             do {
                 let custodianResponse = try JSONDecoder().decode(CustodianResponse.self, from: data)
-                print("✅ Successfully decoded custodian names")
+//                print("✅ Successfully decoded custodian names")
                 completion(.success(custodianResponse))
             } catch {
                 print("❌ JSON decoding error for custodian names: \(error)")

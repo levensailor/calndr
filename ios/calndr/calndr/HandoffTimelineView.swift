@@ -214,11 +214,21 @@ struct HandoffTimelineView: View {
         let newX = originalPosition.x + dragOffset.width
         let newY = originalPosition.y + dragOffset.height
         
-        // Calculate which grid cell this position corresponds to
-        // Account for the fact that bubbles are positioned within cells, not at boundaries
-        // The bubble's center should determine which cell it belongs to
-        var targetCol = Int(newX / cellWidth)
-        var targetRow = Int(newY / cellHeight)
+        // Calculate relative movement in cells instead of absolute position
+        // This ensures dragging "one day right" moves exactly one day, not based on pixel distance
+        let cellsMovedX = Int(round(dragOffset.width / cellWidth))
+        let cellsMovedY = Int(round(dragOffset.height / cellHeight))
+        
+        // Get original position
+        guard let originalIndex = calendarDays.firstIndex(of: originalDate) else {
+            return (date: originalDate, time: availableHandoffTimes[1])
+        }
+        let originalCol = originalIndex % gridColumns
+        let originalRow = originalIndex / gridColumns
+        
+        // Calculate target position based on relative movement
+        var targetCol = originalCol + cellsMovedX
+        var targetRow = originalRow + cellsMovedY
         
         // Handle negative column (left drag across row boundaries)
         while targetCol < 0 && targetRow > 0 {
@@ -261,18 +271,11 @@ struct HandoffTimelineView: View {
         
         let selectedTime = availableHandoffTimes[timeIndex]
         
-        // Get original position info for debugging
-        guard let originalIndex = calendarDays.firstIndex(of: originalDate) else {
-            return (date: originalDate, time: availableHandoffTimes[1])
-        }
-        let originalCol = originalIndex % gridColumns
-        let originalRow = originalIndex / gridColumns
-        
         print("🎯 DRAG DEBUG:")
         print("   Original: col=\(originalCol), row=\(originalRow), index=\(originalIndex), date=\(formatDate(originalDate))")
-        print("   Drag: offsetX=\(Int(dragOffset.width)), newX=\(Int(newX)), originalX=\(Int(originalPosition.x))")
+        print("   Drag: offsetX=\(Int(dragOffset.width)), cellsMovedX=\(cellsMovedX), cellWidth=\(Int(cellWidth))")
         print("   Target: col=\(targetCol), row=\(targetRow), index=\(newIndex), date=\(formatDate(newDate))")
-        print("   Cell: width=\(Int(cellWidth)), height=\(Int(cellHeight))")
+        print("   Movement: \(cellsMovedX) cells right, \(cellsMovedY) cells down")
         print("   Time: \(selectedTime.display)")
         
         return (date: newDate, time: selectedTime)
