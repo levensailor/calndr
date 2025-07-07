@@ -374,42 +374,47 @@ struct HandoffTimelineView: View {
     }
     
     private func getHandoffDays() -> [Date] {
-        // Get days that have handoff records from custody table
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         
         var handoffDays: Set<Date> = []
+        let calendar = Calendar.current
+        let currentMonth = calendar.component(.month, from: viewModel.currentDate)
+        let currentYear = calendar.component(.year, from: viewModel.currentDate)
 
-        // Create a Set of calendar days for efficient lookup
         let visibleDaysSet = Set(calendarDays)
         
-        // First, add all dates that have actual handoff records in custody table
         for custodyRecord in viewModel.custodyRecords {
             if custodyRecord.handoff_day == true {
                 if let date = dateFormatter.date(from: custodyRecord.event_date) {
-                    // CRITICAL: Only add the handoff if its date is visible in the current calendar view.
-                    if visibleDaysSet.contains(date) {
+                    let handoffMonth = calendar.component(.month, from: date)
+                    let handoffYear = calendar.component(.year, from: date)
+                    
+                    if visibleDaysSet.contains(date) && handoffMonth == currentMonth && handoffYear == currentYear {
                         handoffDays.insert(date)
                     }
                 }
             }
         }
         
-        // Then, add days where custody changes (virtual handoffs) only if no handoff record exists
         var previousOwner: String?
         
         for date in calendarDays {
             let currentOwner = viewModel.getCustodyInfo(for: date).owner
             
             if let prev = previousOwner, prev != currentOwner {
-                // Only add if no actual handoff record exists for this date
-                let dateString = dateFormatter.string(from: date)
-                let hasHandoffRecord = viewModel.custodyRecords.contains { record in
-                    record.event_date == dateString && record.handoff_day == true
-                }
+                let handoffMonth = calendar.component(.month, from: date)
+                let handoffYear = calendar.component(.year, from: date)
                 
-                if !hasHandoffRecord {
-                    handoffDays.insert(date)
+                if handoffMonth == currentMonth && handoffYear == currentYear {
+                    let dateString = dateFormatter.string(from: date)
+                    let hasHandoffRecord = viewModel.custodyRecords.contains { record in
+                        record.event_date == dateString && record.handoff_day == true
+                    }
+                    
+                    if !hasHandoffRecord {
+                        handoffDays.insert(date)
+                    }
                 }
             }
             
