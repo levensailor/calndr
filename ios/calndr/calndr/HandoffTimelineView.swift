@@ -562,7 +562,7 @@ struct HandoffTimelineView: View {
                 print("📋 Moving handoff LEFT: Toggle custody of destination day (\(newDateString))")
                 self.createHandoffForNewDay(newDate: newDate, time: newTime) {
                     // After destination day is updated, update original day
-                    self.updateCustodyForDestinationHandoffDay(newDate: newDate) {
+                    self.updateCustodyForDestinationHandoffDay(destinationDate: newDate) {
                         // Refresh custody records after both updates complete
                         DispatchQueue.main.async {
                             self.viewModel.fetchCustodyRecords()
