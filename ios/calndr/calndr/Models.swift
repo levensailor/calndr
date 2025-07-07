@@ -68,7 +68,7 @@ struct CustodyRequest: Codable {
 }
 
 // Response model from custody API (compatible with frontend format)
-struct CustodyResponse: Codable, Identifiable {
+struct CustodyResponse: Codable, Identifiable, Equatable {
     var id: Int
     var event_date: String
     var content: String

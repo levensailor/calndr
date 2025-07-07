@@ -8,7 +8,6 @@ struct HandoffTimeModal: View {
     
     @State private var selectedTimeIndex = 2 // Default to 5pm (index 2)
     @State private var selectedLocation = "daycare" // Default location
-    @State private var currentInitializedDate: Date? = nil
     
     // Available handoff times
     private let handoffTimes = [
@@ -88,9 +87,9 @@ struct HandoffTimeModal: View {
                 initializeTimeAndLocation()
             }
         }
-        .onDisappear {
-            // Reset initialization state when modal is dismissed
-            currentInitializedDate = nil
+        .onChange(of: viewModel.custodyRecords) { _ in
+            // Re-initialize if the custody data changes while the modal is open
+            initializeTimeAndLocation()
         }
     }
     
@@ -271,31 +270,25 @@ struct HandoffTimeModal: View {
     }
     
     private func initializeTimeAndLocation() {
-        // Only initialize if the date has changed or this is the first time
-        guard currentInitializedDate != date else { return }
-
-        // Set current handoff time and location for this date
-        let handoffInfo = viewModel.getHandoffTimeForDate(date)
+        // Use a UTC calendar for comparison to avoid timezone issues
+        var utcCalendar = Calendar.current
+        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
         
-        // Find the closest matching time index
-        selectedTimeIndex = findClosestTimeIndex(hour: handoffInfo.hour, minute: handoffInfo.minute)
-        
-        // Set location, defaulting to "other" if not found
-        if let location = handoffInfo.location, !location.isEmpty {
-            // Ensure the location exists in the list before setting
-            if handoffLocations.contains(location.lowercased()) {
-                selectedLocation = location.lowercased()
-            } else {
-                selectedLocation = "other" // Fallback for custom or unknown locations
+        // Find the first handoff for the selected day by checking custody records
+        if let handoff = viewModel.custodyRecords.first(where: {
+            guard let handoffDate = viewModel.isoDateFormatter.date(from: $0.event_date) else { return false }
+            return utcCalendar.isDate(handoffDate, inSameDayAs: self.date)
+        }) {
+            // Set the time index
+            if let handoffTimeStr = handoff.handoff_time,
+               let hour = Int(handoffTimeStr.prefix(2)),
+               let timeIndex = handoffTimes.firstIndex(where: { $0.hour == hour }) {
+                selectedTimeIndex = timeIndex
             }
-        } else {
-            // Default to daycare if no location is set
-            selectedLocation = "daycare"
+            
+            // Set the location
+            selectedLocation = handoff.handoff_location ?? "other" // Use location or default to "other"
         }
-        
-        currentInitializedDate = date
-        
-        print("Initialized handoff modal for \(formatDate(date)) with time \(handoffTimes[selectedTimeIndex].display) and location \(selectedLocation)")
     }
     
     private func findClosestTimeIndex(hour: Int, minute: Int) -> Int {

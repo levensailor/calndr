@@ -24,25 +24,27 @@ struct HandoffTimelineView: View {
 
     var body: some View {
         VStack {
+            timelineContent
             // Check if all handoff data is loaded
-            if !viewModel.isHandoffDataReady {
-                VStack(spacing: 16) {
-                    ProgressView()
-                        .scaleEffect(1.2)
-                    Text("Loading handoff information...")
-                        .font(.headline)
-                        .foregroundColor(themeManager.currentTheme.textColor)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(themeManager.currentTheme.mainBackgroundColor)
-                .onAppear {
-                    // Data is already being fetched by the ViewModel's initializer
-                    print("Timeline view appeared, waiting for handoff data...")
-                }
-            } else {
-                // Existing timeline content
-                timelineContent
-            }
+//            if !viewModel.isHandoffDataReady {
+//                VStack(spacing: 16) {
+//                    ProgressView()
+//                        .scaleEffect(1.2)
+//                    Text("Loading handoff information...")
+//                        .font(.headline)
+//                        .foregroundColor(themeManager.currentTheme.textColor)
+//                }
+//                .frame(maxWidth: .infinity, maxHeight: .infinity)
+//                .background(themeManager.currentTheme.mainBackgroundColor)
+//                .onAppear {
+//                    // Data is already being fetched by the ViewModel's initializer
+//                    print("Timeline view appeared, waiting for handoff data...")
+//                }
+//                
+//            } else {
+//                // Existing timeline content
+//                timelineContent
+//            }
         }
     }
     
@@ -88,7 +90,6 @@ struct HandoffTimelineView: View {
                                 
                                 // Only start dragging if we've moved horizontally beyond threshold (reduced to 5px for better sensitivity)
                                 if abs(value.translation.width) > 5 {
-                                    print("🎯 Drag started: translation.width=\(value.translation.width)")
                                     draggedBubbleDate = date
                                     dragOffset = horizontalTranslation // Only horizontal movement
                                     
@@ -123,18 +124,14 @@ struct HandoffTimelineView: View {
                                 }
                             }
                             .onEnded { value in
-                                print("🎯 Drag ended: translation.width=\(value.translation.width)")
                                 // If we didn't drag much horizontally, treat as a tap
                                 if abs(value.translation.width) <= 5 {
-                                    print("🎯 Tap detected")
-                                    // Tap action - show modal
                                     selectedHandoffDate = date
                                     // Use async to ensure state update completes before presenting modal
                                     DispatchQueue.main.async {
                                         showingHandoffModal = true
                                     }
                                 } else {
-                                    print("🎯 Drag action detected")
                                     // Drag action - update handoff time (X-axis only)
                                     let horizontalTranslation = CGSize(width: value.translation.width, height: 0)
                                     updateHandoffTime(
@@ -229,27 +226,21 @@ struct HandoffTimelineView: View {
         var targetCol = originalCol + cellsMovedX
         var targetRow = originalRow + cellsMovedY
         
-        print("   Before boundary handling: targetCol=\(targetCol), targetRow=\(targetRow)")
-        
         // Handle negative column (left drag across row boundaries)
         while targetCol < 0 && targetRow > 0 {
             targetCol += gridColumns
             targetRow -= 1
-            print("   Adjusted for negative col: targetCol=\(targetCol), targetRow=\(targetRow)")
         }
         
         // Handle column overflow (right drag across row boundaries)
         while targetCol >= gridColumns && targetRow < (calendarDays.count / gridColumns) {
             targetCol -= gridColumns
             targetRow += 1
-            print("   Adjusted for col overflow: targetCol=\(targetCol), targetRow=\(targetRow)")
         }
         
         // Clamp to valid ranges
         targetCol = max(0, min(gridColumns - 1, targetCol))
         targetRow = max(0, min((calendarDays.count / gridColumns) - 1, targetRow))
-        
-        print("   After clamping: targetCol=\(targetCol), targetRow=\(targetRow)")
         
         // Calculate the new calendar index
         let newIndex = targetRow * gridColumns + targetCol
@@ -275,15 +266,6 @@ struct HandoffTimelineView: View {
         }
         
         let selectedTime = availableHandoffTimes[timeIndex]
-        
-        print("🎯 DRAG DEBUG:")
-        print("   Original: col=\(originalCol), row=\(originalRow), index=\(originalIndex), date=\(formatDate(originalDate))")
-        print("   Drag: offsetX=\(Int(dragOffset.width)), cellsMovedX=\(cellsMovedX), cellWidth=\(Int(cellWidth))")
-        print("   Target: col=\(targetCol), row=\(targetRow), index=\(newIndex), date=\(formatDate(newDate))")
-        let horizontalDirection = cellsMovedX > 0 ? "right" : cellsMovedX < 0 ? "left" : "none"
-        let verticalDirection = cellsMovedY > 0 ? "down" : cellsMovedY < 0 ? "up" : "none"
-        print("   Movement: \(abs(cellsMovedX)) cells \(horizontalDirection), \(abs(cellsMovedY)) cells \(verticalDirection)")
-        print("   Time: \(selectedTime.display)")
         
         return (date: newDate, time: selectedTime)
     }
@@ -527,8 +509,6 @@ struct HandoffTimelineView: View {
         let originalDateString = dateFormatter.string(from: originalDate)
         let newDateString = dateFormatter.string(from: newDate)
         
-        print("Moving handoff from \(originalDateString) to \(newDateString) at \(newTime.display)")
-        
         // Since we're now using custody table, we just need to update the custody record
         // with handoff information
         updateCustodyWithHandoffInfo(originalDate, newDate, newDateString, timeString, newTime)
@@ -546,7 +526,6 @@ struct HandoffTimelineView: View {
         let newHandoffData = getHandoffDataForDate(newDate)
         
         // Update custody records directly through the custody API
-        print("📝 Updating custody with handoff info for \(newDateString) at \(newTime.display)")
         
         // Update custody for the move if different date
         let dateFormatter = DateFormatter()
@@ -557,7 +536,6 @@ struct HandoffTimelineView: View {
             // Different day move - custody logic depends on direction
             if newDate > originalDate {
                 // Moving RIGHT: Toggle custody from original day to day before destination
-                print("📋 Moving handoff RIGHT: Toggle custody from \(originalDateString) to day before \(newDateString)")
                 let endDate = Calendar.current.date(byAdding: .day, value: -1, to: newDate) ?? newDate
                 let rangeDates = generateDateRange(from: originalDate, to: endDate)
                 self.updateCustodyForDateRange(rangeDates) {
@@ -571,7 +549,6 @@ struct HandoffTimelineView: View {
                 }
             } else {
                 // Moving LEFT: Toggle custody from day before original to destination day
-                print("📋 Moving handoff LEFT: Toggle custody from day before \(originalDateString) to \(newDateString)")
                 let startDate = Calendar.current.date(byAdding: .day, value: -1, to: originalDate) ?? originalDate
                 let rangeDates = generateDateRange(from: startDate, to: newDate)
                 self.updateCustodyForDateRange(rangeDates) {
