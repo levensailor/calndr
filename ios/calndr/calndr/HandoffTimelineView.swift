@@ -378,13 +378,19 @@ struct HandoffTimelineView: View {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         
-        var handoffDays: [Date] = []
+        var handoffDays: Set<Date> = []
+
+        // Create a Set of calendar days for efficient lookup
+        let visibleDaysSet = Set(calendarDays)
         
         // First, add all dates that have actual handoff records in custody table
         for custodyRecord in viewModel.custodyRecords {
             if custodyRecord.handoff_day == true {
                 if let date = dateFormatter.date(from: custodyRecord.event_date) {
-                    handoffDays.append(date)
+                    // CRITICAL: Only add the handoff if its date is visible in the current calendar view.
+                    if visibleDaysSet.contains(date) {
+                        handoffDays.insert(date)
+                    }
                 }
             }
         }
@@ -402,15 +408,15 @@ struct HandoffTimelineView: View {
                     record.event_date == dateString && record.handoff_day == true
                 }
                 
-                if !hasHandoffRecord && !handoffDays.contains(date) {
-                    handoffDays.append(date)
+                if !hasHandoffRecord {
+                    handoffDays.insert(date)
                 }
             }
             
             previousOwner = currentOwner
         }
         
-        return handoffDays.sorted()
+        return Array(handoffDays).sorted()
     }
     
     private func getBubblePosition(for date: Date, cellWidth: CGFloat, cellHeight: CGFloat, size: CGSize) -> CGPoint {
