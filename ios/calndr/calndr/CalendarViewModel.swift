@@ -22,7 +22,8 @@ class CalendarViewModel: ObservableObject {
     @Published var notificationEmails: [NotificationEmail] = []
     @Published var isOffline: Bool = false
     @Published var showHandoffTimeline: Bool = false // Toggle for handoff timeline view
-    @Published var custodiansLoaded: Bool = false // Track if custodian data has been loaded
+    @Published var custodiansLoaded: Bool = false // DEPRECATED: Use isHandoffDataReady instead
+    @Published var isHandoffDataReady: Bool = false // NEW: True when all handoff data is loaded
     
     // Password Update
     @Published var currentPassword = ""
@@ -45,7 +46,7 @@ class CalendarViewModel: ObservableObject {
             .map { !$0 }
             .assign(to: \.isOffline, on: self)
             .store(in: &cancellables)
-        fetchCustodianNames()
+        fetchInitialData()
         setupHandoffTimer()
         setupAppLifecycleObservers()
     }
@@ -53,6 +54,31 @@ class CalendarViewModel: ObservableObject {
     deinit {
         handoffTimer?.invalidate()
         NotificationCenter.default.removeObserver(self)
+    }
+
+    func fetchInitialData() {
+        let dispatchGroup = DispatchGroup()
+        
+        // Reset readiness flag
+        self.isHandoffDataReady = false
+
+        // Fetch custodians
+        dispatchGroup.enter()
+        fetchCustodianNames {
+            dispatchGroup.leave()
+        }
+
+        // Fetch custody records for the current view
+        dispatchGroup.enter()
+        fetchCustodyRecords {
+            dispatchGroup.leave()
+        }
+
+        // When both are done, update the UI
+        dispatchGroup.notify(queue: .main) { [weak self] in
+            print("✅ All initial handoff data is ready.")
+            self?.isHandoffDataReady = true
+        }
     }
 
     func fetchEvents() {
@@ -72,7 +98,7 @@ class CalendarViewModel: ObservableObject {
         
         // Fetch both regular events and custody records
         fetchRegularEvents(from: firstDateString, to: lastDateString)
-        fetchCustodyRecords()
+        fetchCustodyRecords() // Keep this for subsequent fetches
     }
     
     private func fetchRegularEvents(from startDate: String, to endDate: String) {
@@ -92,8 +118,9 @@ class CalendarViewModel: ObservableObject {
         }
     }
     
-    func fetchCustodyRecords() {
+    func fetchCustodyRecords(completion: (() -> Void)? = nil) {
         guard !isOffline else {
+            completion?()
             return
         }
         
@@ -145,6 +172,7 @@ class CalendarViewModel: ObservableObject {
             self?.custodyRecords = allCustodyRecords.sorted { $0.event_date < $1.event_date }
             self?.updateCustodyStreak()
             self?.updateCustodyPercentages()
+            completion?() // Signal completion
         }
     }
     
@@ -174,6 +202,33 @@ class CalendarViewModel: ObservableObject {
     }
     
 
+    
+    func fetchCustodianNames(completion: (() -> Void)? = nil) {
+        guard !isOffline else {
+            print("Offline, not fetching custodian names.")
+            completion?()
+            return
+        }
+        
+        APIService.shared.fetchFamilyCustodians { [weak self] result in
+            DispatchQueue.main.async {
+                defer {
+                    completion?() // Ensure completion is always called
+                }
+                switch result {
+                case .success(let custodians):
+                    self?.custodianOne = custodians.custodian_one
+                    self?.custodianTwo = custodians.custodian_two
+                    self?.custodianOneName = custodians.custodian_one.first_name
+                    self?.custodianTwoName = custodians.custodian_two.first_name
+                    self?.custodiansLoaded = true // Keep for any legacy checks if needed
+                case .failure(let error):
+                    print("Error fetching custodian names: \(error.localizedDescription)")
+                    // Handle error, maybe set custodiansLoaded to false or show an error message
+                }
+            }
+        }
+    }
     
     func fetchCustodyRecordsForYear() {
         guard !isOffline else {
@@ -237,34 +292,6 @@ class CalendarViewModel: ObservableObject {
         return (custodianOneDays, custodianTwoDays)
     }
 
-    func fetchCustodianNames() {
-        APIService.shared.fetchCustodianNames { [weak self] result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let response):
-                    self?.custodianOne = response.custodian_one
-                    self?.custodianTwo = response.custodian_two
-                    self?.custodianOneName = response.custodian_one.first_name
-                    self?.custodianTwoName = response.custodian_two.first_name
-                    // After fetching names, we might need to recalculate percentages
-                    self?.updateCustodyPercentages()
-                    self?.updateCustodyStreak()
-                    self?.custodiansLoaded = true // Set to true after names are fetched
-                case .failure(let error):
-                    print("Error fetching custodian names: \(error.localizedDescription)")
-                    // Keep default names
-                    self?.custodiansLoaded = false // Mark as failed to load
-                    
-                    // Retry after a short delay
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                        print("Retrying custodian names fetch...")
-                        self?.fetchCustodianNames()
-                    }
-                }
-            }
-        }
-    }
-    
     func toggleSchoolEvents() {
         showSchoolEvents.toggle()
         if showSchoolEvents && schoolEvents.isEmpty {
@@ -312,7 +339,7 @@ class CalendarViewModel: ObservableObject {
         let dateString = isoDateString(from: date)
         
         // If custodian data isn't loaded yet, return empty info to avoid race conditions
-        guard custodiansLoaded else {
+        guard isHandoffDataReady else {
             return ("", "")
         }
         

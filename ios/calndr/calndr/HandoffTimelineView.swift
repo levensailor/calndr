@@ -24,21 +24,20 @@ struct HandoffTimelineView: View {
 
     var body: some View {
         VStack {
-            // Check if custodian data is loaded
-            if !viewModel.custodiansLoaded {
+            // Check if all handoff data is loaded
+            if !viewModel.isHandoffDataReady {
                 VStack(spacing: 16) {
                     ProgressView()
                         .scaleEffect(1.2)
-                    Text("Loading parent information...")
+                    Text("Loading handoff information...")
                         .font(.headline)
                         .foregroundColor(themeManager.currentTheme.textColor)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(themeManager.currentTheme.mainBackgroundColor)
                 .onAppear {
-                    // Trigger custodian fetch if not loaded
-                    print("Custodians not loaded in timeline, triggering fetch...")
-                    viewModel.fetchCustodianNames()
+                    // Data is already being fetched by the ViewModel's initializer
+                    print("Timeline view appeared, waiting for handoff data...")
                 }
             } else {
                 // Existing timeline content

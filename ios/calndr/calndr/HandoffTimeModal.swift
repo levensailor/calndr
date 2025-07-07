@@ -36,12 +36,12 @@ struct HandoffTimeModal: View {
         NavigationView {
             VStack(spacing: 20) {
                 // Check if custodian data is loaded
-                if !viewModel.custodiansLoaded {
+                if !viewModel.isHandoffDataReady {
                     VStack(spacing: 16) {
                         ProgressView()
                             .scaleEffect(1.2)
                             .progressViewStyle(CircularProgressViewStyle(tint: themeManager.currentTheme.iconActiveColor))
-                        Text("Loading parent information...")
+                        Text("Loading handoff information...")
                             .font(.headline)
                             .foregroundColor(themeManager.currentTheme.textColor)
                     }
@@ -67,7 +67,7 @@ struct HandoffTimeModal: View {
                         saveHandoffTime()
                     }
                     .foregroundColor(themeManager.currentTheme.iconActiveColor)
-                    .disabled(!viewModel.custodiansLoaded) // Disable save until data is loaded
+                    .disabled(!viewModel.isHandoffDataReady) // Disable save until data is loaded
                 }
             }
             .toolbarBackground(themeManager.currentTheme.headerBackgroundColor, for: .navigationBar)
@@ -77,13 +77,13 @@ struct HandoffTimeModal: View {
         .preferredColorScheme(themeManager.currentTheme.mainBackgroundColor.isLight ? .light : .dark)
         .onAppear {
             configureNavigationBarAppearance()
-            // Defer initialization until custodians are loaded
-            if viewModel.custodiansLoaded {
+            // Defer initialization until all data is ready
+            if viewModel.isHandoffDataReady {
                 initializeTimeAndLocation()
             }
         }
-        .onChange(of: viewModel.custodiansLoaded) { loaded in
-            if loaded {
+        .onChange(of: viewModel.isHandoffDataReady) { isReady in
+            if isReady {
                 // Initialize when data becomes available
                 initializeTimeAndLocation()
             }
