@@ -638,17 +638,54 @@ class APIService {
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
+                print("❌ Network error fetching custodian names: \(error.localizedDescription)")
                 completion(.failure(error))
                 return
             }
-            guard let data = data else {
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("❌ Invalid HTTP response for custodian names")
                 completion(.failure(APIError.invalidResponse))
                 return
             }
+            
+            // Log the raw response for debugging
+            if let data = data, let jsonString = String(data: data, encoding: .utf8) {
+                print("--- Raw JSON for fetchCustodianNames ---")
+                print("Status Code: \(httpResponse.statusCode)")
+                print("Response: \(jsonString)")
+                print("--------------------------------------")
+            } else {
+                print("❌ No data received for custodian names (Status: \(httpResponse.statusCode))")
+            }
+            
+            if httpResponse.statusCode == 401 {
+                print("❌ Unauthorized access to custodian names")
+                completion(.failure(APIError.unauthorized))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                print("❌ HTTP error \(httpResponse.statusCode) fetching custodian names")
+                completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                return
+            }
+            
+            guard let data = data else {
+                print("❌ No data in successful response for custodian names")
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
             do {
                 let custodianResponse = try JSONDecoder().decode(CustodianResponse.self, from: data)
+                print("✅ Successfully decoded custodian names")
                 completion(.success(custodianResponse))
             } catch {
+                print("❌ JSON decoding error for custodian names: \(error)")
+                if let decodingError = error as? DecodingError {
+                    print("❌ Detailed decoding error: \(decodingError)")
+                }
                 completion(.failure(error))
             }
         }.resume()
