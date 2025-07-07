@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @EnvironmentObject var authManager: AuthenticationManager
+    @StateObject private var authManager = AuthenticationManager()
     @StateObject private var themeManager = ThemeManager()
 
     var body: some View {
@@ -19,8 +19,10 @@ struct ContentView: View {
         }
         .animation(.easeInOut(duration: 0.5), value: authManager.isLoading)
         .animation(.easeInOut(duration: 0.5), value: authManager.isAuthenticated)
+        .environmentObject(authManager)
         .environmentObject(themeManager)
         .onAppear {
+            AuthenticationService.configure(with: authManager)
             authManager.checkAuthentication()
             NotificationManager.shared.requestAuthorizationAndRegister()
         }

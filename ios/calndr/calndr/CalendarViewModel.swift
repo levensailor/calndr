@@ -58,7 +58,7 @@ class CalendarViewModel: ObservableObject {
 
     private func setupBindings() {
         // When the user logs in, fetch initial data
-        AuthenticationManager.shared.$isLoggedIn
+        AuthenticationService.shared.$isLoggedIn
             .filter { $0 }
             .first()
             .receive(on: DispatchQueue.main)
@@ -75,7 +75,7 @@ class CalendarViewModel: ObservableObject {
     }
 
     func fetchHandoffsAndCustody() {
-        guard let familyId = AuthenticationManager.shared.familyId else {
+        guard let familyId = AuthenticationService.shared.familyId else {
             print("No family ID, cannot fetch handoffs or custody.")
             return
         }
