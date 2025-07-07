@@ -33,6 +33,7 @@ class CalendarViewModel: ObservableObject {
     @Published var isPasswordUpdateSuccessful = false
 
     private var cancellables = Set<AnyCancellable>()
+    private var isDataLoaded: Bool = false
     private let networkMonitor = NetworkMonitor()
     private var authManager: AuthenticationManager
     private var handoffTimer: Timer?
