@@ -215,7 +215,8 @@ struct HandoffTimelineView: View {
         let newY = originalPosition.y + dragOffset.height
         
         // Calculate which grid cell this position corresponds to
-        // Handle negative positions for left drag by allowing movement across row boundaries
+        // Account for the fact that bubbles are positioned within cells, not at boundaries
+        // The bubble's center should determine which cell it belongs to
         var targetCol = Int(newX / cellWidth)
         var targetRow = Int(newY / cellHeight)
         
@@ -260,8 +261,19 @@ struct HandoffTimelineView: View {
         
         let selectedTime = availableHandoffTimes[timeIndex]
         
-        print("🎯 Drag calculation: newX=\(Int(newX)), newY=\(Int(newY)), targetCol=\(targetCol), targetRow=\(targetRow), newIndex=\(newIndex)")
-        print("📅 Target date: \(formatDate(newDate)), time: \(selectedTime.display), clampedIndex=\(clampedIndex)")
+        // Get original position info for debugging
+        guard let originalIndex = calendarDays.firstIndex(of: originalDate) else {
+            return (date: originalDate, time: availableHandoffTimes[1])
+        }
+        let originalCol = originalIndex % gridColumns
+        let originalRow = originalIndex / gridColumns
+        
+        print("🎯 DRAG DEBUG:")
+        print("   Original: col=\(originalCol), row=\(originalRow), index=\(originalIndex), date=\(formatDate(originalDate))")
+        print("   Drag: offsetX=\(Int(dragOffset.width)), newX=\(Int(newX)), originalX=\(Int(originalPosition.x))")
+        print("   Target: col=\(targetCol), row=\(targetRow), index=\(newIndex), date=\(formatDate(newDate))")
+        print("   Cell: width=\(Int(cellWidth)), height=\(Int(cellHeight))")
+        print("   Time: \(selectedTime.display)")
         
         return (date: newDate, time: selectedTime)
     }
