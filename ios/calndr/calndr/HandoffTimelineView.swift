@@ -1018,13 +1018,18 @@ struct HandoffTimelineView: View {
     }
     
     private func detectHandoffCollisions(draggedDate: Date, dragPosition: CGPoint, cellWidth: CGFloat, cellHeight: CGFloat) {
-        let draggedHandoffId = viewModel.getHandoffTimeForDate(draggedDate).id
+        guard let draggedHandoff = viewModel.custodyRecords.first(where: { viewModel.isoDateFormatter.date(from: $0.event_date) == draggedDate && $0.handoff_day == true }) else {
+            return
+        }
         
         for date in getHandoffDays() {
             if date == draggedDate { continue } // Don't check against itself
             
-            let otherHandoff = viewModel.getHandoffTimeForDate(date)
-            let otherPosition = getBubblePosition(for: date, cellWidth: cellWidth, cellHeight: cellHeight, size: .zero) // Size doesn't matter here
+            guard let otherHandoff = viewModel.custodyRecords.first(where: { viewModel.isoDateFormatter.date(from: $0.event_date) == date && $0.handoff_day == true }) else {
+                continue
+            }
+            
+            let otherPosition = getBubblePosition(for: date, cellWidth: cellWidth, cellHeight: cellHeight, size: .zero)
             
             // Check if drag position is close to another handoff bubble
             let distance = abs(dragPosition.x - otherPosition.x)
@@ -1032,8 +1037,8 @@ struct HandoffTimelineView: View {
             // If dragging past another handoff bubble (within a threshold)
             if distance < (cellWidth / 4) { // Collision if within 1/4 of a cell
                 // Check if we are passing over a handoff for the same custodian
-                let draggedToParent = viewModel.getHandoffTimeForDate(draggedDate).to_parent_id
-                let otherToParent = otherHandoff.to_parent_id
+                let draggedToParent = draggedHandoff.custodian_id
+                let otherToParent = otherHandoff.custodian_id
                 
                 let isSameParentHandoff = (draggedToParent == viewModel.custodianOneId && otherToParent == viewModel.custodianOneId) ||
                 (draggedToParent == viewModel.custodianTwoId && otherToParent == viewModel.custodianTwoId)
@@ -1063,8 +1068,10 @@ struct HandoffTimelineView: View {
         
         for date in datesToDelete {
             // Get original handoff to determine which parent had custody
-            let handoffInfo = viewModel.getHandoffTimeForDate(date)
-            let parentReceivingCustody = handoffInfo.to_parent_id
+            guard let handoffInfo = viewModel.custodyRecords.first(where: { viewModel.isoDateFormatter.date(from: $0.event_date) == date && $0.handoff_day == true }) else {
+                continue
+            }
+            let parentReceivingCustody = handoffInfo.custodian_id
             
             // The day of the deleted handoff should now belong to the other parent
             let newCustodianId = parentReceivingCustody == viewModel.custodianOneId ? viewModel.custodianTwoId : viewModel.custodianOneId
