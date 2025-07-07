@@ -77,12 +77,15 @@ struct HandoffTimeModal: View {
         .preferredColorScheme(themeManager.currentTheme.mainBackgroundColor.isLight ? .light : .dark)
         .onAppear {
             configureNavigationBarAppearance()
-            initializeTimeSelection()
-            
-            // Trigger custodian fetch if not loaded
-            if !viewModel.custodiansLoaded {
-                print("Custodians not loaded, triggering fetch...")
-                viewModel.fetchCustodianNames()
+            // Defer initialization until custodians are loaded
+            if viewModel.custodiansLoaded {
+                initializeTimeAndLocation()
+            }
+        }
+        .onChange(of: viewModel.custodiansLoaded) { loaded in
+            if loaded {
+                // Initialize when data becomes available
+                initializeTimeAndLocation()
             }
         }
         .onDisappear {
@@ -267,18 +270,32 @@ struct HandoffTimeModal: View {
         .background(themeManager.currentTheme.mainBackgroundColor)
     }
     
-    private func initializeTimeSelection() {
+    private func initializeTimeAndLocation() {
         // Only initialize if the date has changed or this is the first time
         guard currentInitializedDate != date else { return }
-        
-        // Set current handoff time for this date
-        let currentTime = viewModel.getHandoffTimeForDate(date)
+
+        // Set current handoff time and location for this date
+        let handoffInfo = viewModel.getHandoffTimeForDate(date)
         
         // Find the closest matching time index
-        selectedTimeIndex = findClosestTimeIndex(hour: currentTime.hour, minute: currentTime.minute)
+        selectedTimeIndex = findClosestTimeIndex(hour: handoffInfo.hour, minute: handoffInfo.minute)
+        
+        // Set location, defaulting to "other" if not found
+        if let location = handoffInfo.location, !location.isEmpty {
+            // Ensure the location exists in the list before setting
+            if handoffLocations.contains(location.lowercased()) {
+                selectedLocation = location.lowercased()
+            } else {
+                selectedLocation = "other" // Fallback for custom or unknown locations
+            }
+        } else {
+            // Default to daycare if no location is set
+            selectedLocation = "daycare"
+        }
+        
         currentInitializedDate = date
         
-        print("Initialized handoff modal for \(formatDate(date)) with time \(handoffTimes[selectedTimeIndex].display)")
+        print("Initialized handoff modal for \(formatDate(date)) with time \(handoffTimes[selectedTimeIndex].display) and location \(selectedLocation)")
     }
     
     private func findClosestTimeIndex(hour: Int, minute: Int) -> Int {

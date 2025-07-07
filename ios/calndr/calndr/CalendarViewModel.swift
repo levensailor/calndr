@@ -339,31 +339,41 @@ class CalendarViewModel: ObservableObject {
         return ("", "No custody assigned")
     }
     
-    func getHandoffTimeForDate(_ date: Date) -> (hour: Int, minute: Int) {
+    func getHandoffTimeForDate(_ date: Date) -> (hour: Int, minute: Int, location: String?) {
         let dateString = isoDateString(from: date)
         let dayOfWeek = Calendar.current.component(.weekday, from: date) // 1=Sun, 2=Mon, 7=Sat
         
         // Check custody record for handoff time
         if let custodyRecord = custodyRecords.first(where: { $0.event_date == dateString && $0.handoff_day == true }) {
+            var hour: Int?
+            var minute: Int?
+            
             // Parse the handoff time if available
             if let handoffTime = custodyRecord.handoff_time {
                 let components = handoffTime.split(separator: ":")
                 if components.count == 2,
-                   let hour = Int(components[0]),
-                   let minute = Int(components[1]) {
-//                    print("🔄 Found custody handoff time for \(dateString): \(hour):\(String(format: "%02d", minute)) (\(custodyRecord.handoff_location ?? "Unknown") location)")
-                    return (hour, minute)
+                   let parsedHour = Int(components[0]),
+                   let parsedMinute = Int(components[1]) {
+                    hour = parsedHour
+                    minute = parsedMinute
                 } else {
                     print("⚠️ Invalid time format in custody handoff record for \(dateString): '\(handoffTime)'")
                 }
+            }
+            
+            // If we have a valid time, return it with the location
+            if let validHour = hour, let validMinute = minute {
+                return (validHour, validMinute, custodyRecord.handoff_location)
             }
         }
         
         // Default logic: Noon (12:00) for weekends, 5:00 PM for weekdays
         let isWeekend = dayOfWeek == 1 || dayOfWeek == 7 // Sunday or Saturday
         let defaultHour = isWeekend ? 12 : 17
-        print("🔄 Using default handoff time for \(dateString): \(defaultHour):00 (\(isWeekend ? "weekend" : "weekday") default)")
-        return (defaultHour, 0)
+        let defaultLocation = isWeekend ? "neutral ground" : "daycare" // Example default locations
+        
+        print("🔄 Using default handoff time for \(dateString): \(defaultHour):00 at \(defaultLocation)")
+        return (defaultHour, 0, defaultLocation)
     }
 
     func updateCustodyPercentages() {

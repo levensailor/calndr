@@ -542,8 +542,10 @@ async def set_custody(custody_data: CustodyRecord, current_user: User = Depends(
             # Only update handoff_time and handoff_location if provided
             if custody_data.handoff_time is not None:
                 update_values['handoff_time'] = custody_data.handoff_time
+                logger.info(f"Updating handoff_time: {custody_data.handoff_time}")
             if custody_data.handoff_location is not None:
                 update_values['handoff_location'] = custody_data.handoff_location
+                logger.info(f"Updating handoff_location: {custody_data.handoff_location}")
                 
             update_query = custody.update().where(
                 custody.c.id == existing_record['id']
@@ -563,8 +565,10 @@ async def set_custody(custody_data: CustodyRecord, current_user: User = Depends(
             # Only include handoff_time and handoff_location if provided
             if custody_data.handoff_time is not None:
                 insert_values['handoff_time'] = custody_data.handoff_time
+                logger.info(f"Inserting handoff_time: {custody_data.handoff_time}")
             if custody_data.handoff_location is not None:
                 insert_values['handoff_location'] = custody_data.handoff_location
+                logger.info(f"Inserting handoff_location: {custody_data.handoff_location}")
                 
             insert_query = custody.insert().values(**insert_values)
             logging.info(f"Inserting new custody record: {insert_query}")
