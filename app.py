@@ -497,7 +497,7 @@ async def get_custody_records(year: int, month: int, current_user = Depends(get_
                 content=user_map.get(str(record['custodian_id']), "Unknown"),
                 custodian_id=str(record['custodian_id']),
                 handoff_day=record['handoff_day'],
-                handoff_time=str(record['handoff_time']) if record['handoff_time'] else None,
+                handoff_time=record['handoff_time'].strftime('%H:%M') if record['handoff_time'] else None,
                 handoff_location=record['handoff_location']
             ) for record in db_records
         ]
