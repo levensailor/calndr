@@ -367,10 +367,10 @@ class CalendarViewModel: ObservableObject {
         
         // NEW: Check custody records first (from dedicated custody API)
         if let custodyRecord = custodyRecords.first(where: { $0.event_date == dateString }) {
-            // Map the content back to custodian names and IDs
-            if custodyRecord.content.lowercased() == self.custodianOneName.lowercased() {
+            // CORRECTED: Compare the custodian_id directly
+            if custodyRecord.custodian_id == self.custodianOneId {
                 return (self.custodianOneId ?? "", self.custodianOneName)
-            } else if custodyRecord.content.lowercased() == self.custodianTwoName.lowercased() {
+            } else if custodyRecord.custodian_id == self.custodianTwoId {
                 return (self.custodianTwoId ?? "", self.custodianTwoName)
             }
         }
