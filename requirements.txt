@@ -2,12 +2,13 @@ fastapi
 gunicorn
 uvicorn
 databases[postgresql]
-SQLAlchemy
-python-dotenv
+SQLAlchemy==2.0.28
+python-dotenv==1.0.1
 pydantic[email]
 pydantic
 httpx
-boto3
+boto3==1.34.42
+botocore==1.34.42
 aiofiles
 beautifulsoup4
 lxml
@@ -15,7 +16,7 @@ passlib
 bcrypt
 python-jose[pycryptodome]
 psycopg2-binary
-asyncpg
+asyncpg==0.29.0
 python-multipart
 apns2
 pytz
