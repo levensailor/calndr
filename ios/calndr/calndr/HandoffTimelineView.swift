@@ -524,45 +524,6 @@ struct HandoffTimelineView: View {
         
     }
     
-    private func clearHandoffDay(for date: Date, completion: @escaping () -> Void) {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        let dateString = dateFormatter.string(from: date)
-
-        // When a handoff is removed, custody should revert to the parent who had it the day before.
-        let previousDay = Calendar.current.date(byAdding: .day, value: -1, to: date)!
-        let custodianInfo = viewModel.getCustodyInfo(for: previousDay)
-        let correctCustodianId = custodianInfo.owner
-        
-        guard !correctCustodianId.isEmpty else {
-            print("❌ Cannot determine custodian for \(dateString) to clear handoff day.")
-            completion()
-            return
-        }
-
-        print("🧹 Clearing handoff_day for \(dateString) and setting owner to \(correctCustodianId)")
-
-        APIService.shared.updateCustodyRecord(
-            for: dateString,
-            custodianId: correctCustodianId,
-            handoffDay: false,
-            handoffTime: nil, // Clear time
-            handoffLocation: nil // Clear location
-        ) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let custodyResponse):
-                    print("✅ Successfully cleared handoff day for \(dateString)")
-                    self.updateLocalCustodyRecord(custodyResponse)
-                    completion()
-                case .failure(let error):
-                    print("❌ Failed to clear handoff day for \(dateString): \(error.localizedDescription)")
-                    completion()
-                }
-            }
-        }
-    }
-
     private func updateCustodyWithHandoffInfo(
         _ originalDate: Date,
         _ newDate: Date,
@@ -575,47 +536,37 @@ struct HandoffTimelineView: View {
         let originalDateString = dateFormatter.string(from: originalDate)
         
         if originalDateString != newDateString {
-            // This is a move to a different day.
-            
-            // 1. Clear the handoff flag on the original date.
-            self.clearHandoffDay(for: originalDate) {
-                // 2. After clearing, proceed with updating the custody range.
-                if newDate > originalDate {
-                    // Moving RIGHT: Update days between original and new date.
-                    let startDate = Calendar.current.date(byAdding: .day, value: 1, to: originalDate) ?? originalDate
-                    let endDate = Calendar.current.date(byAdding: .day, value: -1, to: newDate) ?? newDate
-                    
-                    let rangeDates = self.generateDateRange(from: startDate, to: endDate)
-                    self.updateCustodyForDateRange(rangeDates) {
-                        // 3. Create the new handoff.
-                        self.createHandoffForNewDay(newDate: newDate, time: newTime) {
-                            DispatchQueue.main.async {
-                                self.viewModel.fetchCustodyRecords()
-                            }
+            // Different day move - custody logic depends on direction
+            if newDate > originalDate {
+                // Moving RIGHT: Toggle custody from original day to day before destination
+                let endDate = Calendar.current.date(byAdding: .day, value: -1, to: newDate) ?? newDate
+                let rangeDates = generateDateRange(from: originalDate, to: endDate)
+                self.updateCustodyForDateRange(rangeDates) {
+                    // After range is updated, create handoff for new day
+                    self.createHandoffForNewDay(newDate: newDate, time: newTime) {
+                        // Refresh custody records after both updates complete
+                        DispatchQueue.main.async {
+                            self.viewModel.fetchCustodyRecords()
                         }
                     }
-                } else {
-                    // Moving LEFT: Update days from new date up to the day before the original date.
-                    let endDate = Calendar.current.date(byAdding: .day, value: -1, to: originalDate) ?? originalDate
-
-                    let rangeDates = self.generateDateRange(from: newDate, to: endDate)
-                    self.updateCustodyForDateRange(rangeDates) {
-                        // 3. Create the new handoff.
-                        self.createHandoffForNewDay(newDate: newDate, time: newTime) {
-                            DispatchQueue.main.async {
-                                self.viewModel.fetchCustodyRecords()
-                            }
+                }
+            } else {
+                // Moving LEFT: Toggle custody from day before original to destination day
+                let startDate = Calendar.current.date(byAdding: .day, value: -1, to: originalDate) ?? originalDate
+                let rangeDates = generateDateRange(from: startDate, to: newDate)
+                self.updateCustodyForDateRange(rangeDates) {
+                    // After range is updated, create handoff for new day
+                    self.createHandoffForNewDay(newDate: newDate, time: newTime) {
+                        // Refresh custody records after both updates complete
+                        DispatchQueue.main.async {
+                            self.viewModel.fetchCustodyRecords()
                         }
                     }
                 }
             }
         } else {
-            // Same day move - just update the time and potentially the custodian.
-            self.createHandoffForNewDay(newDate: newDate, time: newTime) {
-                 DispatchQueue.main.async {
-                    self.viewModel.fetchCustodyRecords()
-                }
-            }
+            // Same day move - just update the time
+            self.createHandoffForNewDay(newDate: newDate, time: newTime)
         }
     }
     
@@ -715,29 +666,17 @@ struct HandoffTimelineView: View {
         // Get handoff data for the new date
         let handoffData = getHandoffDataForDate(newDate)
         
-        guard let toParentId = handoffData.toParentId, !toParentId.isEmpty else {
-            print("❌ Could not determine 'to parent' ID for handoff creation.")
-            completion()
-            return
-        }
-
-        // Use the new flexible updateCustodyRecord method
-        APIService.shared.updateCustodyRecord(
-            for: dateString,
-            custodianId: toParentId,
-            handoffDay: true,
-            handoffTime: timeString,
-            handoffLocation: handoffData.location
-        ) { result in
+        // Use the existing updateCustodyRecord method (it can create records too)
+        APIService.shared.updateCustodyRecord(for: dateString, custodianId: handoffData.toParentId ?? "", handoffTime: timeString, handoffLocation: handoffData.location) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let custodyResponse):
-                    print("✅ Created/updated handoff record for new day: \(custodyResponse.content)")
+                    print("✅ Created handoff record for new day: \(custodyResponse.content)")
                     self.updateLocalCustodyRecord(custodyResponse)
                     completion()
                     
                 case .failure(let error):
-                    print("❌ Failed to create/update handoff record for new day: \(error.localizedDescription)")
+                    print("❌ Failed to create handoff record for new day: \(error.localizedDescription)")
                     completion()
                 }
             }
@@ -849,126 +788,6 @@ struct HandoffTimelineView: View {
         }
         
         updateNextDate()
-    }
-    
-    private func updateCustodyForHandoffMove(originalDate: Date, newDate: Date, completion: @escaping () -> Void = {}) {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        let originalDateString = dateFormatter.string(from: originalDate)
-        let newDateString = dateFormatter.string(from: newDate)
-        
-        print("🔄 Moving handoff from \(originalDateString) to \(newDateString)")
-        
-        // Same day move - just update that day's custody
-        if originalDate == newDate {
-            updateSingleDayCustody(date: newDate) {
-                completion()
-            }
-            return
-        }
-        
-        // Different day move - need to update custody for the affected range
-        let calendar = Calendar.current
-        
-        // Determine who should get custody for the days between original and new handoff
-        let custodianToAssign: (owner: String, text: String)
-        
-        if newDate > originalDate {
-            // Moving handoff RIGHT (to future): 
-            // Assign custody to whoever had it the day BEFORE the original handoff
-            let dayBeforeOriginal = calendar.date(byAdding: .day, value: -1, to: originalDate) ?? originalDate
-            custodianToAssign = viewModel.getCustodyInfo(for: dayBeforeOriginal)
-            print("📋 Moving handoff RIGHT: Using custody from day before original (\(dateFormatter.string(from: dayBeforeOriginal)))")
-        } else {
-            // Moving handoff LEFT (to past):
-            // Assign custody to whoever had it the day AFTER the original handoff
-            let dayAfterOriginal = calendar.date(byAdding: .day, value: 1, to: originalDate) ?? originalDate
-            custodianToAssign = viewModel.getCustodyInfo(for: dayAfterOriginal)
-            print("📋 Moving handoff LEFT: Using custody from day after original (\(dateFormatter.string(from: dayAfterOriginal)))")
-        }
-        
-        guard !custodianToAssign.owner.isEmpty else {
-            print("❌ Could not determine custodian to assign for handoff move")
-            completion()
-            return
-        }
-        
-        print("📋 Custodian to assign: \(custodianToAssign.text)")
-        
-        // Determine the date range that needs to be updated
-        let updateRange = determineUpdateRange(originalDate: originalDate, newDate: newDate)
-        
-        if updateRange.isEmpty {
-            print("📋 No dates need custody updates")
-            completion()
-            return
-        }
-        
-        print("📋 Updating custody for \(updateRange.count) days: \(updateRange.map { dateFormatter.string(from: $0) })")
-        print("📋 Setting custody to: \(custodianToAssign.text)")
-        
-        // Update custody for the affected range
-        updateCustodyForDateRange(updateRange, toParentId: custodianToAssign.owner) {
-            completion()
-        }
-    }
-    
-    private func determineUpdateRange(originalDate: Date, newDate: Date) -> [Date] {
-        let calendar = Calendar.current
-        
-        // If moving handoff earlier (e.g., Thursday to Tuesday)
-        // Update Tuesday and Wednesday to have the custody that Thursday had
-        if newDate < originalDate {
-            let endDate = calendar.date(byAdding: .day, value: -1, to: originalDate) ?? originalDate
-            return generateDateRange(from: newDate, to: endDate)
-        }
-        // If moving handoff later (e.g., Tuesday to Thursday)
-        // Update Wednesday up to (but NOT including) Thursday to have the custody that Tuesday had
-        else if newDate > originalDate {
-            let startDate = calendar.date(byAdding: .day, value: 1, to: originalDate) ?? originalDate
-            let endDate = calendar.date(byAdding: .day, value: -1, to: newDate) ?? newDate
-            
-            // Only return range if there are actually days between original and new date
-            if startDate <= endDate {
-                return generateDateRange(from: startDate, to: endDate)
-            }
-        }
-        
-        return []
-    }
-    
-    private func updateCustodyForDateRange(_ dates: [Date], toParentId: String, completion: @escaping () -> Void) {
-        guard !dates.isEmpty else {
-            completion()
-            return
-        }
-        
-        print("📋 Updating custody for \(dates.count) days to parent: \(toParentId)")
-        
-        // Track completion of all updates
-        let dispatchGroup = DispatchGroup()
-        
-        // Update custody for each date in the range
-        for (index, date) in dates.enumerated() {
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "yyyy-MM-dd"
-            let dateString = dateFormatter.string(from: date)
-            
-            dispatchGroup.enter()
-            
-            // Add a small delay between requests to avoid overwhelming the API
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.1) {
-                self.updateCustodyRecordWithRetry(dateString: dateString, custodianId: toParentId, retryCount: 0) {
-                    dispatchGroup.leave()
-                }
-            }
-        }
-        
-        // Call completion when all updates finish
-        dispatchGroup.notify(queue: .main) {
-            print("✅ All custody updates completed for range")
-            completion()
-        }
     }
     
     private func generateDateRange(from startDate: Date, to endDate: Date) -> [Date] {
