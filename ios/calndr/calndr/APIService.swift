@@ -299,54 +299,83 @@ class APIService {
         }.resume()
     }
     
-    func updateCustodyRecord(for date: String, custodianId: String, handoffTime: String? = nil, handoffLocation: String? = nil, completion: @escaping (Result<CustodyResponse, Error>) -> Void) {
+    func updateCustodyRecord(
+        for dateString: String,
+        custodianId: String,
+        handoffDay: Bool? = nil,
+        handoffTime: String? = nil,
+        handoffLocation: String? = nil,
+        completion: @escaping (Result<CustodyResponse, Error>) -> Void
+    ) {
         let url = baseURL.appendingPathComponent("/custody")
         var request = createAuthenticatedRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        var body: [String: Any?] = [
+            "date": dateString,
+            "custodian_id": custodianId
+        ]
         
-        let custodyRequest = CustodyRequest(date: date, custodian_id: custodianId, handoff_time: handoffTime, handoff_location: handoffLocation)
+        if let handoffDay = handoffDay {
+            body["handoff_day"] = handoffDay
+        }
         
+        if let handoffTime = handoffTime {
+            body["handoff_time"] = handoffTime
+        }
+        
+        if let handoffLocation = handoffLocation {
+            body["handoff_location"] = handoffLocation
+        }
+
+        let filteredBody = body.compactMapValues { $0 }
+
         do {
-            request.httpBody = try JSONEncoder().encode(custodyRequest)
+            request.httpBody = try JSONSerialization.data(withJSONObject: filteredBody, options: [])
         } catch {
             completion(.failure(error))
             return
         }
-
+        
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 completion(.failure(error))
                 return
             }
             
-            guard let httpResponse = response as? HTTPURLResponse else {
-                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server - not HTTP"])))
-                return
-            }
-            
             guard let data = data else {
-                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received on custody update"])))
-                return
-            }
-
-            // Log the raw data as a string for debugging
-            if let jsonString = String(data: data, encoding: .utf8) {
-                print("--- Raw JSON for updateCustodyRecord (Status: \(httpResponse.statusCode)) ---")
-                print(jsonString)
-                print("--------------------------------------------------------------------")
-            }
-
-            guard (200...299).contains(httpResponse.statusCode) else {
-                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
                 return
             }
             
             do {
-                let updatedCustody = try JSONDecoder().decode(CustodyResponse.self, from: data)
-                completion(.success(updatedCustody))
+                let custodyResponse = try JSONDecoder().decode(CustodyResponse.self, from: data)
+                completion(.success(custodyResponse))
             } catch {
+                if let responseString = String(data: data, encoding: .utf8) {
+                    print("APIService Error: Failed to decode CustodyResponse. Response: \(responseString)")
+                }
                 completion(.failure(error))
+            }
+        }.resume()
+    }
+
+    func deleteCustodyRecord(dateString: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/custody/\(dateString)")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "DELETE"
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                completion(.success(()))
+            } else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to delete custody record"])))
             }
         }.resume()
     }

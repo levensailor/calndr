@@ -524,6 +524,45 @@ struct HandoffTimelineView: View {
         
     }
     
+    private func clearHandoffDay(for date: Date, completion: @escaping () -> Void) {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: date)
+
+        // When a handoff is removed, custody should revert to the parent who had it the day before.
+        let previousDay = Calendar.current.date(byAdding: .day, value: -1, to: date)!
+        let custodianInfo = viewModel.getCustodyInfo(for: previousDay)
+        let correctCustodianId = custodianInfo.owner
+        
+        guard !correctCustodianId.isEmpty else {
+            print("❌ Cannot determine custodian for \(dateString) to clear handoff day.")
+            completion()
+            return
+        }
+
+        print("🧹 Clearing handoff_day for \(dateString) and setting owner to \(correctCustodianId)")
+
+        APIService.shared.updateCustodyRecord(
+            for: dateString,
+            custodianId: correctCustodianId,
+            handoffDay: false,
+            handoffTime: nil, // Clear time
+            handoffLocation: nil // Clear location
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let custodyResponse):
+                    print("✅ Successfully cleared handoff day for \(dateString)")
+                    self.updateLocalCustodyRecord(custodyResponse)
+                    completion()
+                case .failure(let error):
+                    print("❌ Failed to clear handoff day for \(dateString): \(error.localizedDescription)")
+                    completion()
+                }
+            }
+        }
+    }
+
     private func updateCustodyWithHandoffInfo(
         _ originalDate: Date,
         _ newDate: Date,
@@ -531,50 +570,49 @@ struct HandoffTimelineView: View {
         _ timeString: String,
         _ newTime: (hour: Int, minute: Int, display: String)
     ) {
-        // Get handoff data for the new date
-        let newHandoffData = getHandoffDataForDate(newDate)
-        
-        // Update custody records directly through the custody API
-        
-        // Update custody for the move if different date
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let originalDateString = dateFormatter.string(from: originalDate)
         
         if originalDateString != newDateString {
-            // Different day move - custody logic depends on direction
-            if newDate > originalDate {
-                // Moving RIGHT: Toggle custody from original day to day before destination
-                let endDate = Calendar.current.date(byAdding: .day, value: -1, to: newDate) ?? newDate
-                let rangeDates = generateDateRange(from: originalDate, to: endDate)
-                self.updateCustodyForDateRange(rangeDates) {
-                    // After range is updated, create handoff for new day
-                    self.createHandoffForNewDay(newDate: newDate, time: newTime) {
-                        // Refresh custody records after both updates complete
-                        DispatchQueue.main.async {
-                            self.viewModel.fetchCustodyRecords()
+            // This is a move to a different day.
+            
+            // 1. Clear the handoff flag on the original date.
+            self.clearHandoffDay(for: originalDate) {
+                // 2. After clearing, proceed with updating the custody range.
+                if newDate > originalDate {
+                    // Moving RIGHT
+                    let endDate = Calendar.current.date(byAdding: .day, value: -1, to: newDate) ?? newDate
+                    let rangeDates = self.generateDateRange(from: originalDate, to: endDate)
+                    self.updateCustodyForDateRange(rangeDates) {
+                        // 3. Create the new handoff.
+                        self.createHandoffForNewDay(newDate: newDate, time: newTime) {
+                            DispatchQueue.main.async {
+                                self.viewModel.fetchCustodyRecords()
+                            }
                         }
                     }
-                }
-            } else {
-                // Moving LEFT: Toggle custody from day before original to destination day
-                let startDate = Calendar.current.date(byAdding: .day, value: -1, to: originalDate) ?? originalDate
-                let rangeDates = generateDateRange(from: startDate, to: newDate)
-                self.updateCustodyForDateRange(rangeDates) {
-                    // After range is updated, create handoff for new day
-                    self.createHandoffForNewDay(newDate: newDate, time: newTime) {
-                        // Refresh custody records after both updates complete
-                        DispatchQueue.main.async {
-                            self.viewModel.fetchCustodyRecords()
+                } else {
+                    // Moving LEFT
+                    let startDate = Calendar.current.date(byAdding: .day, value: -1, to: originalDate) ?? originalDate
+                    let rangeDates = self.generateDateRange(from: startDate, to: newDate)
+                    self.updateCustodyForDateRange(rangeDates) {
+                        // 3. Create the new handoff.
+                        self.createHandoffForNewDay(newDate: newDate, time: newTime) {
+                            DispatchQueue.main.async {
+                                self.viewModel.fetchCustodyRecords()
+                            }
                         }
                     }
                 }
             }
         } else {
-            // Same day move - update custody with handoff info
-            self.updateCustodyBasedOnHandoffTimeChange(for: newDate)
-            // Refresh custody records to update the view
-            self.viewModel.fetchCustodyRecords()
+            // Same day move - just update the time and potentially the custodian.
+            self.createHandoffForNewDay(newDate: newDate, time: newTime) {
+                 DispatchQueue.main.async {
+                    self.viewModel.fetchCustodyRecords()
+                }
+            }
         }
     }
     
@@ -674,26 +712,29 @@ struct HandoffTimelineView: View {
         // Get handoff data for the new date
         let handoffData = getHandoffDataForDate(newDate)
         
-        // Create custody record with handoff information
-        let custodyData: [String: Any] = [
-            "date": dateString,
-            "custodian_id": handoffData.toParentId ?? "",
-            "handoff_day": true,
-            "handoff_time": timeString,
-            "handoff_location": handoffData.location
-        ]
-        
-        // Use the existing updateCustodyRecord method (it can create records too)
-        APIService.shared.updateCustodyRecord(for: dateString, custodianId: handoffData.toParentId ?? "") { result in
+        guard let toParentId = handoffData.toParentId, !toParentId.isEmpty else {
+            print("❌ Could not determine 'to parent' ID for handoff creation.")
+            completion()
+            return
+        }
+
+        // Use the new flexible updateCustodyRecord method
+        APIService.shared.updateCustodyRecord(
+            for: dateString,
+            custodianId: toParentId,
+            handoffDay: true,
+            handoffTime: timeString,
+            handoffLocation: handoffData.location
+        ) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let custodyResponse):
-                    print("✅ Created handoff record for new day: \(custodyResponse.content)")
+                    print("✅ Created/updated handoff record for new day: \(custodyResponse.content)")
                     self.updateLocalCustodyRecord(custodyResponse)
                     completion()
                     
                 case .failure(let error):
-                    print("❌ Failed to create handoff record for new day: \(error.localizedDescription)")
+                    print("❌ Failed to create/update handoff record for new day: \(error.localizedDescription)")
                     completion()
                 }
             }
