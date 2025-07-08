@@ -549,6 +549,7 @@ struct HandoffTimelineView: View {
                             self.viewModel.fetchCustodyRecords()
                         }
                     }
+                    self.updateCustodyForOriginalHandoffDay(originalDate: originalDate)
                 }
             } else {
                 // Moving LEFT: Toggle custody from day before original to destination day
@@ -562,6 +563,8 @@ struct HandoffTimelineView: View {
                             self.viewModel.fetchCustodyRecords()
                         }
                     }
+                    self.updateCustodyForOriginalHandoffDay(originalDate: originalDate)
+
                 }
             }
         } else {
@@ -609,49 +612,6 @@ struct HandoffTimelineView: View {
             fromParentId: fromParentId,
             toParentId: toParentId
         )
-    }
-    
-
-    
-    private func updateCustodyBasedOnHandoffTimeChange(for date: Date) {
-        // Determine who should have custody after this handoff
-        let custodyInfo = viewModel.getCustodyInfo(for: date)
-        let currentCustodian = custodyInfo.owner
-        
-        // Toggle to the other parent
-        let newCustodianId: String
-        if currentCustodian == viewModel.custodianOneId {
-            newCustodianId = viewModel.custodianTwoId ?? ""
-        } else {
-            newCustodianId = viewModel.custodianOneId ?? ""
-        }
-        
-        guard !newCustodianId.isEmpty else {
-            print("Error: Could not determine new custodian ID for handoff")
-            return
-        }
-        
-        let dateString = viewModel.isoDateString(from: date)
-        
-        // Update custody record for this date
-        APIService.shared.updateCustodyRecord(for: dateString, custodianId: newCustodianId) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let custodyResponse):
-                    print("✅ Updated custody for handoff date via drag: \(custodyResponse)")
-                    // Update local custody records
-                    if let index = self.viewModel.custodyRecords.firstIndex(where: { $0.event_date == custodyResponse.event_date }) {
-                        self.viewModel.custodyRecords[index] = custodyResponse
-                    } else {
-                        self.viewModel.custodyRecords.append(custodyResponse)
-                    }
-                    self.viewModel.updateCustodyPercentages()
-                    
-                case .failure(let error):
-                    print("❌ Failed to update custody for handoff: \(error.localizedDescription)")
-                }
-            }
-        }
     }
     
     private func createHandoffForNewDay(newDate: Date, time: (hour: Int, minute: Int, display: String), completion: @escaping () -> Void = {}) {
@@ -807,54 +767,6 @@ struct HandoffTimelineView: View {
         }
         
         return dates
-    }
-    
-    private func updateSingleDayCustody(date: Date, completion: @escaping () -> Void) {
-        let handoffData = getHandoffDataForDate(date)
-        
-        guard let toParentId = handoffData.toParentId else {
-            print("Error: Could not determine 'to parent' ID for handoff transition")
-            return
-        }
-        
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        let dateString = dateFormatter.string(from: date)
-        
-        print("📋 Updating single day custody for \(dateString) to parent: \(toParentId)")
-        updateCustodyRecordWithRetry(dateString: dateString, custodianId: toParentId, retryCount: 0) {
-            completion()
-        }
-    }
-    
-    private func updateCustodyRecordWithRetry(dateString: String, custodianId: String, retryCount: Int, completion: @escaping () -> Void) {
-        APIService.shared.updateCustodyRecord(for: dateString, custodianId: custodianId) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let custodyResponse):
-                    print("✅ Updated custody for \(dateString): \(custodyResponse.content)")
-                    self.updateLocalCustodyRecord(custodyResponse)
-                    completion()
-                    
-                case .failure(let error):
-                    print("❌ Failed to update custody for \(dateString): \(error.localizedDescription)")
-                    
-                    // Retry up to 2 times with exponential backoff
-                    if retryCount < 2 {
-                        let delay = pow(2.0, Double(retryCount)) // 1s, 2s delays
-                        print("🔄 Retrying custody update for \(dateString) in \(delay)s (attempt \(retryCount + 2)/3)")
-                        
-                        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                            self.updateCustodyRecordWithRetry(dateString: dateString, custodianId: custodianId, retryCount: retryCount + 1, completion: completion)
-                        }
-                    } else {
-                        // Max retries reached - still call completion to avoid hanging
-                        print("❌ Max retries reached for \(dateString) - giving up")
-                        completion()
-                    }
-                }
-            }
-        }
     }
     
     private func updateLocalCustodyRecord(_ custodyResponse: CustodyResponse) {
