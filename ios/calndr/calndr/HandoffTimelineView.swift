@@ -25,26 +25,6 @@ struct HandoffTimelineView: View {
     var body: some View {
         VStack {
             timelineContent
-            // Check if all handoff data is loaded
-//            if !viewModel.isHandoffDataReady {
-//                VStack(spacing: 16) {
-//                    ProgressView()
-//                        .scaleEffect(1.2)
-//                    Text("Loading handoff information...")
-//                        .font(.headline)
-//                        .foregroundColor(themeManager.currentTheme.textColor)
-//                }
-//                .frame(maxWidth: .infinity, maxHeight: .infinity)
-//                .background(themeManager.currentTheme.mainBackgroundColor)
-//                .onAppear {
-//                    // Data is already being fetched by the ViewModel's initializer
-//                    print("Timeline view appeared, waiting for handoff data...")
-//                }
-//                
-//            } else {
-//                // Existing timeline content
-//                timelineContent
-//            }
         }
     }
     
@@ -288,6 +268,26 @@ struct HandoffTimelineView: View {
     private func drawHandoffTimeline(context: GraphicsContext, size: CGSize, cellWidth: CGFloat, cellHeight: CGFloat) {
         let rows = calendarDays.count / gridColumns
         
+        // If the modal is showing, draw a semi-transparent background for each day based on custody
+        if showingHandoffModal {
+            for (index, day) in calendarDays.enumerated() {
+                let row = index / gridColumns
+                let col = index % gridColumns
+                
+                let xPos = CGFloat(col) * cellWidth
+                let yPos = CGFloat(row) * cellHeight
+                
+                let custodyInfo = viewModel.getCustodyInfo(for: day)
+                let custodyColor = getCustodyColor(for: custodyInfo.owner)
+                
+                // Draw a filled rectangle with some transparency
+                context.fill(
+                    Path(CGRect(x: xPos, y: yPos, width: cellWidth, height: cellHeight)),
+                    with: .color(custodyColor.opacity(0.3))
+                )
+            }
+        }
+
         // Draw colored custody line segments for each week
         for row in 0..<rows {
             let y = CGFloat(row) * cellHeight + cellHeight * 0.8
@@ -533,8 +533,10 @@ struct HandoffTimelineView: View {
     ) {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
+        let newDateString = dateFormatter.string(from: newDate)
         let originalDateString = dateFormatter.string(from: originalDate)
-        
+        print("🔄 Updating custody with handoff info for \(originalDateString) to \(newDateString)")
+
         if originalDateString != newDateString {
             // Different day move - custody logic depends on direction
             if newDate > originalDate {
