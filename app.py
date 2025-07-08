@@ -503,7 +503,7 @@ async def get_custody_records(year: int, month: int, current_user = Depends(get_
             ) for record in db_records
         ]
         
-        logger.info(f"Returning {len(custody_responses)} custody records for {year}-{month}")
+        # logger.info(f"Returning {len(custody_responses)} custody records for {year}-{month}")
         return custody_responses
     except Exception as e:
         logger.error(f"Error fetching custody records: {e}")
@@ -515,6 +515,8 @@ async def set_custody(custody_data: CustodyRecord, current_user = Depends(get_cu
     """
     Creates or updates a custody record for a specific date.
     """
+    logger.info(f"Received custody update request: {custody_data.model_dump_json(indent=2)}")
+    
     family_id = current_user['family_id']
     actor_id = current_user['id']
     
@@ -605,7 +607,7 @@ async def get_weather(
     """
     Fetches weather data from Open-Meteo API.
     """
-    logger.info(f"Fetching weather data for {start_date} to {end_date}")
+    # logger.info(f"Fetching weather data for {start_date} to {end_date}")
     cache_key = get_cache_key(latitude, longitude, start_date, end_date, "forecast")
     
     cached_data = get_cached_weather(cache_key)
@@ -643,46 +645,38 @@ async def get_historic_weather(
     """
     Fetches historic weather data from Open-Meteo API.
     """
-    logger.info(f"Fetching historic weather for lat={latitude}, lon={longitude}, from {start_date} to {end_date}")
-    
+    # logger.info(f"Fetching historic weather data for {start_date} to {end_date}")
     cache_key = get_cache_key(latitude, longitude, start_date, end_date, "historic")
     
-    if cached_data := get_cached_weather(cache_key):
-        logger.info("Serving historic weather data from cache.")
+    cached_data = get_cached_weather(cache_key)
+    if cached_data:
+        # logger.info(f"Returning cached weather data for historic: {start_date} to {end_date}")
         return cached_data
+        
+    api_url = f"https://archive-api.open-meteo.com/v1/archive?latitude={latitude}&longitude={longitude}&start_date={start_date}&end_date={end_date}&daily=temperature_2m_max,precipitation_probability_mean,cloudcover_mean&timezone=auto"
 
-    url = "https://archive-api.open-meteo.com/v1/archive"
-    params = {
-        "latitude": latitude,
-        "longitude": longitude,
-        "start_date": start_date,
-        "end_date": end_date,
-        "daily": "temperature_2m_max,precipitation_probability_mean,cloudcover_mean",
-        "timezone": "auto"
-    }
-
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(url, params=params)
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(api_url)
             response.raise_for_status()
             data = response.json()
-
+            
             # Replace None with 0.0 for robust handling
             daily_data = data.get("daily", {})
             for key in ['temperature_2m_max', 'precipitation_probability_mean', 'cloudcover_mean']:
                 if key in daily_data:
                     daily_data[key] = [v if v is not None else 0.0 for v in daily_data[key]]
             
+            # Cache the response
             cache_weather_data(cache_key, data)
-            logger.info("Successfully fetched and cached historic weather data.")
+            
             return data
-        except httpx.HTTPStatusError as e:
-            logger.error(f"Error fetching historic weather data: {e.response.status_code} - {e.response.text}")
-            raise HTTPException(status_code=e.response.status_code, detail=f"Failed to fetch historic weather data: {e.response.text}")
-        except Exception as e:
-            logger.error(f"An unexpected error occurred during historic weather fetch: {e}\n{traceback.format_exc()}")
-            raise HTTPException(status_code=500, detail="An unexpected error occurred while fetching historic weather data.")
-
+    except httpx.HTTPStatusError as e:
+        logger.error(f"HTTP error fetching historic weather: {e.response.status_code} - {e.response.text}")
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from historic weather API: {e.response.text}")
+    except Exception as e:
+        logger.error(f"Error fetching historic weather: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error while fetching historic weather")
 
 @app.get("/api/user/profile", response_model=UserProfile)
 async def get_user_profile(current_user = Depends(get_current_user)):
@@ -893,11 +887,11 @@ async def get_events_by_date_range(start_date: str = None, end_date: str = None,
     
     # Log the raw SQL query for debugging
     compiled_query = query.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True})
-    logger.info(f"Executing event query: {compiled_query}")
+    # logger.info(f"Executing event query: {compiled_query}")
 
     db_events = await database.fetch_all(query)
     
-    logger.info(f"Returning {len(db_events)} non-custody events to iOS app")
+    # logger.info(f"Returning {len(db_events)} non-custody events to iOS app")
     
     # Convert events to the format expected by iOS app
     frontend_events = []
@@ -915,7 +909,7 @@ async def get_events_by_date_range(start_date: str = None, end_date: str = None,
         logger.error(f"Error processing event records for /api/events: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error processing event data")
         
-    logger.info(f"Payload for /api/events: {json.dumps(frontend_events, indent=2)}")
+    # logger.info(f"Payload for /api/events: {json.dumps(frontend_events, indent=2)}")
     return frontend_events
 
 @app.post("/api/events")
@@ -1430,13 +1424,13 @@ async def create_or_get_group_chat(chat_data: GroupChatCreate, current_user = De
         raise HTTPException(status_code=500, detail="Failed to create group chat")
 
 async def send_custody_change_notification(sender_id: uuid.UUID, family_id: uuid.UUID, event_date: date):
-    logger.info("Attempting to send custody change notification...")
+    # logger.info("Attempting to send custody change notification...")
     
     if not apns_client:
         logger.warning("APNs client not configured or initialized. Skipping push notification. Check APNS env vars.")
         return
 
-    logger.info(f"Searching for other user in family '{family_id}' who is not sender '{sender_id}'.")
+    # logger.info(f"Searching for other user in family '{family_id}' who is not sender '{sender_id}'.")
     other_user_query = users.select().where((users.c.family_id == family_id) & (users.c.id != sender_id))
     other_user = await database.fetch_one(other_user_query)
 
@@ -1444,13 +1438,13 @@ async def send_custody_change_notification(sender_id: uuid.UUID, family_id: uuid
         logger.warning(f"Could not find another user in family '{family_id}' to notify.")
         return
         
-    logger.info(f"Found other user: {other_user['first_name']} (ID: {other_user['id']}). Checking for APNs token.")
+    # logger.info(f"Found other user: {other_user['first_name']} (ID: {other_user['id']}). Checking for APNs token.")
 
     if not other_user['apns_token']:
         logger.warning(f"User {other_user['first_name']} does not have an APNs token. Cannot send notification.")
         return
 
-    logger.info(f"User {other_user['first_name']} has an APNs token. Proceeding with notification creation.")
+    # logger.info(f"User {other_user['first_name']} has an APNs token. Proceeding with notification creation.")
         
     sender = await database.fetch_one(users.select().where(users.c.id == sender_id))
     sender_name = sender['first_name'] if sender else "Someone"
@@ -1491,10 +1485,10 @@ async def send_custody_change_notification(sender_id: uuid.UUID, family_id: uuid
     )
     
     try:
-        logger.info(f"Sending enhanced APNs notification to {other_user['first_name']} about {custodian_name} having custody on {formatted_date}")
+        # logger.info(f"Sending enhanced APNs notification to {other_user['first_name']} about {custodian_name} having custody on {formatted_date}")
         # Run the synchronous APNs call in a separate thread
         await asyncio.to_thread(apns_client.send_notification, other_user['apns_token'], payload, topic=APNS_TOPIC)
-        logger.info("Enhanced push notification sent successfully.")
+        # logger.info("Enhanced push notification sent successfully.")
     except Exception as e:
         logger.error(f"Failed to send push notification: {e}")
         logger.error(f"Full APNs error traceback: {traceback.format_exc()}")
