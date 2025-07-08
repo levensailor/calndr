@@ -581,9 +581,11 @@ struct HandoffTimelineView: View {
             self.clearHandoffDay(for: originalDate) {
                 // 2. After clearing, proceed with updating the custody range.
                 if newDate > originalDate {
-                    // Moving RIGHT
+                    // Moving RIGHT: Update days between original and new date.
+                    let startDate = Calendar.current.date(byAdding: .day, value: 1, to: originalDate) ?? originalDate
                     let endDate = Calendar.current.date(byAdding: .day, value: -1, to: newDate) ?? newDate
-                    let rangeDates = self.generateDateRange(from: originalDate, to: endDate)
+                    
+                    let rangeDates = self.generateDateRange(from: startDate, to: endDate)
                     self.updateCustodyForDateRange(rangeDates) {
                         // 3. Create the new handoff.
                         self.createHandoffForNewDay(newDate: newDate, time: newTime) {
@@ -593,9 +595,10 @@ struct HandoffTimelineView: View {
                         }
                     }
                 } else {
-                    // Moving LEFT
-                    let startDate = Calendar.current.date(byAdding: .day, value: -1, to: originalDate) ?? originalDate
-                    let rangeDates = self.generateDateRange(from: startDate, to: newDate)
+                    // Moving LEFT: Update days from new date up to the day before the original date.
+                    let endDate = Calendar.current.date(byAdding: .day, value: -1, to: originalDate) ?? originalDate
+
+                    let rangeDates = self.generateDateRange(from: newDate, to: endDate)
                     self.updateCustodyForDateRange(rangeDates) {
                         // 3. Create the new handoff.
                         self.createHandoffForNewDay(newDate: newDate, time: newTime) {
