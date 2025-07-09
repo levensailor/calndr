@@ -669,22 +669,11 @@ struct HandoffTimelineView: View {
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let dateString = dateFormatter.string(from: originalDate)
         
-        print("📋 Updating custody for original handoff day: \(dateString)")
+        print("📋 Updating handoff_day for original handoff day: \(dateString)")
         
-        // Update custody for the original handoff day
-        APIService.shared.updateCustodyRecord(for: dateString, custodianId: newCustodianId, handoffDay: false) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let custodyResponse):
-                    print("✅ Updated custody for original handoff day: \(custodyResponse.content)")
-                    self.updateLocalCustodyRecord(custodyResponse)
-                    completion()
-                    
-                case .failure(let error):
-                    print("❌ Failed to update custody for original handoff day: \(error.localizedDescription)")
-                    completion()
-                }
-            }
+        // Only update handoff_day to false, don't change custodian or other fields
+        viewModel.updateHandoffDayOnly(for: originalDate, handoffDay: false) {
+            completion()
         }
     }
     

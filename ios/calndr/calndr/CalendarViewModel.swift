@@ -1064,6 +1064,41 @@ class CalendarViewModel: ObservableObject {
         }
     }
     
+    // Update only the handoff_day field for a custody record
+    func updateHandoffDayOnly(for date: Date, handoffDay: Bool, completion: @escaping () -> Void = {}) {
+        let dateString = isoDateString(from: date)
+        
+        // Check if there's already an in-flight request for this date
+        guard !inFlightCustodyUpdates.contains(dateString) else {
+            print("⚠️ Custody update already in progress for \(dateString), ignoring duplicate updateHandoffDayOnly request")
+            completion()
+            return
+        }
+        
+        // Mark this date as having an in-flight request
+        inFlightCustodyUpdates.insert(dateString)
+        
+        APIService.shared.updateHandoffDayOnly(for: dateString, handoffDay: handoffDay) { result in
+            DispatchQueue.main.async {
+                // Always remove from in-flight set when request completes
+                self.inFlightCustodyUpdates.remove(dateString)
+                
+                switch result {
+                case .success(let custodyResponse):
+                    if let index = self.custodyRecords.firstIndex(where: { $0.event_date == custodyResponse.event_date }) {
+                        self.custodyRecords[index] = custodyResponse
+                    } else {
+                        self.custodyRecords.append(custodyResponse)
+                    }
+                    print("✅ Successfully updated handoff_day for \(dateString) to \(handoffDay)")
+                case .failure(let error):
+                    print("❌ Error updating handoff_day for \(dateString): \(error.localizedDescription)")
+                }
+                completion()
+            }
+        }
+    }
+    
     // Custody update for a single day
     func updateCustodyForSingleDay(date: Date, newCustodianId: String, completion: @escaping () -> Void) {
         let dateString = isoDateString(from: date)

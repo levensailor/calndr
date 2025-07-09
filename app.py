@@ -610,6 +610,62 @@ async def set_custody(custody_data: CustodyRecord, current_user = Depends(get_cu
         logger.error(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Internal server error while setting custody: {e}")
 
+@app.patch("/api/custody/handoff-day", response_model=CustodyResponse)
+async def update_handoff_day_only(request: dict, current_user = Depends(get_current_user)):
+    """
+    Updates only the handoff_day field for an existing custody record.
+    Does not modify custodian_id, handoff_time, or handoff_location.
+    """
+    date_str = request.get("date")
+    handoff_day = request.get("handoff_day")
+    
+    if not date_str or handoff_day is None:
+        raise HTTPException(status_code=400, detail="date and handoff_day are required")
+    
+    try:
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    
+    family_id = current_user['family_id']
+    
+    try:
+        # Find existing custody record for this date
+        existing_record_query = custody.select().where(
+            (custody.c.family_id == family_id) &
+            (custody.c.date == date_obj)
+        )
+        existing_record = await database.fetch_one(existing_record_query)
+        
+        if not existing_record:
+            raise HTTPException(status_code=404, detail="No custody record found for this date")
+        
+        # Update only the handoff_day field
+        update_query = custody.update().where(custody.c.id == existing_record['id']).values(
+            handoff_day=handoff_day
+        )
+        await database.execute(update_query)
+        
+        # Get custodian name for response
+        custodian_user = await database.fetch_one(users.select().where(users.c.id == existing_record['custodian_id']))
+        custodian_name = custodian_user['first_name'] if custodian_user else "Unknown"
+        
+        # Return the updated record
+        return CustodyResponse(
+            id=existing_record['id'],
+            event_date=str(date_obj),
+            content=custodian_name,
+            custodian_id=str(existing_record['custodian_id']),
+            handoff_day=handoff_day,
+            handoff_time=existing_record['handoff_time'].strftime('%H:%M') if existing_record['handoff_time'] else None,
+            handoff_location=existing_record['handoff_location']
+        )
+        
+    except Exception as e:
+        logger.error(f"Error updating handoff_day: {e}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal server error while updating handoff_day: {e}")
+
 @app.get("/api/family/custodians")
 async def get_family_custodians(current_user = Depends(get_current_user)):
     """

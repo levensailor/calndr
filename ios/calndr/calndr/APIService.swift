@@ -299,6 +299,52 @@ class APIService {
         }.resume()
     }
     
+    func updateHandoffDayOnly(for date: String, handoffDay: Bool, completion: @escaping (Result<CustodyResponse, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/custody/handoff-day")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let requestBody = [
+            "date": date,
+            "handoff_day": handoffDay
+        ] as [String: Any]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(APIError.noData))
+                return
+            }
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                print("--- Raw JSON for updateHandoffDayOnly (Status: \(httpResponse.statusCode)) ---")
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print(jsonString)
+                }
+                print("--- End Raw JSON ---")
+            }
+            
+            do {
+                let custodyResponse = try JSONDecoder().decode(CustodyResponse.self, from: data)
+                completion(.success(custodyResponse))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
     func updateCustodyRecord(for date: String, custodianId: String, handoffDay: Bool? = nil, handoffTime: String? = nil, handoffLocation: String? = nil, completion: @escaping (Result<CustodyResponse, Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/custody")
         var request = createAuthenticatedRequest(url: url)
