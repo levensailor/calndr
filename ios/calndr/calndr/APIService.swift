@@ -324,7 +324,7 @@ class APIService {
             }
             
             guard let data = data else {
-                completion(.failure(APIError.noData))
+                completion(.failure(APIError.invalidResponse))
                 return
             }
             
