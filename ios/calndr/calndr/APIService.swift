@@ -769,6 +769,40 @@ class APIService {
         }.resume()
     }
 
+    func fetchFamilyMembers(completion: @escaping (Result<[FamilyMember], Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/family/members")
+        let request = createAuthenticatedRequest(url: url)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            if httpResponse.statusCode == 401 {
+                completion(.failure(APIError.unauthorized))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            do {
+                let familyMembers = try JSONDecoder().decode([FamilyMember].self, from: data)
+                completion(.success(familyMembers))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+
     // MARK: - User Profile
     
     private func resizeImage(_ image: UIImage, to targetSize: CGSize) -> UIImage? {

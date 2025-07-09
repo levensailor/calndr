@@ -182,6 +182,18 @@ struct FamilyMemberEmail: Codable {
     let id: String
     let first_name: String
     let email: String
+}
+
+struct FamilyMember: Codable {
+    let id: String
+    let first_name: String
+    let last_name: String
+    let email: String
+    let phone_number: String?
+    
+    var fullName: String {
+        return "\(first_name) \(last_name)"
+    }
 } 
 
 struct Babysitter: Codable, Identifiable {

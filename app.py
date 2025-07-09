@@ -312,6 +312,13 @@ class FamilyMemberEmail(BaseModel):
     first_name: str
     email: str
 
+class FamilyMember(BaseModel):
+    id: str
+    first_name: str
+    last_name: str
+    email: str
+    phone_number: Optional[str] = None
+
 class Babysitter(BaseModel):
     id: Optional[int] = None
     first_name: str
@@ -1217,6 +1224,25 @@ async def get_family_member_emails(current_user = Depends(get_current_user)):
             id=str(member['id']),
             first_name=member['first_name'],
             email=member['email']
+        )
+        for member in family_members
+    ]
+
+@app.get("/api/family/members", response_model=list[FamilyMember])
+async def get_family_members(current_user = Depends(get_current_user)):
+    """
+    Returns all family members with their contact information including phone numbers.
+    """
+    query = users.select().where(users.c.family_id == current_user['family_id']).order_by(users.c.first_name)
+    family_members = await database.fetch_all(query)
+    
+    return [
+        FamilyMember(
+            id=str(member['id']),
+            first_name=member['first_name'],
+            last_name=member['last_name'],
+            email=member['email'],
+            phone_number=member['phone_number']
         )
         for member in family_members
     ]

@@ -4,6 +4,7 @@ import MessageUI
 struct ContactsView: View {
     @EnvironmentObject var viewModel: CalendarViewModel
     @State private var familyEmails: [FamilyMemberEmail] = []
+    @State private var familyMembers: [FamilyMember] = []
     @State private var babysitters: [Babysitter] = []
     @State private var emergencyContacts: [EmergencyContact] = []
     @State private var isLoading = true
@@ -276,6 +277,20 @@ struct ContactsView: View {
             }
         }
         
+        // Load family members with phone numbers
+        group.enter()
+        apiService.fetchFamilyMembers { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let members):
+                    self.familyMembers = members
+                case .failure(let error):
+                    print("Failed to load family members with phone numbers: \(error.localizedDescription)")
+                }
+                group.leave()
+            }
+        }
+        
         // Load babysitters
         group.enter()
         apiService.fetchBabysitters { result in
@@ -310,9 +325,8 @@ struct ContactsView: View {
     }
     
     private func getPhoneNumber(for member: FamilyMemberEmail) -> String? {
-        // This would need to be implemented based on how phone numbers are stored
-        // For now, returning nil since we don't have phone numbers in family emails
-        return nil
+        // Find the corresponding family member with phone number using ID
+        return familyMembers.first { $0.id == member.id }?.phone_number
     }
     
     private func sendTextMessage(to phoneNumber: String) {
@@ -355,14 +369,15 @@ struct ContactsView: View {
     }
     
     private func getFamilyPhoneNumbers() -> [String] {
-        // This would get phone numbers from family members
-        // Placeholder implementation
-        return []
+        // Return phone numbers of all family members that have them
+        return familyMembers.compactMap { member in
+            member.phone_number?.isEmpty == false ? member.phone_number : nil
+        }
     }
     
     private func getFamilyName() -> String {
-        // This would get the family name
-        return "Smith" // Placeholder
+        // Get the family name from the first family member's last name
+        return familyMembers.first?.last_name ?? "Family"
     }
     
     // MARK: - CRUD Operations

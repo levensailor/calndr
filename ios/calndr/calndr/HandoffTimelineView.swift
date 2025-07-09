@@ -197,7 +197,6 @@ struct HandoffTimelineView: View {
         
         // Calculate the new position based on drag
         let newX = originalPosition.x + dragOffset.width
-        let newY = originalPosition.y + dragOffset.height
         
         // Calculate relative movement in cells instead of absolute position
         // This ensures dragging "one day right" moves exactly one day, not based on pixel distance
@@ -238,7 +237,6 @@ struct HandoffTimelineView: View {
         
         // Use calculated positions for time calculation
         let newCol = targetCol
-        let newRow = targetRow
         
         // Calculate time within the cell based on X position within that specific cell
         let cellLocalX = newX - (CGFloat(newCol) * cellWidth)
@@ -515,7 +513,6 @@ struct HandoffTimelineView: View {
         
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
-        let originalDateString = dateFormatter.string(from: originalDate)
         let newDateString = dateFormatter.string(from: newDate)
         
         // Since we're now using custody table, we just need to update the custody record
