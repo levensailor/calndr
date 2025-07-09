@@ -220,12 +220,6 @@ class CalendarViewModel: ObservableObject {
         
         let calendar = Calendar.current
         
-        // Get the date range that includes all dates shown in the calendar view
-        // This includes dates from previous and next month that fill out the grid
-        let visibleDateRange = getVisibleCalendarDateRange()
-//        let startDate = visibleDateRange.start
-//        let endDate = visibleDateRange.end
-        
         // Get unique year-month combinations for the visible range
         var monthsToFetch: Set<String> = []
         
