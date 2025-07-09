@@ -1236,7 +1236,8 @@ async def get_family_members(current_user = Depends(get_current_user)):
     query = users.select().where(users.c.family_id == current_user['family_id']).order_by(users.c.first_name)
     family_members = await database.fetch_all(query)
     
-    return [
+    # Convert to FamilyMember models for logging and response
+    family_member_models = [
         FamilyMember(
             id=str(member['id']),
             first_name=member['first_name'],
@@ -1246,6 +1247,10 @@ async def get_family_members(current_user = Depends(get_current_user)):
         )
         for member in family_members
     ]
+    
+    logger.info(f"Fetched {len(family_member_models)} family members: {[f'{m.first_name} {m.last_name} ({m.phone_number})' for m in family_member_models]}")
+    
+    return family_member_models
 
 # ---------------------- Babysitters API ----------------------
 
