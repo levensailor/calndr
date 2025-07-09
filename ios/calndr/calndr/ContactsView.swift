@@ -335,7 +335,7 @@ struct ContactsView: View {
         apiService.createOrGetGroupChat(contactType: contact.contactType, contactId: contact.contactId) { result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let chatResponse):
+                case .success(_):
                     // Create group text with unique identifier
                     let familyPhoneNumbers = getFamilyPhoneNumbers()
                     let allNumbers = [contact.phone] + familyPhoneNumbers
