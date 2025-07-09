@@ -351,11 +351,25 @@ struct ContactsView: View {
                 switch result {
                 case .success(_):
                     // Create group text with unique identifier
-                    let familyPhoneNumbers = getFamilyPhoneNumbers()
-                    let allNumbers = [contact.phone] + familyPhoneNumbers
-                    let numbersString = allNumbers.joined(separator: ",")
+                    let familyPhoneNumbers = self.getFamilyPhoneNumbers()
                     
-                    guard let url = URL(string: "sms:\(numbersString)&body=Hi \(contact.name)! This is a group chat from the \(getFamilyName()) family.") else { return }
+                    // Debug logging
+                    print("🔍 Group Text Debug:")
+                    print("   Contact: \(contact.name) - \(contact.phone)")
+                    print("   Family members count: \(self.familyMembers.count)")
+                    print("   Family phone numbers: \(familyPhoneNumbers)")
+                    
+                    // Combine contact phone with all family phone numbers
+                    var allNumbers = [contact.phone]
+                    allNumbers.append(contentsOf: familyPhoneNumbers)
+                    
+                    // Remove duplicates (in case contact phone is same as a family member)
+                    let uniqueNumbers = Array(Set(allNumbers)).filter { !$0.isEmpty }
+                    let numbersString = uniqueNumbers.joined(separator: ",")
+                    
+                    print("   Final numbers for group text: \(uniqueNumbers)")
+                    
+                    guard let url = URL(string: "sms:\(numbersString)&body=Hi \(contact.name)! This is a group chat from the \(self.getFamilyName()) family.") else { return }
                     
                     if UIApplication.shared.canOpenURL(url) {
                         UIApplication.shared.open(url)
@@ -370,9 +384,19 @@ struct ContactsView: View {
     
     private func getFamilyPhoneNumbers() -> [String] {
         // Return phone numbers of all family members that have them
-        return familyMembers.compactMap { member in
-            member.phone_number?.isEmpty == false ? member.phone_number : nil
+        let phoneNumbers = familyMembers.compactMap { member -> String? in
+            let phone = member.phone_number?.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let phone = phone, !phone.isEmpty {
+                print("📱 Family member: \(member.first_name) \(member.last_name) - Phone: \(phone)")
+                return phone
+            } else {
+                print("📱 Family member: \(member.first_name) \(member.last_name) - No phone number")
+                return nil
+            }
         }
+        
+        print("📱 Total family phone numbers found: \(phoneNumbers.count)")
+        return phoneNumbers
     }
     
     private func getFamilyName() -> String {
