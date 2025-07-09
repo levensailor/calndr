@@ -320,6 +320,8 @@ class CalendarViewModel: ObservableObject {
         
         dispatchGroup.notify(queue: .main) { [weak self] in
             self?.custodyRecords = allCustodyRecords.sorted { $0.event_date < $1.event_date }
+            self?.updateCustodyStreak()
+            self?.updateCustodyPercentages()
             print("Successfully fetched \(allCustodyRecords.count) custody records for year \(year).")
         }
     }
