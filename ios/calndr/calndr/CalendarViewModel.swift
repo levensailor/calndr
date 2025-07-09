@@ -119,7 +119,7 @@ class CalendarViewModel: ObservableObject {
     }
 
     func fetchHandoffsAndCustody() {
-        guard let familyId = AuthenticationService.shared.familyId else {
+        guard AuthenticationService.shared.familyId != nil else {
             print("No family ID, cannot fetch handoffs or custody.")
             return
         }
