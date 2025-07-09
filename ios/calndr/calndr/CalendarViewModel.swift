@@ -243,7 +243,7 @@ class CalendarViewModel: ObservableObject {
                   let month = Int(components[1]) else { continue }
             
             dispatchGroup.enter()
-            APIService.shared.fetchCustodyRecords(year: year, month: month) { [weak self] result in
+            APIService.shared.fetchCustodyRecords(year: year, month: month) { result in
                 // Process result in the background
                 switch result {
                 case .success(let custodyRecords):
