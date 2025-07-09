@@ -9,7 +9,7 @@ class NotificationManager {
     private init() {}
     
     func requestAuthorizationAndRegister() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { [weak self] granted, error in
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
             if granted {
                 print("Notification permission granted.")
                 // This must be called on the main thread.
