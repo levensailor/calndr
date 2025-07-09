@@ -266,6 +266,7 @@ class CustodyRecord(BaseModel):
     custodian_id: uuid.UUID
     handoff_time: Optional[str] = None
     handoff_location: Optional[str] = None
+    handoff_day: Optional[bool] = None
 
 class CustodyResponse(BaseModel):
     id: int
@@ -528,11 +529,47 @@ async def set_custody(custody_data: CustodyRecord, current_user = Depends(get_cu
         )
         existing_record = await database.fetch_one(existing_record_query)
         
+        # If handoff_day is not provided, determine it based on default logic
+        handoff_day_value = custody_data.handoff_day
+        if handoff_day_value is None and custody_data.handoff_time is not None:
+            # If handoff time is provided but handoff_day is not, assume it's a handoff day
+            handoff_day_value = True
+        elif handoff_day_value is None:
+            # Default logic: check if previous day has different custodian
+            previous_date = custody_data.date - timedelta(days=1)
+            previous_record = await database.fetch_one(
+                custody.select().where(
+                    (custody.c.family_id == family_id) &
+                    (custody.c.date == previous_date)
+                )
+            )
+            if previous_record and previous_record['custodian_id'] != custody_data.custodian_id:
+                handoff_day_value = True
+                
+                # Set default handoff time and location if not provided
+                if not custody_data.handoff_time:
+                    weekday = custody_data.date.weekday()  # Monday = 0, Sunday = 6
+                    is_weekend = weekday >= 5  # Saturday = 5, Sunday = 6
+                    if is_weekend:
+                        custody_data.handoff_time = "12:00"  # Noon for weekends
+                        if not custody_data.handoff_location:
+                            # Get target custodian name for location
+                            target_user = await database.fetch_one(users.select().where(users.c.id == custody_data.custodian_id))
+                            target_name = target_user['first_name'].lower() if target_user else "unknown"
+                            custody_data.handoff_location = f"{target_name}'s home"
+                    else:
+                        custody_data.handoff_time = "17:00"  # 5pm for weekdays
+                        if not custody_data.handoff_location:
+                            custody_data.handoff_location = "daycare"
+            else:
+                handoff_day_value = False
+
         if existing_record:
             # Update existing record
             update_query = custody.update().where(custody.c.id == existing_record['id']).values(
                 custodian_id=custody_data.custodian_id,
                 actor_id=actor_id,
+                handoff_day=handoff_day_value,
                 handoff_time=datetime.strptime(custody_data.handoff_time, '%H:%M').time() if custody_data.handoff_time else None,
                 handoff_location=custody_data.handoff_location
             )
@@ -545,6 +582,7 @@ async def set_custody(custody_data: CustodyRecord, current_user = Depends(get_cu
                 date=custody_data.date,
                 custodian_id=custody_data.custodian_id,
                 actor_id=actor_id,
+                handoff_day=handoff_day_value,
                 handoff_time=datetime.strptime(custody_data.handoff_time, '%H:%M').time() if custody_data.handoff_time else None,
                 handoff_location=custody_data.handoff_location,
                 created_at=datetime.now()
@@ -563,6 +601,7 @@ async def set_custody(custody_data: CustodyRecord, current_user = Depends(get_cu
             event_date=str(custody_data.date),
             content=custodian_name,
             custodian_id=str(custody_data.custodian_id),
+            handoff_day=handoff_day_value,
             handoff_time=custody_data.handoff_time,
             handoff_location=custody_data.handoff_location
         )

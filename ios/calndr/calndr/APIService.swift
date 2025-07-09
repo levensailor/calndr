@@ -299,13 +299,13 @@ class APIService {
         }.resume()
     }
     
-    func updateCustodyRecord(for date: String, custodianId: String, handoffTime: String? = nil, handoffLocation: String? = nil, completion: @escaping (Result<CustodyResponse, Error>) -> Void) {
+    func updateCustodyRecord(for date: String, custodianId: String, handoffDay: Bool? = nil, handoffTime: String? = nil, handoffLocation: String? = nil, completion: @escaping (Result<CustodyResponse, Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/custody")
         var request = createAuthenticatedRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        let custodyRequest = CustodyRequest(date: date, custodian_id: custodianId, handoff_time: handoffTime, handoff_location: handoffLocation)
+        let custodyRequest = CustodyRequest(date: date, custodian_id: custodianId, handoff_day: handoffDay, handoff_time: handoffTime, handoff_location: handoffLocation)
         
         do {
             request.httpBody = try JSONEncoder().encode(custodyRequest)

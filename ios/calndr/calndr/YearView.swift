@@ -115,8 +115,8 @@ struct MonthMiniView: View {
                 .foregroundColor(themeManager.currentTheme.textColor)
             
             // Mini calendar grid
-            let daysInMonth = getDaysInMonth()
-            let firstWeekday = getFirstWeekdayOfMonth()
+//            let daysInMonth = getDaysInMonth()
+//            let firstWeekday = getFirstWeekdayOfMonth()
             
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 1), count: 7), spacing: 1) {
                 ForEach(getCalendarItems(), id: \.id) { item in

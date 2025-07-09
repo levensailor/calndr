@@ -689,6 +689,7 @@ class CalendarViewModel: ObservableObject {
         APIService.shared.updateCustodyRecord(
             for: isoDateString(from: date), 
             custodianId: newCustodianId,
+            handoffDay: isHandoffDay,
             handoffTime: handoffTime,
             handoffLocation: handoffLocation
         ) { [weak self] result in
@@ -1056,7 +1057,7 @@ class CalendarViewModel: ObservableObject {
             objectWillChange.send()
         }
         
-        APIService.shared.updateCustodyRecord(for: dateString, custodianId: newCustodianId) { result in
+        APIService.shared.updateCustodyRecord(for: dateString, custodianId: newCustodianId, handoffDay: false) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let custodyResponse):

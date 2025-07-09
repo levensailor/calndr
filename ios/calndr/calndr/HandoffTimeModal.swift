@@ -162,6 +162,7 @@ struct HandoffTimeModal: View {
             APIService.shared.updateCustodyRecord(
                 for: dateString,
                 custodianId: currentCustodianId,
+                handoffDay: true,
                 handoffTime: timeString,
                 handoffLocation: self.selectedLocation
             ) { result in

@@ -48,12 +48,12 @@ struct HandoffTimelineView: View {
                         // Invisible larger touch target (60x60) for better touch sensitivity
                         Rectangle()
                             .fill(Color.clear)
-                            .frame(width: 60, height: 60)
+                            .frame(width: 70, height: 70)
                         
                         // Visual bubble (20x20) - same size as before
                         Circle()
-                            .fill(Color.white)
-                            .stroke(Color.purple, lineWidth: 3)
+                            .fill(Color.clear)
+                            .stroke(Color.purple, lineWidth: 2)
                             .frame(width: 20, height: 20)
                             .scaleEffect(draggedBubbleDate == date ? 1.2 : 1.0)
                             .animation(.easeInOut(duration: 0.2), value: draggedBubbleDate == date)
@@ -629,7 +629,7 @@ struct HandoffTimelineView: View {
         let handoffData = getHandoffDataForDate(newDate)
         
         // Use the existing updateCustodyRecord method (it can create records too)
-        APIService.shared.updateCustodyRecord(for: dateString, custodianId: handoffData.toParentId ?? "", handoffTime: timeString, handoffLocation: handoffData.location) { result in
+        APIService.shared.updateCustodyRecord(for: dateString, custodianId: handoffData.toParentId ?? "", handoffDay: true, handoffTime: timeString, handoffLocation: handoffData.location) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let custodyResponse):
@@ -672,7 +672,7 @@ struct HandoffTimelineView: View {
         print("📋 Updating custody for original handoff day: \(dateString)")
         
         // Update custody for the original handoff day
-        APIService.shared.updateCustodyRecord(for: dateString, custodianId: newCustodianId) { result in
+        APIService.shared.updateCustodyRecord(for: dateString, custodianId: newCustodianId, handoffDay: false) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let custodyResponse):
@@ -733,7 +733,7 @@ struct HandoffTimelineView: View {
             print("📋 Updating custody for \(dateString)")
             
             // Update custody for this date
-            APIService.shared.updateCustodyRecord(for: dateString, custodianId: newCustodianId) { result in
+            APIService.shared.updateCustodyRecord(for: dateString, custodianId: newCustodianId, handoffDay: false) { result in
                 DispatchQueue.main.async {
                     switch result {
                     case .success(let custodyResponse):
