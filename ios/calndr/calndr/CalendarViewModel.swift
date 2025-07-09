@@ -38,6 +38,9 @@ class CalendarViewModel: ObservableObject {
     private let networkMonitor = NetworkMonitor()
     private var authManager: AuthenticationManager
     private var handoffTimer: Timer?
+    
+    // Track in-flight custody updates to prevent duplicates
+    private var inFlightCustodyUpdates: Set<String> = []
     var currentUserID: String? {
         authManager.userID
     }
@@ -633,6 +636,13 @@ class CalendarViewModel: ObservableObject {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let selectedDate = calendar.startOfDay(for: date)
+        let dateString = isoDateString(from: date)
+        
+        // Check if there's already an in-flight request for this date
+        guard !inFlightCustodyUpdates.contains(dateString) else {
+            print("⚠️ Custody update already in progress for \(dateString), ignoring duplicate request")
+            return
+        }
         
         // Check if trying to edit a past date
         if selectedDate < today {
@@ -657,6 +667,10 @@ class CalendarViewModel: ObservableObject {
             print("Error: Could not determine new custodian ID")
             return
         }
+        
+        // Mark this date as having an in-flight request
+        inFlightCustodyUpdates.insert(dateString)
+        print("🔄 Starting custody update for \(dateString)")
         
         // Check if this should be a handoff day by comparing with previous day
         let previousDate = calendar.date(byAdding: .day, value: -1, to: date) ?? date
@@ -687,13 +701,16 @@ class CalendarViewModel: ObservableObject {
         
         // Use the new custody API with handoff information
         APIService.shared.updateCustodyRecord(
-            for: isoDateString(from: date), 
+            for: dateString, 
             custodianId: newCustodianId,
             handoffDay: isHandoffDay,
             handoffTime: handoffTime,
             handoffLocation: handoffLocation
         ) { [weak self] result in
             DispatchQueue.main.async {
+                // Always remove from in-flight set when request completes
+                self?.inFlightCustodyUpdates.remove(dateString)
+                
                 switch result {
                 case .success(let custodyResponse):
                     // Update the local custody records array
@@ -705,9 +722,9 @@ class CalendarViewModel: ObservableObject {
                     
                     self?.updateCustodyStreak()
                     self?.updateCustodyPercentages()
-                    print("Successfully toggled custodian for \(date) using new custody API")
+                    print("✅ Successfully toggled custodian for \(dateString) using new custody API")
                 case .failure(let error):
-                    print("Error toggling custodian with new API: \(error.localizedDescription)")
+                    print("❌ Error toggling custodian for \(dateString) with new API: \(error.localizedDescription)")
                     // Could fall back to legacy API here if needed
                 }
             }
@@ -1051,6 +1068,16 @@ class CalendarViewModel: ObservableObject {
     func updateCustodyForSingleDay(date: Date, newCustodianId: String, completion: @escaping () -> Void) {
         let dateString = isoDateString(from: date)
         
+        // Check if there's already an in-flight request for this date
+        guard !inFlightCustodyUpdates.contains(dateString) else {
+            print("⚠️ Custody update already in progress for \(dateString), ignoring duplicate updateCustodyForSingleDay request")
+            completion()
+            return
+        }
+        
+        // Mark this date as having an in-flight request
+        inFlightCustodyUpdates.insert(dateString)
+        
         if let index = custodyRecords.firstIndex(where: { $0.event_date == dateString }) {
             custodyRecords[index].custodian_id = newCustodianId
             updateCustodyPercentages()
@@ -1059,6 +1086,9 @@ class CalendarViewModel: ObservableObject {
         
         APIService.shared.updateCustodyRecord(for: dateString, custodianId: newCustodianId, handoffDay: false) { result in
             DispatchQueue.main.async {
+                // Always remove from in-flight set when request completes
+                self.inFlightCustodyUpdates.remove(dateString)
+                
                 switch result {
                 case .success(let custodyResponse):
                     if let index = self.custodyRecords.firstIndex(where: { $0.event_date == custodyResponse.event_date }) {
