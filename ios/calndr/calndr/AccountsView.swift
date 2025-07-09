@@ -388,8 +388,8 @@ struct PasswordChangeModal: View {
             }
             .navigationTitle("Change Password")
             .navigationBarTitleDisplayMode(.inline)
-            .onChange(of: viewModel.isPasswordUpdateSuccessful) { success in
-                if success {
+            .onChange(of: viewModel.isPasswordUpdateSuccessful) { oldValue, newValue in
+                if newValue {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                         dismiss()
                     }

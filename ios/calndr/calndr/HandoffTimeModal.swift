@@ -115,7 +115,7 @@ struct HandoffTimeModal: View {
             .cornerRadius(20)
             .shadow(radius: 10)
             .onAppear(perform: initializeTimeAndLocation)
-            .onChange(of: viewModel.custodyRecords) { _ in
+            .onChange(of: viewModel.custodyRecords) {
                 initializeTimeAndLocation()
             }
         }

@@ -28,8 +28,8 @@ struct PreferencesView: View {
             // Custody Settings Section
             Section(header: Text("Custody Settings"), footer: Text("When enabled, you can edit custody for past dates. No notifications will be sent for past edits.")) {
                 Toggle("Allow editing past days", isOn: $allowPastCustodyEditing)
-                    .onChange(of: allowPastCustodyEditing) { value in
-                        UserDefaults.standard.set(value, forKey: "allowPastCustodyEditing")
+                    .onChange(of: allowPastCustodyEditing) { oldValue, newValue in
+                        UserDefaults.standard.set(newValue, forKey: "allowPastCustodyEditing")
                     }
             }
             

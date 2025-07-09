@@ -88,9 +88,9 @@ struct MainTabView: View {
                         .tag(CalendarViewType.day)
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                .onChange(of: currentView) { newView in
+                .onChange(of: currentView) { oldValue, newValue in
                     // Fetch appropriate data when view changes
-                    if newView == .year {
+                    if newValue == .year {
                         calendarViewModel.fetchCustodyRecordsForYear()
                     } else {
                         calendarViewModel.fetchEvents()
