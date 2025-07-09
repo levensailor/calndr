@@ -220,8 +220,8 @@ class CalendarViewModel: ObservableObject {
         // Get the date range that includes all dates shown in the calendar view
         // This includes dates from previous and next month that fill out the grid
         let visibleDateRange = getVisibleCalendarDateRange()
-        let startDate = visibleDateRange.start
-        let endDate = visibleDateRange.end
+//        let startDate = visibleDateRange.start
+//        let endDate = visibleDateRange.end
         
         // Get unique year-month combinations for the visible range
         var monthsToFetch: Set<String> = []
@@ -658,8 +658,40 @@ class CalendarViewModel: ObservableObject {
             return
         }
         
-        // Use the new custody API
-        APIService.shared.updateCustodyRecord(for: isoDateString(from: date), custodianId: newCustodianId) { [weak self] result in
+        // Check if this should be a handoff day by comparing with previous day
+        let previousDate = calendar.date(byAdding: .day, value: -1, to: date) ?? date
+        let (previousOwner, _) = getCustodyInfo(for: previousDate)
+        let isHandoffDay = !previousOwner.isEmpty && previousOwner != newCustodianId
+        
+        var handoffTime: String? = nil
+        var handoffLocation: String? = nil
+        
+        if isHandoffDay {
+            // Determine handoff time and location based on day of week
+            let weekday = calendar.component(.weekday, from: date) // 1=Sunday, 7=Saturday
+            let isWeekend = weekday == 1 || weekday == 7 // Sunday or Saturday
+            
+            if isWeekend {
+                // Weekend: noon at target custodian's home
+                handoffTime = "12:00"
+                let targetCustodianName = newCustodianId == self.custodianOneId ? self.custodianOneName : self.custodianTwoName
+                handoffLocation = "\(targetCustodianName.lowercased())'s home"
+            } else {
+                // Weekday: 5pm at daycare
+                handoffTime = "17:00"
+                handoffLocation = "daycare"
+            }
+            
+            print("Setting handoff for \(isoDateString(from: date)): \(handoffTime!) at \(handoffLocation!)")
+        }
+        
+        // Use the new custody API with handoff information
+        APIService.shared.updateCustodyRecord(
+            for: isoDateString(from: date), 
+            custodianId: newCustodianId,
+            handoffTime: handoffTime,
+            handoffLocation: handoffLocation
+        ) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let custodyResponse):
