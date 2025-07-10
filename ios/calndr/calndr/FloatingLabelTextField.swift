@@ -12,34 +12,44 @@ struct FloatingLabelTextField: View {
     }
     
     var body: some View {
-        ZStack(alignment: .leading) {
-            Text(title)
-                .foregroundColor(shouldPlaceHolderMove ? themeManager.currentTheme.textColor : themeManager.currentTheme.textColor.opacity(0.6))
-                .offset(y: shouldPlaceHolderMove ? -25 : 0)
-                .scaleEffect(shouldPlaceHolderMove ? 0.8 : 1.0, anchor: .leading)
-                .animation(.easeInOut(duration: 0.2), value: shouldPlaceHolderMove)
-            
-            Group {
-                if isSecure {
-                    SecureField("", text: $text)
-                        .focused($isFocused)
-                } else {
-                    TextField("", text: $text)
-                        .focused($isFocused)
+        VStack(alignment: .leading, spacing: 0) {
+            ZStack(alignment: .leading) {
+                // Background and border
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(themeManager.currentTheme.otherMonthBackgroundColor)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(isFocused ? themeManager.currentTheme.textColor : themeManager.currentTheme.textColor.opacity(0.3), lineWidth: isFocused ? 2 : 1)
+                    )
+                
+                VStack(alignment: .leading, spacing: 0) {
+                    // Label
+                    if shouldPlaceHolderMove {
+                        Text(title)
+                            .font(.caption)
+                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .padding(.top, 8)
+                            .padding(.horizontal, 16)
+                            .transition(.opacity.combined(with: .scale(scale: 0.8, anchor: .leading)))
+                    }
+                    
+                    // Text field
+                    Group {
+                        if isSecure {
+                            SecureField(shouldPlaceHolderMove ? "" : title, text: $text)
+                                .focused($isFocused)
+                        } else {
+                            TextField(shouldPlaceHolderMove ? "" : title, text: $text)
+                                .focused($isFocused)
+                        }
+                    }
+                    .foregroundColor(themeManager.currentTheme.textColor)
+                    .padding(.horizontal, 16)
+                    .padding(.top, shouldPlaceHolderMove ? 2 : 16)
+                    .padding(.bottom, 16)
                 }
             }
-            .padding(.top, 15) // Fixed padding to maintain consistent height
         }
-        .frame(height: 56) // Fixed height to prevent resizing
-        .padding(.horizontal)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(isFocused ? themeManager.currentTheme.textColor : themeManager.currentTheme.textColor.opacity(0.3), lineWidth: isFocused ? 2 : 1)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(themeManager.currentTheme.otherMonthBackgroundColor)
-                )
-        )
-        .foregroundColor(themeManager.currentTheme.textColor)
+        .animation(.easeInOut(duration: 0.15), value: shouldPlaceHolderMove)
     }
 } 
