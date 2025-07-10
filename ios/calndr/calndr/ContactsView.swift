@@ -474,8 +474,17 @@ struct ContactsView: View {
     }
     
     private func getFamilyPhoneNumbers() -> [String] {
-        // Return phone numbers of all family members that have them
+        // Get current user ID to exclude from group text
+        let currentUserID = viewModel.currentUserID
+        
+        // Return phone numbers of all family members that have them, excluding current user
         let phoneNumbers = familyMembers.compactMap { member -> String? in
+            // Skip the current user
+            if member.id == currentUserID {
+                print("📱 Skipping current user: \(member.first_name) \(member.last_name) - \(member.id)")
+                return nil
+            }
+            
             let phone = member.phone_number?.trimmingCharacters(in: .whitespacesAndNewlines)
             if let phone = phone, !phone.isEmpty {
                 print("📱 Family member: \(member.first_name) \(member.last_name) - Phone: \(phone)")
@@ -486,7 +495,7 @@ struct ContactsView: View {
             }
         }
         
-        print("📱 Total family phone numbers found: \(phoneNumbers.count)")
+        print("📱 Total family phone numbers found: \(phoneNumbers.count) (excluding current user)")
         return phoneNumbers
     }
     
