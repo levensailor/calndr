@@ -22,6 +22,7 @@ struct LoginView: View {
                         isSecure: false,
                         themeManager: themeManager
                     )
+                    .frame(height: 56)
                     .keyboardType(.emailAddress)
                     .autocapitalization(.none)
 
@@ -31,6 +32,7 @@ struct LoginView: View {
                         isSecure: true,
                         themeManager: themeManager
                     )
+                    .frame(height: 56)
                 }
                 .padding(.horizontal)
                 

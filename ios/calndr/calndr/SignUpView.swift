@@ -25,6 +25,7 @@ struct SignUpView: View {
                             isSecure: false,
                             themeManager: themeManager
                         )
+                        .frame(height: 56)
                         .autocapitalization(.words)
 
                         FloatingLabelTextField(
@@ -33,6 +34,7 @@ struct SignUpView: View {
                             isSecure: false,
                             themeManager: themeManager
                         )
+                        .frame(height: 56)
                         .autocapitalization(.words)
 
                         FloatingLabelTextField(
@@ -41,6 +43,7 @@ struct SignUpView: View {
                             isSecure: false,
                             themeManager: themeManager
                         )
+                        .frame(height: 56)
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
 
@@ -50,6 +53,7 @@ struct SignUpView: View {
                             isSecure: true,
                             themeManager: themeManager
                         )
+                        .frame(height: 56)
 
                         FloatingLabelTextField(
                             title: "Confirm Password",
@@ -57,6 +61,7 @@ struct SignUpView: View {
                             isSecure: true,
                             themeManager: themeManager
                         )
+                        .frame(height: 56)
 
                         FloatingLabelTextField(
                             title: "Phone Number (Optional)",
@@ -64,6 +69,7 @@ struct SignUpView: View {
                             isSecure: false,
                             themeManager: themeManager
                         )
+                        .frame(height: 56)
                         .keyboardType(.phonePad)
 
                         FloatingLabelTextField(
@@ -72,6 +78,7 @@ struct SignUpView: View {
                             isSecure: false,
                             themeManager: themeManager
                         )
+                        .frame(height: 56)
                         .autocapitalization(.words)
                     }
                     .padding(.horizontal)
