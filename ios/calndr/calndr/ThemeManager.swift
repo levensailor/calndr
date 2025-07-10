@@ -10,6 +10,7 @@ struct Theme: Identifiable, Equatable, Hashable {
     let textColor: Color
     let dayNumberColor: Color
     let otherMonthBackgroundColor: Color
+    let otherMonthForegroundColor: Color
     let highlightColor: Color
     let bubbleBackgroundColor: Color
     let gridLinesColor: Color
@@ -28,6 +29,7 @@ struct Theme: Identifiable, Equatable, Hashable {
             textColor,
             dayNumberColor,
             otherMonthBackgroundColor,
+            otherMonthForegroundColor,
             highlightColor,
             bubbleBackgroundColor,
             gridLinesColor,
@@ -61,6 +63,7 @@ class ThemeManager: ObservableObject {
               textColor: Color(hex: "#000"),
               dayNumberColor: Color(hex: "#000"),
               otherMonthBackgroundColor: Color(hex: "#f7f7f7"),
+              otherMonthForegroundColor: Color(hex: "#999"),
               highlightColor: Color(hex: "#2a64c4"),
               bubbleBackgroundColor: Color(hex: "#f0f0f0"),
               gridLinesColor: Color(hex: "#e0e0e0"),
@@ -78,6 +81,7 @@ class ThemeManager: ObservableObject {
               textColor: Color(hex: "#f8f8f2"),
               dayNumberColor: Color(red: 0.7, green: 0.7, blue: 0.7),
               otherMonthBackgroundColor: Color(hex: "#21222c"),
+              otherMonthForegroundColor: Color(hex: "#555"),
               highlightColor: Color(hex: "#ff79c6"),
               bubbleBackgroundColor: Color(hex: "#21222c"),
               gridLinesColor: Color(hex: "#191a21"),
@@ -95,6 +99,7 @@ class ThemeManager: ObservableObject {
               textColor: Color(hex: "#e0d8ff"),
               dayNumberColor: Color(red: 0.5, green: 0.6, blue: 0.8),
               otherMonthBackgroundColor: Color(hex: "#1a103c"),
+              otherMonthForegroundColor: Color(hex: "#666"),
               highlightColor: Color(hex: "#00fddc"),
               bubbleBackgroundColor: Color(hex: "#1a103c"),
               gridLinesColor: Color(hex: "#12092a"),
@@ -112,6 +117,7 @@ class ThemeManager: ObservableObject {
               textColor: Color(hex: "#000"),
               dayNumberColor: Color(red: 0.4, green: 0.4, blue: 0.4),
               otherMonthBackgroundColor: Color(hex: "#f0f8ff"),
+              otherMonthForegroundColor: Color(hex: "#ccc"),
               highlightColor: Color(hex: "#32cd32"),
               bubbleBackgroundColor: Color(hex: "#f0f8ff"),
               gridLinesColor: Color(hex: "#ffd700"),
@@ -129,6 +135,7 @@ class ThemeManager: ObservableObject {
               textColor: Color(hex: "#5e3c58"),
               dayNumberColor: Color(red: 0.3, green: 0.5, blue: 0.4),
               otherMonthBackgroundColor: Color(hex: "#fdf4f5"),
+              otherMonthForegroundColor: Color(hex: "#bbb"),
               highlightColor: Color(hex: "#ffd700"),
               bubbleBackgroundColor: Color(hex: "#fdf4f5"),
               gridLinesColor: Color(hex: "#fae3f5"),
@@ -146,6 +153,7 @@ class ThemeManager: ObservableObject {
               textColor: Color(hex: "#000000"),
               dayNumberColor: Color(red: 0.4, green: 0.4, blue: 0.4),
               otherMonthBackgroundColor: Color(hex: "#F2F2F7"),
+              otherMonthForegroundColor: Color(hex: "#C7C7CC"),
               highlightColor: Color(hex: "#007AFF"),
               bubbleBackgroundColor: Color(hex: "#F2F2F7"),
               gridLinesColor: Color(hex: "#E5E5EA"),
