@@ -93,14 +93,16 @@ struct SittersView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .sheet(isPresented: $showingAddBabysitter) {
-            AddBabysitterView()
-                .environmentObject(viewModel)
-                .environmentObject(themeManager)
+            AddBabysitterView { babysitter in
+                // TODO: Implement save functionality
+                print("Saving babysitter: \(babysitter)")
+            }
         }
         .sheet(isPresented: $showingAddEmergencyContact) {
-            AddEmergencyContactView()
-                .environmentObject(viewModel)
-                .environmentObject(themeManager)
+            AddEmergencyContactView { contact in
+                // TODO: Implement save functionality
+                print("Saving emergency contact: \(contact)")
+            }
         }
     }
 }
@@ -207,152 +209,7 @@ struct EmergencyContactCard: View {
     }
 }
 
-struct AddBabysitterView: View {
-    @EnvironmentObject var viewModel: CalendarViewModel
-    @EnvironmentObject var themeManager: ThemeManager
-    @Environment(\.dismiss) private var dismiss
-    
-    @State private var firstName = ""
-    @State private var lastName = ""
-    @State private var phoneNumber = ""
-    @State private var rate = ""
-    @State private var notes = ""
-    
-    var body: some View {
-        NavigationView {
-            Form {
-                Section("Babysitter Information") {
-                    FloatingLabelTextField(
-                        title: "First Name",
-                        text: $firstName,
-                        isSecure: false,
-                        themeManager: themeManager
-                    )
-                    
-                    FloatingLabelTextField(
-                        title: "Last Name",
-                        text: $lastName,
-                        isSecure: false,
-                        themeManager: themeManager
-                    )
-                    
-                    FloatingLabelTextField(
-                        title: "Phone Number",
-                        text: $phoneNumber,
-                        isSecure: false,
-                        themeManager: themeManager
-                    )
-                    .keyboardType(.phonePad)
-                    
-                    FloatingLabelTextField(
-                        title: "Hourly Rate (Optional)",
-                        text: $rate,
-                        isSecure: false,
-                        themeManager: themeManager
-                    )
-                    .keyboardType(.decimalPad)
-                    
-                    FloatingLabelTextField(
-                        title: "Notes (Optional)",
-                        text: $notes,
-                        isSecure: false,
-                        themeManager: themeManager
-                    )
-                }
-            }
-            .background(themeManager.currentTheme.mainBackgroundColor)
-            .navigationTitle("Add Babysitter")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        // TODO: Implement save functionality
-                        dismiss()
-                    }
-                    .disabled(firstName.isEmpty || lastName.isEmpty || phoneNumber.isEmpty)
-                }
-            }
-        }
-    }
-}
 
-struct AddEmergencyContactView: View {
-    @EnvironmentObject var viewModel: CalendarViewModel
-    @EnvironmentObject var themeManager: ThemeManager
-    @Environment(\.dismiss) private var dismiss
-    
-    @State private var firstName = ""
-    @State private var lastName = ""
-    @State private var phoneNumber = ""
-    @State private var relationship = ""
-    @State private var notes = ""
-    
-    var body: some View {
-        NavigationView {
-            Form {
-                Section("Emergency Contact Information") {
-                    FloatingLabelTextField(
-                        title: "First Name",
-                        text: $firstName,
-                        isSecure: false,
-                        themeManager: themeManager
-                    )
-                    
-                    FloatingLabelTextField(
-                        title: "Last Name",
-                        text: $lastName,
-                        isSecure: false,
-                        themeManager: themeManager
-                    )
-                    
-                    FloatingLabelTextField(
-                        title: "Phone Number",
-                        text: $phoneNumber,
-                        isSecure: false,
-                        themeManager: themeManager
-                    )
-                    .keyboardType(.phonePad)
-                    
-                    FloatingLabelTextField(
-                        title: "Relationship (Optional)",
-                        text: $relationship,
-                        isSecure: false,
-                        themeManager: themeManager
-                    )
-                    
-                    FloatingLabelTextField(
-                        title: "Notes (Optional)",
-                        text: $notes,
-                        isSecure: false,
-                        themeManager: themeManager
-                    )
-                }
-            }
-            .background(themeManager.currentTheme.mainBackgroundColor)
-            .navigationTitle("Add Emergency Contact")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        // TODO: Implement save functionality
-                        dismiss()
-                    }
-                    .disabled(firstName.isEmpty || lastName.isEmpty || phoneNumber.isEmpty)
-                }
-            }
-        }
-    }
-}
 
 struct SittersView_Previews: PreviewProvider {
     static var previews: some View {
