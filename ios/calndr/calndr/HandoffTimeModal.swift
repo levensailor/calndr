@@ -187,11 +187,15 @@ struct HandoffTimeModal: View {
 
 struct HandoffTimeModal_Previews: PreviewProvider {
     static var previews: some View {
+        let authManager = AuthenticationManager()
+        let themeManager = ThemeManager()
+        let calendarViewModel = CalendarViewModel(authManager: authManager, themeManager: themeManager)
+        
         HandoffTimeModal(
             date: Date(),
-            viewModel: CalendarViewModel(authManager: AuthenticationManager()),
+            viewModel: calendarViewModel,
             isPresented: .constant(true)
         )
-        .environmentObject(ThemeManager())
+        .environmentObject(themeManager)
     }
 } 

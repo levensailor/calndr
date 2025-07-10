@@ -94,7 +94,9 @@ struct WeekView: View {
 struct WeekView_Previews: PreviewProvider {
     static var previews: some View {
         let authManager = AuthenticationManager()
-        let calendarViewModel = CalendarViewModel(authManager: authManager)
+        let themeManager = ThemeManager()
+        let calendarViewModel = CalendarViewModel(authManager: authManager, themeManager: themeManager)
         WeekView(viewModel: calendarViewModel)
+            .environmentObject(themeManager)
     }
 } 
