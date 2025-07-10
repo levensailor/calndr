@@ -175,17 +175,17 @@ struct FamilyView: View {
                         }
                         .padding(.horizontal)
                         
-                        if viewModel.otherFamilyMembers.isEmpty {
+                        if viewModel.emergencyContacts.isEmpty {
                             Text("No other family members added yet")
                                 .font(.subheadline)
                                 .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
                                 .padding(.horizontal)
                         } else {
-                            ForEach(viewModel.otherFamilyMembers) { member in
+                            ForEach(viewModel.emergencyContacts) { contact in
                                 FamilyMemberCard(
-                                    title: member.fullName,
-                                    subtitle: member.relationship,
-                                    detail: member.email ?? member.phoneNumber,
+                                    title: contact.fullName,
+                                    subtitle: contact.displayRelationship,
+                                    detail: contact.notes ?? contact.phone_number,
                                     icon: "person.3",
                                     color: .purple
                                 )
@@ -242,6 +242,10 @@ struct FamilyView: View {
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("To add family members from your contacts, please enable Contacts access in Settings.")
+        }
+        .onAppear {
+            // Ensure emergency contacts are loaded for the "Other Family" section
+            viewModel.fetchEmergencyContacts()
         }
     }
     
@@ -559,10 +563,33 @@ struct AddOtherFamilyView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
-                        // TODO: Implement save functionality
-                        dismiss()
+                        saveOtherFamilyMember()
                     }
                     .disabled(firstName.isEmpty || lastName.isEmpty || relationship.isEmpty)
+                }
+            }
+        }
+    }
+    
+    private func saveOtherFamilyMember() {
+        // Create emergency contact data (using emergency contacts API as temporary solution)
+        let contactData = EmergencyContactCreate(
+            first_name: firstName,
+            last_name: lastName,
+            phone_number: phoneNumber.isEmpty ? "N/A" : phoneNumber,
+            relationship: relationship,
+            notes: email.isEmpty ? nil : email // Store email in notes field temporarily
+        )
+        
+        viewModel.saveEmergencyContact(contactData) { success in
+            DispatchQueue.main.async {
+                if success {
+                    print("✅ Other family member saved successfully")
+                    dismiss()
+                } else {
+                    print("❌ Failed to save other family member")
+                    // For now, just dismiss. In a real app, you'd show an error message
+                    dismiss()
                 }
             }
         }
