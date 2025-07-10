@@ -67,9 +67,9 @@ struct PreferenceCard: View {
         )
         .contentShape(Rectangle())
         .onTapGesture {
-            if item.isToggle, let binding = item.toggleBinding {
-                binding.wrappedValue.toggle()
-            } else if let action = item.action {
+            // Only handle tap gestures for non-toggle items
+            // Toggle items should be controlled only by the Toggle control itself
+            if !item.isToggle, let action = item.action {
                 action()
             }
         }
