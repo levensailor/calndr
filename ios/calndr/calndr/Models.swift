@@ -400,7 +400,7 @@ struct ScheduleTemplate: Codable, Identifiable {
 // MARK: - Settings Section Models
 
 struct SettingsSection: Identifiable {
-    let id = UUID()
+    var id: SettingsDestination { destination }
     let title: String
     let icon: String
     let description: String
@@ -409,7 +409,7 @@ struct SettingsSection: Identifiable {
     let itemCount: Int?
 }
 
-enum SettingsDestination {
+enum SettingsDestination: Hashable {
     case account
     case security
     case preferences
