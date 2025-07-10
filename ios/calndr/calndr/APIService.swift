@@ -29,6 +29,23 @@ struct CustodianNamesResponse: Codable {
     let custodian_two: Custodian
 }
 
+struct UserRegistrationRequest: Codable {
+    let first_name: String
+    let last_name: String
+    let email: String
+    let password: String
+    let phone_number: String?
+    let family_name: String?
+}
+
+struct UserRegistrationResponse: Codable {
+    let user_id: String
+    let family_id: String
+    let access_token: String
+    let token_type: String
+    let message: String
+}
+
 class APIService {
     static let shared = APIService()
     private let baseURL = URL(string: "https://calndr.club/api")!
@@ -603,6 +620,58 @@ class APIService {
             do {
                 let tokenResponse = try JSONDecoder().decode(AuthTokenResponse.self, from: data)
                 completion(.success(tokenResponse.access_token))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func signUp(firstName: String, lastName: String, email: String, password: String, phoneNumber: String?, familyName: String?, completion: @escaping (Result<String, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/auth/register")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let registrationRequest = UserRegistrationRequest(
+            first_name: firstName,
+            last_name: lastName,
+            email: email,
+            password: password,
+            phone_number: phoneNumber,
+            family_name: familyName
+        )
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(registrationRequest)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            if httpResponse.statusCode == 409 {
+                completion(.failure(NSError(domain: "APIService", code: 409, userInfo: [NSLocalizedDescriptionKey: "User with this email already exists"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Registration failed"])))
+                return
+            }
+            
+            do {
+                let registrationResponse = try JSONDecoder().decode(UserRegistrationResponse.self, from: data)
+                completion(.success(registrationResponse.access_token))
             } catch {
                 completion(.failure(error))
             }

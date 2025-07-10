@@ -198,7 +198,110 @@
             <button @click="login" :disabled="loginLoading" class="login-submit-button">
               {{ loginLoading ? 'Logging in...' : 'Login' }}
             </button>
+            <button @click="switchToSignUp" class="signup-button">Sign Up</button>
             <button @click="showLoginModal = false" class="cancel-button">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Sign Up Modal -->
+    <div v-if="showSignUpModal" class="modal-overlay" @click.self="showSignUpModal = false">
+      <div class="signup-modal">
+        <div class="modal-header">
+          <h3>Create Account</h3>
+          <button class="close-button" @click="showSignUpModal = false">&times;</button>
+        </div>
+        <div class="modal-content">
+          <p>Create a new account to get started.</p>
+          
+          <div v-if="signupError" class="signup-error">
+            <p>{{ signupError }}</p>
+          </div>
+          
+          <div class="form-group">
+            <label for="signup-first-name">First Name</label>
+            <input 
+              type="text" 
+              id="signup-first-name" 
+              v-model="signupFirstName" 
+              placeholder="Enter your first name"
+              :disabled="signupLoading"
+            >
+          </div>
+          
+          <div class="form-group">
+            <label for="signup-last-name">Last Name</label>
+            <input 
+              type="text" 
+              id="signup-last-name" 
+              v-model="signupLastName" 
+              placeholder="Enter your last name"
+              :disabled="signupLoading"
+            >
+          </div>
+          
+          <div class="form-group">
+            <label for="signup-email">Email</label>
+            <input 
+              type="email" 
+              id="signup-email" 
+              v-model="signupEmail" 
+              placeholder="Enter your email address"
+              :disabled="signupLoading"
+            >
+          </div>
+          
+          <div class="form-group">
+            <label for="signup-password">Password</label>
+            <input 
+              type="password" 
+              id="signup-password" 
+              v-model="signupPassword" 
+              placeholder="Enter your password"
+              :disabled="signupLoading"
+            >
+          </div>
+          
+          <div class="form-group">
+            <label for="signup-confirm-password">Confirm Password</label>
+            <input 
+              type="password" 
+              id="signup-confirm-password" 
+              v-model="signupConfirmPassword" 
+              placeholder="Confirm your password"
+              :disabled="signupLoading"
+            >
+          </div>
+          
+          <div class="form-group">
+            <label for="signup-phone">Phone Number (Optional)</label>
+            <input 
+              type="tel" 
+              id="signup-phone" 
+              v-model="signupPhoneNumber" 
+              placeholder="Enter your phone number"
+              :disabled="signupLoading"
+            >
+          </div>
+          
+          <div class="form-group">
+            <label for="signup-family-name">Family Name (Optional)</label>
+            <input 
+              type="text" 
+              id="signup-family-name" 
+              v-model="signupFamilyName" 
+              placeholder="Enter your family name"
+              :disabled="signupLoading"
+            >
+          </div>
+          
+          <div class="signup-actions">
+            <button @click="signUp" :disabled="signupLoading" class="signup-submit-button">
+              {{ signupLoading ? 'Creating Account...' : 'Create Account' }}
+            </button>
+            <button @click="switchToLogin" class="login-link-button">Already have an account? Login</button>
+            <button @click="showSignUpModal = false" class="cancel-button">Cancel</button>
           </div>
         </div>
       </div>
@@ -242,6 +345,16 @@ export default {
       loginPassword: '',
       loginLoading: false,
       loginError: null,
+      showSignUpModal: false,
+      signupFirstName: '',
+      signupLastName: '',
+      signupEmail: '',
+      signupPassword: '',
+      signupConfirmPassword: '',
+      signupPhoneNumber: '',
+      signupFamilyName: '',
+      signupLoading: false,
+      signupError: null,
     };
   },
   computed: {
@@ -435,6 +548,96 @@ export default {
       } finally {
         this.loginLoading = false;
       }
+    },
+    switchToSignUp() {
+      this.showLoginModal = false;
+      this.showSignUpModal = true;
+      this.loginError = null;
+      this.signupError = null;
+    },
+    switchToLogin() {
+      this.showSignUpModal = false;
+      this.showLoginModal = true;
+      this.signupError = null;
+      this.loginError = null;
+    },
+    async signUp() {
+      // Validate inputs
+      if (!this.signupFirstName.trim() || !this.signupLastName.trim() || !this.signupEmail.trim() || !this.signupPassword) {
+        this.signupError = 'Please fill in all required fields.';
+        return;
+      }
+      
+      if (this.signupPassword !== this.signupConfirmPassword) {
+        this.signupError = 'Passwords do not match.';
+        return;
+      }
+      
+      if (this.signupPassword.length < 6) {
+        this.signupError = 'Password must be at least 6 characters long.';
+        return;
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(this.signupEmail.trim())) {
+        this.signupError = 'Please enter a valid email address.';
+        return;
+      }
+      
+      this.signupLoading = true;
+      this.signupError = null;
+      
+      try {
+        const registrationData = {
+          first_name: this.signupFirstName.trim(),
+          last_name: this.signupLastName.trim(),
+          email: this.signupEmail.trim(),
+          password: this.signupPassword,
+          phone_number: this.signupPhoneNumber.trim() || null,
+          family_name: this.signupFamilyName.trim() || null
+        };
+        
+        const response = await axios.post('/api/auth/register', registrationData);
+        
+        const { access_token } = response.data;
+        
+        // Store the token
+        localStorage.setItem('authToken', access_token);
+        
+        // Set default authorization header for future requests
+        axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+        
+        // Close signup modal and reset form
+        this.showSignUpModal = false;
+        this.resetSignupForm();
+        
+        // Fetch the user profile now that we're authenticated
+        this.fetchUserProfile();
+        
+      } catch (error) {
+        console.error('Signup error:', error);
+        
+        if (error.response && error.response.status === 409) {
+          this.signupError = 'An account with this email already exists.';
+        } else if (error.response) {
+          this.signupError = `Registration failed: ${error.response.data?.detail || error.response.statusText}`;
+        } else {
+          this.signupError = 'Registration failed. Please check your connection and try again.';
+        }
+      } finally {
+        this.signupLoading = false;
+      }
+    },
+    resetSignupForm() {
+      this.signupFirstName = '';
+      this.signupLastName = '';
+      this.signupEmail = '';
+      this.signupPassword = '';
+      this.signupConfirmPassword = '';
+      this.signupPhoneNumber = '';
+      this.signupFamilyName = '';
+      this.signupError = null;
     },
     formatDate(dateString) {
       if (!dateString) return '';
@@ -1046,6 +1249,107 @@ export default {
   }
 
   .action-button {
+    touch-action: manipulation;
+  }
+}
+
+/* Signup Modal Styles */
+.signup-modal {
+  background: white;
+  color: #333;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.signup-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  border: 1px solid #f5c6cb;
+}
+
+.signup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.signup-submit-button {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.signup-submit-button:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.signup-submit-button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.signup-button {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.signup-button:hover {
+  background-color: #218838;
+}
+
+.login-link-button {
+  background: none;
+  border: none;
+  color: #007bff;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  text-decoration: underline;
+}
+
+.login-link-button:hover {
+  color: #0056b3;
+}
+
+/* Mobile optimizations for signup modal */
+@media (max-width: 768px) {
+  .signup-modal {
+    width: 95%;
+    max-width: none;
+    margin: 10px;
+  }
+  
+  .signup-actions {
+    gap: 8px;
+  }
+  
+  .signup-submit-button,
+  .login-link-button,
+  .signup-button {
+    padding: 12px 16px;
+    font-size: 16px;
+    min-height: 44px;
     touch-action: manipulation;
   }
 }

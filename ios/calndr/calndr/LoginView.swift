@@ -4,6 +4,7 @@ struct LoginView: View {
     @StateObject private var viewModel = LoginViewModel()
     @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var themeManager: ThemeManager
+    @State private var showingSignUp = false
 
     var body: some View {
         ZStack {
@@ -16,7 +17,7 @@ struct LoginView: View {
                     .foregroundColor(themeManager.currentTheme.textColor)
                 
                 VStack(spacing: 15) {
-                    TextField("Email", text: $viewModel.email)
+                    TextField("Enter your email address", text: $viewModel.email)
                         .padding()
                         .background(themeManager.currentTheme.otherMonthBackgroundColor)
                         .cornerRadius(8)
@@ -24,7 +25,7 @@ struct LoginView: View {
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
 
-                    SecureField("Password", text: $viewModel.password)
+                    SecureField("Enter your password", text: $viewModel.password)
                         .padding()
                         .background(themeManager.currentTheme.otherMonthBackgroundColor)
                         .cornerRadius(8)
@@ -60,7 +61,21 @@ struct LoginView: View {
                     .padding(.horizontal)
                 }
                 .disabled(viewModel.isLoading)
+                
+                Button(action: {
+                    showingSignUp = true
+                }) {
+                    Text("Don't have an account? Sign Up")
+                        .font(.footnote)
+                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .padding()
+                }
             }
+        }
+        .sheet(isPresented: $showingSignUp) {
+            SignUpView()
+                .environmentObject(authManager)
+                .environmentObject(themeManager)
         }
     }
 } 

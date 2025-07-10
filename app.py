@@ -373,6 +373,21 @@ class EmergencyContactResponse(BaseModel):
     created_by_user_id: str
     created_at: str
 
+class UserRegistration(BaseModel):
+    first_name: str
+    last_name: str
+    email: EmailStr
+    password: str
+    phone_number: Optional[str] = None
+    family_name: Optional[str] = None
+
+class UserRegistrationResponse(BaseModel):
+    user_id: str
+    family_id: str
+    access_token: str
+    token_type: str = "bearer"
+    message: str
+
 class GroupChatCreate(BaseModel):
     contact_type: str  # 'babysitter' or 'emergency'
     contact_id: int
@@ -469,6 +484,86 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         data={"sub": str(user["id"]), "family_id": str(user["family_id"])}
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
+@app.post("/api/auth/register", response_model=UserRegistrationResponse)
+async def register_user(registration_data: UserRegistration):
+    """
+    Register a new user and create a family if family_name is provided.
+    """
+    logger.info(f"User registration attempt for email: {registration_data.email}")
+    
+    try:
+        # Check if user already exists
+        existing_user_query = users.select().where(users.c.email == registration_data.email)
+        existing_user = await database.fetch_one(existing_user_query)
+        
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="User with this email already exists"
+            )
+        
+        # Hash the password
+        password_hash = pwd_context.hash(registration_data.password)
+        
+        # Handle family creation/assignment
+        family_id = None
+        if registration_data.family_name:
+            # Check if family already exists
+            family_query = families.select().where(families.c.name == registration_data.family_name)
+            existing_family = await database.fetch_one(family_query)
+            
+            if existing_family:
+                family_id = existing_family['id']
+                logger.info(f"Adding user to existing family: {registration_data.family_name}")
+            else:
+                # Create new family
+                family_insert = families.insert().values(name=registration_data.family_name).returning(families.c.id)
+                family_id = await database.execute(family_insert)
+                logger.info(f"Created new family: {registration_data.family_name} with ID: {family_id}")
+        else:
+            # Create family with user's last name if no family name provided
+            default_family_name = f"{registration_data.last_name} Family"
+            family_insert = families.insert().values(name=default_family_name).returning(families.c.id)
+            family_id = await database.execute(family_insert)
+            logger.info(f"Created default family: {default_family_name} with ID: {family_id}")
+        
+        # Create the user
+        user_insert = users.insert().values(
+            family_id=family_id,
+            first_name=registration_data.first_name,
+            last_name=registration_data.last_name,
+            email=registration_data.email,
+            password_hash=password_hash,
+            phone_number=registration_data.phone_number,
+            subscription_type="Free",
+            subscription_status="Active"
+        ).returning(users.c.id)
+        
+        user_id = await database.execute(user_insert)
+        logger.info(f"Created user with ID: {user_id}")
+        
+        # Create access token for the new user
+        access_token = create_access_token(
+            data={"sub": str(user_id), "family_id": str(family_id)}
+        )
+        
+        return UserRegistrationResponse(
+            user_id=str(user_id),
+            family_id=str(family_id),
+            access_token=access_token,
+            message="User registered successfully"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error during user registration: {e}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Registration failed. Please try again."
+        )
 
 @app.get("/api/custody/{year}/{month}", response_model=List[CustodyResponse])
 async def get_custody_records(year: int, month: int, current_user = Depends(get_current_user)):
