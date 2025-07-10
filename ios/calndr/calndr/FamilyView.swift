@@ -223,9 +223,12 @@ struct FamilyView: View {
             AddOtherFamilyView(prefilledContact: selectedContact)
                 .environmentObject(viewModel)
                 .environmentObject(themeManager)
-                .onDisappear {
-                    selectedContact = nil
-                }
+        }
+        .onChange(of: showingAddOtherFamily) { isShowing in
+            if !isShowing {
+                // Reset selectedContact when sheet is dismissed
+                selectedContact = nil
+            }
         }
         .confirmationDialog("Add Family Member", isPresented: $showingAddOptionsSheet) {
             Button("Add Manually") {
@@ -286,9 +289,13 @@ struct FamilyView: View {
         selectedContact = contact
         print("✅ Selected contact stored: \(selectedContact?.givenName ?? "nil")")
         // Add a small delay to ensure the contact picker is fully dismissed
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            print("📱 Showing AddOtherFamilyView with contact: \(self.selectedContact?.givenName ?? "nil")")
-            showingAddOtherFamily = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            print("📱 About to show AddOtherFamilyView with contact: \(self.selectedContact?.givenName ?? "nil")")
+            if self.selectedContact != nil {
+                showingAddOtherFamily = true
+            } else {
+                print("❌ selectedContact is nil when trying to show AddOtherFamilyView")
+            }
         }
     }
     
@@ -511,6 +518,11 @@ struct AddOtherFamilyView: View {
     
     init(prefilledContact: CNContact? = nil) {
         self.prefilledContact = prefilledContact
+        if let contact = prefilledContact {
+            print("🏗️ AddOtherFamilyView init with contact: \(contact.givenName) \(contact.familyName)")
+        } else {
+            print("🏗️ AddOtherFamilyView init with no contact")
+        }
     }
     
     var body: some View {
