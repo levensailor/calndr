@@ -224,8 +224,8 @@ struct FamilyView: View {
                 .environmentObject(viewModel)
                 .environmentObject(themeManager)
         }
-        .onChange(of: showingAddOtherFamily) { isShowing in
-            if !isShowing {
+        .onChange(of: showingAddOtherFamily) { oldValue, newValue in
+            if !newValue {
                 // Reset selectedContact when sheet is dismissed
                 selectedContact = nil
             }
