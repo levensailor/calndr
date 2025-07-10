@@ -17,6 +17,8 @@ struct ContactsView: View {
     @State private var mailComposeResult: Result<MFMailComposeResult, Error>?
     @State private var currentFamilyMember: FamilyMemberEmail?
     @State private var selectedContactForGroupText: (contactType: String, contactId: Int, name: String, phone: String)?
+    @State private var showMessageComposer = false
+    @State private var messageComposeResult: Result<MessageComposeResult, Error>?
     
     private let apiService = APIService.shared
     
@@ -252,6 +254,15 @@ struct ContactsView: View {
                     updateEmergencyContact(contact.id, with: updatedContact)
                 }
             }
+            .sheet(isPresented: $showMessageComposer) {
+                if let contact = selectedContactForGroupText {
+                    MessageComposeView(
+                        recipients: getGroupTextRecipients(),
+                        messageBody: "Hi \(contact.name)! This is a group chat from the \(getFamilyName()) family.",
+                        result: $messageComposeResult
+                    )
+                }
+            }
         }
     }
     
@@ -346,6 +357,12 @@ struct ContactsView: View {
     private func startGroupText() {
         guard let contact = selectedContactForGroupText else { return }
         
+        // Check if device can send messages
+        guard MFMessageComposeViewController.canSendText() else {
+            self.errorMessage = "This device cannot send text messages"
+            return
+        }
+        
         apiService.createOrGetGroupChat(contactType: contact.contactType, contactId: contact.contactId) { result in
             DispatchQueue.main.async {
                 switch result {
@@ -365,15 +382,11 @@ struct ContactsView: View {
                     
                     // Remove duplicates (in case contact phone is same as a family member)
                     let uniqueNumbers = Array(Set(allNumbers)).filter { !$0.isEmpty }
-                    let numbersString = uniqueNumbers.joined(separator: ",")
                     
                     print("   Final numbers for group text: \(uniqueNumbers)")
                     
-                    guard let url = URL(string: "sms:\(numbersString)&body=Hi \(contact.name)! This is a group chat from the \(self.getFamilyName()) family.") else { return }
-                    
-                    if UIApplication.shared.canOpenURL(url) {
-                        UIApplication.shared.open(url)
-                    }
+                    // Use proper message composer for group messaging
+                    self.showMessageComposer = true
                     
                 case .failure(let error):
                     self.errorMessage = "Failed to create group chat: \(error.localizedDescription)"
@@ -402,6 +415,20 @@ struct ContactsView: View {
     private func getFamilyName() -> String {
         // Get the family name from the first family member's last name
         return familyMembers.first?.last_name ?? "Family"
+    }
+    
+    private func getGroupTextRecipients() -> [String] {
+        guard let contact = selectedContactForGroupText else { return [] }
+        
+        let familyPhoneNumbers = getFamilyPhoneNumbers()
+        var allNumbers = [contact.phone]
+        allNumbers.append(contentsOf: familyPhoneNumbers)
+        
+        // Remove duplicates and empty numbers
+        let uniqueNumbers = Array(Set(allNumbers)).filter { !$0.isEmpty }
+        
+        print("📱 Group text recipients: \(uniqueNumbers)")
+        return uniqueNumbers
     }
     
     // MARK: - CRUD Operations
@@ -709,6 +736,62 @@ struct EditEmergencyContactView: View {
                     .disabled(firstName.isEmpty || lastName.isEmpty || phoneNumber.isEmpty)
                 }
             }
+        }
+    }
+}
+
+// MARK: - Message Compose View
+
+struct MessageComposeView: UIViewControllerRepresentable {
+    let recipients: [String]
+    let messageBody: String
+    @Binding var result: Result<MessageComposeResult, Error>?
+    @Environment(\.dismiss) private var dismiss
+
+    func makeUIViewController(context: Context) -> MFMessageComposeViewController {
+        let controller = MFMessageComposeViewController()
+        controller.messageComposeDelegate = context.coordinator
+        controller.recipients = recipients
+        controller.body = messageBody
+        
+        print("📱 Creating message composer with recipients: \(recipients)")
+        print("📱 Message body: \(messageBody)")
+        
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: MFMessageComposeViewController, context: Context) {
+        // No updates needed
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, MFMessageComposeViewControllerDelegate {
+        let parent: MessageComposeView
+
+        init(_ parent: MessageComposeView) {
+            self.parent = parent
+        }
+
+        func messageComposeViewController(_ controller: MFMessageComposeViewController, didFinishWith result: MessageComposeResult) {
+            switch result {
+            case .cancelled:
+                print("📱 Message compose cancelled")
+                parent.result = .success(.cancelled)
+            case .sent:
+                print("📱 Message sent successfully")
+                parent.result = .success(.sent)
+            case .failed:
+                print("📱 Message compose failed")
+                parent.result = .failure(NSError(domain: "MessageComposeError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to send message"]))
+            @unknown default:
+                print("📱 Unknown message compose result")
+                parent.result = .failure(NSError(domain: "MessageComposeError", code: -2, userInfo: [NSLocalizedDescriptionKey: "Unknown result"]))
+            }
+            
+            parent.dismiss()
         }
     }
 } 
