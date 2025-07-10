@@ -29,9 +29,18 @@ struct FamilyMemberCard: View {
                 Spacer()
                 
                 if let detail = detail {
-                    Text(detail)
-                        .font(.caption)
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("Last active:")
+                            .font(.caption2)
+                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.5))
+                        
+                        Text(detail)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                            .multilineTextAlignment(.trailing)
+                    }
+                    .frame(minWidth: 80, alignment: .trailing)
                 }
             }
         }
@@ -96,7 +105,7 @@ struct FamilyView: View {
                                 FamilyMemberCard(
                                     title: coparent.fullName,
                                     subtitle: coparent.phone_number ?? coparent.email,
-                                    detail: coparent.lastSignin != nil ? "Last active: \n\(formatRelativeTime(coparent.lastSignin!))" : "Never signed in",
+                                    detail: coparent.lastSignin != nil ? formatRelativeTime(coparent.lastSignin!) : "Never",
                                     icon: "person.crop.circle",
                                     color: .blue
                                 )
@@ -236,7 +245,7 @@ struct FamilyView: View {
         guard let lastSigninDate = date else { 
             // If we can't parse the date, return a fallback message
             print("⚠️ Could not parse date: \(dateString)")
-            return "Recently active"
+            return "Never"
         }
         
         let now = Date()
@@ -251,46 +260,15 @@ struct FamilyView: View {
         let minutes = seconds / 60
         let hours = minutes / 60
         let days = hours / 24
-        let weeks = days / 7
         
-        if seconds < 60 {
+        if seconds < 300 { // Less than 5 minutes
             return "Just now"
-        } else if minutes < 60 {
-            return minutes == 1 ? "1 minute ago" : "\(minutes) minutes ago"
         } else if hours < 24 {
             return hours == 1 ? "1 hour ago" : "\(hours) hours ago"
         } else if days < 7 {
-            if days == 1 {
-                return "1 day ago"
-            } else {
-                let remainingHours = hours % 24
-                if remainingHours == 0 {
-                    return "\(days) days ago"
-                } else {
-                    return "\(days) days, \(remainingHours) hours ago"
-                }
-            }
-        } else if weeks < 4 {
-            if weeks == 1 {
-                let remainingDays = days % 7
-                if remainingDays == 0 {
-                    return "1 week ago"
-                } else {
-                    return "1 week, \(remainingDays) days ago"
-                }
-            } else {
-                let remainingDays = days % 7
-                if remainingDays == 0 {
-                    return "\(weeks) weeks ago"
-                } else {
-                    return "\(weeks) weeks, \(remainingDays) days ago"
-                }
-            }
+            return days == 1 ? "1 day ago" : "\(days) days ago"
         } else {
-            // For more than 4 weeks, show the actual date
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MMM d, yyyy"
-            return formatter.string(from: lastSigninDate)
+            return "Over a week ago"
         }
     }
 }
