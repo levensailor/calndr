@@ -1,6 +1,30 @@
 import SwiftUI
 import MessageUI
 
+// MARK: - Group Text Data Store
+class GroupTextDataStore: ObservableObject {
+    @Published var contact: (name: String, phone: String)?
+    @Published var recipients: [String] = []
+    
+    func setData(contact: (name: String, phone: String), recipients: [String]) {
+        print("📦 GroupTextDataStore: Setting data - contact: \(contact), recipients: \(recipients)")
+        self.contact = contact
+        self.recipients = recipients
+    }
+    
+    func clearData() {
+        print("📦 GroupTextDataStore: Clearing data")
+        self.contact = nil
+        self.recipients = []
+    }
+    
+    var hasValidData: Bool {
+        let isValid = contact != nil && !recipients.isEmpty
+        print("📦 GroupTextDataStore: hasValidData = \(isValid)")
+        return isValid
+    }
+}
+
 struct ContactsView: View {
     @EnvironmentObject var viewModel: CalendarViewModel
     @State private var familyEmails: [FamilyMemberEmail] = []
@@ -19,16 +43,7 @@ struct ContactsView: View {
     @State private var selectedContactForGroupText: (contactType: String, contactId: Int, name: String, phone: String)?
     @State private var showMessageComposer = false
     @State private var messageComposeResult: Result<MessageComposeResult, Error>?
-    @State private var groupTextRecipients: [String] = [] {
-        didSet {
-            print("🔄 groupTextRecipients changed from \(oldValue.count) to \(groupTextRecipients.count)")
-        }
-    }
-    @State private var groupTextContact: (name: String, phone: String)? {
-        didSet {
-            print("🔄 groupTextContact changed from \(String(describing: oldValue)) to \(String(describing: groupTextContact))")
-        }
-    }
+    @StateObject private var groupTextDataStore = GroupTextDataStore()
     
     private let apiService = APIService.shared
     
@@ -128,7 +143,7 @@ struct ContactsView: View {
                                             }
                                             .buttonStyle(.bordered)
                                             .controlSize(.small)
-                                            .disabled(isLoading || familyMembers.isEmpty)
+                                            .disabled(isLoading)
                                             
                                             Button("Edit") {
                                                 showEditBabysitter = babysitter
@@ -212,7 +227,7 @@ struct ContactsView: View {
                                             }
                                             .buttonStyle(.bordered)
                                             .controlSize(.small)
-                                            .disabled(isLoading || familyMembers.isEmpty)
+                                            .disabled(isLoading)
                                             
                                             Button("Edit") {
                                                 showEditEmergencyContact = contact
@@ -272,15 +287,12 @@ struct ContactsView: View {
             }
             .sheet(isPresented: $showMessageComposer, onDismiss: {
                 print("🗂️ Sheet dismissed - cleaning up state")
-                print("🗂️ Was dismissed properly, clearing: groupTextContact=\(String(describing: groupTextContact)), recipients=\(groupTextRecipients.count)")
                 // Clean up state when modal is dismissed
-                groupTextContact = nil
-                groupTextRecipients = []
+                groupTextDataStore.clearData()
                 selectedContactForGroupText = nil
             }) {
-                SheetContentView(
-                    groupTextContact: groupTextContact,
-                    groupTextRecipients: groupTextRecipients,
+                GroupTextSheetView(
+                    dataStore: groupTextDataStore,
                     familyMembers: familyMembers,
                     messageComposeResult: $messageComposeResult,
                     showMessageComposer: $showMessageComposer,
@@ -406,17 +418,9 @@ struct ContactsView: View {
         
         print("✅ Not currently loading")
         
-        // If family members are empty, this might be the first load or a loading issue
+        // If family members are empty, proceed but warn - the data store will handle the UI appropriately
         if familyMembers.isEmpty {
-            print("🔄 Family members empty, count: \(familyMembers.count)")
-            
-            // Try loading if not already in progress
-            if !isLoading {
-                print("🔄 Triggering loadContacts()")
-                loadContacts()
-                self.errorMessage = "Loading family member data, please try again in a moment"
-            }
-            return
+            print("⚠️ Family members empty, count: \(familyMembers.count) - proceeding anyway")
         }
         
         print("✅ Family members loaded, count: \(familyMembers.count)")
@@ -451,14 +455,13 @@ struct ContactsView: View {
                 switch result {
                 case .success(_):
                                     print("✅ API call successful")
-                // Capture the contact and recipients data to prevent race conditions
-                self.groupTextContact = (name: contact.name, phone: contact.phone)
-                self.groupTextRecipients = uniqueNumbers
+                // Store data in persistent data store
+                self.groupTextDataStore.setData(
+                    contact: (name: contact.name, phone: contact.phone),
+                    recipients: uniqueNumbers
+                )
                 
-                print("💾 Stored groupTextContact: \(String(describing: self.groupTextContact))")
-                print("💾 Stored groupTextRecipients: \(self.groupTextRecipients)")
-                
-                // Present the message composer immediately
+                // Present the message composer
                 print("📱 Setting showMessageComposer = true")
                 self.showMessageComposer = true
                     
@@ -879,11 +882,10 @@ struct MessageComposeView: UIViewControllerRepresentable {
     }
 }
 
-// MARK: - Sheet Content View
+// MARK: - Group Text Sheet View
 
-struct SheetContentView: View {
-    let groupTextContact: (name: String, phone: String)?
-    let groupTextRecipients: [String]
+struct GroupTextSheetView: View {
+    @ObservedObject var dataStore: GroupTextDataStore
     let familyMembers: [FamilyMember]
     @Binding var messageComposeResult: Result<MessageComposeResult, Error>?
     @Binding var showMessageComposer: Bool
@@ -891,10 +893,9 @@ struct SheetContentView: View {
     
     var body: some View {
         Group {
-            // Debug logging happens in init or onAppear
-            if let contact = groupTextContact, !groupTextRecipients.isEmpty {
+            if dataStore.hasValidData, let contact = dataStore.contact {
                 MessageComposeView(
-                    recipients: groupTextRecipients,
+                    recipients: dataStore.recipients,
                     messageBody: "Hi \(contact.name)! This is a group chat from the \(getFamilyName()) family.",
                     result: $messageComposeResult
                 )
@@ -914,8 +915,8 @@ struct SheetContentView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     
-                    // Simplified debug info
-                    Text("Debug: Contact=\(groupTextContact?.name ?? "nil"), Recipients=\(groupTextRecipients.count), Family=\(familyMembers.count)")
+                    // Debug info
+                    Text("Debug: Contact=\(dataStore.contact?.name ?? "nil"), Recipients=\(dataStore.recipients.count), Family=\(familyMembers.count)")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -923,16 +924,15 @@ struct SheetContentView: View {
             }
         }
         .onAppear {
-            // Debug logging happens here instead of in view builder
-            print("🗂️ Sheet presentation - checking state...")
-            print("   groupTextContact: \(String(describing: groupTextContact))")
-            print("   groupTextRecipients count: \(groupTextRecipients.count)")
-            print("   groupTextRecipients: \(groupTextRecipients)")
+            print("🗂️ GroupTextSheetView appeared")
+            print("   dataStore.contact: \(String(describing: dataStore.contact))")
+            print("   dataStore.recipients: \(dataStore.recipients)")
+            print("   dataStore.hasValidData: \(dataStore.hasValidData)")
             
-            if let contact = groupTextContact, !groupTextRecipients.isEmpty {
-                print("✅ Presenting MessageComposeView")
+            if dataStore.hasValidData {
+                print("✅ Presenting MessageComposeView with data store")
             } else {
-                print("❌ Presenting fallback view - contact: \(String(describing: groupTextContact)), recipients empty: \(groupTextRecipients.isEmpty)")
+                print("❌ Presenting fallback view - no valid data in store")
             }
         }
     }
