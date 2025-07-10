@@ -55,8 +55,9 @@ class CalendarViewModel: ObservableObject {
 
     private var cancellables = Set<AnyCancellable>()
     private var isDataLoaded: Bool = false
-    private let networkMonitor = NetworkMonitor()
+    private let networkMonitor: NetworkMonitor
     private var authManager: AuthenticationManager
+    private var themeManager: ThemeManager
     private var handoffTimer: Timer?
     
     // Track in-flight custody updates to prevent duplicates
@@ -72,8 +73,9 @@ class CalendarViewModel: ObservableObject {
         return formatter
     }()
     
-    init(authManager: AuthenticationManager) {
+    init(authManager: AuthenticationManager, themeManager: ThemeManager) {
         self.authManager = authManager
+        self.themeManager = themeManager
         self.networkMonitor = NetworkMonitor()
         self.isOffline = !self.networkMonitor.isConnected
         
@@ -82,8 +84,8 @@ class CalendarViewModel: ObservableObject {
         
         // Load the initial theme from UserDefaults
         let savedThemeName = UserDefaults.standard.string(forKey: "selectedThemeName") ?? "Default"
-        if let initialTheme = themeManager.themes.first(where: { $0.name == savedThemeName }) {
-            themeManager.setTheme(to: initialTheme)
+        if let initialTheme = self.themeManager.themes.first(where: { $0.name == savedThemeName }) {
+            self.themeManager.setTheme(to: initialTheme)
         }
     }
     
@@ -1220,7 +1222,6 @@ class CalendarViewModel: ObservableObject {
                     // Map FamilyMember to Coparent for the settings display
                     self?.coparents = members.enumerated().compactMap { (index, member) in
                         // Convert FamilyMember to Coparent format
-                        // Note: This is a temporary mapping - we need proper coparent API
                         // Using hash of UUID string to generate unique integer ID
                         let uniqueId = abs(member.id.hashValue) % 1000000 // Ensure positive ID under 1 million
                         return Coparent(
@@ -1228,9 +1229,9 @@ class CalendarViewModel: ObservableObject {
                             firstName: member.first_name,
                             lastName: member.last_name,
                             email: member.email,
-                            lastSignin: nil, // Not available in current API
+                            lastSignin: member.last_signed_in, // Now available from API
                             notes: nil, // Not available in current API
-                            isActive: true, // Assume active
+                            isActive: member.status == "active", // Map status to isActive
                             familyId: 0 // Not available in current API
                         )
                     }

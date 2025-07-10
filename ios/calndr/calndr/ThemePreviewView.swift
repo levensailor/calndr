@@ -18,7 +18,7 @@ struct ThemePreviewView: View {
                 .padding(.vertical, 8)
                 .frame(maxWidth: .infinity)
                 .background(.thinMaterial)
-
+            
         }
         .cornerRadius(8)
         .overlay(

@@ -153,6 +153,8 @@ users = sqlalchemy.Table(
     sqlalchemy.Column("subscription_type", sqlalchemy.String, nullable=True, default="Free"),
     sqlalchemy.Column("subscription_status", sqlalchemy.String, nullable=True, default="Active"),
     sqlalchemy.Column("profile_photo_url", sqlalchemy.String, nullable=True),
+    sqlalchemy.Column("status", sqlalchemy.String, nullable=True, default="active"),
+    sqlalchemy.Column("last_signed_in", sqlalchemy.DateTime, nullable=True, default=datetime.now),
     sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
 )
 
@@ -321,6 +323,8 @@ class UserProfile(BaseModel):
     subscription_type: Optional[str] = "Free"
     subscription_status: Optional[str] = "Active"
     profile_photo_url: Optional[str] = None
+    status: Optional[str] = "active"
+    last_signed_in: Optional[str] = None
     selected_theme: Optional[str] = None
     created_at: Optional[str] = None
 
@@ -348,6 +352,8 @@ class FamilyMember(BaseModel):
     last_name: str
     email: str
     phone_number: Optional[str] = None
+    status: Optional[str] = "active"
+    last_signed_in: Optional[str] = None
 
 class Babysitter(BaseModel):
     id: Optional[int] = None
@@ -528,6 +534,11 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    # Update last_signed_in timestamp
+    await database.execute(
+        users.update().where(users.c.id == user['id']).values(last_signed_in=datetime.now())
+    )
     
     access_token = create_access_token(
         data={"sub": uuid_to_string(user["id"]), "family_id": uuid_to_string(user["family_id"])}
@@ -954,6 +965,8 @@ async def get_user_profile(current_user = Depends(get_current_user)):
             subscription_type=user_record['subscription_type'] or "Free",
             subscription_status=user_record['subscription_status'] or "Active",
             profile_photo_url=user_record['profile_photo_url'],
+            status=user_record['status'] or "active",
+            last_signed_in=str(user_record['last_signed_in']) if user_record['last_signed_in'] else None,
             selected_theme=user_prefs['selected_theme'] if user_prefs else None,
             created_at=str(user_record['created_at']) if user_record['created_at'] else None
         )
@@ -986,6 +999,8 @@ async def get_user_profile_legacy(current_user = Depends(get_current_user)):
             subscription_type=user_record['subscription_type'] or "Free",
             subscription_status=user_record['subscription_status'] or "Active",
             profile_photo_url=user_record['profile_photo_url'],
+            status=user_record['status'] or "active",
+            last_signed_in=str(user_record['last_signed_in']) if user_record['last_signed_in'] else None,
             selected_theme=user_prefs['selected_theme'] if user_prefs else None,
             created_at=str(user_record['created_at']) if user_record['created_at'] else None
         )
@@ -1404,7 +1419,9 @@ async def get_family_members(current_user = Depends(get_current_user)):
             first_name=member['first_name'],
             last_name=member['last_name'],
             email=member['email'],
-            phone_number=member['phone_number']
+            phone_number=member['phone_number'],
+            status=member['status'] or "active",
+            last_signed_in=str(member['last_signed_in']) if member['last_signed_in'] else None
         )
         for member in family_members
     ]

@@ -89,11 +89,17 @@ struct ThemeSpotlightView: View {
                 
                 HStack(spacing: 0) {
                     theme.mainBackgroundColor
-                        .frame(width: 40, height: 60)
+                        .frame(width: 20, height: 60)
                     theme.highlightColor
-                        .frame(width: 20, height: 60)
+                        .frame(width: 15, height: 60)
+                    theme.secondaryBackgroundColor
+                        .frame(width: 15, height: 60)
+                    theme.parentOneColor
+                        .frame(width: 10, height: 60)
+                    theme.parentTwoColor
+                        .frame(width: 10, height: 60)
                     theme.otherMonthBackgroundColor
-                        .frame(width: 20, height: 60)
+                        .frame(width: 10, height: 60)
                 }
                 .cornerRadius(8)
                 .overlay(

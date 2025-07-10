@@ -191,6 +191,8 @@ struct FamilyMember: Codable {
     let last_name: String
     let email: String
     let phone_number: String?
+    let status: String?
+    let last_signed_in: String?
     
     var fullName: String {
         return "\(first_name) \(last_name)"
