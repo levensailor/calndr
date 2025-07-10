@@ -19,6 +19,8 @@ struct ContactsView: View {
     @State private var selectedContactForGroupText: (contactType: String, contactId: Int, name: String, phone: String)?
     @State private var showMessageComposer = false
     @State private var messageComposeResult: Result<MessageComposeResult, Error>?
+    @State private var groupTextRecipients: [String] = []
+    @State private var groupTextContact: (name: String, phone: String)?
     
     private let apiService = APIService.shared
     
@@ -254,13 +256,35 @@ struct ContactsView: View {
                     updateEmergencyContact(contact.id, with: updatedContact)
                 }
             }
-            .sheet(isPresented: $showMessageComposer) {
-                if let contact = selectedContactForGroupText {
+            .sheet(isPresented: $showMessageComposer, onDismiss: {
+                // Clean up state when modal is dismissed
+                groupTextContact = nil
+                groupTextRecipients = []
+                selectedContactForGroupText = nil
+            }) {
+                if let contact = groupTextContact, !groupTextRecipients.isEmpty {
                     MessageComposeView(
-                        recipients: getGroupTextRecipients(),
+                        recipients: groupTextRecipients,
                         messageBody: "Hi \(contact.name)! This is a group chat from the \(getFamilyName()) family.",
                         result: $messageComposeResult
                     )
+                } else {
+                    // Fallback view to prevent blank modal
+                    VStack {
+                        Text("Unable to start group message")
+                            .font(.headline)
+                            .padding()
+                        Text("Please make sure you have family members added with phone numbers.")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
+                            .padding()
+                        Button("Close") {
+                            showMessageComposer = false
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .padding()
+                    }
                 }
             }
         }
@@ -363,29 +387,39 @@ struct ContactsView: View {
             return
         }
         
+        // Prepare group text data immediately to avoid race conditions
+        let familyPhoneNumbers = self.getFamilyPhoneNumbers()
+        
+        // Debug logging
+        print("🔍 Group Text Debug:")
+        print("   Contact: \(contact.name) - \(contact.phone)")
+        print("   Family members count: \(self.familyMembers.count)")
+        print("   Family phone numbers: \(familyPhoneNumbers)")
+        
+        // Combine contact phone with all family phone numbers
+        var allNumbers = [contact.phone]
+        allNumbers.append(contentsOf: familyPhoneNumbers)
+        
+        // Remove duplicates (in case contact phone is same as a family member)
+        let uniqueNumbers = Array(Set(allNumbers)).filter { !$0.isEmpty }
+        
+        print("   Final numbers for group text: \(uniqueNumbers)")
+        
+        // Validate we have recipients before proceeding
+        guard !uniqueNumbers.isEmpty else {
+            self.errorMessage = "No phone numbers available for group text"
+            return
+        }
+        
         apiService.createOrGetGroupChat(contactType: contact.contactType, contactId: contact.contactId) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(_):
-                    // Create group text with unique identifier
-                    let familyPhoneNumbers = self.getFamilyPhoneNumbers()
+                    // Capture the contact and recipients data to prevent race conditions
+                    self.groupTextContact = (name: contact.name, phone: contact.phone)
+                    self.groupTextRecipients = uniqueNumbers
                     
-                    // Debug logging
-                    print("🔍 Group Text Debug:")
-                    print("   Contact: \(contact.name) - \(contact.phone)")
-                    print("   Family members count: \(self.familyMembers.count)")
-                    print("   Family phone numbers: \(familyPhoneNumbers)")
-                    
-                    // Combine contact phone with all family phone numbers
-                    var allNumbers = [contact.phone]
-                    allNumbers.append(contentsOf: familyPhoneNumbers)
-                    
-                    // Remove duplicates (in case contact phone is same as a family member)
-                    let uniqueNumbers = Array(Set(allNumbers)).filter { !$0.isEmpty }
-                    
-                    print("   Final numbers for group text: \(uniqueNumbers)")
-                    
-                    // Use proper message composer for group messaging
+                    // Present the message composer
                     self.showMessageComposer = true
                     
                 case .failure(let error):
@@ -751,11 +785,19 @@ struct MessageComposeView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> MFMessageComposeViewController {
         let controller = MFMessageComposeViewController()
         controller.messageComposeDelegate = context.coordinator
-        controller.recipients = recipients
+        
+        // Validate and set recipients
+        let validRecipients = recipients.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        controller.recipients = validRecipients
         controller.body = messageBody
         
-        print("📱 Creating message composer with recipients: \(recipients)")
+        print("📱 Creating message composer with \(validRecipients.count) recipients: \(validRecipients)")
         print("📱 Message body: \(messageBody)")
+        
+        // Additional validation
+        if validRecipients.isEmpty {
+            print("⚠️ Warning: No valid recipients for message composer")
+        }
         
         return controller
     }
