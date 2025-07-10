@@ -1,4 +1,6 @@
 import SwiftUI
+import Contacts
+import ContactsUI
 
 struct FamilyMemberCard: View {
     let title: String
@@ -59,6 +61,10 @@ struct FamilyView: View {
     @State private var showingAddCoparent = false
     @State private var showingAddChild = false
     @State private var showingAddOtherFamily = false
+    @State private var showingContactPicker = false
+    @State private var showingAddOptionsSheet = false
+    @State private var selectedContact: CNContact?
+    @State private var showingContactPermissionAlert = false
     
     var body: some View {
         NavigationView {
@@ -161,7 +167,7 @@ struct FamilyView: View {
                             
                             Spacer()
                             
-                            Button(action: { showingAddOtherFamily = true }) {
+                            Button(action: { showingAddOptionsSheet = true }) {
                                 Image(systemName: "plus.circle.fill")
                                     .font(.title3)
                                     .foregroundColor(.purple)
@@ -204,10 +210,69 @@ struct FamilyView: View {
                 .environmentObject(themeManager)
         }
         .sheet(isPresented: $showingAddOtherFamily) {
-            AddOtherFamilyView()
+            AddOtherFamilyView(prefilledContact: selectedContact)
                 .environmentObject(viewModel)
                 .environmentObject(themeManager)
+                .onDisappear {
+                    selectedContact = nil
+                }
         }
+        .confirmationDialog("Add Family Member", isPresented: $showingAddOptionsSheet) {
+            Button("Add Manually") {
+                showingAddOtherFamily = true
+            }
+            Button("Choose from Contacts") {
+                requestContactsPermission()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("How would you like to add a family member?")
+        }
+        .sheet(isPresented: $showingContactPicker) {
+            ContactPickerView { contact in
+                handleSelectedContact(contact)
+            }
+        }
+        .alert("Contacts Access Required", isPresented: $showingContactPermissionAlert) {
+            Button("Settings") {
+                if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(settingsUrl)
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("To add family members from your contacts, please enable Contacts access in Settings.")
+        }
+    }
+    
+    private func requestContactsPermission() {
+        let store = CNContactStore()
+        
+        switch CNContactStore.authorizationStatus(for: .contacts) {
+        case .authorized:
+            showingContactPicker = true
+        case .denied, .restricted:
+            showingContactPermissionAlert = true
+        case .limited:
+            showingContactPicker = true
+        case .notDetermined:
+            store.requestAccess(for: .contacts) { granted, error in
+                DispatchQueue.main.async {
+                    if granted {
+                        self.showingContactPicker = true
+                    } else {
+                        print("Contacts access denied by user.")
+                    }
+                }
+            }
+        @unknown default:
+            break
+        }
+    }
+    
+    private func handleSelectedContact(_ contact: CNContact) {
+        selectedContact = contact
+        showingAddOtherFamily = true
     }
     
     private func formatDate(_ dateString: String) -> String {
@@ -419,11 +484,17 @@ struct AddOtherFamilyView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.dismiss) private var dismiss
     
+    let prefilledContact: CNContact?
+    
     @State private var firstName = ""
     @State private var lastName = ""
     @State private var email = ""
     @State private var phoneNumber = ""
     @State private var relationship = ""
+    
+    init(prefilledContact: CNContact? = nil) {
+        self.prefilledContact = prefilledContact
+    }
     
     var body: some View {
         NavigationView {
@@ -471,6 +542,15 @@ struct AddOtherFamilyView: View {
             .background(themeManager.currentTheme.mainBackgroundColor)
             .navigationTitle("Add Family Member")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                if let contact = prefilledContact {
+                    firstName = contact.givenName
+                    lastName = contact.familyName
+                    email = contact.emailAddresses.first?.value as String? ?? ""
+                    phoneNumber = contact.phoneNumbers.first?.value.stringValue ?? ""
+                    relationship = "Family Member" // Default relationship
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
@@ -485,6 +565,44 @@ struct AddOtherFamilyView: View {
                     .disabled(firstName.isEmpty || lastName.isEmpty || relationship.isEmpty)
                 }
             }
+        }
+    }
+}
+
+// MARK: - Contact Picker View
+struct ContactPickerView: UIViewControllerRepresentable {
+    let onContactSelected: (CNContact) -> Void
+    @Environment(\.dismiss) private var dismiss
+    
+    func makeUIViewController(context: Context) -> CNContactPickerViewController {
+        let picker = CNContactPickerViewController()
+        picker.delegate = context.coordinator
+        picker.displayedPropertyKeys = [CNContactGivenNameKey, CNContactFamilyNameKey, CNContactEmailAddressesKey, CNContactPhoneNumbersKey]
+        return picker
+    }
+    
+    func updateUIViewController(_ uiViewController: CNContactPickerViewController, context: Context) {
+        // No updates needed
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, CNContactPickerDelegate {
+        let parent: ContactPickerView
+        
+        init(_ parent: ContactPickerView) {
+            self.parent = parent
+        }
+        
+        func contactPicker(_ picker: CNContactPickerViewController, didSelect contact: CNContact) {
+            parent.onContactSelected(contact)
+            parent.dismiss()
+        }
+        
+        func contactPickerDidCancel(_ picker: CNContactPickerViewController) {
+            parent.dismiss()
         }
     }
 }

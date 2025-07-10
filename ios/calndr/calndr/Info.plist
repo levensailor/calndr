@@ -15,5 +15,7 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSContactsUsageDescription</key>
+	<string>This app needs access to your contacts to help you add family members quickly.</string>
 </dict>
 </plist>
