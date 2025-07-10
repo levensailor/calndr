@@ -74,13 +74,17 @@ class CalendarViewModel: ObservableObject {
     
     init(authManager: AuthenticationManager) {
         self.authManager = authManager
-        networkMonitor.$isConnected
-            .map { !$0 }
-            .assign(to: \.isOffline, on: self)
-            .store(in: &cancellables)
+        self.networkMonitor = NetworkMonitor()
+        self.isOffline = !self.networkMonitor.isConnected
+        
         setupBindings()
-        setupHandoffTimer()
-        setupAppLifecycleObservers()
+        fetchInitialData()
+        
+        // Load the initial theme from UserDefaults
+        let savedThemeName = UserDefaults.standard.string(forKey: "selectedThemeName") ?? "Default"
+        if let initialTheme = themeManager.themes.first(where: { $0.name == savedThemeName }) {
+            themeManager.setTheme(to: initialTheme)
+        }
     }
     
     deinit {
@@ -1297,6 +1301,24 @@ class CalendarViewModel: ObservableObject {
                 case .failure(let error):
                     print("❌ Error saving child: \(error.localizedDescription)")
                     completion(false)
+                }
+            }
+        }
+    }
+
+    func saveThemePreference(themeName: String) {
+        // Optimistically update local state
+        UserDefaults.standard.set(themeName, forKey: "selectedThemeName")
+        
+        // Call API to save preference
+        APIService.shared.saveThemePreference(themeName: themeName) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    print("Successfully saved theme preference: \(themeName)")
+                case .failure(let error):
+                    print("Error saving theme preference: \(error.localizedDescription)")
+                    // Optionally, revert the optimistic update or show an error
                 }
             }
         }

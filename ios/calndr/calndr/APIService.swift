@@ -273,6 +273,38 @@ class APIService {
         }.resume()
     }
     
+    // MARK: - User Preferences
+    
+    func saveThemePreference(themeName: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/user/preferences")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "PUT"
+        
+        let body = ["selected_theme": themeName]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+                let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+                completion(.failure(NSError(domain: "APIService", code: statusCode, userInfo: [NSLocalizedDescriptionKey: "Failed to save theme preference"])))
+                return
+            }
+            
+            completion(.success(()))
+        }.resume()
+    }
+    
     // MARK: - Custody API (New dedicated custody endpoints)
     
     func fetchCustodyRecords(year: Int, month: Int, completion: @escaping (Result<[CustodyResponse], Error>) -> Void) {

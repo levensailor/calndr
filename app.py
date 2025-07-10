@@ -259,6 +259,15 @@ children = sqlalchemy.Table(
     sqlalchemy.Column("dob", sqlalchemy.Date, nullable=False),
 )
 
+user_preferences = sqlalchemy.Table(
+    "user_preferences",
+    metadata,
+    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
+    sqlalchemy.Column("user_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True),
+    sqlalchemy.Column("selected_theme", sqlalchemy.String(100), nullable=True),
+    sqlalchemy.Column("updated_at", sqlalchemy.DateTime, nullable=True, default=datetime.now, onupdate=datetime.now),
+)
+
 
 # --- Pydantic Models ---
 class User(BaseModel):
@@ -267,6 +276,11 @@ class User(BaseModel):
     first_name: str
     email: EmailStr
     apns_token: Optional[str] = None
+    subscription_type: Optional[str] = "Free"
+    subscription_status: Optional[str] = "Active"
+    profile_photo_url: Optional[str] = None
+    selected_theme: Optional[str] = None
+    created_at: Optional[str] = None
 
 class Event(BaseModel):
     id: Optional[int] = None
@@ -307,11 +321,14 @@ class UserProfile(BaseModel):
     subscription_type: Optional[str] = "Free"
     subscription_status: Optional[str] = "Active"
     profile_photo_url: Optional[str] = None
+    selected_theme: Optional[str] = None
     created_at: Optional[str] = None
 
 class PasswordUpdate(BaseModel):
     current_password: str
     new_password: str
+    dob: str  # Date string in YYYY-MM-DD format
+    family_id: str
 
 class NotificationEmail(BaseModel):
     id: int
@@ -417,6 +434,9 @@ class ChildResponse(BaseModel):
     last_name: str
     dob: str  # Date string in YYYY-MM-DD format
     family_id: str
+
+class UserPreferenceUpdate(BaseModel):
+    selected_theme: str
 
 
 
@@ -921,6 +941,10 @@ async def get_user_profile(current_user = Depends(get_current_user)):
         if not user_record:
             raise HTTPException(status_code=404, detail="User not found")
             
+        # Get user preferences
+        prefs_query = user_preferences.select().where(user_preferences.c.user_id == current_user['id'])
+        user_prefs = await database.fetch_one(prefs_query)
+            
         return UserProfile(
             id=uuid_to_string(user_record['id']),
             first_name=user_record['first_name'],
@@ -930,6 +954,7 @@ async def get_user_profile(current_user = Depends(get_current_user)):
             subscription_type=user_record['subscription_type'] or "Free",
             subscription_status=user_record['subscription_status'] or "Active",
             profile_photo_url=user_record['profile_photo_url'],
+            selected_theme=user_prefs['selected_theme'] if user_prefs else None,
             created_at=str(user_record['created_at']) if user_record['created_at'] else None
         )
     except Exception as e:
@@ -948,6 +973,10 @@ async def get_user_profile_legacy(current_user = Depends(get_current_user)):
         if not user_record:
             raise HTTPException(status_code=404, detail="User not found")
             
+        # Get user preferences
+        prefs_query = user_preferences.select().where(user_preferences.c.user_id == current_user['id'])
+        user_prefs = await database.fetch_one(prefs_query)
+            
         return UserProfile(
             id=uuid_to_string(user_record['id']),
             first_name=user_record['first_name'],
@@ -957,6 +986,7 @@ async def get_user_profile_legacy(current_user = Depends(get_current_user)):
             subscription_type=user_record['subscription_type'] or "Free",
             subscription_status=user_record['subscription_status'] or "Active",
             profile_photo_url=user_record['profile_photo_url'],
+            selected_theme=user_prefs['selected_theme'] if user_prefs else None,
             created_at=str(user_record['created_at']) if user_record['created_at'] else None
         )
     except Exception as e:
@@ -1044,6 +1074,7 @@ async def upload_profile_photo(
             subscription_type=user_record['subscription_type'] or "Free",
             subscription_status=user_record['subscription_status'] or "Active",
             profile_photo_url=user_record['profile_photo_url'],
+            selected_theme=user_record['selected_theme'] if user_record['selected_theme'] else None,
             created_at=str(user_record['created_at']) if user_record['created_at'] else None
         )
     except ClientError as e:
@@ -1982,3 +2013,42 @@ async def get_school_events(current_user = Depends(get_current_user)):
     except Exception as e:
         logger.error(f"Error retrieving school events: {e}")
         raise HTTPException(status_code=500, detail="Unable to retrieve school events")
+
+@app.put("/api/user/preferences")
+async def update_user_preferences(
+    preferences_data: UserPreferenceUpdate,
+    current_user = Depends(get_current_user)
+):
+    """
+    Update user preferences, such as selected theme.
+    """
+    user_id = current_user['id']
+    
+    try:
+        # Check if preferences already exist for this user
+        existing_prefs_query = user_preferences.select().where(user_preferences.c.user_id == user_id)
+        existing_prefs = await database.fetch_one(existing_prefs_query)
+        
+        if existing_prefs:
+            # Update existing preferences
+            update_query = user_preferences.update().where(
+                user_preferences.c.user_id == user_id
+            ).values(
+                selected_theme=preferences_data.selected_theme
+            )
+            await database.execute(update_query)
+            logger.info(f"Updated theme for user {user_id} to {preferences_data.selected_theme}")
+        else:
+            # Insert new preferences
+            insert_query = user_preferences.insert().values(
+                user_id=user_id,
+                selected_theme=preferences_data.selected_theme
+            )
+            await database.execute(insert_query)
+            logger.info(f"Set initial theme for user {user_id} to {preferences_data.selected_theme}")
+            
+        return {"status": "success", "message": "Preferences updated successfully"}
+    except Exception as e:
+        logger.error(f"Error updating user preferences: {e}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Failed to update preferences")

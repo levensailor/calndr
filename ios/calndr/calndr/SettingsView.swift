@@ -174,7 +174,7 @@ struct SettingsView: View {
         case .security:
             SecuritySettingsView()
         case .preferences:
-            PreferencesView().environmentObject(viewModel)
+            PreferencesView(themeManager: themeManager).environmentObject(viewModel)
         case .daycare:
             DaycareView().environmentObject(viewModel)
         case .sitters:

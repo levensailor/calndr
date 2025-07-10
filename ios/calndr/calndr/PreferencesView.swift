@@ -1,3 +1,10 @@
+//
+//  PreferencesView.swift
+//  calndr
+//
+//  Created by Levi Sailor on 10/7/23.
+//
+
 import SwiftUI
 
 struct PreferenceItem: Identifiable {
@@ -59,12 +66,96 @@ struct PreferenceRow: View {
     }
 }
 
+struct ThemeSpotlightView: View {
+    let theme: Theme
+    let action: () -> Void
+    @EnvironmentObject var themeManager: ThemeManager
+
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(theme.name)
+                        .font(theme.font)
+                        .foregroundColor(theme.textColor)
+                        .font(.largeTitle)
+                    
+                    Button("Set Theme", action: action)
+                        .buttonStyle(.borderedProminent)
+                        .tint(theme.highlightColor)
+                }
+                
+                Spacer()
+                
+                HStack(spacing: 0) {
+                    theme.mainBackgroundColor
+                        .frame(width: 40, height: 60)
+                    theme.highlightColor
+                        .frame(width: 20, height: 60)
+                    theme.otherMonthBackgroundColor
+                        .frame(width: 20, height: 60)
+                }
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(theme.textColor.opacity(0.5), lineWidth: 1)
+                )
+            }
+            .padding()
+            .background(theme.secondaryBackgroundColor)
+            .cornerRadius(12)
+        }
+    }
+}
+
+struct ThemeSelectorView: View {
+    @Binding var selectedTheme: Theme
+    let themes: [Theme]
+    
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 20) {
+                    ForEach(themes) { theme in
+                        Button(action: {
+                            withAnimation {
+                                selectedTheme = theme
+                            }
+                        }) {
+                            Text(theme.name)
+                                .font(.headline)
+                                .padding()
+                                .background(selectedTheme.id == theme.id ? Color.gray.opacity(0.3) : Color.clear)
+                                .cornerRadius(8)
+                        }
+                        .id(theme.id)
+                    }
+                }
+                .padding()
+            }
+            .onChange(of: selectedTheme) { _, newTheme in
+                withAnimation {
+                    proxy.scrollTo(newTheme.id, anchor: .center)
+                }
+            }
+            .onAppear {
+                DispatchQueue.main.async {
+                    proxy.scrollTo(selectedTheme.id, anchor: .center)
+                }
+            }
+        }
+    }
+}
+
 struct PreferencesView: View {
     @EnvironmentObject var viewModel: CalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
     @State private var allowPastCustodyEditing = UserDefaults.standard.bool(forKey: "allowPastCustodyEditing")
+    @State private var previewTheme: Theme
 
-    let columns = [GridItem(.flexible()), GridItem(.flexible())]
+    init(themeManager: ThemeManager) {
+        _previewTheme = State(initialValue: themeManager.currentTheme)
+    }
 
     var body: some View {
         Form {
@@ -77,21 +168,24 @@ struct PreferencesView: View {
             
             // Theme Selection Section
             Section(header: Text("Themes")) {
-                ScrollView {
-                    LazyVGrid(columns: columns, spacing: 20) {
-                        ForEach(themeManager.themes) { theme in
-                            ThemePreviewView(theme: theme)
-                        }
-                    }
-                    .padding()
+                VStack {
+                    ThemeSpotlightView(theme: previewTheme, action: {
+                        themeManager.setTheme(to: previewTheme)
+                        viewModel.saveThemePreference(themeName: previewTheme.name)
+                    })
+                    
+                    ThemeSelectorView(selectedTheme: $previewTheme, themes: themeManager.themes)
                 }
-                .frame(height: 250)
+                .padding(.vertical)
             }
         }
         .navigationTitle("Preferences")
         .background(themeManager.currentTheme.mainBackgroundColor)
         .onChange(of: allowPastCustodyEditing) { oldValue, newValue in
             UserDefaults.standard.set(newValue, forKey: "allowPastCustodyEditing")
+        }
+        .onAppear {
+            self.previewTheme = themeManager.currentTheme
         }
     }
     
