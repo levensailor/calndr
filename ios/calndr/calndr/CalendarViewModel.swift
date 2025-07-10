@@ -1361,6 +1361,78 @@ class CalendarViewModel: ObservableObject {
             }
         }
     }
+    
+    // MARK: - Family Data Updating
+    
+    func updateChild(_ id: String, childData: ChildCreate, completion: @escaping (Bool) -> Void) {
+        APIService.shared.updateChild(id: id, childData) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let updatedChild):
+                    if let index = self?.children.firstIndex(where: { $0.id == id }) {
+                        self?.children[index] = updatedChild
+                    }
+                    print("✅ Successfully updated child: \(updatedChild.firstName)")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error updating child: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func updateEmergencyContact(_ id: Int, contactData: EmergencyContactCreate, completion: @escaping (Bool) -> Void) {
+        APIService.shared.updateEmergencyContact(id: id, contact: contactData) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let updatedContact):
+                    if let index = self?.emergencyContacts.firstIndex(where: { $0.id == id }) {
+                        self?.emergencyContacts[index] = updatedContact
+                    }
+                    print("✅ Successfully updated emergency contact: \(updatedContact.fullName)")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error updating emergency contact: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Family Data Deleting
+    
+    func deleteChild(_ id: String, completion: @escaping (Bool) -> Void) {
+        APIService.shared.deleteChild(id: id) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    self?.children.removeAll { $0.id == id }
+                    print("✅ Successfully deleted child")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error deleting child: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func deleteEmergencyContact(_ id: Int, completion: @escaping (Bool) -> Void) {
+        APIService.shared.deleteEmergencyContact(id: id) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    self?.emergencyContacts.removeAll { $0.id == id }
+                    print("✅ Successfully deleted emergency contact")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error deleting emergency contact: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
 
     func saveThemePreference(themeName: String) {
         // Optimistically update local state

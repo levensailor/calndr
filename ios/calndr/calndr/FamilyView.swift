@@ -6,9 +6,29 @@ struct FamilyMemberCard: View {
     let title: String
     let subtitle: String
     let detail: String?
+    let phoneNumber: String?
+    let email: String?
     let icon: String
     let color: Color
+    let canEdit: Bool
+    let canDelete: Bool
+    let onEdit: (() -> Void)?
+    let onDelete: (() -> Void)?
     @EnvironmentObject var themeManager: ThemeManager
+    
+    init(title: String, subtitle: String, detail: String? = nil, phoneNumber: String? = nil, email: String? = nil, icon: String, color: Color, canEdit: Bool = false, canDelete: Bool = false, onEdit: (() -> Void)? = nil, onDelete: (() -> Void)? = nil) {
+        self.title = title
+        self.subtitle = subtitle
+        self.detail = detail
+        self.phoneNumber = phoneNumber
+        self.email = email
+        self.icon = icon
+        self.color = color
+        self.canEdit = canEdit
+        self.canDelete = canDelete
+        self.onEdit = onEdit
+        self.onDelete = onDelete
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -30,6 +50,31 @@ struct FamilyMemberCard: View {
                 
                 Spacer()
                 
+                // Action buttons
+                if canEdit || canDelete {
+                    HStack(spacing: 8) {
+                        if canEdit {
+                            Button(action: { onEdit?() }) {
+                                Image(systemName: "pencil")
+                                    .font(.caption)
+                                    .foregroundColor(.blue)
+                                    .frame(width: 24, height: 24)
+                                    .background(Circle().fill(Color.blue.opacity(0.1)))
+                            }
+                        }
+                        
+                        if canDelete {
+                            Button(action: { onDelete?() }) {
+                                Image(systemName: "trash")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                                    .frame(width: 24, height: 24)
+                                    .background(Circle().fill(Color.red.opacity(0.1)))
+                            }
+                        }
+                    }
+                }
+                
                 if let detail = detail {
                     VStack(alignment: .trailing, spacing: 2) {
                         Text("Last active:")
@@ -45,6 +90,54 @@ struct FamilyMemberCard: View {
                     .frame(minWidth: 80, alignment: .trailing)
                 }
             }
+            
+            // Contact information with clickable phone numbers
+            if let phoneNumber = phoneNumber, phoneNumber != "N/A" {
+                HStack {
+                    Image(systemName: "phone.fill")
+                        .font(.caption)
+                        .foregroundColor(.green)
+                    
+                    Button(action: { makePhoneCall(phoneNumber) }) {
+                        Text(phoneNumber)
+                            .font(.subheadline)
+                            .foregroundColor(.blue)
+                            .underline()
+                    }
+                    
+                    Spacer()
+                    
+                    Button(action: { sendGroupMessage(phoneNumber) }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "message.fill")
+                                .font(.caption)
+                            Text("Text")
+                                .font(.caption)
+                        }
+                        .foregroundColor(.blue)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(Color.blue.opacity(0.1)))
+                    }
+                }
+                .padding(.top, 4)
+            } else if let email = email {
+                HStack {
+                    Image(systemName: "envelope.fill")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                    
+                    Button(action: { sendEmail(email) }) {
+                        Text(email)
+                            .font(.subheadline)
+                            .foregroundColor(.blue)
+                            .underline()
+                    }
+                    
+                    Spacer()
+                }
+                .padding(.top, 4)
+            }
         }
         .padding()
         .background(
@@ -52,6 +145,26 @@ struct FamilyMemberCard: View {
                 .fill(themeManager.currentTheme.otherMonthBackgroundColor)
                 .shadow(color: themeManager.currentTheme.textColor.opacity(0.1), radius: 2, x: 0, y: 1)
         )
+    }
+    
+    private func makePhoneCall(_ phoneNumber: String) {
+        let cleanedNumber = phoneNumber.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+        if let url = URL(string: "tel:\(cleanedNumber)") {
+            UIApplication.shared.open(url)
+        }
+    }
+    
+    private func sendGroupMessage(_ phoneNumber: String) {
+        let cleanedNumber = phoneNumber.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+        if let url = URL(string: "sms:\(cleanedNumber)") {
+            UIApplication.shared.open(url)
+        }
+    }
+    
+    private func sendEmail(_ email: String) {
+        if let url = URL(string: "mailto:\(email)") {
+            UIApplication.shared.open(url)
+        }
     }
 }
 
@@ -65,6 +178,14 @@ struct FamilyView: View {
     @State private var showingAddOptionsSheet = false
     @State private var selectedContact: CNContact?
     @State private var showingContactPermissionAlert = false
+    @State private var showingEditChild = false
+    @State private var showingEditOtherFamily = false
+    @State private var selectedChild: Child?
+    @State private var selectedEmergencyContact: EmergencyContact?
+    @State private var showingDeleteAlert = false
+    @State private var itemToDelete: Any?
+    @State private var deleteAlertTitle = ""
+    @State private var deleteAlertMessage = ""
     
     var body: some View {
         NavigationView {
@@ -112,6 +233,8 @@ struct FamilyView: View {
                                     title: coparent.fullName,
                                     subtitle: coparent.phone_number ?? coparent.email,
                                     detail: coparent.lastSignin != nil ? formatRelativeTime(coparent.lastSignin!) : "Never",
+                                    phoneNumber: coparent.phone_number,
+                                    email: coparent.email,
                                     icon: "person.crop.circle",
                                     color: .blue
                                 )
@@ -150,7 +273,11 @@ struct FamilyView: View {
                                     subtitle: "Born: \(formatDate(child.dateOfBirth))",
                                     detail: "\(child.age) years old",
                                     icon: "figure.2.and.child.holdinghands",
-                                    color: .green
+                                    color: .green,
+                                    canEdit: true,
+                                    canDelete: true,
+                                    onEdit: { editChild(child) },
+                                    onDelete: { deleteChild(child) }
                                 )
                                 .padding(.horizontal)
                             }
@@ -195,9 +322,14 @@ struct FamilyView: View {
                                 FamilyMemberCard(
                                     title: contact.fullName,
                                     subtitle: contact.displayRelationship,
-                                    detail: contact.notes ?? contact.phone_number,
+                                    phoneNumber: contact.phone_number,
+                                    email: contact.notes, // Email is stored in notes field
                                     icon: "person.3",
-                                    color: .purple
+                                    color: .purple,
+                                    canEdit: true,
+                                    canDelete: true,
+                                    onEdit: { editEmergencyContact(contact) },
+                                    onDelete: { deleteEmergencyContact(contact) }
                                 )
                                 .padding(.horizontal)
                             }
@@ -255,6 +387,30 @@ struct FamilyView: View {
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("To add family members from your contacts, please enable Contacts access in Settings.")
+        }
+        .sheet(isPresented: $showingEditChild) {
+            if let child = selectedChild {
+                EditChildView(child: child)
+                    .environmentObject(viewModel)
+                    .environmentObject(themeManager)
+            }
+        }
+        .sheet(isPresented: $showingEditOtherFamily) {
+            if let contact = selectedEmergencyContact {
+                EditOtherFamilyView(contact: contact)
+                    .environmentObject(viewModel)
+                    .environmentObject(themeManager)
+            }
+        }
+        .alert(deleteAlertTitle, isPresented: $showingDeleteAlert) {
+            Button("Delete", role: .destructive) {
+                confirmDelete()
+            }
+            Button("Cancel", role: .cancel) {
+                itemToDelete = nil
+            }
+        } message: {
+            Text(deleteAlertMessage)
         }
     }
 
@@ -359,6 +515,59 @@ struct FamilyView: View {
         } else {
             return "Over a week ago"
         }
+    }
+    
+    // MARK: - Edit and Delete Functions
+    
+    private func editChild(_ child: Child) {
+        selectedChild = child
+        showingEditChild = true
+    }
+    
+    private func deleteChild(_ child: Child) {
+        itemToDelete = child
+        deleteAlertTitle = "Delete Child"
+        deleteAlertMessage = "Are you sure you want to delete \(child.firstName)? This action cannot be undone."
+        showingDeleteAlert = true
+    }
+    
+    private func editEmergencyContact(_ contact: EmergencyContact) {
+        selectedEmergencyContact = contact
+        showingEditOtherFamily = true
+    }
+    
+    private func deleteEmergencyContact(_ contact: EmergencyContact) {
+        itemToDelete = contact
+        deleteAlertTitle = "Delete Family Member"
+        deleteAlertMessage = "Are you sure you want to delete \(contact.fullName)? This action cannot be undone."
+        showingDeleteAlert = true
+    }
+    
+    private func confirmDelete() {
+        if let child = itemToDelete as? Child {
+            viewModel.deleteChild(child.id) { success in
+                DispatchQueue.main.async {
+                    if success {
+                        print("✅ Child deleted successfully")
+                        viewModel.fetchChildren()
+                    } else {
+                        print("❌ Failed to delete child")
+                    }
+                }
+            }
+        } else if let contact = itemToDelete as? EmergencyContact {
+            viewModel.deleteEmergencyContact(contact.id) { success in
+                DispatchQueue.main.async {
+                    if success {
+                        print("✅ Emergency contact deleted successfully")
+                        viewModel.fetchEmergencyContacts()
+                    } else {
+                        print("❌ Failed to delete emergency contact")
+                    }
+                }
+            }
+        }
+        itemToDelete = nil
     }
 }
 
@@ -659,6 +868,198 @@ struct ContactPickerView: UIViewControllerRepresentable {
         
         func contactPickerDidCancel(_ picker: CNContactPickerViewController) {
             parent.dismiss()
+        }
+    }
+}
+
+// MARK: - Edit Child View
+struct EditChildView: View {
+    @EnvironmentObject var viewModel: CalendarViewModel
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.dismiss) private var dismiss
+    
+    let child: Child
+    @State private var firstName = ""
+    @State private var lastName = ""
+    @State private var dateOfBirth = Date()
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("Child Information") {
+                    FloatingLabelTextField(
+                        title: "First Name",
+                        text: $firstName,
+                        isSecure: false,
+                        themeManager: themeManager
+                    )
+                    
+                    FloatingLabelTextField(
+                        title: "Last Name",
+                        text: $lastName,
+                        isSecure: false,
+                        themeManager: themeManager
+                    )
+                    
+                    DatePicker("Date of Birth", selection: $dateOfBirth, displayedComponents: .date)
+                        .foregroundColor(themeManager.currentTheme.textColor)
+                }
+            }
+            .background(themeManager.currentTheme.mainBackgroundColor)
+            .navigationTitle("Edit Child")
+            .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                firstName = child.firstName
+                lastName = child.lastName
+                
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateFormat = "yyyy-MM-dd"
+                if let date = dateFormatter.date(from: child.dateOfBirth) {
+                    dateOfBirth = date
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        saveChild()
+                    }
+                    .disabled(firstName.isEmpty || lastName.isEmpty)
+                }
+            }
+        }
+    }
+    
+    private func saveChild() {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dobString = dateFormatter.string(from: dateOfBirth)
+        
+        let childData = ChildCreate(
+            first_name: firstName,
+            last_name: lastName,
+            dob: dobString
+        )
+        
+        viewModel.updateChild(child.id, childData: childData) { success in
+            DispatchQueue.main.async {
+                if success {
+                    print("✅ Child updated successfully")
+                    viewModel.fetchChildren()
+                } else {
+                    print("❌ Failed to update child")
+                }
+                dismiss()
+            }
+        }
+    }
+}
+
+// MARK: - Edit Other Family View
+struct EditOtherFamilyView: View {
+    @EnvironmentObject var viewModel: CalendarViewModel
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.dismiss) private var dismiss
+    
+    let contact: EmergencyContact
+    @State private var firstName = ""
+    @State private var lastName = ""
+    @State private var email = ""
+    @State private var phoneNumber = ""
+    @State private var relationship = ""
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("Family Member Information") {
+                    FloatingLabelTextField(
+                        title: "First Name",
+                        text: $firstName,
+                        isSecure: false,
+                        themeManager: themeManager
+                    )
+                    
+                    FloatingLabelTextField(
+                        title: "Last Name",
+                        text: $lastName,
+                        isSecure: false,
+                        themeManager: themeManager
+                    )
+                    
+                    FloatingLabelTextField(
+                        title: "Email (Optional)",
+                        text: $email,
+                        isSecure: false,
+                        themeManager: themeManager
+                    )
+                    .keyboardType(.emailAddress)
+                    .autocapitalization(.none)
+                    
+                    FloatingLabelTextField(
+                        title: "Phone Number (Optional)",
+                        text: $phoneNumber,
+                        isSecure: false,
+                        themeManager: themeManager
+                    )
+                    .keyboardType(.phonePad)
+                    
+                    FloatingLabelTextField(
+                        title: "Relationship",
+                        text: $relationship,
+                        isSecure: false,
+                        themeManager: themeManager
+                    )
+                }
+            }
+            .background(themeManager.currentTheme.mainBackgroundColor)
+            .navigationTitle("Edit Family Member")
+            .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                firstName = contact.first_name
+                lastName = contact.last_name
+                email = contact.notes ?? ""
+                phoneNumber = contact.phone_number == "N/A" ? "" : contact.phone_number
+                relationship = contact.relationship ?? ""
+            }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        saveOtherFamilyMember()
+                    }
+                    .disabled(firstName.isEmpty || lastName.isEmpty || relationship.isEmpty)
+                }
+            }
+        }
+    }
+    
+    private func saveOtherFamilyMember() {
+        let contactData = EmergencyContactCreate(
+            first_name: firstName,
+            last_name: lastName,
+            phone_number: phoneNumber.isEmpty ? "N/A" : phoneNumber,
+            relationship: relationship,
+            notes: email.isEmpty ? nil : email
+        )
+        
+        viewModel.updateEmergencyContact(contact.id, contactData: contactData) { success in
+            DispatchQueue.main.async {
+                if success {
+                    print("✅ Emergency contact updated successfully")
+                    viewModel.fetchEmergencyContacts()
+                } else {
+                    print("❌ Failed to update emergency contact")
+                }
+                dismiss()
+            }
         }
     }
 }
