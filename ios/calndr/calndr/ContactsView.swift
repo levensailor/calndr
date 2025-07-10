@@ -284,37 +284,26 @@ struct ContactsView: View {
                 } else {
                     print("❌ Presenting fallback view - contact: \(String(describing: groupTextContact)), recipients empty: \(groupTextRecipients.isEmpty)")
                     // Fallback view to prevent blank modal
-                    VStack {
+                    VStack(spacing: 16) {
                         Text("Unable to start group message")
                             .font(.headline)
-                            .padding()
+                        
                         Text("Family member data is still loading or unavailable. Please wait a moment and try again.")
                             .font(.caption)
                             .foregroundColor(.gray)
                             .multilineTextAlignment(.center)
-                            .padding()
+                        
                         Button("Close") {
                             showMessageComposer = false
                         }
                         .buttonStyle(.borderedProminent)
-                        .padding()
                         
-                        // Debug info for troubleshooting
-                        VStack {
-                            Text("Debug Info:")
-                                .font(.caption)
-                                .bold()
-                            Text("Contact: \(String(describing: groupTextContact))")
-                                .font(.caption)
-                            Text("Recipients: \(groupTextRecipients)")
-                                .font(.caption)
-                            Text("Family Members: \(familyMembers.count)")
-                                .font(.caption)
-                        }
-                        .padding()
-                        .background(Color.gray.opacity(0.1))
-                        .cornerRadius(8)
+                        // Simplified debug info
+                        Text("Debug: Contact=\(groupTextContact?.name ?? "nil"), Recipients=\(groupTextRecipients.count), Family=\(familyMembers.count)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
+                    .padding()
                 }
             }
         }
