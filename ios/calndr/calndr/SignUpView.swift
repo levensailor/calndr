@@ -8,10 +8,10 @@ struct SignUpView: View {
 
     var body: some View {
         ZStack {
-            themeManager.currentTheme.mainBackgroundColor.edgesIgnoringSafeArea(.all)
+            themeManager.currentTheme.mainBackgroundColor.ignoresSafeArea()
             
             ScrollView {
-                VStack(spacing: 20) {
+                LazyVStack(spacing: 20) {
                     Text("Create Account")
                         .font(.custom(themeManager.currentTheme.fontName, size: 32))
                         .fontWeight(.bold)
@@ -106,11 +106,16 @@ struct SignUpView: View {
                             .foregroundColor(themeManager.currentTheme.textColor)
                             .padding()
                     }
-                    
-                    Spacer(minLength: 40)
+                    .padding(.bottom, 40)
                 }
+                .padding(.bottom, 20)
             }
+            .keyboardDismissMode(.onDrag)
         }
         .navigationBarHidden(true)
+        .onTapGesture {
+            // Dismiss keyboard when tapping outside
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
     }
 } 

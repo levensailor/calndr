@@ -8,7 +8,7 @@ struct LoginView: View {
 
     var body: some View {
         ZStack {
-            themeManager.currentTheme.mainBackgroundColor.edgesIgnoringSafeArea(.all)
+            themeManager.currentTheme.mainBackgroundColor.ignoresSafeArea()
             
             VStack(spacing: 20) {
                 Text("calndr")
@@ -76,6 +76,10 @@ struct LoginView: View {
             SignUpView()
                 .environmentObject(authManager)
                 .environmentObject(themeManager)
+        }
+        .onTapGesture {
+            // Dismiss keyboard when tapping outside
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
     }
 } 
