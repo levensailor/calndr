@@ -1,6 +1,31 @@
 import SwiftUI
 import Contacts
 import ContactsUI
+import MessageUI
+
+// MARK: - Family Group Text Data Store
+class FamilyGroupTextDataStore: ObservableObject {
+    @Published var contact: (name: String, phone: String)?
+    @Published var recipients: [String] = []
+    
+    func setData(contact: (name: String, phone: String), recipients: [String]) {
+        print("📦 FamilyGroupTextDataStore: Setting data - contact: \(contact), recipients: \(recipients)")
+        self.contact = contact
+        self.recipients = recipients
+    }
+    
+    func clearData() {
+        print("📦 FamilyGroupTextDataStore: Clearing data")
+        self.contact = nil
+        self.recipients = []
+    }
+    
+    var hasValidData: Bool {
+        let isValid = contact != nil && !recipients.isEmpty
+        print("📦 FamilyGroupTextDataStore: hasValidData = \(isValid)")
+        return isValid
+    }
+}
 
 struct FamilyMemberCard: View {
     let title: String
@@ -155,15 +180,118 @@ struct FamilyMemberCard: View {
     }
     
     private func sendGroupMessage(_ phoneNumber: String) {
-        let cleanedNumber = phoneNumber.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
-        if let url = URL(string: "sms:\(cleanedNumber)") {
-            UIApplication.shared.open(url)
+        // Find the emergency contact that matches this phone number
+        if let contact = viewModel.emergencyContacts.first(where: { $0.phone_number == phoneNumber }) {
+            selectedContactForGroupText = ("emergency", contact.id, contact.fullName, phoneNumber)
+            startGroupText()
+        } else {
+            // Fallback to simple SMS if contact not found
+            let cleanedNumber = phoneNumber.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+            if let url = URL(string: "sms:\(cleanedNumber)") {
+                UIApplication.shared.open(url)
+            }
         }
     }
     
     private func sendEmail(_ email: String) {
         if let url = URL(string: "mailto:\(email)") {
             UIApplication.shared.open(url)
+        }
+    }
+    
+    private func startGroupText() {
+        print("🚀 FamilyView startGroupText() called")
+        
+        guard let contact = selectedContactForGroupText else {
+            print("❌ No contact selected for group text")
+            return
+        }
+        
+        print("✅ Contact selected: \(contact.name) - \(contact.phone)")
+        
+        // Check if device can send messages
+        guard MFMessageComposeViewController.canSendText() else {
+            print("❌ Device cannot send text messages")
+            return
+        }
+        
+        print("✅ Device can send messages")
+        
+        // Prepare group text data
+        let familyPhoneNumbers = getFamilyPhoneNumbers()
+        
+        // Debug logging
+        print("🔍 Group Text Debug:")
+        print("   Contact: \(contact.name) - \(contact.phone)")
+        print("   Family members count: \(self.familyMembers.count)")
+        print("   Family phone numbers: \(familyPhoneNumbers)")
+        
+        // Combine contact phone with all family phone numbers
+        var allNumbers = [contact.phone]
+        allNumbers.append(contentsOf: familyPhoneNumbers)
+        
+        // Remove duplicates (in case contact phone is same as a family member)
+        let uniqueNumbers = Array(Set(allNumbers)).filter { !$0.isEmpty }
+        
+        print("   Final numbers for group text: \(uniqueNumbers)")
+        
+        // Validate we have recipients before proceeding
+        guard !uniqueNumbers.isEmpty else {
+            print("❌ No phone numbers available for group text")
+            return
+        }
+        
+        print("🌐 Calling createOrGetGroupChat API...")
+        APIService.shared.createOrGetGroupChat(contactType: contact.contactType, contactId: contact.contactId) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(_):
+                    print("✅ API call successful")
+                    // Store data in persistent data store
+                    self.groupTextDataStore.setData(
+                        contact: (name: contact.name, phone: contact.phone),
+                        recipients: uniqueNumbers
+                    )
+                    
+                    // Present the message composer
+                    print("📱 Setting showMessageComposer = true")
+                    self.showMessageComposer = true
+                    
+                case .failure(let error):
+                    print("❌ API call failed: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    private func getFamilyPhoneNumbers() -> [String] {
+        // Return phone numbers of all family members that have them
+        let phoneNumbers = familyMembers.compactMap { member -> String? in
+            let phone = member.phone_number?.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let phone = phone, !phone.isEmpty {
+                print("📱 Family member: \(member.first_name) \(member.last_name) - Phone: \(phone)")
+                return phone
+            } else {
+                print("📱 Family member: \(member.first_name) \(member.last_name) - No phone number")
+                return nil
+            }
+        }
+        
+        print("📱 Total family phone numbers found: \(phoneNumbers.count)")
+        return phoneNumbers
+    }
+    
+    private func loadFamilyData() {
+        APIService.shared.fetchFamilyMembers { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let members):
+                    self.familyMembers = members
+                    print("✅ Successfully loaded \(members.count) family members for group text")
+                case .failure(let error):
+                    print("❌ Failed to load family members: \(error.localizedDescription)")
+                }
+            }
         }
     }
 }
@@ -186,6 +314,11 @@ struct FamilyView: View {
     @State private var itemToDelete: Any?
     @State private var deleteAlertTitle = ""
     @State private var deleteAlertMessage = ""
+    @State private var selectedContactForGroupText: (contactType: String, contactId: Int, name: String, phone: String)?
+    @State private var showMessageComposer = false
+    @State private var messageComposeResult: Result<MessageComposeResult, Error>?
+    @State private var familyMembers: [FamilyMember] = []
+    @StateObject private var groupTextDataStore = FamilyGroupTextDataStore()
     
     var body: some View {
         NavigationView {
@@ -420,6 +553,21 @@ struct FamilyView: View {
             }
         } message: {
             Text(deleteAlertMessage)
+        }
+        .sheet(isPresented: $showMessageComposer, onDismiss: {
+            print("🗂️ Sheet dismissed - cleaning up state")
+            groupTextDataStore.clearData()
+            selectedContactForGroupText = nil
+        }) {
+            FamilyGroupTextSheetView(
+                dataStore: groupTextDataStore,
+                familyMembers: familyMembers,
+                messageComposeResult: $messageComposeResult,
+                showMessageComposer: $showMessageComposer
+            )
+        }
+        .onAppear {
+            loadFamilyData()
         }
     }
 
@@ -846,6 +994,118 @@ struct AddOtherFamilyView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Family Message Compose View
+
+struct FamilyMessageComposeView: UIViewControllerRepresentable {
+    let recipients: [String]
+    let messageBody: String
+    @Binding var result: Result<MessageComposeResult, Error>?
+    @Environment(\.dismiss) private var dismiss
+
+    func makeUIViewController(context: Context) -> MFMessageComposeViewController {
+        let controller = MFMessageComposeViewController()
+        controller.messageComposeDelegate = context.coordinator
+        
+        // Validate and set recipients
+        let validRecipients = recipients.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        controller.recipients = validRecipients
+        controller.body = messageBody
+        
+        print("📱 Creating message composer with \(validRecipients.count) recipients: \(validRecipients)")
+        print("📱 Message body: \(messageBody)")
+        
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: MFMessageComposeViewController, context: Context) {
+        // No updates needed
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, MFMessageComposeViewControllerDelegate {
+        let parent: FamilyMessageComposeView
+
+        init(_ parent: FamilyMessageComposeView) {
+            self.parent = parent
+        }
+
+        func messageComposeViewController(_ controller: MFMessageComposeViewController, didFinishWith result: MessageComposeResult) {
+            switch result {
+            case .cancelled:
+                print("📱 Message compose cancelled")
+                parent.result = .success(.cancelled)
+            case .sent:
+                print("📱 Message sent successfully")
+                parent.result = .success(.sent)
+            case .failed:
+                print("📱 Message compose failed")
+                parent.result = .failure(NSError(domain: "MessageComposeError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to send message"]))
+            @unknown default:
+                print("📱 Unknown message compose result")
+                parent.result = .failure(NSError(domain: "MessageComposeError", code: -2, userInfo: [NSLocalizedDescriptionKey: "Unknown result"]))
+            }
+            
+            parent.dismiss()
+        }
+    }
+}
+
+// MARK: - Family Group Text Sheet View
+
+struct FamilyGroupTextSheetView: View {
+    @ObservedObject var dataStore: FamilyGroupTextDataStore
+    let familyMembers: [FamilyMember]
+    @Binding var messageComposeResult: Result<MessageComposeResult, Error>?
+    @Binding var showMessageComposer: Bool
+    
+    var body: some View {
+        Group {
+            if dataStore.hasValidData, let contact = dataStore.contact {
+                FamilyMessageComposeView(
+                    recipients: dataStore.recipients,
+                    messageBody: "Hi \(contact.name)! This is a group message from the \(getFamilyName()) family.",
+                    result: $messageComposeResult
+                )
+            } else {
+                // Fallback view to prevent blank modal
+                VStack(spacing: 16) {
+                    Text("Unable to start group message")
+                        .font(.headline)
+                    
+                    Text("Family member data is still loading or unavailable. Please wait a moment and try again.")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                    
+                    Button("Close") {
+                        showMessageComposer = false
+                    }
+                    .buttonStyle(.borderedProminent)
+                    
+                    // Debug info
+                    Text("Debug: Contact=\(dataStore.contact?.name ?? "nil"), Recipients=\(dataStore.recipients.count), Family=\(familyMembers.count)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding()
+            }
+        }
+        .onAppear {
+            print("🗂️ FamilyGroupTextSheetView appeared")
+            print("   dataStore.contact: \(String(describing: dataStore.contact))")
+            print("   dataStore.recipients: \(dataStore.recipients)")
+            print("   dataStore.hasValidData: \(dataStore.hasValidData)")
+        }
+    }
+    
+    private func getFamilyName() -> String {
+        return familyMembers.first?.last_name ?? "Family"
     }
 }
 
