@@ -655,11 +655,13 @@ class CalendarViewModel: ObservableObject {
      
      // Setup app lifecycle observers to update streak when app becomes active
      private func setupAppLifecycleObservers() {
+         print("🔧 Setting up app lifecycle observers")
          NotificationCenter.default.addObserver(
              forName: UIApplication.didBecomeActiveNotification,
              object: nil,
              queue: .main
          ) { [weak self] _ in
+             print("📱 App became active - running lifecycle tasks")
              // When app becomes active, check if we need to update custody streak
              // in case handoff time was crossed while app was in background
              self?.updateCustodyStreak()
@@ -674,11 +676,15 @@ class CalendarViewModel: ObservableObject {
     }
     
     private func updateLastSigninTime() {
+        print("🕐 updateLastSigninTime called")
+        
         // Only update if user is authenticated
         guard AuthenticationService.shared.isLoggedIn else {
+            print("⚠️ User not logged in, skipping last signin update")
             return
         }
         
+        print("🔐 User is authenticated, calling API to update last signin")
         APIService.shared.updateLastSignin { result in
             switch result {
             case .success:

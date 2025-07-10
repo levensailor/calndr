@@ -783,6 +783,8 @@ class APIService {
         let url = baseURL.appendingPathComponent("/users/me/last-signin")
         var request = createAuthenticatedRequest(url: url)
         request.httpMethod = "POST"
+        
+        print("🌐 Making API call to update last signin: \(url)")
 
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
