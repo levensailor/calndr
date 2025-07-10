@@ -7,9 +7,20 @@ class CalendarViewModel: ObservableObject {
     @Published var custodyRecords: [CustodyResponse] = [] // New: custody data from dedicated API
 
     @Published var schoolEvents: [SchoolEvent] = []
-    @Published var showSchoolEvents: Bool = false
+    @Published var showSchoolEvents: Bool = UserDefaults.standard.bool(forKey: "showSchoolEvents") {
+        didSet {
+            UserDefaults.standard.set(showSchoolEvents, forKey: "showSchoolEvents")
+            if showSchoolEvents && !oldValue && schoolEvents.isEmpty {
+                fetchSchoolEvents()
+            }
+        }
+    }
     @Published var weatherData: [String: WeatherInfo] = [:]
-    @Published var showWeather: Bool = false
+    @Published var showWeather: Bool = UserDefaults.standard.bool(forKey: "showWeather") {
+        didSet {
+            UserDefaults.standard.set(showWeather, forKey: "showWeather")
+        }
+    }
     @Published var currentDate: Date = Date()
     @Published var custodyStreak: Int = 0
     @Published var custodianWithStreak: Int = 0 // 1 for custodian one, 2 for custodian two, 0 for none
@@ -111,6 +122,11 @@ class CalendarViewModel: ObservableObject {
         self.isDataLoaded = true // Set this immediately to prevent re-entry for the same session
         fetchHandoffsAndCustody()
         fetchFamilyData()
+        
+        // Fetch school events if enabled
+        if showSchoolEvents && schoolEvents.isEmpty {
+            fetchSchoolEvents()
+        }
     }
     
     func resetData() {

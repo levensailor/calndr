@@ -4,7 +4,6 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 import logging
 import pprint
-import lxml
 
 # Set up logging to see the script's progress
 logging.basicConfig(level=logging.INFO)
@@ -22,7 +21,7 @@ def scrape_school_events():
         response = httpx.get(url, follow_redirects=True, timeout=10)
         response.raise_for_status()
 
-        soup = BeautifulSoup(response.text, 'lxml')
+        soup = BeautifulSoup(response.text, 'html.parser')
         
         # Find the header for the 2025 closings to anchor the search
         # Corrected from 'h3' to 'p' based on actual page structure

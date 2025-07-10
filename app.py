@@ -1775,7 +1775,7 @@ async def fetch_school_events() -> List[Dict[str, str]]:
         return []
 
     try:
-        soup = BeautifulSoup(html, "lxml")
+        soup = BeautifulSoup(html, "html.parser")
         header = soup.find('p', string=re.compile(r'THE LEARNING TREE CLOSINGS IN 202[0-9]'))
         if not header:
             logger.warning("School events header not found on page.")
