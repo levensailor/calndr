@@ -10,7 +10,7 @@ struct ContentView: View {
                 SplashScreenView()
                     .transition(.opacity)
             } else if authManager.isAuthenticated {
-                MainTabView(calendarViewModel: CalendarViewModel(authManager: authManager))
+                MainTabView(calendarViewModel: CalendarViewModel(authManager: authManager, themeManager: themeManager))
                     .transition(.opacity)
             } else {
                 LoginView()
@@ -510,7 +510,14 @@ struct MainTabView: View {
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
+        let authManager = AuthenticationManager()
+        let themeManager = ThemeManager()
+        let calendarViewModel = CalendarViewModel(authManager: authManager, themeManager: themeManager)
+        
         ContentView()
-            .environmentObject(AuthenticationManager())
+            .environmentObject(authManager)
+            .environmentObject(calendarViewModel)
+            .environmentObject(themeManager)
+            .environmentObject(NetworkMonitor())
     }
 }

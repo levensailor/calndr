@@ -2,36 +2,46 @@
 //  calndrApp.swift
 //  calndr
 //
-//  Created by Jeff Levensailor on 6/25/25.
+//  Created by Levi Sailor on 9/1/23.
 //
 
 import SwiftUI
+import UserNotifications
 
 @main
 struct calndrApp: App {
-    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var authManager = AuthenticationManager()
-    @StateObject private var navigationManager = NavigationManager()
-    @StateObject private var storeManager = StoreKitManager()
+    @StateObject private var themeManager = ThemeManager()
+    @StateObject private var calendarViewModel: CalendarViewModel
+    @StateObject private var networkMonitor = NetworkMonitor()
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    
+    init() {
+        let authManager = AuthenticationManager()
+        let themeManager = ThemeManager()
+        _authManager = StateObject(wrappedValue: authManager)
+        _themeManager = StateObject(wrappedValue: themeManager)
+        _calendarViewModel = StateObject(wrappedValue: CalendarViewModel(authManager: authManager, themeManager: themeManager))
+    }
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(authManager)
-                .environmentObject(navigationManager)
-                .environmentObject(ThemeManager()) // It's okay to create this here if it's stateless
-                .environmentObject(storeManager)
-                .onOpenURL { url in
-                    handleURL(url)
+            Group {
+                if authManager.isLoggedIn {
+                    ContentView()
+                } else {
+                    LoginView()
                 }
+            }
+            .environmentObject(authManager)
+            .environmentObject(calendarViewModel)
+            .environmentObject(themeManager)
+            .environmentObject(networkMonitor)
+            .onAppear(perform: setupAppearance)
         }
     }
     
-    private func handleURL(_ url: URL) {
-        guard url.scheme == "calndr" else { return }
-        
-        if url.host == "schedule" {
-            navigationManager.shouldNavigateToSchedule = true
-        }
+    private func setupAppearance() {
+        // Your existing appearance setup code
     }
 }
