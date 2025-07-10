@@ -4,12 +4,12 @@ import Combine
 struct Theme: Identifiable, Equatable, Hashable {
     let id = UUID()
     let name: String
-    let fontName: String
-    let todayBorderColor: Color
-    let otherMonthBackgroundColor: Color
-    let otherMonthForegroundColor: Color
+    let font: Font
     let mainBackgroundColor: Color
+    let secondaryBackgroundColor: Color
     let textColor: Color
+    let dayNumberColor: Color
+    let bubbleBackgroundColor: Color
     let gridLinesColor: Color
     let headerBackgroundColor: Color
     let footerBackgroundColor: Color
@@ -20,11 +20,11 @@ struct Theme: Identifiable, Equatable, Hashable {
     
     var allColors: [Color] {
         [
-            todayBorderColor,
-            otherMonthBackgroundColor,
-            otherMonthForegroundColor,
             mainBackgroundColor,
+            secondaryBackgroundColor,
             textColor,
+            dayNumberColor,
+            bubbleBackgroundColor,
             gridLinesColor,
             headerBackgroundColor,
             footerBackgroundColor,
@@ -33,14 +33,6 @@ struct Theme: Identifiable, Equatable, Hashable {
             parentOneColor,
             parentTwoColor
         ]
-    }
-
-    var dayNumberColor: Color {
-        return mainBackgroundColor.isLight ? .black : .white
-    }
-
-    var bubbleBackgroundColor: Color {
-        return mainBackgroundColor.isLight ? Color.black.opacity(0.1) : Color.white.opacity(0.2)
     }
 
     static func == (lhs: Theme, rhs: Theme) -> Bool {
@@ -57,12 +49,12 @@ class ThemeManager: ObservableObject {
     
     let themes: [Theme] = [
         Theme(name: "Stork",
-              fontName: "-apple-system",
-              todayBorderColor: Color(hex: "#2a64c4"),
-              otherMonthBackgroundColor: Color(hex: "#f7f7f7"),
-              otherMonthForegroundColor: Color(hex: "#aaa"),
+              font: .system(size: 24, weight: .bold, design: .default),
               mainBackgroundColor: Color(hex: "#fff"),
+              secondaryBackgroundColor: Color(hex: "#f2f2f2"),
               textColor: Color(hex: "#000"),
+              dayNumberColor: Color(hex: "#000"),
+              bubbleBackgroundColor: Color(hex: "#f0f0f0"),
               gridLinesColor: Color(hex: "#e0e0e0"),
               headerBackgroundColor: Color(hex: "#e0e0e0"),
               footerBackgroundColor: Color(hex: "#f0f0f0"),
@@ -71,12 +63,12 @@ class ThemeManager: ObservableObject {
               parentOneColor: Color(hex: "#96CBFC"),
               parentTwoColor: Color(hex: "#FFC2D9")),
         Theme(name: "Dracula",
-              fontName: "Menlo-Regular",
-              todayBorderColor: Color(hex: "#ff79c6"),
-              otherMonthBackgroundColor: Color(hex: "#21222c"),
-              otherMonthForegroundColor: Color(hex: "#6272a4"),
+              font: .system(size: 24, weight: .bold, design: .default),
               mainBackgroundColor: Color(hex: "#282a36"),
+              secondaryBackgroundColor: Color(red: 0.1, green: 0.1, blue: 0.15),
               textColor: Color(hex: "#f8f8f2"),
+              dayNumberColor: Color(red: 0.7, green: 0.7, blue: 0.7),
+              bubbleBackgroundColor: Color(hex: "#21222c"),
               gridLinesColor: Color(hex: "#191a21"),
               headerBackgroundColor: Color(hex: "#191a21"),
               footerBackgroundColor: Color(hex: "#191a21"),
@@ -85,12 +77,12 @@ class ThemeManager: ObservableObject {
               parentOneColor: Color(hex: "#96CBFC"),
               parentTwoColor: Color(hex: "#FFC2D9")),
         Theme(name: "Vibe",
-              fontName: "Futura-Medium",
-              todayBorderColor: Color(hex: "#00fddc"),
-              otherMonthBackgroundColor: Color(hex: "#1a103c"),
-              otherMonthForegroundColor: Color(hex: "#5d4a9c"),
+              font: .system(size: 24, weight: .bold, design: .default),
               mainBackgroundColor: Color(hex: "#251758"),
+              secondaryBackgroundColor: Color(red: 0.9, green: 0.95, blue: 1.0),
               textColor: Color(hex: "#e0d8ff"),
+              dayNumberColor: Color(red: 0.5, green: 0.6, blue: 0.8),
+              bubbleBackgroundColor: Color(hex: "#1a103c"),
               gridLinesColor: Color(hex: "#12092a"),
               headerBackgroundColor: Color(hex: "#12092a"),
               footerBackgroundColor: Color(hex: "#12092a"),
@@ -99,12 +91,12 @@ class ThemeManager: ObservableObject {
               parentOneColor: Color(hex: "#96CBFC"),
               parentTwoColor: Color(hex: "#FFC2D9")),
         Theme(name: "Crayola",
-              fontName: "ChalkboardSE-Regular",
-              todayBorderColor: Color(hex: "#32cd32"),
-              otherMonthBackgroundColor: Color(hex: "#f0f8ff"),
-              otherMonthForegroundColor: Color(hex: "#d3d3d3"),
+              font: .system(size: 24, weight: .bold, design: .default),
               mainBackgroundColor: Color(hex: "#fff"),
+              secondaryBackgroundColor: Color(red: 0.98, green: 0.98, blue: 0.98),
               textColor: Color(hex: "#000"),
+              dayNumberColor: Color(red: 0.4, green: 0.4, blue: 0.4),
+              bubbleBackgroundColor: Color(hex: "#f0f8ff"),
               gridLinesColor: Color(hex: "#ffd700"),
               headerBackgroundColor: Color(hex: "#ffd700"),
               footerBackgroundColor: Color(hex: "#ff7f50"),
@@ -113,12 +105,12 @@ class ThemeManager: ObservableObject {
               parentOneColor: Color(hex: "#96CBFC"),
               parentTwoColor: Color(hex: "#FFC2D9")),
         Theme(name: "Princess",
-              fontName: "SnellRoundhand",
-              todayBorderColor: Color(hex: "#ffd700"),
-              otherMonthBackgroundColor: Color(hex: "#fdf4f5"),
-              otherMonthForegroundColor: Color(hex: "#d8bfd8"),
+              font: .system(size: 24, weight: .bold, design: .default),
               mainBackgroundColor: Color(hex: "#fffafb"),
+              secondaryBackgroundColor: Color(red: 0.94, green: 0.97, blue: 0.94),
               textColor: Color(hex: "#5e3c58"),
+              dayNumberColor: Color(red: 0.3, green: 0.5, blue: 0.4),
+              bubbleBackgroundColor: Color(hex: "#fdf4f5"),
               gridLinesColor: Color(hex: "#fae3f5"),
               headerBackgroundColor: Color(hex: "#fae3f5"),
               footerBackgroundColor: Color(hex: "#fae3f5"),
@@ -127,12 +119,12 @@ class ThemeManager: ObservableObject {
               parentOneColor: Color(hex: "#96CBFC"),
               parentTwoColor: Color(hex: "#FFC2D9")),
         Theme(name: "Vanilla",
-              fontName: "-apple-system",
-              todayBorderColor: Color(hex: "#007AFF"),
-              otherMonthBackgroundColor: Color(hex: "#F2F2F7"),
-              otherMonthForegroundColor: Color(hex: "#8E8E93"),
+              font: .system(size: 24, weight: .bold, design: .default),
               mainBackgroundColor: Color(hex: "#FFFFFF"),
+              secondaryBackgroundColor: Color(red: 0.98, green: 0.98, blue: 0.98),
               textColor: Color(hex: "#000000"),
+              dayNumberColor: Color(red: 0.4, green: 0.4, blue: 0.4),
+              bubbleBackgroundColor: Color(hex: "#F2F2F7"),
               gridLinesColor: Color(hex: "#E5E5EA"),
               headerBackgroundColor: Color(hex: "#E5E5EA"),
               footerBackgroundColor: Color(hex: "#E5E5EA"),
