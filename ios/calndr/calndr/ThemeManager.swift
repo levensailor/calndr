@@ -19,6 +19,7 @@ struct Theme: Identifiable, Equatable, Hashable {
     let iconActiveColor: Color
     let parentOneColor: Color
     let parentTwoColor: Color
+    let todayBorderColor: Color
     
     var allColors: [Color] {
         [
@@ -35,7 +36,8 @@ struct Theme: Identifiable, Equatable, Hashable {
             iconColor,
             iconActiveColor,
             parentOneColor,
-            parentTwoColor
+            parentTwoColor,
+            todayBorderColor
         ]
     }
 
@@ -67,7 +69,8 @@ class ThemeManager: ObservableObject {
               iconColor: Color(hex: "#555"),
               iconActiveColor: Color(hex: "#007bff"),
               parentOneColor: Color(hex: "#96CBFC"),
-              parentTwoColor: Color(hex: "#FFC2D9")),
+              parentTwoColor: Color(hex: "#FFC2D9"),
+              todayBorderColor: Color(hex: "#007bff")),
         Theme(name: "Dracula",
               font: .system(size: 24, weight: .bold, design: .default),
               mainBackgroundColor: Color(hex: "#282a36"),
@@ -83,7 +86,8 @@ class ThemeManager: ObservableObject {
               iconColor: Color(hex: "#bd93f9"),
               iconActiveColor: Color(hex: "#ff79c6"),
               parentOneColor: Color(hex: "#96CBFC"),
-              parentTwoColor: Color(hex: "#FFC2D9")),
+              parentTwoColor: Color(hex: "#FFC2D9"),
+              todayBorderColor: Color(hex: "#ff79c6")),
         Theme(name: "Vibe",
               font: .system(size: 24, weight: .bold, design: .default),
               mainBackgroundColor: Color(hex: "#251758"),
@@ -99,7 +103,8 @@ class ThemeManager: ObservableObject {
               iconColor: Color(hex: "#b3a5ef"),
               iconActiveColor: Color(hex: "#00fddc"),
               parentOneColor: Color(hex: "#96CBFC"),
-              parentTwoColor: Color(hex: "#FFC2D9")),
+              parentTwoColor: Color(hex: "#FFC2D9"),
+              todayBorderColor: Color(hex: "#00fddc")),
         Theme(name: "Crayola",
               font: .system(size: 24, weight: .bold, design: .default),
               mainBackgroundColor: Color(hex: "#fff"),
@@ -115,7 +120,8 @@ class ThemeManager: ObservableObject {
               iconColor: Color(hex: "#000"),
               iconActiveColor: Color(hex: "#1e90ff"),
               parentOneColor: Color(hex: "#96CBFC"),
-              parentTwoColor: Color(hex: "#FFC2D9")),
+              parentTwoColor: Color(hex: "#FFC2D9"),
+              todayBorderColor: Color(hex: "#1e90ff")),
         Theme(name: "Princess",
               font: .system(size: 24, weight: .bold, design: .default),
               mainBackgroundColor: Color(hex: "#fffafb"),
@@ -131,7 +137,8 @@ class ThemeManager: ObservableObject {
               iconColor: Color(hex: "#c789a8"),
               iconActiveColor: Color(hex: "#e6a4b4"),
               parentOneColor: Color(hex: "#96CBFC"),
-              parentTwoColor: Color(hex: "#FFC2D9")),
+              parentTwoColor: Color(hex: "#FFC2D9"),
+              todayBorderColor: Color(hex: "#e6a4b4")),
         Theme(name: "Vanilla",
               font: .system(size: 24, weight: .bold, design: .default),
               mainBackgroundColor: Color(hex: "#FFFFFF"),
@@ -147,7 +154,8 @@ class ThemeManager: ObservableObject {
               iconColor: Color(hex: "#000000"),
               iconActiveColor: Color(hex: "#007AFF"),
               parentOneColor: Color(hex: "#96CBFC"),
-              parentTwoColor: Color(hex: "#FFC2D9")),
+              parentTwoColor: Color(hex: "#FFC2D9"),
+              todayBorderColor: Color(hex: "#007AFF")),
     ]
 
     init() {
