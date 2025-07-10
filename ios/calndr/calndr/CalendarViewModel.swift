@@ -1330,6 +1330,51 @@ class CalendarViewModel: ObservableObject {
         }
     }
     
+    func updateBabysitter(_ babysitter: BabysitterCreate, completion: @escaping (Bool) -> Void) {
+        // Find the babysitter to update (we need the ID)
+        guard let existingBabysitter = babysitters.first(where: { 
+            $0.first_name == babysitter.first_name && 
+            $0.last_name == babysitter.last_name && 
+            $0.phone_number == babysitter.phone_number 
+        }) else {
+            print("❌ Could not find babysitter to update")
+            completion(false)
+            return
+        }
+        
+        APIService.shared.updateBabysitter(id: existingBabysitter.id, babysitter: babysitter) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let updatedBabysitter):
+                    if let index = self?.babysitters.firstIndex(where: { $0.id == existingBabysitter.id }) {
+                        self?.babysitters[index] = updatedBabysitter
+                    }
+                    print("✅ Successfully updated babysitter: \(updatedBabysitter.fullName)")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error updating babysitter: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func deleteBabysitter(_ babysitter: Babysitter, completion: @escaping (Bool) -> Void) {
+        APIService.shared.deleteBabysitter(id: babysitter.id) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    self?.babysitters.removeAll { $0.id == babysitter.id }
+                    print("✅ Successfully deleted babysitter: \(babysitter.fullName)")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error deleting babysitter: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
     func saveEmergencyContact(_ contact: EmergencyContactCreate, completion: @escaping (Bool) -> Void) {
         APIService.shared.createEmergencyContact(contact) { [weak self] result in
             DispatchQueue.main.async {

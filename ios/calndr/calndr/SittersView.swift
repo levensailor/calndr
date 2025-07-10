@@ -29,13 +29,20 @@ struct SittersView: View {
     @EnvironmentObject var viewModel: CalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
     @State private var showingAddBabysitter = false
-    @State private var showingAddEmergencyContact = false
     @State private var familyMembers: [FamilyMember] = []
     @State private var isLoading = true
     @State private var selectedContactForGroupText: (contactType: String, contactId: Int, name: String, phone: String)?
     @State private var showMessageComposer = false
     @State private var messageComposeResult: Result<MessageComposeResult, Error>?
     @StateObject private var groupTextDataStore = SittersGroupTextDataStore()
+    
+    // Edit/Delete state
+    @State private var selectedBabysitter: Babysitter?
+    @State private var showingEditBabysitter = false
+    @State private var showingDeleteAlert = false
+    @State private var babysitterToDelete: Babysitter?
+    @State private var deleteAlertTitle = ""
+    @State private var deleteAlertMessage = ""
     
     private let apiService = APIService.shared
     
@@ -45,12 +52,12 @@ struct SittersView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     // Header
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Sitters & Contacts")
+                        Text("Babysitters")
                             .font(.largeTitle)
                             .fontWeight(.bold)
                             .foregroundColor(themeManager.currentTheme.textColor)
                         
-                        Text("Manage babysitters and emergency contacts")
+                        Text("Manage your trusted babysitters")
                             .font(.subheadline)
                             .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
                     }
@@ -86,6 +93,12 @@ struct SittersView: View {
                                     onGroupText: {
                                         selectedContactForGroupText = ("babysitter", babysitter.id, babysitter.fullName, babysitter.phone_number)
                                         startGroupText()
+                                    },
+                                    onEdit: {
+                                        editBabysitter(babysitter)
+                                    },
+                                    onDelete: {
+                                        deleteBabysitter(babysitter)
                                     }
                                 )
                                 .padding(.horizontal)
@@ -93,35 +106,48 @@ struct SittersView: View {
                         }
                     }
                     
-                    // Emergency Contacts Section
+                    // Find Babysitters Section
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
-                            Text("Emergency Contacts")
+                            Text("Find Babysitters")
                                 .font(.title2)
                                 .fontWeight(.semibold)
                                 .foregroundColor(themeManager.currentTheme.textColor)
                             
                             Spacer()
                             
-                            Button(action: { showingAddEmergencyContact = true }) {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.title3)
-                                    .foregroundColor(.red)
-                            }
+                            Image(systemName: "magnifyingglass")
+                                .font(.title3)
+                                .foregroundColor(.blue)
                         }
                         .padding(.horizontal)
                         
-                        if viewModel.emergencyContacts.isEmpty {
-                            Text("No emergency contacts added yet")
-                                .font(.subheadline)
-                                .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
-                                .padding(.horizontal)
-                        } else {
-                            ForEach(viewModel.emergencyContacts) { contact in
-                                EmergencyContactCard(contact: contact)
-                                    .padding(.horizontal)
-                            }
+                        VStack(spacing: 16) {
+                            FindBabysitterCard(
+                                title: "Care.com",
+                                subtitle: "Find trusted babysitters in your area",
+                                icon: "heart.fill",
+                                color: .pink,
+                                url: "https://www.care.com/babysitters"
+                            )
+                            
+                            FindBabysitterCard(
+                                title: "Sittercity.com",
+                                subtitle: "Connect with local childcare providers",
+                                icon: "house.fill",
+                                color: .blue,
+                                url: "https://www.sittercity.com"
+                            )
+                            
+                            FindBabysitterCard(
+                                title: "Nextdoor",
+                                subtitle: "Ask your neighbors for recommendations",
+                                icon: "person.2.fill",
+                                color: .green,
+                                url: "https://nextdoor.com"
+                            )
                         }
+                        .padding(.horizontal)
                     }
                     
                     Spacer(minLength: 80)
@@ -143,15 +169,19 @@ struct SittersView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingAddEmergencyContact) {
-            AddEmergencyContactView { contact in
-                viewModel.saveEmergencyContact(contact) { success in
-                    if success {
-                        print("✅ Emergency contact saved successfully")
-                    } else {
-                        print("❌ Failed to save emergency contact")
+        .sheet(isPresented: $showingEditBabysitter) {
+            if let babysitter = selectedBabysitter {
+                EditBabysitterView(babysitter: babysitter) { updatedBabysitter in
+                    viewModel.updateBabysitter(updatedBabysitter) { success in
+                        if success {
+                            print("✅ Babysitter updated successfully")
+                        } else {
+                            print("❌ Failed to update babysitter")
+                        }
                     }
                 }
+                .environmentObject(viewModel)
+                .environmentObject(themeManager)
             }
         }
         .sheet(isPresented: $showMessageComposer, onDismiss: {
@@ -166,6 +196,25 @@ struct SittersView: View {
                 messageComposeResult: $messageComposeResult,
                 showMessageComposer: $showMessageComposer
             )
+        }
+        .alert(deleteAlertTitle, isPresented: $showingDeleteAlert) {
+            Button("Delete", role: .destructive) {
+                if let babysitter = babysitterToDelete {
+                    viewModel.deleteBabysitter(babysitter) { success in
+                        if success {
+                            print("✅ Babysitter deleted successfully")
+                        } else {
+                            print("❌ Failed to delete babysitter")
+                        }
+                    }
+                }
+                babysitterToDelete = nil
+            }
+            Button("Cancel", role: .cancel) {
+                babysitterToDelete = nil
+            }
+        } message: {
+            Text(deleteAlertMessage)
         }
     }
     
@@ -269,11 +318,27 @@ struct SittersView: View {
         print("📱 Total family phone numbers found: \(phoneNumbers.count)")
         return phoneNumbers
     }
+    
+    // MARK: - Edit and Delete Functions
+    
+    private func editBabysitter(_ babysitter: Babysitter) {
+        selectedBabysitter = babysitter
+        showingEditBabysitter = true
+    }
+    
+    private func deleteBabysitter(_ babysitter: Babysitter) {
+        babysitterToDelete = babysitter
+        deleteAlertTitle = "Delete Babysitter"
+        deleteAlertMessage = "Are you sure you want to delete \(babysitter.fullName)? This action cannot be undone."
+        showingDeleteAlert = true
+    }
 }
 
 struct BabysitterCard: View {
     let babysitter: Babysitter
     let onGroupText: () -> Void
+    let onEdit: () -> Void
+    let onDelete: () -> Void
     @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
@@ -322,6 +387,18 @@ struct BabysitterCard: View {
                             .font(.title3)
                             .foregroundColor(.purple)
                     }
+                    
+                    Button(action: onEdit) {
+                        Image(systemName: "pencil")
+                            .font(.title3)
+                            .foregroundColor(.orange)
+                    }
+                    
+                    Button(action: onDelete) {
+                        Image(systemName: "trash")
+                            .font(.title3)
+                            .foregroundColor(.red)
+                    }
                 }
             }
             
@@ -341,54 +418,50 @@ struct BabysitterCard: View {
     }
 }
 
-struct EmergencyContactCard: View {
-    let contact: EmergencyContact
+struct FindBabysitterCard: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let color: Color
+    let url: String
     @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        Button(action: {
+            if let websiteURL = URL(string: url) {
+                UIApplication.shared.open(websiteURL)
+            }
+        }) {
             HStack {
-                Image(systemName: "exclamationmark.triangle.fill")
+                Image(systemName: icon)
                     .font(.title2)
-                    .foregroundColor(.red)
+                    .foregroundColor(color)
                     .frame(width: 30, height: 30)
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(contact.fullName)
+                    Text(title)
                         .font(.headline)
                         .foregroundColor(themeManager.currentTheme.textColor)
                     
-                    Text(contact.displayRelationship)
+                    Text(subtitle)
                         .font(.subheadline)
                         .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
                 }
                 
                 Spacer()
                 
-                Button(action: {
-                    if let phoneURL = URL(string: "tel:\(contact.phone_number)") {
-                        UIApplication.shared.open(phoneURL)
-                    }
-                }) {
-                    Image(systemName: "phone.fill")
-                        .font(.title3)
-                        .foregroundColor(.red)
-                }
-            }
-            
-            if let notes = contact.notes {
-                Text(notes)
+                Image(systemName: "arrow.up.right")
                     .font(.caption)
-                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
-                    .padding(.top, 4)
+                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.5))
             }
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(themeManager.currentTheme.otherMonthBackgroundColor)
+                    .shadow(color: themeManager.currentTheme.textColor.opacity(0.1), radius: 2, x: 0, y: 1)
+            )
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(themeManager.currentTheme.otherMonthBackgroundColor)
-                .shadow(color: themeManager.currentTheme.textColor.opacity(0.1), radius: 2, x: 0, y: 1)
-        )
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
@@ -522,6 +595,79 @@ struct SittersGroupTextSheetView: View {
         
         print("📝 Generated babysitter message: \(message)")
         return message
+    }
+}
+
+// MARK: - Edit Babysitter View
+
+struct EditBabysitterView: View {
+    @EnvironmentObject var viewModel: CalendarViewModel
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.dismiss) private var dismiss
+    
+    let babysitter: Babysitter
+    let onSave: (BabysitterCreate) -> Void
+    
+    @State private var firstName = ""
+    @State private var lastName = ""
+    @State private var phoneNumber = ""
+    @State private var rate = ""
+    @State private var notes = ""
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("Babysitter Information") {
+                    TextField("First Name", text: $firstName)
+                    TextField("Last Name", text: $lastName)
+                    TextField("Phone Number", text: $phoneNumber)
+                        .keyboardType(.phonePad)
+                    TextField("Hourly Rate", text: $rate)
+                        .keyboardType(.decimalPad)
+                }
+                
+                Section("Notes") {
+                    TextField("Additional notes (optional)", text: $notes, axis: .vertical)
+                        .lineLimit(3...6)
+                }
+            }
+            .navigationTitle("Edit Babysitter")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        saveBabysitter()
+                    }
+                    .disabled(firstName.isEmpty || lastName.isEmpty || phoneNumber.isEmpty)
+                }
+            }
+        }
+        .onAppear {
+            firstName = babysitter.first_name
+            lastName = babysitter.last_name
+            phoneNumber = babysitter.phone_number
+            rate = babysitter.rate != nil ? String(format: "%.2f", babysitter.rate!) : ""
+            notes = babysitter.notes ?? ""
+        }
+    }
+    
+    private func saveBabysitter() {
+        let updatedBabysitter = BabysitterCreate(
+            first_name: firstName,
+            last_name: lastName,
+            phone_number: phoneNumber,
+            rate: Double(rate) ?? 0.0,
+            notes: notes.isEmpty ? nil : notes
+        )
+        
+        onSave(updatedBabysitter)
+        dismiss()
     }
 }
 
