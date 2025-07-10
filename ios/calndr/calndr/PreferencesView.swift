@@ -21,33 +21,18 @@ struct PreferenceItem: Identifiable {
     }
 }
 
-struct PreferenceCard: View {
+struct PreferenceRow: View {
     let item: PreferenceItem
     @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: item.icon)
-                    .font(.title2)
-                    .foregroundColor(item.isToggle && item.toggleBinding?.wrappedValue == true ? item.activeColor : themeManager.currentTheme.iconColor)
-                    .frame(width: 30, height: 30)
-                
-                Spacer()
-                
-                if item.isToggle, let binding = item.toggleBinding {
-                    Toggle("", isOn: binding)
-                        .scaleEffect(0.9)
-                } else if let action = item.action {
-                    Button(action: action) {
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
-                    }
-                }
-            }
-            
-            VStack(alignment: .leading, spacing: 4) {
+        HStack(spacing: 15) {
+            Image(systemName: item.icon)
+                .font(.title2)
+                .foregroundColor(item.isToggle && item.toggleBinding?.wrappedValue == true ? item.activeColor : themeManager.currentTheme.iconColor)
+                .frame(width: 30, height: 30)
+
+            VStack(alignment: .leading, spacing: 2) {
                 Text(item.title)
                     .font(.headline)
                     .foregroundColor(themeManager.currentTheme.textColor)
@@ -55,24 +40,22 @@ struct PreferenceCard: View {
                 Text(item.description)
                     .font(.caption)
                     .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
-                    .lineLimit(3)
-                    .multilineTextAlignment(.leading)
+            }
+            
+            Spacer()
+            
+            if item.isToggle, let binding = item.toggleBinding {
+                Toggle("", isOn: binding)
+                    .labelsHidden()
+            } else if let action = item.action {
+                Button(action: action) {
+                    Image(systemName: "chevron.right")
+                        .font(.body)
+                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                }
             }
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(themeManager.currentTheme.otherMonthBackgroundColor)
-                .shadow(color: themeManager.currentTheme.textColor.opacity(0.1), radius: 2, x: 0, y: 1)
-        )
-        .contentShape(Rectangle())
-        .onTapGesture {
-            // Only handle tap gestures for non-toggle items
-            // Toggle items should be controlled only by the Toggle control itself
-            if !item.isToggle, let action = item.action {
-                action()
-            }
-        }
+        .padding(.vertical, 8)
     }
 }
 
@@ -90,35 +73,30 @@ struct PreferencesView: View {
         Form {
             // Display & Features Section
             Section(header: Text("Display & Features")) {
-                LazyVGrid(columns: columns, spacing: 16) {
-                    ForEach(displayPreferences) { item in
-                        PreferenceCard(item: item)
-                    }
+                ForEach(displayPreferences) { item in
+                    PreferenceRow(item: item)
                 }
-                .padding(.vertical, 8)
             }
             
             // Theme Selection Section
             Section(header: Text("Themes")) {
-                ScrollView {
-                    LazyVGrid(columns: columns, spacing: 20) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 20) {
                         ForEach(themeManager.themes) { theme in
                             ThemePreviewView(theme: theme)
+                                .frame(width: 150)
                         }
                     }
                     .padding()
                 }
-                .frame(height: 300)
+                .frame(height: 220)
             }
             
             // Custody Settings Section
             Section(header: Text("Custody Settings")) {
-                LazyVGrid(columns: [GridItem(.flexible())], spacing: 16) {
-                    ForEach(custodyPreferences) { item in
-                        PreferenceCard(item: item)
-                    }
+                ForEach(custodyPreferences) { item in
+                    PreferenceRow(item: item)
                 }
-                .padding(.vertical, 8)
             }
             
             // Notification Emails Section
@@ -182,7 +160,7 @@ struct PreferencesView: View {
             PreferenceItem(
                 title: "Weather Effects",
                 icon: "cloud.sun.fill",
-                description: "Show weather information and visual effects on calendar",
+                description: "Show weather and visual effects",
                 isToggle: true,
                 toggleBinding: $viewModel.showWeather,
                 activeColor: .blue
@@ -190,7 +168,7 @@ struct PreferencesView: View {
             PreferenceItem(
                 title: "School Events",
                 icon: "graduationcap.fill",
-                description: "Display school events and academic calendar",
+                description: "Display school calendar",
                 isToggle: true,
                 toggleBinding: $viewModel.showSchoolEvents,
                 activeColor: .green
@@ -203,7 +181,7 @@ struct PreferencesView: View {
             PreferenceItem(
                 title: "Edit Past Custody",
                 icon: "calendar.badge.clock",
-                description: "Allow editing custody for past dates. No notifications will be sent for past edits.",
+                description: "Allow editing of past custody",
                 isToggle: true,
                 toggleBinding: $allowPastCustodyEditing,
                 activeColor: .orange
