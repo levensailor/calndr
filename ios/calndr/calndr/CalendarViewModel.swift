@@ -1197,11 +1197,13 @@ class CalendarViewModel: ObservableObject {
                 switch result {
                 case .success(let members):
                     // Map FamilyMember to Coparent for the settings display
-                    self?.coparents = members.compactMap { member in
+                    self?.coparents = members.enumerated().compactMap { (index, member) in
                         // Convert FamilyMember to Coparent format
                         // Note: This is a temporary mapping - we need proper coparent API
+                        // Using hash of UUID string to generate unique integer ID
+                        let uniqueId = abs(member.id.hashValue) % 1000000 // Ensure positive ID under 1 million
                         return Coparent(
-                            id: Int(member.id.split(separator: "-").first ?? "0") ?? 0,
+                            id: uniqueId,
                             firstName: member.first_name,
                             lastName: member.last_name,
                             email: member.email,
