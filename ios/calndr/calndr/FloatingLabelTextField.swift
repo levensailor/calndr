@@ -14,7 +14,7 @@ struct FloatingLabelTextField: View {
     var body: some View {
         ZStack(alignment: .leading) {
             Text(title)
-                .foregroundColor(shouldPlaceHolderMove ? themeManager.currentTheme.accentColor : themeManager.currentTheme.textColor.opacity(0.6))
+                .foregroundColor(shouldPlaceHolderMove ? themeManager.currentTheme.textColor : themeManager.currentTheme.textColor.opacity(0.6))
                 .offset(y: shouldPlaceHolderMove ? -25 : 0)
                 .scaleEffect(shouldPlaceHolderMove ? 0.8 : 1.0, anchor: .leading)
                 .animation(.easeInOut(duration: 0.2), value: shouldPlaceHolderMove)
@@ -28,13 +28,13 @@ struct FloatingLabelTextField: View {
                         .focused($isFocused)
                 }
             }
-            .padding(.top, shouldPlaceHolderMove ? 15 : 0)
-            .animation(.easeInOut(duration: 0.2), value: shouldPlaceHolderMove)
+            .padding(.top, 15) // Fixed padding to maintain consistent height
         }
-        .padding()
+        .frame(height: 56) // Fixed height to prevent resizing
+        .padding(.horizontal)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(isFocused ? themeManager.currentTheme.accentColor : themeManager.currentTheme.textColor.opacity(0.3), lineWidth: isFocused ? 2 : 1)
+                .stroke(isFocused ? themeManager.currentTheme.textColor : themeManager.currentTheme.textColor.opacity(0.3), lineWidth: isFocused ? 2 : 1)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
                         .fill(themeManager.currentTheme.otherMonthBackgroundColor)
