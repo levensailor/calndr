@@ -118,6 +118,7 @@ struct ContactsView: View {
                                             }
                                             .buttonStyle(.bordered)
                                             .controlSize(.small)
+                                            .disabled(isLoading || familyMembers.isEmpty)
                                             
                                             Button("Edit") {
                                                 showEditBabysitter = babysitter
@@ -199,6 +200,7 @@ struct ContactsView: View {
                                             }
                                             .buttonStyle(.bordered)
                                             .controlSize(.small)
+                                            .disabled(isLoading || familyMembers.isEmpty)
                                             
                                             Button("Edit") {
                                                 showEditEmergencyContact = contact
@@ -274,7 +276,7 @@ struct ContactsView: View {
                         Text("Unable to start group message")
                             .font(.headline)
                             .padding()
-                        Text("Please make sure you have family members added with phone numbers.")
+                        Text("Family member data is still loading or unavailable. Please wait a moment and try again.")
                             .font(.caption)
                             .foregroundColor(.gray)
                             .multilineTextAlignment(.center)
@@ -384,6 +386,24 @@ struct ContactsView: View {
         // Check if device can send messages
         guard MFMessageComposeViewController.canSendText() else {
             self.errorMessage = "This device cannot send text messages"
+            return
+        }
+        
+        // Check if we're still loading contacts
+        if isLoading {
+            self.errorMessage = "Still loading contacts, please try again in a moment"
+            return
+        }
+        
+        // If family members are empty, this might be the first load or a loading issue
+        if familyMembers.isEmpty {
+            print("🔄 Family members not loaded, checking if we need to reload...")
+            
+            // Try loading if not already in progress
+            if !isLoading {
+                loadContacts()
+                self.errorMessage = "Loading family member data, please try again in a moment"
+            }
             return
         }
         
