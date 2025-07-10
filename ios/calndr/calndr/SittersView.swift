@@ -94,14 +94,24 @@ struct SittersView: View {
         }
         .sheet(isPresented: $showingAddBabysitter) {
             AddBabysitterView { babysitter in
-                // TODO: Implement save functionality
-                print("Saving babysitter: \(babysitter)")
+                viewModel.saveBabysitter(babysitter) { success in
+                    if success {
+                        print("✅ Babysitter saved successfully")
+                    } else {
+                        print("❌ Failed to save babysitter")
+                    }
+                }
             }
         }
         .sheet(isPresented: $showingAddEmergencyContact) {
             AddEmergencyContactView { contact in
-                // TODO: Implement save functionality
-                print("Saving emergency contact: \(contact)")
+                viewModel.saveEmergencyContact(contact) { success in
+                    if success {
+                        print("✅ Emergency contact saved successfully")
+                    } else {
+                        print("❌ Failed to save emergency contact")
+                    }
+                }
             }
         }
     }

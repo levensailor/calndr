@@ -110,6 +110,7 @@ class CalendarViewModel: ObservableObject {
         print("--- Starting initial data fetch ---")
         self.isDataLoaded = true // Set this immediately to prevent re-entry for the same session
         fetchHandoffsAndCustody()
+        fetchFamilyData()
     }
     
     func resetData() {
@@ -125,6 +126,15 @@ class CalendarViewModel: ObservableObject {
         custodianTwoId = nil
         isHandoffDataReady = false
         isDataLoading = false
+        
+        // Reset family data
+        coparents = []
+        children = []
+        otherFamilyMembers = []
+        daycareProviders = []
+        scheduleTemplates = []
+        babysitters = []
+        emergencyContacts = []
     }
 
     func fetchHandoffsAndCustody() {
@@ -1140,6 +1150,105 @@ class CalendarViewModel: ObservableObject {
                     print("Error updating custody record: \(error.localizedDescription)")
                 }
                 completion()
+            }
+        }
+    }
+    
+    // MARK: - Family Data Loading
+    
+    func fetchFamilyData() {
+        print("📱 Fetching family data...")
+        fetchBabysitters()
+        fetchEmergencyContacts()
+        fetchFamilyMembers()
+    }
+    
+    func fetchBabysitters() {
+        APIService.shared.fetchBabysitters { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let babysitters):
+                    self?.babysitters = babysitters
+                    print("✅ Successfully fetched \(babysitters.count) babysitters")
+                case .failure(let error):
+                    print("❌ Error fetching babysitters: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    func fetchEmergencyContacts() {
+        APIService.shared.fetchEmergencyContacts { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let contacts):
+                    self?.emergencyContacts = contacts
+                    print("✅ Successfully fetched \(contacts.count) emergency contacts")
+                case .failure(let error):
+                    print("❌ Error fetching emergency contacts: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    func fetchFamilyMembers() {
+        APIService.shared.fetchFamilyMembers { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let members):
+                    // Map FamilyMember to Coparent for the settings display
+                    self?.coparents = members.compactMap { member in
+                        // Convert FamilyMember to Coparent format
+                        // Note: This is a temporary mapping - we need proper coparent API
+                        return Coparent(
+                            id: Int(member.id.split(separator: "-").first ?? "0") ?? 0,
+                            firstName: member.first_name,
+                            lastName: member.last_name,
+                            email: member.email,
+                            lastSignin: nil, // Not available in current API
+                            notes: nil, // Not available in current API
+                            isActive: true, // Assume active
+                            familyId: 0 // Not available in current API
+                        )
+                    }
+                    print("✅ Successfully fetched \(members.count) family members (mapped to coparents)")
+                case .failure(let error):
+                    print("❌ Error fetching family members: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    // MARK: - Family Data Saving
+    
+    func saveBabysitter(_ babysitter: BabysitterCreate, completion: @escaping (Bool) -> Void) {
+        APIService.shared.createBabysitter(babysitter) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let savedBabysitter):
+                    self?.babysitters.append(savedBabysitter)
+                    print("✅ Successfully saved babysitter: \(savedBabysitter.fullName)")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error saving babysitter: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func saveEmergencyContact(_ contact: EmergencyContactCreate, completion: @escaping (Bool) -> Void) {
+        APIService.shared.createEmergencyContact(contact) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let savedContact):
+                    self?.emergencyContacts.append(savedContact)
+                    print("✅ Successfully saved emergency contact: \(savedContact.fullName)")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error saving emergency contact: \(error.localizedDescription)")
+                    completion(false)
+                }
             }
         }
     }
