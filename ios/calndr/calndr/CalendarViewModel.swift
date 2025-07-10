@@ -1271,8 +1271,13 @@ class CalendarViewModel: ObservableObject {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let members):
+                    // Filter out the current logged-in user from the coparents list
+                    let filteredMembers = members.filter { member in
+                        return member.id != self?.currentUserID
+                    }
+                    
                     // Map FamilyMember to Coparent for the settings display
-                    self?.coparents = members.enumerated().compactMap { (index, member) in
+                    self?.coparents = filteredMembers.enumerated().compactMap { (index, member) in
                         // Convert FamilyMember to Coparent format
                         // Using hash of UUID string to generate unique integer ID
                         let uniqueId = abs(member.id.hashValue) % 1000000 // Ensure positive ID under 1 million
@@ -1288,7 +1293,7 @@ class CalendarViewModel: ObservableObject {
                             familyId: 0 // Not available in current API
                         )
                     }
-                    print("✅ Successfully fetched \(members.count) family members (mapped to coparents)")
+                    print("✅ Successfully fetched \(members.count) family members, filtered to \(filteredMembers.count) coparents (excluding current user)")
                 case .failure(let error):
                     print("❌ Error fetching family members: \(error.localizedDescription)")
                 }
