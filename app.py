@@ -246,6 +246,18 @@ group_chats = sqlalchemy.Table(
     sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
 )
 
+children = sqlalchemy.Table(
+    "children",
+    metadata,
+    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
+    sqlalchemy.Column("family_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("families.id", ondelete="CASCADE"), nullable=False),
+    sqlalchemy.Column("first_name", sqlalchemy.String(100), nullable=False),
+    sqlalchemy.Column("last_name", sqlalchemy.String(100), nullable=False),
+    sqlalchemy.Column("dob", sqlalchemy.Date, nullable=False),
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
+    sqlalchemy.Column("updated_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
+)
+
 
 # --- Pydantic Models ---
 class User(BaseModel):
@@ -392,6 +404,20 @@ class GroupChatCreate(BaseModel):
     contact_type: str  # 'babysitter' or 'emergency'
     contact_id: int
     group_identifier: Optional[str] = None
+
+class ChildCreate(BaseModel):
+    first_name: str
+    last_name: str
+    dob: str  # Date string in YYYY-MM-DD format
+
+class ChildResponse(BaseModel):
+    id: int
+    first_name: str
+    last_name: str
+    dob: str  # Date string in YYYY-MM-DD format
+    family_id: str
+    created_at: str
+    updated_at: str
 
 
 
@@ -1801,6 +1827,133 @@ async def fetch_school_events() -> List[Dict[str, str]]:
     return SCHOOL_EVENTS_CACHE
 
 # -------------------------------------------------------------------
+
+# ---------------------- Children API ----------------------
+
+@app.get("/api/children", response_model=list[ChildResponse])
+async def get_children(current_user = Depends(get_current_user)):
+    """
+    Get all children for the current user's family.
+    """
+    query = children.select().where(
+        children.c.family_id == current_user['family_id']
+    ).order_by(children.c.dob.desc())  # Newest first
+    
+    child_records = await database.fetch_all(query)
+    
+    return [
+        ChildResponse(
+            id=record['id'],
+            first_name=record['first_name'],
+            last_name=record['last_name'],
+            dob=str(record['dob']),
+            family_id=str(record['family_id']),
+            created_at=str(record['created_at']),
+            updated_at=str(record['updated_at'])
+        )
+        for record in child_records
+    ]
+
+@app.post("/api/children", response_model=ChildResponse)
+async def create_child(child_data: ChildCreate, current_user = Depends(get_current_user)):
+    """
+    Create a new child for the current user's family.
+    """
+    try:
+        # Parse the date string
+        dob_date = datetime.strptime(child_data.dob, '%Y-%m-%d').date()
+        
+        # Insert child
+        child_insert = children.insert().values(
+            family_id=current_user['family_id'],
+            first_name=child_data.first_name,
+            last_name=child_data.last_name,
+            dob=dob_date
+        )
+        child_id = await database.execute(child_insert)
+        
+        # Fetch the created child
+        child_record = await database.fetch_one(children.select().where(children.c.id == child_id))
+        
+        return ChildResponse(
+            id=child_record['id'],
+            first_name=child_record['first_name'],
+            last_name=child_record['last_name'],
+            dob=str(child_record['dob']),
+            family_id=str(child_record['family_id']),
+            created_at=str(child_record['created_at']),
+            updated_at=str(child_record['updated_at'])
+        )
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    except Exception as e:
+        logger.error(f"Error creating child: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create child")
+
+@app.put("/api/children/{child_id}", response_model=ChildResponse)
+async def update_child(child_id: int, child_data: ChildCreate, current_user = Depends(get_current_user)):
+    """
+    Update a child that belongs to the current user's family.
+    """
+    # Check if child belongs to user's family
+    check_query = children.select().where(
+        (children.c.id == child_id) & 
+        (children.c.family_id == current_user['family_id'])
+    )
+    existing = await database.fetch_one(check_query)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Child not found")
+    
+    try:
+        # Parse the date string
+        dob_date = datetime.strptime(child_data.dob, '%Y-%m-%d').date()
+        
+        # Update child
+        update_query = children.update().where(children.c.id == child_id).values(
+            first_name=child_data.first_name,
+            last_name=child_data.last_name,
+            dob=dob_date,
+            updated_at=datetime.now()
+        )
+        await database.execute(update_query)
+        
+        # Fetch updated record
+        child_record = await database.fetch_one(children.select().where(children.c.id == child_id))
+        
+        return ChildResponse(
+            id=child_record['id'],
+            first_name=child_record['first_name'],
+            last_name=child_record['last_name'],
+            dob=str(child_record['dob']),
+            family_id=str(child_record['family_id']),
+            created_at=str(child_record['created_at']),
+            updated_at=str(child_record['updated_at'])
+        )
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    except Exception as e:
+        logger.error(f"Error updating child: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update child")
+
+@app.delete("/api/children/{child_id}")
+async def delete_child(child_id: int, current_user = Depends(get_current_user)):
+    """
+    Delete a child from the current user's family.
+    """
+    # Check if child belongs to user's family
+    check_query = children.select().where(
+        (children.c.id == child_id) & 
+        (children.c.family_id == current_user['family_id'])
+    )
+    existing = await database.fetch_one(check_query)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Child not found")
+    
+    # Delete the child
+    delete_query = children.delete().where(children.c.id == child_id)
+    await database.execute(delete_query)
+    
+    return {"status": "success", "message": "Child deleted successfully"}
 
 @app.get("/api/school-events")
 async def get_school_events(current_user = Depends(get_current_user)):

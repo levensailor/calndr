@@ -1311,5 +1311,117 @@ class APIService {
         }.resume()
     }
     
+    // MARK: - Children
+    
+    func fetchChildren(completion: @escaping (Result<[Child], Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/children")
+        let request = createAuthenticatedRequest(url: url)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
+                return
+            }
+            
+            do {
+                let children = try JSONDecoder().decode([Child].self, from: data)
+                completion(.success(children))
+            } catch {
+                print("Failed to decode children: \(error)")
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func createChild(_ child: ChildCreate, completion: @escaping (Result<Child, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/children")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(child)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
+                return
+            }
+            
+            do {
+                let createdChild = try JSONDecoder().decode(Child.self, from: data)
+                completion(.success(createdChild))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func updateChild(id: Int, _ child: ChildCreate, completion: @escaping (Result<Child, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/children/\(id)")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(child)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
+                return
+            }
+            
+            do {
+                let updatedChild = try JSONDecoder().decode(Child.self, from: data)
+                completion(.success(updatedChild))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func deleteChild(id: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/children/\(id)")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "DELETE"
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                completion(.success(()))
+            } else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to delete child"])))
+            }
+        }.resume()
+    }
+    
 
 } 

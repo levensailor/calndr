@@ -287,6 +287,7 @@ struct AddChildView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var firstName = ""
+    @State private var lastName = ""
     @State private var dateOfBirth = Date()
     
     var body: some View {
@@ -296,6 +297,13 @@ struct AddChildView: View {
                     FloatingLabelTextField(
                         title: "First Name",
                         text: $firstName,
+                        isSecure: false,
+                        themeManager: themeManager
+                    )
+                    
+                    FloatingLabelTextField(
+                        title: "Last Name",
+                        text: $lastName,
                         isSecure: false,
                         themeManager: themeManager
                     )
@@ -315,12 +323,32 @@ struct AddChildView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
-                        // TODO: Implement save functionality
-                        dismiss()
+                        saveChild()
                     }
-                    .disabled(firstName.isEmpty)
+                    .disabled(firstName.isEmpty || lastName.isEmpty)
                 }
             }
+        }
+    }
+    
+    private func saveChild() {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dobString = dateFormatter.string(from: dateOfBirth)
+        
+        let childData = ChildCreate(
+            first_name: firstName,
+            last_name: lastName,
+            dob: dobString
+        )
+        
+        viewModel.saveChild(childData) { success in
+            if success {
+                print("✅ Child saved successfully")
+            } else {
+                print("❌ Failed to save child")
+            }
+            dismiss()
         }
     }
 }

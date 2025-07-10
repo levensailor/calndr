@@ -297,8 +297,9 @@ struct Coparent: Codable, Identifiable {
 struct Child: Codable, Identifiable {
     let id: Int
     let firstName: String
+    let lastName: String
     let dateOfBirth: String
-    let familyId: Int
+    let familyId: String
     let createdAt: String
     let updatedAt: String
     
@@ -312,11 +313,18 @@ struct Child: Codable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case id
         case firstName = "first_name"
-        case dateOfBirth = "date_of_birth"
+        case lastName = "last_name"
+        case dateOfBirth = "dob"
         case familyId = "family_id"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
+}
+
+struct ChildCreate: Codable {
+    let first_name: String
+    let last_name: String
+    let dob: String  // Date string in YYYY-MM-DD format
 }
 
 struct OtherFamilyMember: Codable, Identifiable {

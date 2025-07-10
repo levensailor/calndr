@@ -1161,6 +1161,7 @@ class CalendarViewModel: ObservableObject {
         fetchBabysitters()
         fetchEmergencyContacts()
         fetchFamilyMembers()
+        fetchChildren()
     }
     
     func fetchBabysitters() {
@@ -1221,6 +1222,20 @@ class CalendarViewModel: ObservableObject {
         }
     }
     
+    func fetchChildren() {
+        APIService.shared.fetchChildren { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let children):
+                    self?.children = children
+                    print("✅ Successfully fetched \(children.count) children")
+                case .failure(let error):
+                    print("❌ Error fetching children: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
     // MARK: - Family Data Saving
     
     func saveBabysitter(_ babysitter: BabysitterCreate, completion: @escaping (Bool) -> Void) {
@@ -1249,6 +1264,22 @@ class CalendarViewModel: ObservableObject {
                     completion(true)
                 case .failure(let error):
                     print("❌ Error saving emergency contact: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func saveChild(_ child: ChildCreate, completion: @escaping (Bool) -> Void) {
+        APIService.shared.createChild(child) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let savedChild):
+                    self?.children.append(savedChild)
+                    print("✅ Successfully saved child: \(savedChild.firstName)")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error saving child: \(error.localizedDescription)")
                     completion(false)
                 }
             }
