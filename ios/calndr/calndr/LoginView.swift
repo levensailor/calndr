@@ -17,19 +17,29 @@ struct LoginView: View {
                     .foregroundColor(themeManager.currentTheme.textColor)
                 
                 VStack(spacing: 15) {
-                    TextField("Enter your email address", text: $viewModel.email)
-                        .padding()
-                        .background(themeManager.currentTheme.otherMonthBackgroundColor)
-                        .cornerRadius(8)
-                        .foregroundColor(themeManager.currentTheme.textColor)
-                        .keyboardType(.emailAddress)
-                        .autocapitalization(.none)
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Email")
+                            .font(.headline)
+                            .foregroundColor(themeManager.currentTheme.textColor)
+                        TextField("Enter your email address", text: $viewModel.email)
+                            .padding()
+                            .background(themeManager.currentTheme.otherMonthBackgroundColor)
+                            .cornerRadius(8)
+                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .keyboardType(.emailAddress)
+                            .autocapitalization(.none)
+                    }
 
-                    SecureField("Enter your password", text: $viewModel.password)
-                        .padding()
-                        .background(themeManager.currentTheme.otherMonthBackgroundColor)
-                        .cornerRadius(8)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Password")
+                            .font(.headline)
+                            .foregroundColor(themeManager.currentTheme.textColor)
+                        SecureField("Enter your password", text: $viewModel.password)
+                            .padding()
+                            .background(themeManager.currentTheme.otherMonthBackgroundColor)
+                            .cornerRadius(8)
+                            .foregroundColor(themeManager.currentTheme.textColor)
+                    }
                 }
                 .padding(.horizontal)
                 
