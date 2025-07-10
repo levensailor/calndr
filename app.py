@@ -470,6 +470,10 @@ def create_access_token(data: dict):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+def uuid_to_string(uuid_obj) -> str:
+    """Convert UUID to standardized lowercase string format for consistent comparisons"""
+    return str(uuid_obj).lower()
+
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -503,7 +507,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         )
     
     access_token = create_access_token(
-        data={"sub": str(user["id"]), "family_id": str(user["family_id"])}
+        data={"sub": uuid_to_string(user["id"]), "family_id": uuid_to_string(user["family_id"])}
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -567,12 +571,12 @@ async def register_user(registration_data: UserRegistration):
         
         # Create access token for the new user
         access_token = create_access_token(
-            data={"sub": str(user_id), "family_id": str(family_id)}
+            data={"sub": uuid_to_string(user_id), "family_id": uuid_to_string(family_id)}
         )
         
         return UserRegistrationResponse(
-            user_id=str(user_id),
-            family_id=str(family_id),
+            user_id=uuid_to_string(user_id),
+            family_id=uuid_to_string(family_id),
             access_token=access_token,
             message="User registered successfully"
         )
@@ -613,15 +617,15 @@ async def get_custody_records(year: int, month: int, current_user = Depends(get_
         # Get all user data for the family in a single query
         user_query = users.select().where(users.c.family_id == family_id)
         family_users = await database.fetch_all(user_query)
-        user_map = {str(user['id']): user['first_name'] for user in family_users}
+        user_map = {uuid_to_string(user['id']): user['first_name'] for user in family_users}
         
         # Convert records to CustodyResponse format
         custody_responses = [
             CustodyResponse(
                 id=record['id'],
                 event_date=str(record['date']),
-                content=user_map.get(str(record['custodian_id']), "Unknown"),
-                custodian_id=str(record['custodian_id']),
+                content=user_map.get(uuid_to_string(record['custodian_id']), "Unknown"),
+                custodian_id=uuid_to_string(record['custodian_id']),
                 handoff_day=record['handoff_day'],
                 handoff_time=record['handoff_time'].strftime('%H:%M') if record['handoff_time'] else None,
                 handoff_location=record['handoff_location']
@@ -779,7 +783,7 @@ async def update_handoff_day_only(request: dict, current_user = Depends(get_curr
             id=existing_record['id'],
             event_date=str(date_obj),
             content=custodian_name,
-            custodian_id=str(existing_record['custodian_id']),
+            custodian_id=uuid_to_string(existing_record['custodian_id']),
             handoff_day=handoff_day,
             handoff_time=existing_record['handoff_time'].strftime('%H:%M') if existing_record['handoff_time'] else None,
             handoff_location=existing_record['handoff_location']
@@ -806,11 +810,11 @@ async def get_family_custodians(current_user = Depends(get_current_user)):
     
     return {
         "custodian_one": {
-            "id": str(custodian_one['id']),
+            "id": uuid_to_string(custodian_one['id']),
             "first_name": custodian_one['first_name']
         },
         "custodian_two": {
-            "id": str(custodian_two['id']),
+            "id": uuid_to_string(custodian_two['id']),
             "first_name": custodian_two['first_name']
         }
     }
@@ -915,7 +919,7 @@ async def get_user_profile(current_user = Depends(get_current_user)):
             raise HTTPException(status_code=404, detail="User not found")
             
         return UserProfile(
-            id=str(user_record['id']),
+            id=uuid_to_string(user_record['id']),
             first_name=user_record['first_name'],
             last_name=user_record['last_name'],
             email=user_record['email'],
@@ -942,7 +946,7 @@ async def get_user_profile_legacy(current_user = Depends(get_current_user)):
             raise HTTPException(status_code=404, detail="User not found")
             
         return UserProfile(
-            id=str(user_record['id']),
+            id=uuid_to_string(user_record['id']),
             first_name=user_record['first_name'],
             last_name=user_record['last_name'],
             email=user_record['email'],
@@ -1839,11 +1843,11 @@ async def get_children(current_user = Depends(get_current_user)):
     
     return [
         ChildResponse(
-            id=str(record['id']),
+            id=uuid_to_string(record['id']),
             first_name=record['first_name'],
             last_name=record['last_name'],
             dob=str(record['dob']),
-            family_id=str(record['family_id'])
+            family_id=uuid_to_string(record['family_id'])
         )
         for record in child_records
     ]
@@ -1874,11 +1878,11 @@ async def create_child(child_data: ChildCreate, current_user = Depends(get_curre
         child_record = await database.fetch_one(children.select().where(children.c.id == child_id))
         
         return ChildResponse(
-            id=str(child_record['id']),
+            id=uuid_to_string(child_record['id']),
             first_name=child_record['first_name'],
             last_name=child_record['last_name'],
             dob=str(child_record['dob']),
-            family_id=str(child_record['family_id'])
+            family_id=uuid_to_string(child_record['family_id'])
         )
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
@@ -1917,21 +1921,16 @@ async def update_child(child_id: str, child_data: ChildCreate, current_user = De
         
         # Fetch updated record
         child_record = await database.fetch_one(children.select().where(children.c.id == child_uuid))
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid child ID or date format")
-    except Exception as e:
-        logger.error(f"Error updating child: {e}")
-        raise HTTPException(status_code=500, detail="Failed to update child")
         
         return ChildResponse(
-            id=str(child_record['id']),
+            id=uuid_to_string(child_record['id']),
             first_name=child_record['first_name'],
             last_name=child_record['last_name'],
             dob=str(child_record['dob']),
-            family_id=str(child_record['family_id'])
+            family_id=uuid_to_string(child_record['family_id'])
         )
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+        raise HTTPException(status_code=400, detail="Invalid child ID or date format")
     except Exception as e:
         logger.error(f"Error updating child: {e}")
         raise HTTPException(status_code=500, detail="Failed to update child")
