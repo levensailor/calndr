@@ -254,7 +254,7 @@ struct FamilyView: View {
             Text("To add family members from your contacts, please enable Contacts access in Settings.")
         }
     }
-    \
+
     
     private func requestContactsPermission() {
         let store = CNContactStore()
@@ -282,8 +282,14 @@ struct FamilyView: View {
     }
     
     private func handleSelectedContact(_ contact: CNContact) {
+        print("📱 Contact selected: \(contact.givenName) \(contact.familyName)")
         selectedContact = contact
-        showingAddOtherFamily = true
+        print("✅ Selected contact stored: \(selectedContact?.givenName ?? "nil")")
+        // Add a small delay to ensure the contact picker is fully dismissed
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            print("📱 Showing AddOtherFamilyView with contact: \(self.selectedContact?.givenName ?? "nil")")
+            showingAddOtherFamily = true
+        }
     }
     
     private func formatDate(_ dateString: String) -> String {
@@ -555,11 +561,15 @@ struct AddOtherFamilyView: View {
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
                 if let contact = prefilledContact {
+                    print("📱 Prefilling form with contact: \(contact.givenName) \(contact.familyName)")
                     firstName = contact.givenName
                     lastName = contact.familyName
                     email = contact.emailAddresses.first?.value as String? ?? ""
                     phoneNumber = contact.phoneNumbers.first?.value.stringValue ?? ""
                     relationship = "Family Member" // Default relationship
+                    print("✅ Form prefilled - First: \(firstName), Last: \(lastName)")
+                } else {
+                    print("⚠️ No prefilled contact available")
                 }
             }
             .toolbar {
