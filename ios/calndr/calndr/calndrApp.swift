@@ -14,6 +14,7 @@ struct calndrApp: App {
     @StateObject private var themeManager = ThemeManager()
     @StateObject private var calendarViewModel: CalendarViewModel
     @StateObject private var networkMonitor = NetworkMonitor()
+    @StateObject private var navigationManager = NavigationManager()
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     init() {
@@ -37,6 +38,7 @@ struct calndrApp: App {
             .environmentObject(calendarViewModel)
             .environmentObject(themeManager)
             .environmentObject(networkMonitor)
+            .environmentObject(navigationManager)
             .onAppear(perform: setupAppearance)
         }
     }
