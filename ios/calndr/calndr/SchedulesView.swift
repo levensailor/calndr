@@ -69,8 +69,6 @@ struct SchedulesView: View {
                 }
             }
             .background(themeManager.currentTheme.mainBackgroundColor)
-            .navigationTitle("Schedules")
-            .navigationBarTitleDisplayMode(.inline)
         }
         .sheet(isPresented: $showingAddSchedule) {
             AddScheduleView()

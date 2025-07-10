@@ -69,8 +69,6 @@ struct DaycareView: View {
                 }
             }
             .background(themeManager.currentTheme.mainBackgroundColor)
-            .navigationTitle("Daycare")
-            .navigationBarTitleDisplayMode(.inline)
         }
         .sheet(isPresented: $showingAddDaycare) {
             AddDaycareView()

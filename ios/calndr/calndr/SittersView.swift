@@ -89,8 +89,6 @@ struct SittersView: View {
                 }
             }
             .background(themeManager.currentTheme.mainBackgroundColor)
-            .navigationTitle("Sitters & Contacts")
-            .navigationBarTitleDisplayMode(.inline)
         }
         .sheet(isPresented: $showingAddBabysitter) {
             AddBabysitterView { babysitter in

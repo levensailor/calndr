@@ -183,8 +183,6 @@ struct FamilyView: View {
                 }
             }
             .background(themeManager.currentTheme.mainBackgroundColor)
-            .navigationTitle("Family")
-            .navigationBarTitleDisplayMode(.inline)
         }
         .sheet(isPresented: $showingAddCoparent) {
             AddCoparentView()
