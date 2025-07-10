@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 // Represents a single calendar event
 struct Event: Codable, Identifiable {
@@ -399,7 +400,7 @@ struct SettingsSection: Identifiable {
     let title: String
     let icon: String
     let description: String
-    let color: String
+    let color: Color
     let destination: SettingsDestination
     let itemCount: Int?
 }

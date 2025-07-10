@@ -9,7 +9,7 @@ struct SettingsSectionCard: View {
             HStack {
                 Image(systemName: section.icon)
                     .font(.title2)
-                    .foregroundColor(Color(section.color))
+                    .foregroundColor(section.color)
                     .frame(width: 30, height: 30)
                 
                 Spacer()
@@ -20,7 +20,7 @@ struct SettingsSectionCard: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Color(section.color))
+                        .background(section.color)
                         .clipShape(Capsule())
                 }
                 
@@ -111,7 +111,7 @@ struct SettingsView: View {
                 title: "Account",
                 icon: "person.crop.circle",
                 description: "Profile, subscription, and account details",
-                color: "blue",
+                color: .blue,
                 destination: .account,
                 itemCount: nil
             ),
@@ -119,7 +119,7 @@ struct SettingsView: View {
                 title: "Security",
                 icon: "shield.lefthalf.filled",
                 description: "Password, authentication, and privacy",
-                color: "red",
+                color: .red,
                 destination: .security,
                 itemCount: nil
             ),
@@ -127,7 +127,7 @@ struct SettingsView: View {
                 title: "Preferences",
                 icon: "slider.horizontal.3",
                 description: "App settings, themes, and display options",
-                color: "purple",
+                color: .purple,
                 destination: .preferences,
                 itemCount: nil
             ),
@@ -135,7 +135,7 @@ struct SettingsView: View {
                 title: "Daycare",
                 icon: "building.2",
                 description: "Daycare providers and childcare information",
-                color: "green",
+                color: .green,
                 destination: .daycare,
                 itemCount: viewModel.daycareProviders.count
             ),
@@ -143,7 +143,7 @@ struct SettingsView: View {
                 title: "Sitters",
                 icon: "person.2",
                 description: "Babysitters and emergency contacts",
-                color: "orange",
+                color: .orange,
                 destination: .sitters,
                 itemCount: viewModel.babysitters.count + viewModel.emergencyContacts.count
             ),
@@ -151,7 +151,7 @@ struct SettingsView: View {
                 title: "Schedules",
                 icon: "calendar.badge.clock",
                 description: "Schedule templates and routines",
-                color: "indigo",
+                color: .indigo,
                 destination: .schedules,
                 itemCount: viewModel.scheduleTemplates.count
             ),
@@ -159,7 +159,7 @@ struct SettingsView: View {
                 title: "Family",
                 icon: "house.fill",
                 description: "Coparents, children, and family members",
-                color: "pink",
+                color: .pink,
                 destination: .family,
                 itemCount: viewModel.coparents.count + viewModel.children.count + viewModel.otherFamilyMembers.count
             )
