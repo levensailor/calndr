@@ -6,10 +6,10 @@ SQLAlchemy==2.0.28
 python-dotenv==1.0.1
 pydantic[email]
 pydantic
-httpx>=0.28.1
-h2>=4.2.0
-hyperframe>=6.1.0
-hpack>=4.1.0
+httpx>=0.25.0,<0.26.0
+h2>=4.0.0,<4.2.0
+hyperframe>=6.0.0,<6.1.0
+hpack>=4.0.0,<4.1.0
 boto3==1.34.42
 botocore==1.34.42
 aiofiles
@@ -21,5 +21,5 @@ python-jose[pycryptodome]
 psycopg2-binary
 asyncpg==0.29.0
 python-multipart
-apns2
+aioapns>=3.0.0
 pytz

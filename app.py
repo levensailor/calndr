@@ -15,9 +15,7 @@ from logging.handlers import RotatingFileHandler
 import traceback
 from passlib.context import CryptContext
 import uuid
-from apns2.client import APNsClient
-from apns2.credentials import TokenCredentials
-from apns2.payload import Payload
+from aioapns import APNs, NotificationRequest, PushType
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import httpx
@@ -111,14 +109,19 @@ APNS_TEAM_ID = os.getenv("APNS_TEAM_ID")
 APNS_TOPIC = os.getenv("APNS_TOPIC")
 
 # --- APNs Client Setup ---
-token_credentials = TokenCredentials(auth_key_path=APNS_CERT_PATH, auth_key_id=APNS_KEY_ID, team_id=APNS_TEAM_ID)
 apns_client = None
 if all([APNS_CERT_PATH, APNS_KEY_ID, APNS_TEAM_ID, APNS_TOPIC]):
     try:
-        apns_client = APNsClient(credentials=token_credentials,use_sandbox=True)
-        logger.info("APNsClient initialized successfully.")
+        apns_client = APNs(
+            key=APNS_CERT_PATH,
+            key_id=APNS_KEY_ID,
+            team_id=APNS_TEAM_ID,
+            topic=APNS_TOPIC,
+            use_sandbox=True
+        )
+        logger.info("APNs client initialized successfully.")
     except Exception as e:
-        logger.error(f"Failed to initialize APNsClient: {e}")
+        logger.error(f"Failed to initialize APNs client: {e}")
 else:
     logger.warning("APNs environment variables not fully set. Push notifications will be disabled.")
 
@@ -1719,28 +1722,34 @@ async def send_custody_change_notification(sender_id: uuid.UUID, family_id: uuid
     formatted_date = event_date.strftime('%A, %B %-d')
     
     # Create enhanced notification payload
-    payload = Payload(
-        alert={
-            "title": "📅 Schedule Updated",
-            "subtitle": f"{custodian_name} now has custody",
-            "body": f"{sender_name} changed the schedule for {formatted_date}. Tap to manage your schedule."
+    payload = {
+        "aps": {
+            "alert": {
+                "title": "📅 Schedule Updated",
+                "subtitle": f"{custodian_name} now has custody",
+                "body": f"{sender_name} changed the schedule for {formatted_date}. Tap to manage your schedule."
+            },
+            "sound": "default",
+            "badge": 1,
+            "category": "CUSTODY_CHANGE"
         },
-        sound="default",
-        badge=1,
-        category="CUSTODY_CHANGE",  # For custom actions
-        custom={
-            "type": "custody_change",
-            "date": event_date.isoformat(),
-            "custodian": custodian_name,
-            "sender": sender_name,
-            "deep_link": "calndr://schedule"  # Deep link to schedule view
-        }
-    )
+        "type": "custody_change",
+        "date": event_date.isoformat(),
+        "custodian": custodian_name,
+        "sender": sender_name,
+        "deep_link": "calndr://schedule"
+    }
     
     try:
         # logger.info(f"Sending enhanced APNs notification to {other_user['first_name']} about {custodian_name} having custody on {formatted_date}")
-        # Run the synchronous APNs call in a separate thread
-        await asyncio.to_thread(apns_client.send_notification, other_user['apns_token'], payload, topic=APNS_TOPIC)
+        # Create notification request
+        request = NotificationRequest(
+            device_token=other_user['apns_token'],
+            message=payload,
+            push_type=PushType.ALERT
+        )
+        # Send notification
+        await apns_client.send_notification(request)
         # logger.info("Enhanced push notification sent successfully.")
     except Exception as e:
         logger.error(f"Failed to send push notification: {e}")
