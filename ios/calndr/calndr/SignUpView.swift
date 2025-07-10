@@ -13,7 +13,7 @@ struct SignUpView: View {
             ScrollView {
                 LazyVStack(spacing: 20) {
                     Text("Create Account")
-                        .font(.custom(themeManager.currentTheme.fontName, size: 32))
+                        .font(.system(size: 32, weight: .bold, design: .default))
                         .fontWeight(.bold)
                         .foregroundColor(themeManager.currentTheme.textColor)
                         .padding(.top, 40)

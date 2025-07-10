@@ -14,7 +14,7 @@ struct ThemePreviewView: View {
             .frame(height: 60)
 
             Text(theme.name)
-                .font(.custom(theme.fontName, size: 12))
+                .font(.system(size: 12, weight: .bold, design: .default))
                 .padding(.vertical, 8)
                 .frame(maxWidth: .infinity)
                 .background(.thinMaterial)

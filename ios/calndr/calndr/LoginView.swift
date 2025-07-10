@@ -12,8 +12,7 @@ struct LoginView: View {
             
             VStack(spacing: 20) {
                 Text("calndr")
-                    .font(.custom(themeManager.currentTheme.fontName, size: 60))
-                    .fontWeight(.bold)
+                    .font(.system(size: 60, weight: .bold, design: .default))
                     .foregroundColor(themeManager.currentTheme.textColor)
                 
                 VStack(spacing: 15) {
