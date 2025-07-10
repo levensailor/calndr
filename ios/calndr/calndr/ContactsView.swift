@@ -113,6 +113,8 @@ struct ContactsView: View {
                                             .controlSize(.small)
                                             
                                             Button("Group Text") {
+                                                print("🖱️ Group Text button clicked for babysitter: \(babysitter.fullName)")
+                                                print("   isLoading: \(isLoading), familyMembers.isEmpty: \(familyMembers.isEmpty)")
                                                 selectedContactForGroupText = ("babysitter", babysitter.id, babysitter.fullName, babysitter.phone_number)
                                                 startGroupText()
                                             }
@@ -195,6 +197,8 @@ struct ContactsView: View {
                                             .controlSize(.small)
                                             
                                             Button("Group Text") {
+                                                print("🖱️ Group Text button clicked for emergency contact: \(contact.fullName)")
+                                                print("   isLoading: \(isLoading), familyMembers.isEmpty: \(familyMembers.isEmpty)")
                                                 selectedContactForGroupText = ("emergency", contact.id, contact.fullName, contact.phone_number)
                                                 startGroupText()
                                             }
@@ -259,18 +263,26 @@ struct ContactsView: View {
                 }
             }
             .sheet(isPresented: $showMessageComposer, onDismiss: {
+                print("🗂️ Sheet dismissed - cleaning up state")
                 // Clean up state when modal is dismissed
                 groupTextContact = nil
                 groupTextRecipients = []
                 selectedContactForGroupText = nil
             }) {
+                print("🗂️ Sheet presentation - checking state...")
+                print("   groupTextContact: \(String(describing: groupTextContact))")
+                print("   groupTextRecipients count: \(groupTextRecipients.count)")
+                print("   groupTextRecipients: \(groupTextRecipients)")
+                
                 if let contact = groupTextContact, !groupTextRecipients.isEmpty {
+                    print("✅ Presenting MessageComposeView")
                     MessageComposeView(
                         recipients: groupTextRecipients,
                         messageBody: "Hi \(contact.name)! This is a group chat from the \(getFamilyName()) family.",
                         result: $messageComposeResult
                     )
                 } else {
+                    print("❌ Presenting fallback view - contact: \(String(describing: groupTextContact)), recipients empty: \(groupTextRecipients.isEmpty)")
                     // Fallback view to prevent blank modal
                     VStack {
                         Text("Unable to start group message")
@@ -286,6 +298,22 @@ struct ContactsView: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .padding()
+                        
+                        // Debug info for troubleshooting
+                        VStack {
+                            Text("Debug Info:")
+                                .font(.caption)
+                                .bold()
+                            Text("Contact: \(String(describing: groupTextContact))")
+                                .font(.caption)
+                            Text("Recipients: \(groupTextRecipients)")
+                                .font(.caption)
+                            Text("Family Members: \(familyMembers.count)")
+                                .font(.caption)
+                        }
+                        .padding()
+                        .background(Color.gray.opacity(0.1))
+                        .cornerRadius(8)
                     }
                 }
             }
@@ -381,31 +409,47 @@ struct ContactsView: View {
     }
     
     private func startGroupText() {
-        guard let contact = selectedContactForGroupText else { return }
+        print("🚀 startGroupText() called")
+        
+        guard let contact = selectedContactForGroupText else {
+            print("❌ No contact selected for group text")
+            return
+        }
+        
+        print("✅ Contact selected: \(contact.name) - \(contact.phone)")
         
         // Check if device can send messages
         guard MFMessageComposeViewController.canSendText() else {
+            print("❌ Device cannot send text messages")
             self.errorMessage = "This device cannot send text messages"
             return
         }
         
+        print("✅ Device can send messages")
+        
         // Check if we're still loading contacts
         if isLoading {
+            print("⏳ Still loading contacts...")
             self.errorMessage = "Still loading contacts, please try again in a moment"
             return
         }
         
+        print("✅ Not currently loading")
+        
         // If family members are empty, this might be the first load or a loading issue
         if familyMembers.isEmpty {
-            print("🔄 Family members not loaded, checking if we need to reload...")
+            print("🔄 Family members empty, count: \(familyMembers.count)")
             
             // Try loading if not already in progress
             if !isLoading {
+                print("🔄 Triggering loadContacts()")
                 loadContacts()
                 self.errorMessage = "Loading family member data, please try again in a moment"
             }
             return
         }
+        
+        print("✅ Family members loaded, count: \(familyMembers.count)")
         
         // Prepare group text data immediately to avoid race conditions
         let familyPhoneNumbers = self.getFamilyPhoneNumbers()
@@ -431,18 +475,25 @@ struct ContactsView: View {
             return
         }
         
+        print("🌐 Calling createOrGetGroupChat API...")
         apiService.createOrGetGroupChat(contactType: contact.contactType, contactId: contact.contactId) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(_):
+                    print("✅ API call successful")
                     // Capture the contact and recipients data to prevent race conditions
                     self.groupTextContact = (name: contact.name, phone: contact.phone)
                     self.groupTextRecipients = uniqueNumbers
                     
+                    print("💾 Stored groupTextContact: \(String(describing: self.groupTextContact))")
+                    print("💾 Stored groupTextRecipients: \(self.groupTextRecipients)")
+                    
                     // Present the message composer
+                    print("📱 Setting showMessageComposer = true")
                     self.showMessageComposer = true
                     
                 case .failure(let error):
+                    print("❌ API call failed: \(error.localizedDescription)")
                     self.errorMessage = "Failed to create group chat: \(error.localizedDescription)"
                 }
             }
