@@ -169,33 +169,7 @@ struct MainTabView: View {
                 .padding()
 
                 // Menu Bar
-                HStack(alignment: .top, spacing: 40) {
-                    VStack(spacing: 4) {
-                        Button(action: {
-                            calendarViewModel.toggleWeather()
-                        }) {
-                            Image(systemName: getWeatherIconName())
-                                .font(.title2)
-                                .foregroundColor(getWeatherIconColor())
-                        }
-                        Text("Weather")
-                            .font(.caption2)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
-                    }
-                    
-                    VStack(spacing: 4) {
-                        Button(action: {
-                            calendarViewModel.toggleSchoolEvents()
-                        }) {
-                            Image(systemName: getSchoolIconName())
-                                .font(.title2)
-                                .foregroundColor(getSchoolIconColor())
-                        }
-                        Text("School")
-                            .font(.caption2)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
-                    }
-                    
+                HStack(alignment: .top, spacing: 60) {
                     VStack(spacing: 4) {
                         Button(action: {
                             calendarViewModel.showHandoffTimeline.toggle()
@@ -523,21 +497,7 @@ struct MainTabView: View {
         return min(calendarViewModel.custodyStreak, 10)
     }
     
-    private func getWeatherIconName() -> String {
-        return calendarViewModel.showWeather ? "cloud.sun.fill" : "cloud.sun"
-    }
-    
-    private func getWeatherIconColor() -> Color {
-        return calendarViewModel.showWeather ? themeManager.currentTheme.iconActiveColor : themeManager.currentTheme.iconColor
-    }
-    
-    private func getSchoolIconName() -> String {
-        return calendarViewModel.showSchoolEvents ? "graduationcap.fill" : "graduationcap"
-    }
-    
-    private func getSchoolIconColor() -> Color {
-        return calendarViewModel.showSchoolEvents ? themeManager.currentTheme.iconActiveColor : themeManager.currentTheme.iconColor
-    }
+
     
     private func getHandoffIconName() -> String {
         return calendarViewModel.showHandoffTimeline ? "clock.fill" : "clock"

@@ -1,5 +1,81 @@
 import SwiftUI
 
+struct PreferenceItem: Identifiable {
+    let id = UUID()
+    let title: String
+    let icon: String
+    let description: String
+    let isToggle: Bool
+    let toggleBinding: Binding<Bool>?
+    let action: (() -> Void)?
+    let activeColor: Color
+    
+    init(title: String, icon: String, description: String, isToggle: Bool = false, toggleBinding: Binding<Bool>? = nil, action: (() -> Void)? = nil, activeColor: Color = .blue) {
+        self.title = title
+        self.icon = icon
+        self.description = description
+        self.isToggle = isToggle
+        self.toggleBinding = toggleBinding
+        self.action = action
+        self.activeColor = activeColor
+    }
+}
+
+struct PreferenceCard: View {
+    let item: PreferenceItem
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: item.icon)
+                    .font(.title2)
+                    .foregroundColor(item.isToggle && item.toggleBinding?.wrappedValue == true ? item.activeColor : themeManager.currentTheme.iconColor)
+                    .frame(width: 30, height: 30)
+                
+                Spacer()
+                
+                if item.isToggle, let binding = item.toggleBinding {
+                    Toggle("", isOn: binding)
+                        .scaleEffect(0.9)
+                } else if let action = item.action {
+                    Button(action: action) {
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                    }
+                }
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.title)
+                    .font(.headline)
+                    .foregroundColor(themeManager.currentTheme.textColor)
+                
+                Text(item.description)
+                    .font(.caption)
+                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(themeManager.currentTheme.otherMonthBackgroundColor)
+                .shadow(color: themeManager.currentTheme.textColor.opacity(0.1), radius: 2, x: 0, y: 1)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if item.isToggle, let binding = item.toggleBinding {
+                binding.wrappedValue.toggle()
+            } else if let action = item.action {
+                action()
+            }
+        }
+    }
+}
+
 struct PreferencesView: View {
     @EnvironmentObject var viewModel: CalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
@@ -12,6 +88,16 @@ struct PreferencesView: View {
 
     var body: some View {
         Form {
+            // Display & Features Section
+            Section(header: Text("Display & Features")) {
+                LazyVGrid(columns: columns, spacing: 16) {
+                    ForEach(displayPreferences) { item in
+                        PreferenceCard(item: item)
+                    }
+                }
+                .padding(.vertical, 8)
+            }
+            
             // Theme Selection Section
             Section(header: Text("Themes")) {
                 ScrollView {
@@ -26,11 +112,13 @@ struct PreferencesView: View {
             }
             
             // Custody Settings Section
-            Section(header: Text("Custody Settings"), footer: Text("When enabled, you can edit custody for past dates. No notifications will be sent for past edits.")) {
-                Toggle("Allow editing past days", isOn: $allowPastCustodyEditing)
-                    .onChange(of: allowPastCustodyEditing) { oldValue, newValue in
-                        UserDefaults.standard.set(newValue, forKey: "allowPastCustodyEditing")
+            Section(header: Text("Custody Settings")) {
+                LazyVGrid(columns: [GridItem(.flexible())], spacing: 16) {
+                    ForEach(custodyPreferences) { item in
+                        PreferenceCard(item: item)
                     }
+                }
+                .padding(.vertical, 8)
             }
             
             // Notification Emails Section
@@ -82,7 +170,48 @@ struct PreferencesView: View {
         .navigationTitle("Preferences")
         .background(themeManager.currentTheme.mainBackgroundColor)
         .onAppear(perform: setupView)
+        .onChange(of: allowPastCustodyEditing) { oldValue, newValue in
+            UserDefaults.standard.set(newValue, forKey: "allowPastCustodyEditing")
+        }
     }
+    
+    // MARK: - Preference Items
+    
+    private var displayPreferences: [PreferenceItem] {
+        [
+            PreferenceItem(
+                title: "Weather Effects",
+                icon: "cloud.sun.fill",
+                description: "Show weather information and visual effects on calendar",
+                isToggle: true,
+                toggleBinding: $viewModel.showWeather,
+                activeColor: .blue
+            ),
+            PreferenceItem(
+                title: "School Events",
+                icon: "graduationcap.fill",
+                description: "Display school events and academic calendar",
+                isToggle: true,
+                toggleBinding: $viewModel.showSchoolEvents,
+                activeColor: .green
+            )
+        ]
+    }
+    
+    private var custodyPreferences: [PreferenceItem] {
+        [
+            PreferenceItem(
+                title: "Edit Past Custody",
+                icon: "calendar.badge.clock",
+                description: "Allow editing custody for past dates. No notifications will be sent for past edits.",
+                isToggle: true,
+                toggleBinding: $allowPastCustodyEditing,
+                activeColor: .orange
+            )
+        ]
+    }
+    
+    // MARK: - Helper Methods
     
     private func isEmailValid(_ email: String) -> Bool {
         return email.isValidEmail()
