@@ -269,42 +269,14 @@ struct ContactsView: View {
                 groupTextRecipients = []
                 selectedContactForGroupText = nil
             }) {
-                print("🗂️ Sheet presentation - checking state...")
-                print("   groupTextContact: \(String(describing: groupTextContact))")
-                print("   groupTextRecipients count: \(groupTextRecipients.count)")
-                print("   groupTextRecipients: \(groupTextRecipients)")
-                
-                if let contact = groupTextContact, !groupTextRecipients.isEmpty {
-                    print("✅ Presenting MessageComposeView")
-                    MessageComposeView(
-                        recipients: groupTextRecipients,
-                        messageBody: "Hi \(contact.name)! This is a group chat from the \(getFamilyName()) family.",
-                        result: $messageComposeResult
-                    )
-                } else {
-                    print("❌ Presenting fallback view - contact: \(String(describing: groupTextContact)), recipients empty: \(groupTextRecipients.isEmpty)")
-                    // Fallback view to prevent blank modal
-                    VStack(spacing: 16) {
-                        Text("Unable to start group message")
-                            .font(.headline)
-                        
-                        Text("Family member data is still loading or unavailable. Please wait a moment and try again.")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                            .multilineTextAlignment(.center)
-                        
-                        Button("Close") {
-                            showMessageComposer = false
-                        }
-                        .buttonStyle(.borderedProminent)
-                        
-                        // Simplified debug info
-                        Text("Debug: Contact=\(groupTextContact?.name ?? "nil"), Recipients=\(groupTextRecipients.count), Family=\(familyMembers.count)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding()
-                }
+                SheetContentView(
+                    groupTextContact: groupTextContact,
+                    groupTextRecipients: groupTextRecipients,
+                    familyMembers: familyMembers,
+                    messageComposeResult: $messageComposeResult,
+                    showMessageComposer: $showMessageComposer,
+                    getFamilyName: getFamilyName
+                )
             }
         }
     }
@@ -894,6 +866,65 @@ struct MessageComposeView: UIViewControllerRepresentable {
             }
             
             parent.dismiss()
+        }
+    }
+}
+
+// MARK: - Sheet Content View
+
+struct SheetContentView: View {
+    let groupTextContact: (name: String, phone: String)?
+    let groupTextRecipients: [String]
+    let familyMembers: [FamilyMember]
+    @Binding var messageComposeResult: Result<MessageComposeResult, Error>?
+    @Binding var showMessageComposer: Bool
+    let getFamilyName: () -> String
+    
+    var body: some View {
+        Group {
+            // Debug logging happens in init or onAppear
+            if let contact = groupTextContact, !groupTextRecipients.isEmpty {
+                MessageComposeView(
+                    recipients: groupTextRecipients,
+                    messageBody: "Hi \(contact.name)! This is a group chat from the \(getFamilyName()) family.",
+                    result: $messageComposeResult
+                )
+            } else {
+                // Fallback view to prevent blank modal
+                VStack(spacing: 16) {
+                    Text("Unable to start group message")
+                        .font(.headline)
+                    
+                    Text("Family member data is still loading or unavailable. Please wait a moment and try again.")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                    
+                    Button("Close") {
+                        showMessageComposer = false
+                    }
+                    .buttonStyle(.borderedProminent)
+                    
+                    // Simplified debug info
+                    Text("Debug: Contact=\(groupTextContact?.name ?? "nil"), Recipients=\(groupTextRecipients.count), Family=\(familyMembers.count)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding()
+            }
+        }
+        .onAppear {
+            // Debug logging happens here instead of in view builder
+            print("🗂️ Sheet presentation - checking state...")
+            print("   groupTextContact: \(String(describing: groupTextContact))")
+            print("   groupTextRecipients count: \(groupTextRecipients.count)")
+            print("   groupTextRecipients: \(groupTextRecipients)")
+            
+            if let contact = groupTextContact, !groupTextRecipients.isEmpty {
+                print("✅ Presenting MessageComposeView")
+            } else {
+                print("❌ Presenting fallback view - contact: \(String(describing: groupTextContact)), recipients empty: \(groupTextRecipients.isEmpty)")
+            }
         }
     }
 } 
