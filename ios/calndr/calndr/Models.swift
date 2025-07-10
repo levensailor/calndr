@@ -295,13 +295,11 @@ struct Coparent: Codable, Identifiable {
 }
 
 struct Child: Codable, Identifiable {
-    let id: Int
+    let id: String
     let firstName: String
     let lastName: String
     let dateOfBirth: String
     let familyId: String
-    let createdAt: String
-    let updatedAt: String
     
     var age: Int {
         let dateFormatter = DateFormatter()
@@ -316,8 +314,6 @@ struct Child: Codable, Identifiable {
         case lastName = "last_name"
         case dateOfBirth = "dob"
         case familyId = "family_id"
-        case createdAt = "created_at"
-        case updatedAt = "updated_at"
     }
 }
 

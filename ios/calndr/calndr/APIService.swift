@@ -1371,7 +1371,7 @@ class APIService {
         }.resume()
     }
     
-    func updateChild(id: Int, _ child: ChildCreate, completion: @escaping (Result<Child, Error>) -> Void) {
+    func updateChild(id: String, _ child: ChildCreate, completion: @escaping (Result<Child, Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/children/\(id)")
         var request = createAuthenticatedRequest(url: url)
         request.httpMethod = "PUT"
@@ -1404,7 +1404,7 @@ class APIService {
         }.resume()
     }
     
-    func deleteChild(id: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+    func deleteChild(id: String, completion: @escaping (Result<Void, Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/children/\(id)")
         var request = createAuthenticatedRequest(url: url)
         request.httpMethod = "DELETE"
