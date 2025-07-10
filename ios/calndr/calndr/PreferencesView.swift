@@ -67,13 +67,11 @@ struct PreferencesView: View {
     @State private var emailValues: [Int: String] = [:]
     @FocusState private var isEmailFieldFocused: Bool
 
-    let columns = [GridItem(.flexible()), GridItem(.flexible())]
-
     var body: some View {
         Form {
-            // Display & Features Section
-            Section(header: Text("Display & Features")) {
-                ForEach(displayPreferences) { item in
+            // Features Section
+            Section(header: Text("Features")) {
+                ForEach(featurePreferences) { item in
                     PreferenceRow(item: item)
                 }
             }
@@ -89,14 +87,7 @@ struct PreferencesView: View {
                     }
                     .padding()
                 }
-                .frame(height: 220)
-            }
-            
-            // Custody Settings Section
-            Section(header: Text("Custody Settings")) {
-                ForEach(custodyPreferences) { item in
-                    PreferenceRow(item: item)
-                }
+                .frame(height: 110)
             }
             
             // Notification Emails Section
@@ -155,7 +146,7 @@ struct PreferencesView: View {
     
     // MARK: - Preference Items
     
-    private var displayPreferences: [PreferenceItem] {
+    private var featurePreferences: [PreferenceItem] {
         [
             PreferenceItem(
                 title: "Weather Effects",
@@ -172,12 +163,7 @@ struct PreferencesView: View {
                 isToggle: true,
                 toggleBinding: $viewModel.showSchoolEvents,
                 activeColor: .green
-            )
-        ]
-    }
-    
-    private var custodyPreferences: [PreferenceItem] {
-        [
+            ),
             PreferenceItem(
                 title: "Edit Past Custody",
                 icon: "calendar.badge.clock",
