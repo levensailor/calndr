@@ -1206,13 +1206,37 @@ class CalendarViewModel: ObservableObject {
     
     func fetchFamilyData() {
         print("📱 Fetching family data...")
-        fetchBabysitters()
-        fetchEmergencyContacts()
-        fetchFamilyMembers()
-        fetchChildren()
+        isDataLoading = true
+        
+        let dispatchGroup = DispatchGroup()
+        
+        dispatchGroup.enter()
+        fetchBabysitters {
+            dispatchGroup.leave()
+        }
+        
+        dispatchGroup.enter()
+        fetchEmergencyContacts {
+            dispatchGroup.leave()
+        }
+        
+        dispatchGroup.enter()
+        fetchFamilyMembers {
+            dispatchGroup.leave()
+        }
+        
+        dispatchGroup.enter()
+        fetchChildren {
+            dispatchGroup.leave()
+        }
+        
+        dispatchGroup.notify(queue: .main) {
+            self.isDataLoading = false
+            print("✅ All family data loaded")
+        }
     }
     
-    func fetchBabysitters() {
+    func fetchBabysitters(completion: (() -> Void)? = nil) {
         APIService.shared.fetchBabysitters { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
@@ -1222,11 +1246,12 @@ class CalendarViewModel: ObservableObject {
                 case .failure(let error):
                     print("❌ Error fetching babysitters: \(error.localizedDescription)")
                 }
+                completion?()
             }
         }
     }
     
-    func fetchEmergencyContacts() {
+    func fetchEmergencyContacts(completion: (() -> Void)? = nil) {
         APIService.shared.fetchEmergencyContacts { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
@@ -1236,11 +1261,12 @@ class CalendarViewModel: ObservableObject {
                 case .failure(let error):
                     print("❌ Error fetching emergency contacts: \(error.localizedDescription)")
                 }
+                completion?()
             }
         }
     }
     
-    func fetchFamilyMembers() {
+    func fetchFamilyMembers(completion: (() -> Void)? = nil) {
         APIService.shared.fetchFamilyMembers { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
@@ -1266,11 +1292,12 @@ class CalendarViewModel: ObservableObject {
                 case .failure(let error):
                     print("❌ Error fetching family members: \(error.localizedDescription)")
                 }
+                completion?()
             }
         }
     }
     
-    func fetchChildren() {
+    func fetchChildren(completion: (() -> Void)? = nil) {
         APIService.shared.fetchChildren { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
@@ -1280,6 +1307,7 @@ class CalendarViewModel: ObservableObject {
                 case .failure(let error):
                     print("❌ Error fetching children: \(error.localizedDescription)")
                 }
+                completion?()
             }
         }
     }

@@ -175,7 +175,17 @@ struct FamilyView: View {
                         }
                         .padding(.horizontal)
                         
-                        if viewModel.emergencyContacts.isEmpty {
+                        if viewModel.isDataLoading {
+                            HStack {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                Text("Loading family members...")
+                                    .font(.subheadline)
+                                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                                Spacer()
+                            }
+                            .padding(.horizontal)
+                        } else if viewModel.emergencyContacts.isEmpty {
                             Text("No other family members added yet")
                                 .font(.subheadline)
                                 .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
@@ -243,11 +253,8 @@ struct FamilyView: View {
         } message: {
             Text("To add family members from your contacts, please enable Contacts access in Settings.")
         }
-        .onAppear {
-            // Ensure emergency contacts are loaded for the "Other Family" section
-            viewModel.fetchEmergencyContacts()
-        }
     }
+    \
     
     private func requestContactsPermission() {
         let store = CNContactStore()
