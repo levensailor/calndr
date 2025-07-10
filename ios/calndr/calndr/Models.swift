@@ -265,5 +265,154 @@ struct GroupChatResponse: Codable {
     let created_at: String
 }
 
+// MARK: - Comprehensive Family Models for Settings
+
+struct Coparent: Codable, Identifiable {
+    let id: Int
+    let firstName: String
+    let lastName: String
+    let email: String
+    let lastSignin: String?
+    let notes: String?
+    let isActive: Bool
+    let familyId: Int
+    
+    var fullName: String {
+        return "\(firstName) \(lastName)"
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case firstName = "first_name"
+        case lastName = "last_name"
+        case email
+        case lastSignin = "last_signin"
+        case notes
+        case isActive = "is_active"
+        case familyId = "family_id"
+    }
+}
+
+struct Child: Codable, Identifiable {
+    let id: Int
+    let firstName: String
+    let dateOfBirth: String
+    let familyId: Int
+    let createdAt: String
+    let updatedAt: String
+    
+    var age: Int {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        guard let birthDate = dateFormatter.date(from: dateOfBirth) else { return 0 }
+        return Calendar.current.dateComponents([.year], from: birthDate, to: Date()).year ?? 0
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case firstName = "first_name"
+        case dateOfBirth = "date_of_birth"
+        case familyId = "family_id"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+struct OtherFamilyMember: Codable, Identifiable {
+    let id: Int
+    let firstName: String
+    let lastName: String
+    let email: String?
+    let phoneNumber: String?
+    let relationship: String
+    let familyId: Int
+    let createdAt: String
+    let updatedAt: String
+    
+    var fullName: String {
+        return "\(firstName) \(lastName)"
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case firstName = "first_name"
+        case lastName = "last_name"
+        case email
+        case phoneNumber = "phone_number"
+        case relationship
+        case familyId = "family_id"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+struct DaycareProvider: Codable, Identifiable {
+    let id: Int
+    let name: String
+    let address: String?
+    let phoneNumber: String?
+    let email: String?
+    let hours: String?
+    let notes: String?
+    let familyId: Int
+    let createdAt: String
+    let updatedAt: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case address
+        case phoneNumber = "phone_number"
+        case email
+        case hours
+        case notes
+        case familyId = "family_id"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+struct ScheduleTemplate: Codable, Identifiable {
+    let id: Int
+    let name: String
+    let description: String?
+    let isActive: Bool
+    let familyId: Int
+    let createdAt: String
+    let updatedAt: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case description
+        case isActive = "is_active"
+        case familyId = "family_id"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+// MARK: - Settings Section Models
+
+struct SettingsSection: Identifiable {
+    let id = UUID()
+    let title: String
+    let icon: String
+    let description: String
+    let color: String
+    let destination: SettingsDestination
+    let itemCount: Int?
+}
+
+enum SettingsDestination {
+    case account
+    case security
+    case preferences
+    case daycare
+    case sitters
+    case schedules
+    case family
+}
+
 // Handoff Time Models
  

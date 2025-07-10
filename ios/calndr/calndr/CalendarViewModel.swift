@@ -21,6 +21,15 @@ class CalendarViewModel: ObservableObject {
     @Published var custodianTwoPercentage: Double = 0.0
     @Published var notificationEmails: [NotificationEmail] = []
     @Published var isOffline: Bool = false
+    
+    // MARK: - Family Management Properties
+    @Published var coparents: [Coparent] = []
+    @Published var children: [Child] = []
+    @Published var otherFamilyMembers: [OtherFamilyMember] = []
+    @Published var daycareProviders: [DaycareProvider] = []
+    @Published var scheduleTemplates: [ScheduleTemplate] = []
+    @Published var babysitters: [Babysitter] = []
+    @Published var emergencyContacts: [EmergencyContact] = []
     @Published var showHandoffTimeline: Bool = false // Toggle for handoff timeline view
     @Published var custodiansLoaded: Bool = false // DEPRECATED: Use isHandoffDataReady instead
     @Published var isHandoffDataReady: Bool = false // NEW: True when all handoff data is loaded
