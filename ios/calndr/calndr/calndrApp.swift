@@ -27,7 +27,7 @@ struct calndrApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if authManager.isLoggedIn {
+                if authManager.isAuthenticated {
                     ContentView()
                 } else {
                     LoginView()
