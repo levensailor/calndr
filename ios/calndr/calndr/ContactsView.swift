@@ -19,8 +19,16 @@ struct ContactsView: View {
     @State private var selectedContactForGroupText: (contactType: String, contactId: Int, name: String, phone: String)?
     @State private var showMessageComposer = false
     @State private var messageComposeResult: Result<MessageComposeResult, Error>?
-    @State private var groupTextRecipients: [String] = []
-    @State private var groupTextContact: (name: String, phone: String)?
+    @State private var groupTextRecipients: [String] = [] {
+        didSet {
+            print("🔄 groupTextRecipients changed from \(oldValue.count) to \(groupTextRecipients.count)")
+        }
+    }
+    @State private var groupTextContact: (name: String, phone: String)? {
+        didSet {
+            print("🔄 groupTextContact changed from \(String(describing: oldValue)) to \(String(describing: groupTextContact))")
+        }
+    }
     
     private let apiService = APIService.shared
     
@@ -264,6 +272,7 @@ struct ContactsView: View {
             }
             .sheet(isPresented: $showMessageComposer, onDismiss: {
                 print("🗂️ Sheet dismissed - cleaning up state")
+                print("🗂️ Was dismissed properly, clearing: groupTextContact=\(String(describing: groupTextContact)), recipients=\(groupTextRecipients.count)")
                 // Clean up state when modal is dismissed
                 groupTextContact = nil
                 groupTextRecipients = []
@@ -441,17 +450,17 @@ struct ContactsView: View {
             DispatchQueue.main.async {
                 switch result {
                 case .success(_):
-                    print("✅ API call successful")
-                    // Capture the contact and recipients data to prevent race conditions
-                    self.groupTextContact = (name: contact.name, phone: contact.phone)
-                    self.groupTextRecipients = uniqueNumbers
-                    
-                    print("💾 Stored groupTextContact: \(String(describing: self.groupTextContact))")
-                    print("💾 Stored groupTextRecipients: \(self.groupTextRecipients)")
-                    
-                    // Present the message composer
-                    print("📱 Setting showMessageComposer = true")
-                    self.showMessageComposer = true
+                                    print("✅ API call successful")
+                // Capture the contact and recipients data to prevent race conditions
+                self.groupTextContact = (name: contact.name, phone: contact.phone)
+                self.groupTextRecipients = uniqueNumbers
+                
+                print("💾 Stored groupTextContact: \(String(describing: self.groupTextContact))")
+                print("💾 Stored groupTextRecipients: \(self.groupTextRecipients)")
+                
+                // Present the message composer immediately
+                print("📱 Setting showMessageComposer = true")
+                self.showMessageComposer = true
                     
                 case .failure(let error):
                     print("❌ API call failed: \(error.localizedDescription)")
