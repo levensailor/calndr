@@ -213,8 +213,10 @@ struct FamilyView: View {
     private func formatRelativeTime(_ dateString: String) -> String {
         // Try different date formats that might be returned from the API
         let formatters = [
+            "yyyy-MM-dd HH:mm:ss:SSSSSS",    // Format like "2025-07-01 11:33:37:522876"
             "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",  // ISO format with microseconds
             "yyyy-MM-dd'T'HH:mm:ss",         // ISO format without microseconds
+            "yyyy-MM-dd HH:mm:ss.SSSSSS",    // SQL datetime with microseconds (dot)
             "yyyy-MM-dd HH:mm:ss",           // SQL datetime format
             "yyyy-MM-dd"                     // Date only format
         ]
@@ -226,12 +228,15 @@ struct FamilyView: View {
             formatter.timeZone = TimeZone.current
             if let parsedDate = formatter.date(from: dateString) {
                 date = parsedDate
+                print("✅ Successfully parsed date '\(dateString)' using format '\(format)'")
                 break
             }
         }
         
         guard let lastSigninDate = date else { 
-            return dateString 
+            // If we can't parse the date, return a fallback message
+            print("⚠️ Could not parse date: \(dateString)")
+            return "Recently active"
         }
         
         let now = Date()
