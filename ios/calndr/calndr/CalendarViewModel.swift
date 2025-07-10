@@ -80,6 +80,7 @@ class CalendarViewModel: ObservableObject {
         self.isOffline = !self.networkMonitor.isConnected
         
         setupBindings()
+        setupAppLifecycleObservers()
         fetchInitialData()
         
         // Load the initial theme from UserDefaults
@@ -662,11 +663,30 @@ class CalendarViewModel: ObservableObject {
              // When app becomes active, check if we need to update custody streak
              // in case handoff time was crossed while app was in background
              self?.updateCustodyStreak()
+             
+             // Update last signin time when app becomes active
+             self?.updateLastSigninTime()
          }
      }
     
     func isoDateString(from date: Date) -> String {
         return isoDateFormatter.string(from: date)
+    }
+    
+    private func updateLastSigninTime() {
+        // Only update if user is authenticated
+        guard AuthenticationService.shared.isLoggedIn else {
+            return
+        }
+        
+        APIService.shared.updateLastSignin { result in
+            switch result {
+            case .success:
+                print("✅ Last signin time updated successfully")
+            case .failure(let error):
+                print("❌ Failed to update last signin time: \(error.localizedDescription)")
+            }
+        }
     }
 
     func toggleCustodian(for date: Date) {
@@ -1231,6 +1251,7 @@ class CalendarViewModel: ObservableObject {
                             email: member.email,
                             lastSignin: member.last_signed_in, // Now available from API
                             notes: nil, // Not available in current API
+                            phone_number: member.phone_number,
                             isActive: member.status == "active", // Map status to isActive
                             familyId: 0 // Not available in current API
                         )

@@ -96,7 +96,7 @@ struct FamilyView: View {
                                 FamilyMemberCard(
                                     title: coparent.fullName,
                                     subtitle: coparent.phone_number ?? coparent.email,
-                                    detail: coparent.lastSignin != nil ? "Last active: \(formatRelativeTime(coparent.lastSignin!))" : "Never signed in",
+                                    detail: coparent.lastSignin != nil ? "Last active: \n\(formatRelativeTime(coparent.lastSignin!))" : "Never signed in",
                                     icon: "person.crop.circle",
                                     color: .blue
                                 )

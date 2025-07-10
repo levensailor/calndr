@@ -277,6 +277,7 @@ struct Coparent: Codable, Identifiable {
     let email: String
     let lastSignin: String?
     let notes: String?
+    let phone_number: String?
     let isActive: Bool
     let familyId: Int
     
@@ -290,6 +291,7 @@ struct Coparent: Codable, Identifiable {
         case lastName = "last_name"
         case email
         case lastSignin = "last_signin"
+        case phone_number = "phone_number"
         case notes
         case isActive = "is_active"
         case familyId = "family_id"

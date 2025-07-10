@@ -1032,6 +1032,21 @@ async def update_device_token(token: str = Form(...), current_user = Depends(get
     await database.execute(users.update().where(users.c.id == current_user['id']).values(apns_token=token))
     return {"status": "success"}
 
+@app.post("/api/users/me/last-signin")
+async def update_last_signin(current_user = Depends(get_current_user)):
+    """
+    Update the user's last_signed_in timestamp to the current time.
+    This should be called when the app becomes active.
+    """
+    try:
+        await database.execute(
+            users.update().where(users.c.id == current_user['id']).values(last_signed_in=datetime.now())
+        )
+        return {"message": "Last signin time updated successfully"}
+    except Exception as e:
+        logger.error(f"Error updating last signin time: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update last signin time")
+
 @app.post("/api/user/profile/photo", response_model=UserProfile)
 async def upload_profile_photo(
     photo: UploadFile = File(...),
