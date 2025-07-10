@@ -95,8 +95,8 @@ struct FamilyView: View {
                             ForEach(viewModel.coparents) { coparent in
                                 FamilyMemberCard(
                                     title: coparent.fullName,
-                                    subtitle: coparent.email,
-                                    detail: coparent.lastSignin != nil ? "Last active: \(formatDate(coparent.lastSignin!))" : "Never signed in",
+                                    subtitle: coparent.phone_number ?? coparent.email,
+                                    detail: coparent.lastSignin != nil ? "Last active: \(formatRelativeTime(coparent.lastSignin!))" : "Never signed in",
                                     icon: "person.crop.circle",
                                     color: .blue
                                 )
@@ -208,6 +208,85 @@ struct FamilyView: View {
         
         formatter.dateFormat = "MMM d, yyyy"
         return formatter.string(from: date)
+    }
+    
+    private func formatRelativeTime(_ dateString: String) -> String {
+        // Try different date formats that might be returned from the API
+        let formatters = [
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",  // ISO format with microseconds
+            "yyyy-MM-dd'T'HH:mm:ss",         // ISO format without microseconds
+            "yyyy-MM-dd HH:mm:ss",           // SQL datetime format
+            "yyyy-MM-dd"                     // Date only format
+        ]
+        
+        var date: Date?
+        for format in formatters {
+            let formatter = DateFormatter()
+            formatter.dateFormat = format
+            formatter.timeZone = TimeZone.current
+            if let parsedDate = formatter.date(from: dateString) {
+                date = parsedDate
+                break
+            }
+        }
+        
+        guard let lastSigninDate = date else { 
+            return dateString 
+        }
+        
+        let now = Date()
+        let timeInterval = now.timeIntervalSince(lastSigninDate)
+        
+        // If in the future, show "Just now"
+        if timeInterval < 0 {
+            return "Just now"
+        }
+        
+        let seconds = Int(timeInterval)
+        let minutes = seconds / 60
+        let hours = minutes / 60
+        let days = hours / 24
+        let weeks = days / 7
+        
+        if seconds < 60 {
+            return "Just now"
+        } else if minutes < 60 {
+            return minutes == 1 ? "1 minute ago" : "\(minutes) minutes ago"
+        } else if hours < 24 {
+            return hours == 1 ? "1 hour ago" : "\(hours) hours ago"
+        } else if days < 7 {
+            if days == 1 {
+                return "1 day ago"
+            } else {
+                let remainingHours = hours % 24
+                if remainingHours == 0 {
+                    return "\(days) days ago"
+                } else {
+                    return "\(days) days, \(remainingHours) hours ago"
+                }
+            }
+        } else if weeks < 4 {
+            if weeks == 1 {
+                let remainingDays = days % 7
+                if remainingDays == 0 {
+                    return "1 week ago"
+                } else {
+                    return "1 week, \(remainingDays) days ago"
+                }
+            } else {
+                let remainingDays = days % 7
+                if remainingDays == 0 {
+                    return "\(weeks) weeks ago"
+                } else {
+                    return "\(weeks) weeks, \(remainingDays) days ago"
+                }
+            }
+        } else {
+            // For more than 4 weeks, show the actual date
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM d, yyyy"
+            return formatter.string(from: lastSigninDate)
+        }
     }
 }
 
