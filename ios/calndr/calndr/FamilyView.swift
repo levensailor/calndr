@@ -397,9 +397,18 @@ struct FamilyView: View {
         }
         .sheet(isPresented: $showingEditOtherFamily) {
             if let contact = selectedEmergencyContact {
+                print("🏗️ Creating EditOtherFamilyView with contact: \(contact.fullName)")
                 EditOtherFamilyView(contact: contact)
                     .environmentObject(viewModel)
                     .environmentObject(themeManager)
+            } else {
+                print("⚠️ No selectedEmergencyContact available for EditOtherFamilyView")
+            }
+        }
+        .onChange(of: showingEditOtherFamily) { oldValue, newValue in
+            if !newValue {
+                // Reset selectedEmergencyContact when sheet is dismissed
+                selectedEmergencyContact = nil
             }
         }
         .alert(deleteAlertTitle, isPresented: $showingDeleteAlert) {
@@ -532,8 +541,14 @@ struct FamilyView: View {
     }
     
     private func editEmergencyContact(_ contact: EmergencyContact) {
+        print("📱 Emergency contact selected for editing: \(contact.fullName)")
         selectedEmergencyContact = contact
-        showingEditOtherFamily = true
+        print("✅ Selected emergency contact stored: \(selectedEmergencyContact?.fullName ?? "nil")")
+        // Add a small delay to ensure the contact data is properly set before showing the edit view
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            print("📱 Showing EditOtherFamilyView with contact: \(self.selectedEmergencyContact?.fullName ?? "nil")")
+            showingEditOtherFamily = true
+        }
     }
     
     private func deleteEmergencyContact(_ contact: EmergencyContact) {
@@ -1019,11 +1034,13 @@ struct EditOtherFamilyView: View {
             .navigationTitle("Edit Family Member")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
+                print("🏗️ EditOtherFamilyView onAppear with contact: \(contact.fullName)")
                 firstName = contact.first_name
                 lastName = contact.last_name
                 email = contact.notes ?? ""
                 phoneNumber = contact.phone_number == "N/A" ? "" : contact.phone_number
                 relationship = contact.relationship ?? ""
+                print("✅ Form prefilled - First: \(firstName), Last: \(lastName), Relationship: \(relationship)")
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
