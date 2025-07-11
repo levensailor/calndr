@@ -55,28 +55,34 @@ async def migrate_user_preferences():
             await database.execute(create_table_query)
             print("✅ Created user_preferences table with selected_theme column")
         else:
-            print("📋 user_preferences table exists, checking for selected_theme column...")
+            print("📋 user_preferences table exists, checking for missing columns...")
             
-            # Check if selected_theme column exists
-            column_exists_query = """
-            SELECT EXISTS (
-                SELECT FROM information_schema.columns 
-                WHERE table_name = 'user_preferences' 
-                AND column_name = 'selected_theme'
-            );
-            """
-            column_exists = await database.fetch_val(column_exists_query)
+            # Check for missing columns
+            columns_to_check = [
+                ("selected_theme", "VARCHAR(100) DEFAULT 'Default'"),
+                ("updated_at", "TIMESTAMP DEFAULT NOW()")
+            ]
             
-            if not column_exists:
-                print("➕ Adding selected_theme column to user_preferences table...")
-                alter_query = """
-                ALTER TABLE user_preferences 
-                ADD COLUMN selected_theme VARCHAR(100) DEFAULT 'Default'
+            for column_name, column_definition in columns_to_check:
+                column_exists_query = f"""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.columns 
+                    WHERE table_name = 'user_preferences' 
+                    AND column_name = '{column_name}'
+                );
                 """
-                await database.execute(alter_query)
-                print("✅ Added selected_theme column to user_preferences table")
-            else:
-                print("ℹ️  selected_theme column already exists in user_preferences table")
+                column_exists = await database.fetch_val(column_exists_query)
+                
+                if not column_exists:
+                    print(f"➕ Adding {column_name} column to user_preferences table...")
+                    alter_query = f"""
+                    ALTER TABLE user_preferences 
+                    ADD COLUMN {column_name} {column_definition}
+                    """
+                    await database.execute(alter_query)
+                    print(f"✅ Added {column_name} column to user_preferences table")
+                else:
+                    print(f"ℹ️  {column_name} column already exists in user_preferences table")
         
         # Create index for better performance
         print("🔍 Creating index for user_id...")
