@@ -60,6 +60,7 @@ async def migrate_user_preferences():
             # Check for missing columns
             columns_to_check = [
                 ("selected_theme", "VARCHAR(100) DEFAULT 'Default'"),
+                ("created_at", "TIMESTAMP DEFAULT NOW()"),
                 ("updated_at", "TIMESTAMP DEFAULT NOW()")
             ]
             
@@ -83,6 +84,31 @@ async def migrate_user_preferences():
                     print(f"✅ Added {column_name} column to user_preferences table")
                 else:
                     print(f"ℹ️  {column_name} column already exists in user_preferences table")
+            
+            # Remove unnecessary key and value columns if they exist
+            print("🧹 Checking for unnecessary key and value columns to remove...")
+            columns_to_remove = ["key", "value"]
+            
+            for column_name in columns_to_remove:
+                column_exists_query = f"""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.columns 
+                    WHERE table_name = 'user_preferences' 
+                    AND column_name = '{column_name}'
+                );
+                """
+                column_exists = await database.fetch_val(column_exists_query)
+                
+                if column_exists:
+                    print(f"🗑️  Removing unnecessary {column_name} column...")
+                    drop_query = f"""
+                    ALTER TABLE user_preferences 
+                    DROP COLUMN IF EXISTS {column_name}
+                    """
+                    await database.execute(drop_query)
+                    print(f"✅ Removed {column_name} column from user_preferences table")
+                else:
+                    print(f"ℹ️  {column_name} column doesn't exist (already clean)")
         
         # Create index for better performance
         print("🔍 Creating index for user_id...")

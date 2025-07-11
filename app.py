@@ -267,6 +267,7 @@ user_preferences = sqlalchemy.Table(
     sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
     sqlalchemy.Column("user_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True),
     sqlalchemy.Column("selected_theme", sqlalchemy.String(100), nullable=True),
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
     sqlalchemy.Column("updated_at", sqlalchemy.DateTime, nullable=True, default=datetime.now, onupdate=datetime.now),
 )
 
