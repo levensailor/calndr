@@ -502,8 +502,8 @@ struct ScheduleBuilderView: View {
         print("📆 Date range: \(startDate) to \(endDate)")
         
         // Save template first
-        viewModel.createScheduleTemplate(templateData) { [weak self] success in
-            guard let self = self, success else {
+        viewModel.createScheduleTemplate(templateData) { success in
+            guard success else {
                 print("❌ Failed to save schedule template")
                 return
             }
@@ -533,7 +533,7 @@ struct ScheduleBuilderView: View {
                 }
                 
                 DispatchQueue.main.async {
-                    self.dismiss()
+                    dismiss()
                 }
             }
         }
