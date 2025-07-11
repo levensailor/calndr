@@ -7,6 +7,8 @@ struct ReminderModal: View {
     
     let date: Date
     @State private var reminderText: String = ""
+    @State private var notificationEnabled: Bool = false
+    @State private var notificationTime: Date = Date()
     @State private var isLoading: Bool = false
     @State private var showingDeleteAlert: Bool = false
     
@@ -59,6 +61,32 @@ struct ReminderModal: View {
                         )
                         .foregroundColor(themeManager.currentTheme.textColor)
                         .font(.body)
+                }
+                .padding(.horizontal)
+                
+                // Notification Settings
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Push Notification")
+                        .font(.headline)
+                        .foregroundColor(themeManager.currentTheme.textColor)
+                    
+                    Toggle("Send notification", isOn: $notificationEnabled)
+                        .toggleStyle(SwitchToggleStyle(tint: Color.blue))
+                        .foregroundColor(themeManager.currentTheme.textColor)
+                    
+                    if notificationEnabled {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Notification Time")
+                                .font(.subheadline)
+                                .foregroundColor(themeManager.currentTheme.textColor.opacity(0.8))
+                            
+                            DatePicker("", selection: $notificationTime, displayedComponents: .hourAndMinute)
+                                .datePickerStyle(WheelDatePickerStyle())
+                                .labelsHidden()
+                                .frame(maxHeight: 120)
+                        }
+                        .padding(.top, 8)
+                    }
                 }
                 .padding(.horizontal)
                 
@@ -135,6 +163,16 @@ struct ReminderModal: View {
     private func loadExistingReminder() {
         if let reminder = existingReminder {
             reminderText = reminder.text
+            notificationEnabled = reminder.notificationEnabled
+            
+            // Parse notification time if available
+            if let timeString = reminder.notificationTime {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "HH:mm:ss"
+                if let time = formatter.date(from: timeString) {
+                    notificationTime = time
+                }
+            }
         }
     }
     
@@ -144,9 +182,17 @@ struct ReminderModal: View {
         
         isLoading = true
         
+        // Format notification time if enabled
+        var notificationTimeString: String? = nil
+        if notificationEnabled {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "HH:mm"
+            notificationTimeString = formatter.string(from: notificationTime)
+        }
+        
         if let existingReminder = existingReminder {
             // Update existing reminder
-            viewModel.updateReminder(existingReminder.id, text: text) { [self] success in
+            viewModel.updateReminder(existingReminder.id, text: text, notificationEnabled: notificationEnabled, notificationTime: notificationTimeString) { [self] success in
                 DispatchQueue.main.async {
                     self.isLoading = false
                     if success {
@@ -157,7 +203,7 @@ struct ReminderModal: View {
             }
         } else {
             // Create new reminder
-            viewModel.createReminder(date: date, text: text) { [self] success in
+            viewModel.createReminder(date: date, text: text, notificationEnabled: notificationEnabled, notificationTime: notificationTimeString) { [self] success in
                 DispatchQueue.main.async {
                     self.isLoading = false
                     if success {

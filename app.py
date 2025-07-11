@@ -278,6 +278,8 @@ reminders = sqlalchemy.Table(
     sqlalchemy.Column("family_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("families.id", ondelete="CASCADE"), nullable=False),
     sqlalchemy.Column("date", sqlalchemy.Date, nullable=False),
     sqlalchemy.Column("text", sqlalchemy.Text, nullable=False),
+    sqlalchemy.Column("notification_enabled", sqlalchemy.Boolean, nullable=False, default=False),
+    sqlalchemy.Column("notification_time", sqlalchemy.Time, nullable=True),
     sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
     sqlalchemy.Column("updated_at", sqlalchemy.DateTime, nullable=True, default=datetime.now, onupdate=datetime.now),
     sqlalchemy.UniqueConstraint("family_id", "date", name="unique_family_date_reminder"),
@@ -460,14 +462,20 @@ class UserPreferenceUpdate(BaseModel):
 class ReminderCreate(BaseModel):
     date: str  # Date string in YYYY-MM-DD format
     text: str
+    notification_enabled: bool = False
+    notification_time: Optional[str] = None  # Time string in HH:MM format
 
 class ReminderUpdate(BaseModel):
     text: str
+    notification_enabled: bool = False
+    notification_time: Optional[str] = None  # Time string in HH:MM format
 
 class ReminderResponse(BaseModel):
     id: int
     date: str  # Date string in YYYY-MM-DD format
     text: str
+    notification_enabled: bool
+    notification_time: Optional[str] = None  # Time string in HH:MM format
     created_at: str
     updated_at: str
 
@@ -2112,6 +2120,124 @@ async def update_user_preferences(
         logger.error(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Failed to update preferences")
 
+# ---------------------- Notification Scheduling ----------------------
+
+async def schedule_reminder_notification(reminder_id: int, family_id: uuid.UUID, reminder_date: date, notification_time: time, reminder_text: str):
+    """
+    Schedule a push notification for a reminder.
+    """
+    try:
+        # Get family members with APNS tokens
+        family_members_query = users.select().where(
+            (users.c.family_id == family_id) &
+            (users.c.apns_token.isnot(None))
+        )
+        family_members = await database.fetch_all(family_members_query)
+        
+        if not family_members:
+            logger.info(f"No family members with APNS tokens found for family {family_id}")
+            return
+        
+        # Calculate notification datetime
+        notification_datetime = datetime.combine(reminder_date, notification_time)
+        
+        # Convert to UTC (assuming local time is EST)
+        est = pytz.timezone('US/Eastern')
+        local_datetime = est.localize(notification_datetime)
+        utc_datetime = local_datetime.astimezone(pytz.UTC)
+        
+        # Only schedule if the notification time is in the future
+        if utc_datetime <= datetime.now(pytz.UTC):
+            logger.info(f"Reminder notification time {utc_datetime} is in the past, skipping scheduling")
+            return
+        
+        # Calculate delay in seconds
+        delay_seconds = (utc_datetime - datetime.now(pytz.UTC)).total_seconds()
+        
+        # Schedule the notification task
+        asyncio.create_task(send_delayed_reminder_notification(delay_seconds, family_members, reminder_text, reminder_date))
+        logger.info(f"Scheduled reminder notification for {len(family_members)} family members in {delay_seconds} seconds")
+        
+    except Exception as e:
+        logger.error(f"Error scheduling reminder notification: {e}")
+
+async def send_delayed_reminder_notification(delay_seconds: float, family_members: list, reminder_text: str, reminder_date: date):
+    """
+    Send a delayed reminder notification after the specified delay.
+    """
+    try:
+        # Wait for the specified delay
+        await asyncio.sleep(delay_seconds)
+        
+        # Send notification to all family members
+        for member in family_members:
+            try:
+                await send_reminder_notification(member['apns_token'], reminder_text, reminder_date)
+                logger.info(f"Sent reminder notification to user {member['id']}")
+            except Exception as e:
+                logger.error(f"Failed to send reminder notification to user {member['id']}: {e}")
+        
+    except Exception as e:
+        logger.error(f"Error sending delayed reminder notification: {e}")
+
+async def cancel_reminder_notification(reminder_id: int):
+    """
+    Cancel a scheduled reminder notification.
+    Note: This is a placeholder since we can't easily cancel scheduled APNS notifications.
+    In a production app, you might want to use a task queue like Celery with Redis.
+    """
+    logger.info(f"Notification cancellation requested for reminder {reminder_id}")
+    # In a real implementation, you would cancel the scheduled task here
+
+async def send_reminder_notification(apns_token: str, reminder_text: str, reminder_date: date):
+    """
+    Send a push notification for a reminder.
+    """
+    try:
+        # Load APNS configuration
+        apns_key_id = os.getenv("APNS_KEY_ID")
+        apns_team_id = os.getenv("APNS_TEAM_ID")
+        apns_bundle_id = os.getenv("APNS_BUNDLE_ID", "com.levensailor.calndr")
+        apns_key_path = os.getenv("APNS_KEY_PATH")
+        
+        if not all([apns_key_id, apns_team_id, apns_key_path]):
+            logger.error("APNS configuration missing")
+            return
+        
+        # Create APNS client
+        apns = APNs(
+            key=apns_key_path,
+            key_id=apns_key_id,
+            team_id=apns_team_id,
+            bundle_id=apns_bundle_id,
+            use_sandbox=os.getenv("APNS_USE_SANDBOX", "true").lower() == "true"
+        )
+        
+        # Format the date for display
+        formatted_date = reminder_date.strftime("%B %d, %Y")
+        
+        # Create notification request
+        request = NotificationRequest(
+            device_token=apns_token,
+            message={
+                "aps": {
+                    "alert": {
+                        "title": f"Reminder for {formatted_date}",
+                        "body": reminder_text
+                    },
+                    "sound": "default",
+                    "badge": 1
+                }
+            }
+        )
+        
+        # Send the notification
+        await apns.send_notification(request)
+        logger.info(f"Sent reminder notification to device {apns_token[:8]}...")
+        
+    except Exception as e:
+        logger.error(f"Error sending reminder notification: {e}")
+
 # ---------------------- Reminders API ----------------------
 
 @app.get("/api/reminders", response_model=List[ReminderResponse])
@@ -2141,6 +2267,8 @@ async def get_reminders(
             id=record['id'],
             date=str(record['date']),
             text=record['text'],
+            notification_enabled=record['notification_enabled'],
+            notification_time=str(record['notification_time']) if record['notification_time'] else None,
             created_at=str(record['created_at']),
             updated_at=str(record['updated_at'])
         )
@@ -2154,6 +2282,14 @@ async def create_reminder(reminder_data: ReminderCreate, current_user = Depends(
     """
     try:
         reminder_date = datetime.strptime(reminder_data.date, '%Y-%m-%d').date()
+        
+        # Parse notification time if provided
+        notification_time = None
+        if reminder_data.notification_enabled and reminder_data.notification_time:
+            try:
+                notification_time = datetime.strptime(reminder_data.notification_time, '%H:%M').time()
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid notification time format. Use HH:MM")
         
         # Check if reminder already exists for this date
         existing_query = reminders.select().where(
@@ -2169,10 +2305,16 @@ async def create_reminder(reminder_data: ReminderCreate, current_user = Depends(
         insert_query = reminders.insert().values(
             family_id=current_user['family_id'],
             date=reminder_date,
-            text=reminder_data.text
+            text=reminder_data.text,
+            notification_enabled=reminder_data.notification_enabled,
+            notification_time=notification_time
         ).returning(reminders.c.id)
         
         reminder_id = await database.execute(insert_query)
+        
+        # Schedule notification if enabled
+        if reminder_data.notification_enabled and notification_time:
+            await schedule_reminder_notification(reminder_id, current_user['family_id'], reminder_date, notification_time, reminder_data.text)
         
         # Fetch the created reminder
         reminder_record = await database.fetch_one(reminders.select().where(reminders.c.id == reminder_id))
@@ -2181,6 +2323,8 @@ async def create_reminder(reminder_data: ReminderCreate, current_user = Depends(
             id=reminder_record['id'],
             date=str(reminder_record['date']),
             text=reminder_record['text'],
+            notification_enabled=reminder_record['notification_enabled'],
+            notification_time=str(reminder_record['notification_time']) if reminder_record['notification_time'] else None,
             created_at=str(reminder_record['created_at']),
             updated_at=str(reminder_record['updated_at'])
         )
@@ -2206,12 +2350,29 @@ async def update_reminder(reminder_id: int, reminder_data: ReminderUpdate, curre
         if not existing:
             raise HTTPException(status_code=404, detail="Reminder not found")
         
+        # Parse notification time if provided
+        notification_time = None
+        if reminder_data.notification_enabled and reminder_data.notification_time:
+            try:
+                notification_time = datetime.strptime(reminder_data.notification_time, '%H:%M').time()
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid notification time format. Use HH:MM")
+        
         # Update the reminder
         update_query = reminders.update().where(reminders.c.id == reminder_id).values(
             text=reminder_data.text,
+            notification_enabled=reminder_data.notification_enabled,
+            notification_time=notification_time,
             updated_at=datetime.now()
         )
         await database.execute(update_query)
+        
+        # Handle notification scheduling
+        if reminder_data.notification_enabled and notification_time:
+            await schedule_reminder_notification(reminder_id, current_user['family_id'], existing['date'], notification_time, reminder_data.text)
+        else:
+            # Cancel existing notification if disabled
+            await cancel_reminder_notification(reminder_id)
         
         # Fetch the updated reminder
         reminder_record = await database.fetch_one(reminders.select().where(reminders.c.id == reminder_id))
@@ -2220,6 +2381,8 @@ async def update_reminder(reminder_id: int, reminder_data: ReminderUpdate, curre
             id=reminder_record['id'],
             date=str(reminder_record['date']),
             text=reminder_record['text'],
+            notification_enabled=reminder_record['notification_enabled'],
+            notification_time=str(reminder_record['notification_time']) if reminder_record['notification_time'] else None,
             created_at=str(reminder_record['created_at']),
             updated_at=str(reminder_record['updated_at'])
         )

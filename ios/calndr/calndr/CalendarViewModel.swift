@@ -1714,12 +1714,12 @@ class CalendarViewModel: ObservableObject {
         }
     }
     
-    func createReminder(date: Date, text: String, completion: @escaping (Bool) -> Void) {
+    func createReminder(date: Date, text: String, notificationEnabled: Bool = false, notificationTime: String? = nil, completion: @escaping (Bool) -> Void) {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let dateString = dateFormatter.string(from: date)
         
-        let reminderData = ReminderCreate(date: dateString, text: text)
+        let reminderData = ReminderCreate(date: dateString, text: text, notificationEnabled: notificationEnabled, notificationTime: notificationTime)
         
         APIService.shared.createReminder(reminderData) { [weak self] result in
             DispatchQueue.main.async {
@@ -1737,8 +1737,8 @@ class CalendarViewModel: ObservableObject {
         }
     }
     
-    func updateReminder(_ reminderId: Int, text: String, completion: @escaping (Bool) -> Void) {
-        let reminderData = ReminderUpdate(text: text)
+    func updateReminder(_ reminderId: Int, text: String, notificationEnabled: Bool = false, notificationTime: String? = nil, completion: @escaping (Bool) -> Void) {
+        let reminderData = ReminderUpdate(text: text, notificationEnabled: notificationEnabled, notificationTime: notificationTime)
         
         APIService.shared.updateReminder(reminderId, reminderData: reminderData) { [weak self] result in
             DispatchQueue.main.async {

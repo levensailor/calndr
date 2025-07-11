@@ -750,11 +750,15 @@ struct Reminder: Codable, Identifiable {
     let id: Int
     let date: String
     let text: String
+    let notificationEnabled: Bool
+    let notificationTime: String?
     let createdAt: String
     let updatedAt: String
     
     enum CodingKeys: String, CodingKey {
         case id, date, text
+        case notificationEnabled = "notification_enabled"
+        case notificationTime = "notification_time"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
@@ -763,10 +767,39 @@ struct Reminder: Codable, Identifiable {
 struct ReminderCreate: Codable {
     let date: String
     let text: String
+    let notificationEnabled: Bool
+    let notificationTime: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case date, text
+        case notificationEnabled = "notification_enabled"
+        case notificationTime = "notification_time"
+    }
+    
+    init(date: String, text: String, notificationEnabled: Bool = false, notificationTime: String? = nil) {
+        self.date = date
+        self.text = text
+        self.notificationEnabled = notificationEnabled
+        self.notificationTime = notificationTime
+    }
 }
 
 struct ReminderUpdate: Codable {
     let text: String
+    let notificationEnabled: Bool
+    let notificationTime: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case text
+        case notificationEnabled = "notification_enabled"
+        case notificationTime = "notification_time"
+    }
+    
+    init(text: String, notificationEnabled: Bool = false, notificationTime: String? = nil) {
+        self.text = text
+        self.notificationEnabled = notificationEnabled
+        self.notificationTime = notificationTime
+    }
 }
 
 struct ReminderByDate: Codable {
