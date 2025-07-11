@@ -248,7 +248,7 @@ class FamilyViewModel: ObservableObject {
     func deleteEmergencyContact(at offsets: IndexSet) {
         let contactsToDelete = offsets.map { self.emergencyContacts[$0] }
         for contact in contactsToDelete {
-            apiService.deleteEmergencyContact(contactId: contact.id) { [weak self] result in
+            apiService.deleteEmergencyContact(id: contact.id) { [weak self] result in
                 DispatchQueue.main.async {
                     switch result {
                     case .success:
@@ -264,7 +264,7 @@ class FamilyViewModel: ObservableObject {
     func deleteBabysitter(at offsets: IndexSet) {
         let sittersToDelete = offsets.map { self.babysitters[$0] }
         for sitter in sittersToDelete {
-            apiService.deleteBabysitter(sitterId: sitter.id) { [weak self] result in
+            apiService.deleteBabysitter(id: sitter.id) { [weak self] result in
                 DispatchQueue.main.async {
                     switch result {
                     case .success:
