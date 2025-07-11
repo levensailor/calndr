@@ -34,17 +34,12 @@ struct FamilyView: View {
             }
             .onAppear(perform: viewModel.fetchFamilyData)
             .sheet(isPresented: $showingAddEmergencyContact) {
-                // Assuming you have a view named AddEmergencyContactView
-                // If not, this will need to be created.
-                // AddContactView(contactType: .emergency) {
-                //     viewModel.fetchFamilyData()
-                // }
+                // AddContactView will be created here
+                Text("Add Emergency Contact (View Pending)")
             }
             .sheet(isPresented: $showingAddBabysitter) {
-                // Assuming you have a view named AddBabysitterView
-                // AddContactView(contactType: .babysitter) {
-                //     viewModel.fetchFamilyData()
-                // }
+                // AddContactView will be created here
+                Text("Add Babysitter (View Pending)")
             }
             .alert(isPresented: .constant(viewModel.errorMessage != nil), content: {
                 Alert(title: Text("Error"), message: Text(viewModel.errorMessage ?? "An unknown error occurred."), dismissButton: .default(Text("OK"), action: {
