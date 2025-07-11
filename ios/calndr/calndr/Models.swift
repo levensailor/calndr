@@ -401,6 +401,325 @@ struct ScheduleTemplate: Codable, Identifiable {
     }
 }
 
+// MARK: - Enhanced Schedule Models
+
+enum SchedulePatternType: String, Codable, CaseIterable {
+    case weekly = "weekly"
+    case alternatingWeeks = "alternating_weeks"
+    case alternatingDays = "alternating_days"
+    case custom = "custom"
+    
+    var displayName: String {
+        switch self {
+        case .weekly:
+            return "Weekly Pattern"
+        case .alternatingWeeks:
+            return "Alternating Weeks"
+        case .alternatingDays:
+            return "Alternating Days"
+        case .custom:
+            return "Custom Pattern"
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .weekly:
+            return "Same pattern every week"
+        case .alternatingWeeks:
+            return "Alternate between parents each week"
+        case .alternatingDays:
+            return "Alternate between parents each day"
+        case .custom:
+            return "Custom arrangement"
+        }
+    }
+}
+
+struct WeeklySchedulePattern: Codable {
+    let sunday: String?
+    let monday: String?
+    let tuesday: String?
+    let wednesday: String?
+    let thursday: String?
+    let friday: String?
+    let saturday: String?
+    
+    func custodianFor(weekday: Int) -> String? {
+        // weekday: 1=Sunday, 2=Monday, ..., 7=Saturday
+        switch weekday {
+        case 1: return sunday
+        case 2: return monday
+        case 3: return tuesday
+        case 4: return wednesday
+        case 5: return thursday
+        case 6: return friday
+        case 7: return saturday
+        default: return nil
+        }
+    }
+}
+
+struct AlternatingWeeksPattern: Codable {
+    let weekAPattern: WeeklySchedulePattern
+    let weekBPattern: WeeklySchedulePattern
+    let startingWeek: String // "A" or "B"
+    let referenceDate: String // ISO date string to determine which week is A/B
+}
+
+struct ScheduleTemplateDetailed: Codable, Identifiable {
+    let id: Int
+    let name: String
+    let description: String?
+    let patternType: SchedulePatternType
+    let weeklyPattern: WeeklySchedulePattern?
+    let alternatingWeeksPattern: AlternatingWeeksPattern?
+    let isActive: Bool
+    let familyId: Int
+    let createdAt: String
+    let updatedAt: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case description
+        case patternType = "pattern_type"
+        case weeklyPattern = "weekly_pattern"
+        case alternatingWeeksPattern = "alternating_weeks_pattern"
+        case isActive = "is_active"
+        case familyId = "family_id"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+struct ScheduleTemplateCreate: Codable {
+    let name: String
+    let description: String?
+    let patternType: SchedulePatternType
+    let weeklyPattern: WeeklySchedulePattern?
+    let alternatingWeeksPattern: AlternatingWeeksPattern?
+    let isActive: Bool
+    
+    enum CodingKeys: String, CodingKey {
+        case name
+        case description
+        case patternType = "pattern_type"
+        case weeklyPattern = "weekly_pattern"
+        case alternatingWeeksPattern = "alternating_weeks_pattern"
+        case isActive = "is_active"
+    }
+}
+
+struct ScheduleApplication: Codable {
+    let templateId: Int
+    let startDate: String
+    let endDate: String
+    let overwriteExisting: Bool
+    
+    enum CodingKeys: String, CodingKey {
+        case templateId = "template_id"
+        case startDate = "start_date"
+        case endDate = "end_date"
+        case overwriteExisting = "overwrite_existing"
+    }
+}
+
+struct ScheduleApplicationResponse: Codable {
+    let success: Bool
+    let message: String
+    let daysApplied: Int
+    let conflictsOverwritten: Int?
+    
+    enum CodingKeys: String, CodingKey {
+        case success
+        case message
+        case daysApplied = "days_applied"
+        case conflictsOverwritten = "conflicts_overwritten"
+    }
+}
+
+struct SchedulePreset {
+    let id: String
+    let name: String
+    let description: String
+    let patternType: SchedulePatternType
+    let weeklyPattern: WeeklySchedulePattern?
+    let alternatingWeeksPattern: AlternatingWeeksPattern?
+    let icon: String
+    let isPopular: Bool
+    
+    static let commonPresets: [SchedulePreset] = [
+        // Weekly patterns
+        SchedulePreset(
+            id: "weekdays_weekends",
+            name: "Weekdays/Weekends",
+            description: "One parent has weekdays, other has weekends",
+            patternType: .weekly,
+            weeklyPattern: WeeklySchedulePattern(
+                sunday: "parent2",
+                monday: "parent1",
+                tuesday: "parent1",
+                wednesday: "parent1",
+                thursday: "parent1",
+                friday: "parent1",
+                saturday: "parent2"
+            ),
+            alternatingWeeksPattern: nil,
+            icon: "calendar.badge.clock",
+            isPopular: true
+        ),
+        
+        SchedulePreset(
+            id: "traditional_split",
+            name: "Traditional Split",
+            description: "Parent 1: Mon-Wed, Parent 2: Thu-Sun",
+            patternType: .weekly,
+            weeklyPattern: WeeklySchedulePattern(
+                sunday: "parent2",
+                monday: "parent1",
+                tuesday: "parent1",
+                wednesday: "parent1",
+                thursday: "parent2",
+                friday: "parent2",
+                saturday: "parent2"
+            ),
+            alternatingWeeksPattern: nil,
+            icon: "calendar.badge.clock",
+            isPopular: true
+        ),
+        
+        // Alternating weeks
+        SchedulePreset(
+            id: "alternating_weeks",
+            name: "Alternating Weeks",
+            description: "Switch between parents every week",
+            patternType: .alternatingWeeks,
+            weeklyPattern: nil,
+            alternatingWeeksPattern: AlternatingWeeksPattern(
+                weekAPattern: WeeklySchedulePattern(
+                    sunday: "parent1",
+                    monday: "parent1",
+                    tuesday: "parent1",
+                    wednesday: "parent1",
+                    thursday: "parent1",
+                    friday: "parent1",
+                    saturday: "parent1"
+                ),
+                weekBPattern: WeeklySchedulePattern(
+                    sunday: "parent2",
+                    monday: "parent2",
+                    tuesday: "parent2",
+                    wednesday: "parent2",
+                    thursday: "parent2",
+                    friday: "parent2",
+                    saturday: "parent2"
+                ),
+                startingWeek: "A",
+                referenceDate: "2024-01-01" // Monday
+            ),
+            icon: "arrow.left.arrow.right",
+            isPopular: true
+        ),
+        
+        SchedulePreset(
+            id: "two_two_three",
+            name: "2-2-3 Schedule",
+            description: "2 days, 2 days, 3 days alternating",
+            patternType: .alternatingWeeks,
+            weeklyPattern: nil,
+            alternatingWeeksPattern: AlternatingWeeksPattern(
+                weekAPattern: WeeklySchedulePattern(
+                    sunday: "parent1",
+                    monday: "parent1",
+                    tuesday: "parent2",
+                    wednesday: "parent2",
+                    thursday: "parent1",
+                    friday: "parent1",
+                    saturday: "parent1"
+                ),
+                weekBPattern: WeeklySchedulePattern(
+                    sunday: "parent2",
+                    monday: "parent2",
+                    tuesday: "parent1",
+                    wednesday: "parent1",
+                    thursday: "parent2",
+                    friday: "parent2",
+                    saturday: "parent2"
+                ),
+                startingWeek: "A",
+                referenceDate: "2024-01-01"
+            ),
+            icon: "calendar.badge.clock",
+            isPopular: true
+        ),
+        
+        SchedulePreset(
+            id: "two_two_five_five",
+            name: "2-2-5-5 Schedule",
+            description: "2 weekdays, 2 weekdays, 5 days, 5 days",
+            patternType: .alternatingWeeks,
+            weeklyPattern: nil,
+            alternatingWeeksPattern: AlternatingWeeksPattern(
+                weekAPattern: WeeklySchedulePattern(
+                    sunday: "parent1",
+                    monday: "parent1",
+                    tuesday: "parent2",
+                    wednesday: "parent2",
+                    thursday: "parent1",
+                    friday: "parent1",
+                    saturday: "parent1"
+                ),
+                weekBPattern: WeeklySchedulePattern(
+                    sunday: "parent1",
+                    monday: "parent1",
+                    tuesday: "parent2",
+                    wednesday: "parent2",
+                    thursday: "parent2",
+                    friday: "parent2",
+                    saturday: "parent2"
+                ),
+                startingWeek: "A",
+                referenceDate: "2024-01-01"
+            ),
+            icon: "calendar.badge.clock",
+            isPopular: false
+        ),
+        
+        SchedulePreset(
+            id: "every_other_day",
+            name: "Every Other Day",
+            description: "Alternate between parents daily",
+            patternType: .alternatingDays,
+            weeklyPattern: nil,
+            alternatingWeeksPattern: AlternatingWeeksPattern(
+                weekAPattern: WeeklySchedulePattern(
+                    sunday: "parent1",
+                    monday: "parent2",
+                    tuesday: "parent1",
+                    wednesday: "parent2",
+                    thursday: "parent1",
+                    friday: "parent2",
+                    saturday: "parent1"
+                ),
+                weekBPattern: WeeklySchedulePattern(
+                    sunday: "parent2",
+                    monday: "parent1",
+                    tuesday: "parent2",
+                    wednesday: "parent1",
+                    thursday: "parent2",
+                    friday: "parent1",
+                    saturday: "parent2"
+                ),
+                startingWeek: "A",
+                referenceDate: "2024-01-01"
+            ),
+            icon: "arrow.left.arrow.right.circle",
+            isPopular: false
+        )
+    ]
+}
+
 // MARK: - Settings Section Models
 
 struct SettingsSection: Identifiable {

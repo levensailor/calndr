@@ -1501,4 +1501,166 @@ class CalendarViewModel: ObservableObject {
             }
         }
     }
+
+    // MARK: - Schedule Template Management
+    
+    func fetchScheduleTemplates(completion: (() -> Void)? = nil) {
+        APIService.shared.fetchScheduleTemplates { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let templates):
+                    self?.scheduleTemplates = templates
+                    print("✅ Successfully fetched \(templates.count) schedule templates")
+                case .failure(let error):
+                    print("❌ Error fetching schedule templates: \(error.localizedDescription)")
+                }
+                completion?()
+            }
+        }
+    }
+    
+    func createScheduleTemplate(_ templateData: ScheduleTemplateCreate, completion: @escaping (Bool) -> Void) {
+        APIService.shared.createScheduleTemplate(templateData) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let template):
+                    self?.scheduleTemplates.append(template)
+                    print("✅ Successfully created schedule template: \(template.name)")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error creating schedule template: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func updateScheduleTemplate(_ templateId: Int, templateData: ScheduleTemplateCreate, completion: @escaping (Bool) -> Void) {
+        APIService.shared.updateScheduleTemplate(templateId, templateData: templateData) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let updatedTemplate):
+                    if let index = self?.scheduleTemplates.firstIndex(where: { $0.id == templateId }) {
+                        self?.scheduleTemplates[index] = updatedTemplate
+                    }
+                    print("✅ Successfully updated schedule template: \(updatedTemplate.name)")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error updating schedule template: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func deleteScheduleTemplate(_ templateId: Int, completion: @escaping (Bool) -> Void) {
+        APIService.shared.deleteScheduleTemplate(templateId) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    self?.scheduleTemplates.removeAll { $0.id == templateId }
+                    print("✅ Successfully deleted schedule template")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error deleting schedule template: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func applyScheduleTemplate(_ application: ScheduleApplication, completion: @escaping (Bool, String?) -> Void) {
+        APIService.shared.applyScheduleTemplate(application) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    // Refresh custody data after applying schedule
+                    self?.fetchHandoffsAndCustody()
+                    let message = "Applied schedule to \(response.daysApplied) days"
+                    print("✅ Successfully applied schedule template: \(message)")
+                    completion(true, message)
+                case .failure(let error):
+                    print("❌ Error applying schedule template: \(error.localizedDescription)")
+                    completion(false, error.localizedDescription)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Schedule Validation and Utilities
+    
+    func validateSchedulePattern(_ pattern: WeeklySchedulePattern) -> (isValid: Bool, message: String?) {
+        let assignedDays = [
+            pattern.sunday, pattern.monday, pattern.tuesday, pattern.wednesday,
+            pattern.thursday, pattern.friday, pattern.saturday
+        ].compactMap { $0 }
+        
+        if assignedDays.isEmpty {
+            return (false, "At least one day must be assigned")
+        }
+        
+        // Check for valid custodian assignments
+        let validAssignments = ["parent1", "parent2"]
+        let invalidAssignments = assignedDays.filter { !validAssignments.contains($0) }
+        
+        if !invalidAssignments.isEmpty {
+            return (false, "Invalid custodian assignments found")
+        }
+        
+        return (true, nil)
+    }
+    
+    func generateSchedulePreview(pattern: WeeklySchedulePattern, startDate: Date, numberOfWeeks: Int = 4) -> [(date: Date, custodian: String?)] {
+        var preview: [(date: Date, custodian: String?)] = []
+        let calendar = Calendar.current
+        
+        for week in 0..<numberOfWeeks {
+            for day in 0..<7 {
+                let date = calendar.date(byAdding: .day, value: week * 7 + day, to: startDate) ?? startDate
+                let weekday = calendar.component(.weekday, from: date) // 1=Sunday, 2=Monday, etc.
+                let custodian = pattern.custodianFor(weekday: weekday)
+                preview.append((date: date, custodian: custodian))
+            }
+        }
+        
+        return preview
+    }
+    
+    func getCustodianNameFromId(_ custodianId: String?) -> String {
+        guard let custodianId = custodianId else { return "Unassigned" }
+        
+        if custodianId == "parent1" || custodianId == custodianOneId {
+            return custodianOneName
+        } else if custodianId == "parent2" || custodianId == custodianTwoId {
+            return custodianTwoName
+        } else {
+            return "Unknown"
+        }
+    }
+    
+    func convertPatternToAPIFormat(_ pattern: WeeklySchedulePattern) -> WeeklySchedulePattern {
+        // Convert "parent1"/"parent2" to actual custodian IDs
+        return WeeklySchedulePattern(
+            sunday: convertCustodianToId(pattern.sunday),
+            monday: convertCustodianToId(pattern.monday),
+            tuesday: convertCustodianToId(pattern.tuesday),
+            wednesday: convertCustodianToId(pattern.wednesday),
+            thursday: convertCustodianToId(pattern.thursday),
+            friday: convertCustodianToId(pattern.friday),
+            saturday: convertCustodianToId(pattern.saturday)
+        )
+    }
+    
+    private func convertCustodianToId(_ custodian: String?) -> String? {
+        guard let custodian = custodian else { return nil }
+        
+        switch custodian {
+        case "parent1":
+            return custodianOneId
+        case "parent2":
+            return custodianTwoId
+        default:
+            return custodian // Already an ID
+        }
+    }
 } 

@@ -1487,5 +1487,179 @@ class APIService {
         }.resume()
     }
     
+    // MARK: - Schedule Template API Methods
+    
+    func fetchScheduleTemplates(completion: @escaping (Result<[ScheduleTemplate], Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/schedule-templates")
+        let request = createAuthenticatedRequest(url: url)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            if httpResponse.statusCode == 401 {
+                completion(.failure(NSError(domain: "APIService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Unauthorized"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error"])))
+                return
+            }
+            
+            do {
+                let templates = try JSONDecoder().decode([ScheduleTemplate].self, from: data)
+                completion(.success(templates))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func createScheduleTemplate(_ templateData: ScheduleTemplateCreate, completion: @escaping (Result<ScheduleTemplate, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/schedule-templates")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(templateData)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error"])))
+                return
+            }
+            
+            do {
+                let template = try JSONDecoder().decode(ScheduleTemplate.self, from: data)
+                completion(.success(template))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func updateScheduleTemplate(_ templateId: Int, templateData: ScheduleTemplateCreate, completion: @escaping (Result<ScheduleTemplate, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/schedule-templates/\(templateId)")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "PUT"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(templateData)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error"])))
+                return
+            }
+            
+            do {
+                let template = try JSONDecoder().decode(ScheduleTemplate.self, from: data)
+                completion(.success(template))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func deleteScheduleTemplate(_ templateId: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/schedule-templates/\(templateId)")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "DELETE"
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error"])))
+                return
+            }
+            
+            completion(.success(()))
+        }.resume()
+    }
+    
+    func applyScheduleTemplate(_ application: ScheduleApplication, completion: @escaping (Result<ScheduleApplicationResponse, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/schedule-templates/apply")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(application)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error"])))
+                return
+            }
+            
+            do {
+                let response = try JSONDecoder().decode(ScheduleApplicationResponse.self, from: data)
+                completion(.success(response))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
 
 } 
