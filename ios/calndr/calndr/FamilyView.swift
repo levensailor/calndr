@@ -63,7 +63,7 @@ struct CoParentsSection: View {
                 ProgressView()
             }
             
-            ForEach(viewModel.familyMembers.filter { $0.id != viewModel.currentUserID }) { member in
+            ForEach(viewModel.familyMembers.filter { $0.id != viewModel.currentUserID }, id: \.id) { member in
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
                         Image(systemName: "person.circle.fill")
