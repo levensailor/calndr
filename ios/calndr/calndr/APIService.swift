@@ -965,7 +965,7 @@ class APIService {
     }
     
     func fetchUserProfile(completion: @escaping (Result<UserProfile, Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/users/me")
+        let url = baseURL.appendingPathComponent("/user/profile")
         let request = createAuthenticatedRequest(url: url)
         
         URLSession.shared.dataTask(with: request) { data, response, error in

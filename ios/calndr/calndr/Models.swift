@@ -173,9 +173,10 @@ struct UserProfile: Codable {
     let subscription_status: String?
     let created_at: String?
     let profile_photo_url: String?
+    let selected_theme: String?
     
     enum CodingKeys: String, CodingKey {
-        case id, first_name, last_name, email, phone_number, subscription_type, subscription_status, created_at, profile_photo_url
+        case id, first_name, last_name, email, phone_number, subscription_type, subscription_status, created_at, profile_photo_url, selected_theme
     }
 }
 
