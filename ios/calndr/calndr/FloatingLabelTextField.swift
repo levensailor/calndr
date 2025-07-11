@@ -7,10 +7,6 @@ struct FloatingLabelTextField: View {
     let themeManager: ThemeManager
     @FocusState private var isFocused: Bool
     
-    private var shouldPlaceHolderMove: Bool {
-        isFocused || !text.isEmpty
-    }
-    
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .leading) {
@@ -19,37 +15,37 @@ struct FloatingLabelTextField: View {
                     .fill(themeManager.currentTheme.otherMonthBackgroundColor)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
-                            .stroke(isFocused ? themeManager.currentTheme.textColor : themeManager.currentTheme.textColor.opacity(0.3), lineWidth: isFocused ? 2 : 1)
+                            .stroke(isFocused ? Color.blue : themeManager.currentTheme.textColor.opacity(0.3), lineWidth: isFocused ? 2 : 1)
                     )
                 
                 VStack(alignment: .leading, spacing: 0) {
-                    // Label
-                    if shouldPlaceHolderMove {
+                    // Label - Always visible
+                    HStack {
                         Text(title)
                             .font(.caption)
-                            .foregroundColor(themeManager.currentTheme.textColor)
-                            .padding(.top, 8)
-                            .padding(.horizontal, 16)
-                            .transition(.opacity.combined(with: .scale(scale: 0.8, anchor: .leading)))
+                            .foregroundColor(isFocused ? Color.blue : Color.primary)
+                        Spacer()
                     }
+                    .padding(.top, 8)
+                    .padding(.horizontal, 16)
                     
                     // Text field
                     Group {
                         if isSecure {
-                            SecureField(shouldPlaceHolderMove ? "" : title, text: $text)
+                            SecureField("", text: $text)
                                 .focused($isFocused)
                         } else {
-                            TextField(shouldPlaceHolderMove ? "" : title, text: $text)
+                            TextField("", text: $text)
                                 .focused($isFocused)
                         }
                     }
                     .foregroundColor(themeManager.currentTheme.textColor)
                     .padding(.horizontal, 16)
-                    .padding(.top, shouldPlaceHolderMove ? 2 : 16)
+                    .padding(.top, 2)
                     .padding(.bottom, 16)
                 }
             }
         }
-        .animation(.easeInOut(duration: 0.15), value: shouldPlaceHolderMove)
+        .animation(.easeInOut(duration: 0.15), value: isFocused)
     }
 } 
