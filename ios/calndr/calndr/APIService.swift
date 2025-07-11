@@ -1661,5 +1661,177 @@ class APIService {
             }
         }.resume()
     }
+    
+    // MARK: - Reminders API
+    
+    func fetchReminders(startDate: String, endDate: String, completion: @escaping (Result<[Reminder], Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/reminders")
+        var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        urlComponents?.queryItems = [
+            URLQueryItem(name: "start_date", value: startDate),
+            URLQueryItem(name: "end_date", value: endDate)
+        ]
+        
+        guard let finalURL = urlComponents?.url else {
+            completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])))
+            return
+        }
+        
+        let request = createAuthenticatedRequest(url: finalURL)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error"])))
+                return
+            }
+            
+            do {
+                let reminders = try JSONDecoder().decode([Reminder].self, from: data)
+                completion(.success(reminders))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func createReminder(_ reminderData: ReminderCreate, completion: @escaping (Result<Reminder, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/reminders")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(reminderData)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error"])))
+                return
+            }
+            
+            do {
+                let reminder = try JSONDecoder().decode(Reminder.self, from: data)
+                completion(.success(reminder))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func updateReminder(_ reminderId: Int, reminderData: ReminderUpdate, completion: @escaping (Result<Reminder, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/reminders/\(reminderId)")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "PUT"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(reminderData)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error"])))
+                return
+            }
+            
+            do {
+                let reminder = try JSONDecoder().decode(Reminder.self, from: data)
+                completion(.success(reminder))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func deleteReminder(_ reminderId: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/reminders/\(reminderId)")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "DELETE"
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error"])))
+                return
+            }
+            
+            completion(.success(()))
+        }.resume()
+    }
+    
+    func fetchReminderByDate(_ date: String, completion: @escaping (Result<ReminderByDate, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/reminders/\(date)")
+        let request = createAuthenticatedRequest(url: url)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error"])))
+                return
+            }
+            
+            do {
+                let reminder = try JSONDecoder().decode(ReminderByDate.self, from: data)
+                completion(.success(reminder))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
 
 } 

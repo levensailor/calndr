@@ -41,6 +41,7 @@ class CalendarViewModel: ObservableObject {
     @Published var scheduleTemplates: [ScheduleTemplate] = []
     @Published var babysitters: [Babysitter] = []
     @Published var emergencyContacts: [EmergencyContact] = []
+    @Published var reminders: [Reminder] = []
     @Published var showHandoffTimeline: Bool = false // Toggle for handoff timeline view
     @Published var custodiansLoaded: Bool = false // DEPRECATED: Use isHandoffDataReady instead
     @Published var isHandoffDataReady: Bool = false // NEW: True when all handoff data is loaded
@@ -124,6 +125,7 @@ class CalendarViewModel: ObservableObject {
         fetchHandoffsAndCustody()
         fetchFamilyData()
         fetchUserThemePreference() // Load saved theme from database
+        fetchReminders() // Load reminders
         
         // Fetch school events if enabled
         if showSchoolEvents && schoolEvents.isEmpty {
@@ -153,6 +155,7 @@ class CalendarViewModel: ObservableObject {
         scheduleTemplates = []
         babysitters = []
         emergencyContacts = []
+        reminders = []
     }
 
     func fetchHandoffsAndCustody() {
@@ -1683,5 +1686,106 @@ class CalendarViewModel: ObservableObject {
         default:
             return custodian // Already an ID
         }
+    }
+    
+    // MARK: - Reminders Management
+    
+    func fetchReminders() {
+        let calendar = Calendar.current
+        let startDate = calendar.date(byAdding: .month, value: -1, to: currentDate) ?? currentDate
+        let endDate = calendar.date(byAdding: .month, value: 2, to: currentDate) ?? currentDate
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        
+        let startDateString = dateFormatter.string(from: startDate)
+        let endDateString = dateFormatter.string(from: endDate)
+        
+        APIService.shared.fetchReminders(startDate: startDateString, endDate: endDateString) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let reminders):
+                    self?.reminders = reminders
+                    print("✅ Fetched \(reminders.count) reminders")
+                case .failure(let error):
+                    print("❌ Error fetching reminders: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    func createReminder(date: Date, text: String, completion: @escaping (Bool) -> Void) {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: date)
+        
+        let reminderData = ReminderCreate(date: dateString, text: text)
+        
+        APIService.shared.createReminder(reminderData) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let reminder):
+                    self?.reminders.append(reminder)
+                    self?.reminders.sort { $0.date < $1.date }
+                    print("✅ Created reminder for \(dateString)")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error creating reminder: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func updateReminder(_ reminderId: Int, text: String, completion: @escaping (Bool) -> Void) {
+        let reminderData = ReminderUpdate(text: text)
+        
+        APIService.shared.updateReminder(reminderId, reminderData: reminderData) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let updatedReminder):
+                    if let index = self?.reminders.firstIndex(where: { $0.id == reminderId }) {
+                        self?.reminders[index] = updatedReminder
+                    }
+                    print("✅ Updated reminder \(reminderId)")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error updating reminder: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func deleteReminder(_ reminderId: Int, completion: @escaping (Bool) -> Void) {
+        APIService.shared.deleteReminder(reminderId) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    self?.reminders.removeAll { $0.id == reminderId }
+                    print("✅ Deleted reminder \(reminderId)")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error deleting reminder: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func getReminderForDate(_ date: Date) -> Reminder? {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: date)
+        
+        return reminders.first { $0.date == dateString }
+    }
+    
+    func hasReminderForDate(_ date: Date) -> Bool {
+        return getReminderForDate(date) != nil
+    }
+    
+    func getReminderTextForDate(_ date: Date) -> String {
+        return getReminderForDate(date)?.text ?? ""
     }
 } 

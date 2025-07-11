@@ -3,6 +3,8 @@ import SwiftUI
 struct ThreeDayView: View {
     @ObservedObject var viewModel: CalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
+    @State private var showingReminderModal = false
+    @State private var selectedDate: Date = Date()
     
     var body: some View {
         GeometryReader { geometry in
@@ -106,6 +108,32 @@ struct ThreeDayView: View {
                                 }
                             }
                             
+                            // Reminder section
+                            if viewModel.hasReminderForDate(day) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "note.text")
+                                        .font(.title3)
+                                        .foregroundColor(.orange)
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Reminder")
+                                            .font(.caption)
+                                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                                        Text(viewModel.getReminderTextForDate(day))
+                                            .font(.subheadline)
+                                            .foregroundColor(themeManager.currentTheme.textColor)
+                                            .lineLimit(2)
+                                    }
+                                    
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 16)
+                                .onTapGesture {
+                                    selectedDate = day
+                                    showingReminderModal = true
+                                }
+                            }
+                            
                             Spacer()
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -122,6 +150,11 @@ struct ThreeDayView: View {
         .background(themeManager.currentTheme.mainBackgroundColor)
         .onAppear {
             viewModel.fetchEvents()
+        }
+        .sheet(isPresented: $showingReminderModal) {
+            ReminderModal(date: selectedDate)
+                .environmentObject(viewModel)
+                .environmentObject(themeManager)
         }
     }
     

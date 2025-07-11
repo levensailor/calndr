@@ -744,4 +744,44 @@ enum SettingsDestination: Hashable {
 }
 
 // Handoff Time Models
+
+// MARK: - Reminder Models
+struct Reminder: Codable, Identifiable {
+    let id: Int
+    let date: String
+    let text: String
+    let createdAt: String
+    let updatedAt: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id, date, text
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+struct ReminderCreate: Codable {
+    let date: String
+    let text: String
+}
+
+struct ReminderUpdate: Codable {
+    let text: String
+}
+
+struct ReminderByDate: Codable {
+    let id: Int?
+    let date: String
+    let text: String
+    let hasReminder: Bool
+    let createdAt: String?
+    let updatedAt: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id, date, text
+        case hasReminder = "has_reminder"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
  

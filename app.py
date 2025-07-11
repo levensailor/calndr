@@ -271,6 +271,18 @@ user_preferences = sqlalchemy.Table(
     sqlalchemy.Column("updated_at", sqlalchemy.DateTime, nullable=True, default=datetime.now, onupdate=datetime.now),
 )
 
+reminders = sqlalchemy.Table(
+    "reminders",
+    metadata,
+    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
+    sqlalchemy.Column("family_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("families.id", ondelete="CASCADE"), nullable=False),
+    sqlalchemy.Column("date", sqlalchemy.Date, nullable=False),
+    sqlalchemy.Column("text", sqlalchemy.Text, nullable=False),
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
+    sqlalchemy.Column("updated_at", sqlalchemy.DateTime, nullable=True, default=datetime.now, onupdate=datetime.now),
+    sqlalchemy.UniqueConstraint("family_id", "date", name="unique_family_date_reminder"),
+)
+
 
 # --- Pydantic Models ---
 class User(BaseModel):
@@ -444,6 +456,20 @@ class ChildResponse(BaseModel):
 
 class UserPreferenceUpdate(BaseModel):
     selected_theme: str
+
+class ReminderCreate(BaseModel):
+    date: str  # Date string in YYYY-MM-DD format
+    text: str
+
+class ReminderUpdate(BaseModel):
+    text: str
+
+class ReminderResponse(BaseModel):
+    id: int
+    date: str  # Date string in YYYY-MM-DD format
+    text: str
+    created_at: str
+    updated_at: str
 
 
 
@@ -2085,3 +2111,175 @@ async def update_user_preferences(
         logger.error(f"Error updating user preferences: {e}")
         logger.error(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Failed to update preferences")
+
+# ---------------------- Reminders API ----------------------
+
+@app.get("/api/reminders", response_model=List[ReminderResponse])
+async def get_reminders(
+    start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
+    end_date: str = Query(..., description="End date in YYYY-MM-DD format"),
+    current_user = Depends(get_current_user)
+):
+    """
+    Get reminders for the current user's family within a date range.
+    """
+    try:
+        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    
+    query = reminders.select().where(
+        (reminders.c.family_id == current_user['family_id']) &
+        (reminders.c.date.between(start_date_obj, end_date_obj))
+    ).order_by(reminders.c.date)
+    
+    reminder_records = await database.fetch_all(query)
+    
+    return [
+        ReminderResponse(
+            id=record['id'],
+            date=str(record['date']),
+            text=record['text'],
+            created_at=str(record['created_at']),
+            updated_at=str(record['updated_at'])
+        )
+        for record in reminder_records
+    ]
+
+@app.post("/api/reminders", response_model=ReminderResponse)
+async def create_reminder(reminder_data: ReminderCreate, current_user = Depends(get_current_user)):
+    """
+    Create a new reminder for the current user's family.
+    """
+    try:
+        reminder_date = datetime.strptime(reminder_data.date, '%Y-%m-%d').date()
+        
+        # Check if reminder already exists for this date
+        existing_query = reminders.select().where(
+            (reminders.c.family_id == current_user['family_id']) &
+            (reminders.c.date == reminder_date)
+        )
+        existing = await database.fetch_one(existing_query)
+        
+        if existing:
+            raise HTTPException(status_code=400, detail="Reminder already exists for this date")
+        
+        # Create the reminder
+        insert_query = reminders.insert().values(
+            family_id=current_user['family_id'],
+            date=reminder_date,
+            text=reminder_data.text
+        ).returning(reminders.c.id)
+        
+        reminder_id = await database.execute(insert_query)
+        
+        # Fetch the created reminder
+        reminder_record = await database.fetch_one(reminders.select().where(reminders.c.id == reminder_id))
+        
+        return ReminderResponse(
+            id=reminder_record['id'],
+            date=str(reminder_record['date']),
+            text=reminder_record['text'],
+            created_at=str(reminder_record['created_at']),
+            updated_at=str(reminder_record['updated_at'])
+        )
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    except Exception as e:
+        logger.error(f"Error creating reminder: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create reminder")
+
+@app.put("/api/reminders/{reminder_id}", response_model=ReminderResponse)
+async def update_reminder(reminder_id: int, reminder_data: ReminderUpdate, current_user = Depends(get_current_user)):
+    """
+    Update a reminder that belongs to the current user's family.
+    """
+    try:
+        # Check if reminder exists and belongs to user's family
+        check_query = reminders.select().where(
+            (reminders.c.id == reminder_id) &
+            (reminders.c.family_id == current_user['family_id'])
+        )
+        existing = await database.fetch_one(check_query)
+        
+        if not existing:
+            raise HTTPException(status_code=404, detail="Reminder not found")
+        
+        # Update the reminder
+        update_query = reminders.update().where(reminders.c.id == reminder_id).values(
+            text=reminder_data.text,
+            updated_at=datetime.now()
+        )
+        await database.execute(update_query)
+        
+        # Fetch the updated reminder
+        reminder_record = await database.fetch_one(reminders.select().where(reminders.c.id == reminder_id))
+        
+        return ReminderResponse(
+            id=reminder_record['id'],
+            date=str(reminder_record['date']),
+            text=reminder_record['text'],
+            created_at=str(reminder_record['created_at']),
+            updated_at=str(reminder_record['updated_at'])
+        )
+    except Exception as e:
+        logger.error(f"Error updating reminder: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update reminder")
+
+@app.delete("/api/reminders/{reminder_id}")
+async def delete_reminder(reminder_id: int, current_user = Depends(get_current_user)):
+    """
+    Delete a reminder that belongs to the current user's family.
+    """
+    try:
+        # Check if reminder exists and belongs to user's family
+        check_query = reminders.select().where(
+            (reminders.c.id == reminder_id) &
+            (reminders.c.family_id == current_user['family_id'])
+        )
+        existing = await database.fetch_one(check_query)
+        
+        if not existing:
+            raise HTTPException(status_code=404, detail="Reminder not found")
+        
+        # Delete the reminder
+        delete_query = reminders.delete().where(reminders.c.id == reminder_id)
+        await database.execute(delete_query)
+        
+        return {"status": "success", "message": "Reminder deleted successfully"}
+    except Exception as e:
+        logger.error(f"Error deleting reminder: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete reminder")
+
+@app.get("/api/reminders/{date}")
+async def get_reminder_by_date(date: str, current_user = Depends(get_current_user)):
+    """
+    Get a specific reminder by date for the current user's family.
+    """
+    try:
+        reminder_date = datetime.strptime(date, '%Y-%m-%d').date()
+        
+        query = reminders.select().where(
+            (reminders.c.family_id == current_user['family_id']) &
+            (reminders.c.date == reminder_date)
+        )
+        
+        reminder_record = await database.fetch_one(query)
+        
+        if not reminder_record:
+            return {"id": None, "date": date, "text": "", "has_reminder": False}
+        
+        return {
+            "id": reminder_record['id'],
+            "date": str(reminder_record['date']),
+            "text": reminder_record['text'],
+            "has_reminder": True,
+            "created_at": str(reminder_record['created_at']),
+            "updated_at": str(reminder_record['updated_at'])
+        }
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    except Exception as e:
+        logger.error(f"Error getting reminder by date: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get reminder")

@@ -3,6 +3,8 @@ import SwiftUI
 struct WeekView: View {
     @ObservedObject var viewModel: CalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
+    @State private var showingReminderModal = false
+    @State private var selectedDate: Date = Date()
     
     var body: some View {
         VStack {
@@ -40,6 +42,26 @@ struct WeekView: View {
                         
                         Spacer()
                         
+                        // Reminder icon
+                        Button(action: {
+                            selectedDate = day
+                            showingReminderModal = true
+                        }) {
+                            Image(systemName: "note.text")
+                                .font(.title2)
+                                .foregroundColor(viewModel.hasReminderForDate(day) ? .orange : .gray)
+                                .frame(width: 32, height: 32)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(viewModel.hasReminderForDate(day) ? Color.yellow.opacity(0.3) : Color.gray.opacity(0.1))
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .stroke(viewModel.hasReminderForDate(day) ? Color.orange : Color.gray.opacity(0.5), lineWidth: 1)
+                                )
+                        }
+                        .padding(.trailing, 8)
+                        
                         // Custody information and toggle button
                         let custodyInfo = viewModel.getCustodyInfo(for: day)
                         let ownerName = custodyInfo.text
@@ -69,6 +91,11 @@ struct WeekView: View {
             }
         }
         .padding(.horizontal)
+        .sheet(isPresented: $showingReminderModal) {
+            ReminderModal(date: selectedDate)
+                .environmentObject(viewModel)
+                .environmentObject(themeManager)
+        }
     }
     
     private func getDaysForCurrentWeek() -> [Date] {

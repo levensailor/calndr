@@ -3,6 +3,7 @@ import SwiftUI
 struct DayView: View {
     @ObservedObject var viewModel: CalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
+    @State private var showingReminderModal = false
     
     var body: some View {
         ZStack {
@@ -62,6 +63,49 @@ struct DayView: View {
                 }
             }
             
+            // Reminder Section
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Reminder")
+                        .font(.headline)
+                        .foregroundColor(themeManager.currentTheme.textColor)
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        showingReminderModal = true
+                    }) {
+                        Image(systemName: viewModel.hasReminderForDate(viewModel.currentDate) ? "note.text" : "note.text.badge.plus")
+                            .font(.title2)
+                            .foregroundColor(viewModel.hasReminderForDate(viewModel.currentDate) ? .orange : .gray)
+                    }
+                }
+                
+                if viewModel.hasReminderForDate(viewModel.currentDate) {
+                    Text(viewModel.getReminderTextForDate(viewModel.currentDate))
+                        .font(.body)
+                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.yellow.opacity(0.2))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.orange, lineWidth: 1)
+                                )
+                        )
+                        .onTapGesture {
+                            showingReminderModal = true
+                        }
+                } else {
+                    Text("No reminder set")
+                        .font(.body)
+                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                        .italic()
+                }
+            }
+            
             // Events List
             VStack(alignment: .leading, spacing: 12) {
                 Text("Events")
@@ -112,6 +156,11 @@ struct DayView: View {
             .padding()
             .background(themeManager.currentTheme.mainBackgroundColor.opacity(0.8))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .sheet(isPresented: $showingReminderModal) {
+            ReminderModal(date: viewModel.currentDate)
+                .environmentObject(viewModel)
+                .environmentObject(themeManager)
         }
     }
     
