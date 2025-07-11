@@ -131,11 +131,12 @@ struct EmergencyContactsList: View {
         Section {
             if viewModel.emergencyContacts.isEmpty && !viewModel.isLoading {
                 Text("No emergency contacts found.")
+            } else {
+                ForEach(viewModel.emergencyContacts) { contact in
+                    Text(contact.first_name) // Placeholder
+                }
+                .onDelete(perform: viewModel.deleteEmergencyContact)
             }
-            ForEach(viewModel.emergencyContacts) { contact in
-                Text(contact.first_name) // Placeholder
-            }
-            .onDelete(perform: viewModel.deleteEmergencyContact)
         } header: {
             Text("EMERGENCY CONTACTS").font(.headline)
         }
@@ -150,11 +151,12 @@ struct BabysittersList: View {
         Section {
             if viewModel.babysitters.isEmpty && !viewModel.isLoading {
                 Text("No babysitters found.")
+            } else {
+                ForEach(viewModel.babysitters) { sitter in
+                    Text(sitter.first_name) // Placeholder
+                }
+                .onDelete(perform: viewModel.deleteBabysitter)
             }
-            ForEach(viewModel.babysitters) { sitter in
-                Text(sitter.first_name) // Placeholder
-            }
-            .onDelete(perform: viewModel.deleteBabysitter)
         } header: {
             Text("BABYSITTERS").font(.headline)
         }
