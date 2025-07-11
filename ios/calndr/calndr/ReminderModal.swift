@@ -11,6 +11,7 @@ struct ReminderModal: View {
     @State private var notificationTime: Date = Date()
     @State private var isLoading: Bool = false
     @State private var showingDeleteAlert: Bool = false
+    @FocusState private var isTextEditorFocused: Bool
     
     private var existingReminder: Reminder? {
         viewModel.getReminderForDate(date)
@@ -61,6 +62,7 @@ struct ReminderModal: View {
                         )
                         .foregroundColor(themeManager.currentTheme.textColor)
                         .font(.body)
+                        .focused($isTextEditorFocused)
                 }
                 .padding(.horizontal)
                 
@@ -145,7 +147,29 @@ struct ReminderModal: View {
                     .foregroundColor(themeManager.currentTheme.textColor)
                     .disabled(isLoading)
                 }
+                
+                // Add Done button when keyboard is active
+                if isTextEditorFocused {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Done") {
+                            isTextEditorFocused = false
+                        }
+                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .disabled(isLoading)
+                    }
+                }
             }
+            .background(
+                // Invisible background to capture taps for keyboard dismissal
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        // Dismiss keyboard when tapping outside text editor
+                        if isTextEditorFocused {
+                            isTextEditorFocused = false
+                        }
+                    }
+            )
         }
         .alert("Delete Reminder", isPresented: $showingDeleteAlert) {
             Button("Delete", role: .destructive) {
