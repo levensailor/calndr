@@ -132,7 +132,13 @@ struct FamilyMemberCard: View {
                     
                     Spacer()
                     
-                    Button(action: { sendGroupMessage(phoneNumber) }) {
+                    Button(action: { 
+                        // Simple SMS fallback
+                        let cleanedNumber = phoneNumber.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+                        if let url = URL(string: "sms:\(cleanedNumber)") {
+                            UIApplication.shared.open(url)
+                        }
+                    }) {
                         HStack(spacing: 4) {
                             Image(systemName: "message.fill")
                                 .font(.caption)
@@ -152,7 +158,11 @@ struct FamilyMemberCard: View {
                         .font(.caption)
                         .foregroundColor(.orange)
                     
-                    Button(action: { sendEmail(email) }) {
+                    Button(action: { 
+                        if let url = URL(string: "mailto:\(email)") {
+                            UIApplication.shared.open(url)
+                        }
+                    }) {
                         Text(email)
                             .font(.subheadline)
                             .foregroundColor(.blue)
@@ -179,112 +189,6 @@ struct FamilyMemberCard: View {
         }
     }
     
-    private func sendGroupMessage(_ phoneNumber: String) {
-        // Simple SMS fallback - parent view will handle group text functionality
-        let cleanedNumber = phoneNumber.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
-        if let url = URL(string: "sms:\(cleanedNumber)") {
-            UIApplication.shared.open(url)
-        }
-    }
-    
-    private func sendEmail(_ email: String) {
-        if let url = URL(string: "mailto:\(email)") {
-            UIApplication.shared.open(url)
-        }
-    }
-    
-    private func startGroupText() {
-        print("🚀 FamilyView startGroupText() called")
-        
-        guard let contact = selectedContactForGroupText else {
-            print("❌ No contact selected for group text")
-            return
-        }
-        
-        print("✅ Contact selected: \(contact.name) - \(contact.phone)")
-        
-        // Check if device can send messages
-        guard MFMessageComposeViewController.canSendText() else {
-            print("❌ Device cannot send text messages")
-            return
-        }
-        
-        print("✅ Device can send messages")
-        
-        // Prepare group text data
-        let familyPhoneNumbers = getFamilyPhoneNumbers()
-        
-        // Debug logging
-        print("🔍 Group Text Debug:")
-        print("   Contact: \(contact.name) - \(contact.phone)")
-        print("   Family members count: \(self.familyMembers.count)")
-        print("   Family phone numbers: \(familyPhoneNumbers)")
-        
-        // Combine contact phone with all family phone numbers
-        var allNumbers = [contact.phone]
-        allNumbers.append(contentsOf: familyPhoneNumbers)
-        
-        // Remove duplicates (in case contact phone is same as a family member)
-        let uniqueNumbers = Array(Set(allNumbers)).filter { !$0.isEmpty }
-        
-        print("   Final numbers for group text: \(uniqueNumbers)")
-        
-        // Validate we have recipients before proceeding
-        guard !uniqueNumbers.isEmpty else {
-            print("❌ No phone numbers available for group text")
-            return
-        }
-        
-        print("🌐 Calling createOrGetGroupChat API...")
-        APIService.shared.createOrGetGroupChat(contactType: contact.contactType, contactId: contact.contactId) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(_):
-                    print("✅ API call successful")
-                    // Store data in persistent data store
-                    self.groupTextDataStore.setData(
-                        contact: (name: contact.name, phone: contact.phone),
-                        recipients: uniqueNumbers
-                    )
-                    
-                    // Present the message composer
-                    print("📱 Setting showMessageComposer = true")
-                    self.showMessageComposer = true
-                    
-                case .failure(let error):
-                    print("❌ API call failed: \(error.localizedDescription)")
-                }
-            }
-        }
-    }
-    
-    private func getFamilyPhoneNumbers() -> [String] {
-        // Get current user ID to exclude from group text
-        let currentUserID = viewModel.currentUserID
-        
-        // Return phone numbers of all family members that have them, excluding current user
-        let phoneNumbers = familyMembers.compactMap { member -> String? in
-            // Skip the current user
-            if member.id == currentUserID {
-                print("📱 Skipping current user: \(member.first_name) \(member.last_name) - \(member.id)")
-                return nil
-            }
-            
-            let phone = member.phone_number?.trimmingCharacters(in: .whitespacesAndNewlines)
-            if let phone = phone, !phone.isEmpty {
-                print("📱 Family member: \(member.first_name) \(member.last_name) - Phone: \(phone)")
-                return phone
-            } else {
-                print("📱 Family member: \(member.first_name) \(member.last_name) - No phone number")
-                return nil
-            }
-        }
-        
-        print("📱 Total family phone numbers found: \(phoneNumbers.count) (excluding current user)")
-        return phoneNumbers
-    }
-    
-
 }
 
 struct FamilyView: View {
