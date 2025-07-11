@@ -276,7 +276,7 @@ struct ContactsView: View {
                 }
             }
             .sheet(item: $showEditBabysitter) { babysitter in
-                EditBabysitterView(babysitter: babysitter) { updatedBabysitter in
+                ContactsEditBabysitterView(babysitter: babysitter) { updatedBabysitter in
                     updateBabysitter(babysitter.id, with: updatedBabysitter)
                 }
             }
@@ -653,7 +653,7 @@ struct AddBabysitterView: View {
     }
 }
 
-struct EditBabysitterView: View {
+struct ContactsEditBabysitterView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var firstName: String
     @State private var lastName: String
