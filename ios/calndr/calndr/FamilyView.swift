@@ -425,12 +425,17 @@ struct FamilyView: View {
         }
         .sheet(isPresented: $showingEditOtherFamily) {
             if let contact = selectedEmergencyContact {
-                print("🏗️ Creating EditOtherFamilyView with contact: \(contact.fullName)")
                 EditOtherFamilyView(contact: contact)
                     .environmentObject(viewModel)
                     .environmentObject(themeManager)
+                    .onAppear {
+                        print("🏗️ Creating EditOtherFamilyView with contact: \(contact.fullName)")
+                    }
             } else {
-                print("⚠️ No selectedEmergencyContact available for EditOtherFamilyView")
+                Text("Error: No contact selected")
+                    .onAppear {
+                        print("⚠️ No selectedEmergencyContact available for EditOtherFamilyView")
+                    }
             }
         }
         .onChange(of: showingEditOtherFamily) { oldValue, newValue in
