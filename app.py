@@ -15,7 +15,6 @@ from logging.handlers import RotatingFileHandler
 import traceback
 from passlib.context import CryptContext
 import uuid
-from aioapns import APNs, NotificationRequest, PushType
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import httpx
@@ -29,6 +28,9 @@ import base64
 import hashlib
 from typing import Tuple
 import time
+import ssl
+import re
+from bs4 import BeautifulSoup
 
 # --- Environment variables ---
 load_dotenv()
@@ -103,27 +105,19 @@ logger.propagate = False
 SECRET_KEY = os.getenv("SECRET_KEY", "a_random_secret_key_for_development")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 30 # 30 days
-APNS_CERT_PATH = os.getenv("APNS_CERT_PATH")
-APNS_KEY_ID = os.getenv("APNS_KEY_ID")
-APNS_TEAM_ID = os.getenv("APNS_TEAM_ID")
-APNS_TOPIC = os.getenv("APNS_TOPIC")
+SNS_PLATFORM_APPLICATION_ARN = os.getenv("SNS_PLATFORM_APPLICATION_ARN")
 
-# --- APNs Client Setup ---
-apns_client = None
-if all([APNS_CERT_PATH, APNS_KEY_ID, APNS_TEAM_ID, APNS_TOPIC]):
+
+# --- AWS SNS Client Setup ---
+sns_client = None
+if SNS_PLATFORM_APPLICATION_ARN:
     try:
-        apns_client = APNs(
-            key=APNS_CERT_PATH,
-            key_id=APNS_KEY_ID,
-            team_id=APNS_TEAM_ID,
-            topic=APNS_TOPIC,
-            use_sandbox=True
-        )
-        logger.info("APNs client initialized successfully.")
+        sns_client = boto3.client('sns', region_name='us-east-1')
+        logger.info("AWS SNS client initialized successfully.")
     except Exception as e:
-        logger.error(f"Failed to initialize APNs client: {e}")
+        logger.error(f"Failed to initialize AWS SNS client: {e}", exc_info=True)
 else:
-    logger.warning("APNs environment variables not fully set. Push notifications will be disabled.")
+    logger.warning("SNS_PLATFORM_APPLICATION_ARN not set. Push notifications will be disabled.")
 
 
 # --- Database ---
@@ -149,7 +143,9 @@ users = sqlalchemy.Table(
     sqlalchemy.Column("email", sqlalchemy.String, unique=True, nullable=False),
     sqlalchemy.Column("password_hash", sqlalchemy.String, nullable=False),
     sqlalchemy.Column("phone_number", sqlalchemy.String, nullable=True),
-    sqlalchemy.Column("apns_token", sqlalchemy.String, nullable=True),
+    sqlalchemy.Column("sns_endpoint_arn", sqlalchemy.String, nullable=True),
+    sqlalchemy.Column("last_known_location", sqlalchemy.String, nullable=True),
+    sqlalchemy.Column("last_known_location_timestamp", sqlalchemy.DateTime, nullable=True),
     sqlalchemy.Column("subscription_type", sqlalchemy.String, nullable=True, default="Free"),
     sqlalchemy.Column("subscription_status", sqlalchemy.String, nullable=True, default="Active"),
     sqlalchemy.Column("profile_photo_url", sqlalchemy.String, nullable=True),
@@ -292,7 +288,7 @@ class User(BaseModel):
     family_id: uuid.UUID
     first_name: str
     email: EmailStr
-    apns_token: Optional[str] = None
+    sns_endpoint_arn: Optional[str] = None
     subscription_type: Optional[str] = "Free"
     subscription_status: Optional[str] = "Active"
     profile_photo_url: Optional[str] = None
@@ -369,6 +365,8 @@ class FamilyMember(BaseModel):
     phone_number: Optional[str] = None
     status: Optional[str] = "active"
     last_signed_in: Optional[str] = None
+    last_known_location: Optional[str] = None
+    last_known_location_timestamp: Optional[str] = None
 
 class Babysitter(BaseModel):
     id: Optional[int] = None
@@ -479,9 +477,11 @@ class ReminderResponse(BaseModel):
     created_at: str
     updated_at: str
 
+class LocationUpdateRequest(BaseModel):
+    latitude: float
+    longitude: float
 
-
-# Add a new Pydantic model for the old format
+# Legacy Event model for compatibility
 class LegacyEvent(BaseModel):
     id: Optional[int] = None
     event_date: str
@@ -1064,8 +1064,58 @@ async def update_user_password(password_update: PasswordUpdate, current_user = D
 
 @app.post("/api/users/me/device-token")
 async def update_device_token(token: str = Form(...), current_user = Depends(get_current_user)):
-    await database.execute(users.update().where(users.c.id == current_user['id']).values(apns_token=token))
-    return {"status": "success"}
+    if not sns_client or not SNS_PLATFORM_APPLICATION_ARN:
+        logger.error("SNS client or Platform Application ARN not configured. Cannot update device token.")
+        raise HTTPException(status_code=500, detail="Notification service is not configured.")
+    
+    try:
+        logger.info(f"Creating platform endpoint for user {current_user['id']} with token {token[:10]}...")
+        response = sns_client.create_platform_endpoint(
+            PlatformApplicationArn=SNS_PLATFORM_APPLICATION_ARN,
+            Token=token,
+            CustomUserData=f"User ID: {current_user['id']}"
+        )
+        endpoint_arn = response.get('EndpointArn')
+        
+        if not endpoint_arn:
+            logger.error("Failed to create platform endpoint: 'EndpointArn' not in response.")
+            raise HTTPException(status_code=500, detail="Failed to register device for notifications.")
+
+        logger.info(f"Successfully created endpoint ARN: {endpoint_arn}")
+        await database.execute(
+            users.update().where(users.c.id == current_user['id']).values(sns_endpoint_arn=endpoint_arn)
+        )
+        return {"status": "success", "endpoint_arn": endpoint_arn}
+
+    except ClientError as e:
+        error_code = e.response.get("Error", {}).get("Code")
+        error_message = e.response.get("Error", {}).get("Message")
+        
+        # This regex finds an existing EndpointArn in the error message
+        match = re.search(r'(arn:aws:sns:.*)', error_message)
+        if error_code == 'InvalidParameter' and 'Endpoint already exists' in error_message and match:
+            endpoint_arn = match.group(1)
+            logger.warning(f"Endpoint already exists. Updating token for existing ARN: {endpoint_arn}")
+            
+            try:
+                # Update the token for the existing endpoint
+                sns_client.set_endpoint_attributes(
+                    EndpointArn=endpoint_arn,
+                    Attributes={'Token': token, 'Enabled': 'true'}
+                )
+                await database.execute(
+                    users.update().where(users.c.id == current_user['id']).values(sns_endpoint_arn=endpoint_arn)
+                )
+                return {"status": "success", "endpoint_arn": endpoint_arn}
+            except ClientError as update_e:
+                logger.error(f"Failed to update existing endpoint attributes: {update_e}", exc_info=True)
+                raise HTTPException(status_code=500, detail="Failed to update device registration.")
+        
+        logger.error(f"Boto3 ClientError in update_device_token: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An error occurred while registering the device.")
+    except Exception as e:
+        logger.error(f"Generic error in update_device_token: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An error occurred while registering the device.")
 
 @app.post("/api/users/me/last-signin")
 async def update_last_signin(current_user = Depends(get_current_user)):
@@ -1459,26 +1509,23 @@ async def get_family_members(current_user = Depends(get_current_user)):
     """
     Returns all family members with their contact information including phone numbers.
     """
-    query = users.select().where(users.c.family_id == current_user['family_id']).order_by(users.c.first_name)
-    family_members = await database.fetch_all(query)
+    family_id = current_user['family_id']
+    query = users.select().where(users.c.family_id == family_id)
+    family_members_records = await database.fetch_all(query)
     
-    # Convert to FamilyMember models for logging and response
-    family_member_models = [
+    return [
         FamilyMember(
             id=str(member['id']),
             first_name=member['first_name'],
             last_name=member['last_name'],
             email=member['email'],
             phone_number=member['phone_number'],
-            status=member['status'] or "active",
-            last_signed_in=str(member['last_signed_in']) if member['last_signed_in'] else None
-        )
-        for member in family_members
+            status=member['status'],
+            last_signed_in=member['last_signed_in'].isoformat() if member['last_signed_in'] else None,
+            last_known_location=member['last_known_location'],
+            last_known_location_timestamp=member['last_known_location_timestamp'].isoformat() if member['last_known_location_timestamp'] else None
+        ) for member in family_members_records
     ]
-    
-    logger.info(f"Fetched {len(family_member_models)} family members: {[f'{m.first_name} {m.last_name} ({m.phone_number})' for m in family_member_models]}")
-    
-    return family_member_models
 
 # ---------------------- Babysitters API ----------------------
 
@@ -1778,49 +1825,39 @@ async def create_or_get_group_chat(chat_data: GroupChatCreate, current_user = De
         raise HTTPException(status_code=500, detail="Failed to create group chat")
 
 async def send_custody_change_notification(sender_id: uuid.UUID, family_id: uuid.UUID, event_date: date):
-    # logger.info("Attempting to send custody change notification...")
-    
-    if not apns_client:
-        logger.warning("APNs client not configured or initialized. Skipping push notification. Check APNS env vars.")
+    if not sns_client:
+        logger.warning("SNS client not configured. Skipping push notification.")
         return
 
-    # logger.info(f"Searching for other user in family '{family_id}' who is not sender '{sender_id}'.")
-    other_user_query = users.select().where((users.c.family_id == family_id) & (users.c.id != sender_id))
+    other_user_query = users.select().where(
+        (users.c.family_id == family_id) & 
+        (users.c.id != sender_id) &
+        (users.c.sns_endpoint_arn.isnot(None))
+    )
     other_user = await database.fetch_one(other_user_query)
 
     if not other_user:
-        logger.warning(f"Could not find another user in family '{family_id}' to notify.")
+        logger.warning(f"Could not find another user in family '{family_id}' with an SNS endpoint to notify.")
         return
-        
-    # logger.info(f"Found other user: {other_user['first_name']} (ID: {other_user['id']}). Checking for APNs token.")
-
-    if not other_user['apns_token']:
-        logger.warning(f"User {other_user['first_name']} does not have an APNs token. Cannot send notification.")
-        return
-
-    # logger.info(f"User {other_user['first_name']} has an APNs token. Proceeding with notification creation.")
         
     sender = await database.fetch_one(users.select().where(users.c.id == sender_id))
     sender_name = sender['first_name'] if sender else "Someone"
     
-    # Get the new custodian info for the changed date
     custodian_query = custody.select().where(
         (custody.c.family_id == family_id) & 
         (custody.c.date == event_date)
     )
     custody_record = await database.fetch_one(custodian_query)
     
-    # Get custodian name
     custodian_name = "Unknown"
     if custody_record:
         custodian = await database.fetch_one(users.select().where(users.c.id == custody_record['custodian_id']))
         custodian_name = custodian['first_name'] if custodian else "Unknown"
     
-    # Format the date nicely
     formatted_date = event_date.strftime('%A, %B %-d')
     
-    # Create enhanced notification payload
-    payload = {
+    # Construct the APNS payload for SNS
+    aps_payload = {
         "aps": {
             "alert": {
                 "title": "📅 Schedule Updated",
@@ -1837,26 +1874,29 @@ async def send_custody_change_notification(sender_id: uuid.UUID, family_id: uuid
         "sender": sender_name,
         "deep_link": "calndr://schedule"
     }
+
+    # The ARN determines if it's sandbox or production, so we use the generic "APNS" key
+    message = {
+        "APNS": json.dumps(aps_payload)
+    }
     
     try:
-        # logger.info(f"Sending enhanced APNs notification to {other_user['first_name']} about {custodian_name} having custody on {formatted_date}")
-        # Create notification request
-        request = NotificationRequest(
-            device_token=other_user['apns_token'],
-            message=payload,
-            push_type=PushType.ALERT
+        logger.info(f"Sending custody change notification to endpoint for user {other_user['first_name']}")
+        sns_client.publish(
+            TargetArn=other_user['sns_endpoint_arn'],
+            Message=json.dumps(message),
+            MessageStructure='json'
         )
-        # Send notification
-        await apns_client.send_notification(request)
-        # logger.info("Enhanced push notification sent successfully.")
+        logger.info("Custody change push notification sent successfully via SNS.")
     except Exception as e:
-        logger.error(f"Failed to send push notification: {e}")
-        logger.error(f"Full APNs error traceback: {traceback.format_exc()}")
+        logger.error(f"Failed to send push notification via SNS: {e}", exc_info=True)
 
-# ---------------------- School Events Caching ----------------------
+
+# --- School Events Caching ---
 SCHOOL_EVENTS_CACHE: Optional[List[Dict[str, Any]]] = None
 SCHOOL_EVENTS_CACHE_TIME: Optional[datetime] = None
 SCHOOL_EVENTS_CACHE_TTL_HOURS = 24
+
 
 async def fetch_school_events() -> List[Dict[str, str]]:
     """Scrape school closing events and return list of {date, title}. Uses 24-hour in-memory cache."""
@@ -1864,78 +1904,79 @@ async def fetch_school_events() -> List[Dict[str, str]]:
     # Return cached copy if fresh
     if SCHOOL_EVENTS_CACHE and SCHOOL_EVENTS_CACHE_TIME:
         if datetime.now(timezone.utc) - SCHOOL_EVENTS_CACHE_TIME < timedelta(hours=SCHOOL_EVENTS_CACHE_TTL_HOURS):
+            logger.info("Returning cached school events.")
             return SCHOOL_EVENTS_CACHE
 
-    import re
-    from bs4 import BeautifulSoup
-
-    logger.info("Fetching school events from The Learning Tree website …")
-    events: Dict[str, str] = {}
+    logger.info("Fetching fresh school events from the website...")
     url = "https://www.thelearningtreewilmington.com/calendar-of-events/"
+    scraped_events = {}
+
     try:
         async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
             response = await client.get(url)
             response.raise_for_status()
-            html = response.text
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Find the header for the 2025 closings to anchor the search
+        header = soup.find('p', string=re.compile(r'THE LEARNING TREE CLOSINGS IN 2025'))
+        if header:
+            for sibling in header.find_next_siblings():
+                if sibling.name != 'p':
+                    break
+                
+                text = sibling.get_text(separator=' ', strip=True)
+                if not text:
+                    continue
+
+                parts = text.split('-')
+                
+                if len(parts) > 1:
+                    event_name = parts[0].strip()
+                    date_str = "-".join(parts[1:]).strip()
+                else:
+                    event_name = text
+                    date_str = ""
+
+                date_match = re.search(r'(\w+\s+\d+)', text)
+                if date_match:
+                    date_str = date_match.group(1)
+
+                year_match = re.search(r'(\d{4})', header.text)
+                year = year_match.group(1) if year_match else "2025"
+                
+                if "new year" in event_name.lower() and "2026" in text.lower():
+                    year = "2026"
+
+                event_name = event_name.replace(date_str, "").strip()
+                event_name = re.sub(r'\s*-\s*$', '', event_name)
+
+                try:
+                    date_str_no_weekday = re.sub(r'^\w+,\s*', '', date_str)
+                    full_date_str = f"{date_str_no_weekday}, {year}"
+                    full_date_str = full_date_str.replace("Jan ", "January ")
+
+                    event_date = datetime.strptime(full_date_str, '%B %d, %Y')
+                    iso_date = event_date.strftime('%Y-%m-%d')
+                    if event_name:
+                        scraped_events[iso_date] = event_name
+                except ValueError:
+                    logger.warning(f"Could not parse date from: '{date_str}' in text: '{text}'")
+        else:
+            logger.warning("Could not find the school closings header for 2025.")
+
     except Exception as e:
-        logger.error(f"Failed to download school events page: {e}")
+        logger.error(f"Failed to scrape or parse school events: {e}", exc_info=True)
+        # Return old cache if fetching fails to avoid returning nothing on a temporary error
+        if SCHOOL_EVENTS_CACHE:
+            return SCHOOL_EVENTS_CACHE
         return []
 
-    try:
-        soup = BeautifulSoup(html, "html.parser")
-        header = soup.find('p', string=re.compile(r'THE LEARNING TREE CLOSINGS IN 202[0-9]'))
-        if not header:
-            logger.warning("School events header not found on page.")
-            return []
-        for sibling in header.find_next_siblings():
-            if sibling.name != 'p':
-                break
-            text = sibling.get_text(separator=' ', strip=True)
-            if not text:
-                continue
-            # Split by hyphen
-            parts = text.split('-')
-            if len(parts) > 1:
-                event_name = parts[0].strip()
-                date_str = '-'.join(parts[1:]).strip()
-            else:
-                event_name = text
-                date_str = ''
-            # Extract first occurrence of month day pattern
-            date_match = re.search(r'(\w+\s+\d+)', text)
-            if date_match:
-                date_str = date_match.group(1)
-            # Determine year from header
-            year_match = re.search(r'(\d{4})', header.text)
-            year = year_match.group(1) if year_match else str(datetime.now(timezone.utc).year)
-            # Special New Year edge case for next year
-            if "new year" in event_name.lower() and str(int(year)+1) in text:
-                year = str(int(year)+1)
-            # Clean event name
-            event_name = event_name.replace(date_str, '').strip().rstrip('-').strip()
-            # Parse date
-            try:
-                date_str_no_weekday = re.sub(r'^\w+,\s*', '', date_str)
-                full_date_str = f"{date_str_no_weekday}, {year}"
-                full_date_str = full_date_str.replace("Jan ", "January ")
-                event_date = datetime.strptime(full_date_str, '%B %d, %Y')
-                iso_date = event_date.strftime('%Y-%m-%d')
-                if event_name:
-                    events[iso_date] = event_name
-            except ValueError:
-                logger.warning(f"Could not parse date from: {date_str} ({text})")
-    except Exception as e:
-        logger.error(f"Failed to parse school events: {e}")
-        return []
-
-    logger.info(f"Successfully scraped {len(events)} school events.")
-    SCHOOL_EVENTS_CACHE = [{"date": d, "title": name} for d, name in events.items()]
+    logger.info(f"Successfully scraped {len(scraped_events)} school events.")
+    SCHOOL_EVENTS_CACHE = [{"date": d, "title": name} for d, name in scraped_events.items()]
     SCHOOL_EVENTS_CACHE_TIME = datetime.now(timezone.utc)
     return SCHOOL_EVENTS_CACHE
 
-# -------------------------------------------------------------------
-
-# ---------------------- Children API ----------------------
 
 @app.get("/api/children", response_model=list[ChildResponse])
 async def get_children(current_user = Depends(get_current_user)):
@@ -2127,15 +2168,15 @@ async def schedule_reminder_notification(reminder_id: int, family_id: uuid.UUID,
     Schedule a push notification for a reminder.
     """
     try:
-        # Get family members with APNS tokens
+        # Get family members with SNS endpoint ARNs
         family_members_query = users.select().where(
             (users.c.family_id == family_id) &
-            (users.c.apns_token.isnot(None))
+            (users.c.sns_endpoint_arn.isnot(None))
         )
         family_members = await database.fetch_all(family_members_query)
         
         if not family_members:
-            logger.info(f"No family members with APNS tokens found for family {family_id}")
+            logger.info(f"No family members with SNS endpoints found for family {family_id}")
             return
         
         # Calculate notification datetime
@@ -2159,7 +2200,7 @@ async def schedule_reminder_notification(reminder_id: int, family_id: uuid.UUID,
         logger.info(f"Scheduled reminder notification for {len(family_members)} family members in {delay_seconds} seconds")
         
     except Exception as e:
-        logger.error(f"Error scheduling reminder notification: {e}")
+        logger.error(f"Error scheduling reminder notification: {e}", exc_info=True)
 
 async def send_delayed_reminder_notification(delay_seconds: float, family_members: list, reminder_text: str, reminder_date: date):
     """
@@ -2172,71 +2213,69 @@ async def send_delayed_reminder_notification(delay_seconds: float, family_member
         # Send notification to all family members
         for member in family_members:
             try:
-                await send_reminder_notification(member['apns_token'], reminder_text, reminder_date)
-                logger.info(f"Sent reminder notification to user {member['id']}")
+                # Pass the endpoint ARN to the sending function
+                await send_reminder_notification(member['sns_endpoint_arn'], reminder_text, reminder_date)
+                logger.info(f"Sent reminder notification to user {member['id']} via SNS")
             except Exception as e:
-                logger.error(f"Failed to send reminder notification to user {member['id']}: {e}")
+                logger.error(f"Failed to send reminder notification to user {member['id']}: {e}", exc_info=True)
         
     except Exception as e:
-        logger.error(f"Error sending delayed reminder notification: {e}")
+        logger.error(f"Error sending delayed reminder notification: {e}", exc_info=True)
 
 async def cancel_reminder_notification(reminder_id: int):
     """
     Cancel a scheduled reminder notification.
-    Note: This is a placeholder since we can't easily cancel scheduled APNS notifications.
-    In a production app, you might want to use a task queue like Celery with Redis.
+    Note: This is a placeholder since we can't easily cancel asyncio tasks by ID.
+    In a production app with SNS, you wouldn't schedule here. You'd use a scheduled task system
+    (like Celery Beat or AWS EventBridge) to trigger the SNS publish at the correct time.
     """
     logger.info(f"Notification cancellation requested for reminder {reminder_id}")
     # In a real implementation, you would cancel the scheduled task here
 
-async def send_reminder_notification(apns_token: str, reminder_text: str, reminder_date: date):
+async def send_reminder_notification(endpoint_arn: str, reminder_text: str, reminder_date: date):
     """
-    Send a push notification for a reminder.
+    Send a push notification for a reminder via AWS SNS.
     """
+    if not sns_client:
+        logger.error("SNS client is not initialized. Cannot send reminder notification.")
+        return
+
     try:
-        # Load APNS configuration
-        apns_key_id = os.getenv("APNS_KEY_ID")
-        apns_team_id = os.getenv("APNS_TEAM_ID")
-        apns_bundle_id = os.getenv("APNS_BUNDLE_ID", "com.levensailor.calndr")
-        apns_key_path = os.getenv("APNS_KEY_PATH")
-        
-        if not all([apns_key_id, apns_team_id, apns_key_path]):
-            logger.error("APNS configuration missing")
-            return
-        
-        # Create APNS client
-        apns = APNs(
-            key=apns_key_path,
-            key_id=apns_key_id,
-            team_id=apns_team_id,
-            bundle_id=apns_bundle_id,
-            use_sandbox=os.getenv("APNS_USE_SANDBOX", "true").lower() == "true"
-        )
-        
-        # Format the date for display
         formatted_date = reminder_date.strftime("%B %d, %Y")
         
-        # Create notification request
-        request = NotificationRequest(
-            device_token=apns_token,
-            message={
-                "aps": {
-                    "alert": {
-                        "title": f"Reminder for {formatted_date}",
-                        "body": reminder_text
-                    },
-                    "sound": "default",
-                    "badge": 1
-                }
+        # Construct the APNS payload for SNS
+        aps_payload = {
+            "aps": {
+                "alert": {
+                    "title": f"Reminder for {formatted_date}",
+                    "body": reminder_text
+                },
+                "sound": "default",
+                "badge": 1
             }
+        }
+        
+        # The key should be "APNS_SANDBOX" or "APNS" depending on the platform application ARN.
+        # It's safer to use a generic "APNS" key as SNS often handles the distinction.
+        # For clarity, we'll check the ARN.
+        platform_key = "APNS_SANDBOX" if "APNS_SANDBOX" in SNS_PLATFORM_APPLICATION_ARN else "APNS"
+
+        message = {
+            platform_key: json.dumps(aps_payload)
+        }
+        
+        # Send the notification via SNS
+        logger.info(f"Sending SNS reminder to endpoint {endpoint_arn}")
+        sns_client.publish(
+            TargetArn=endpoint_arn,
+            Message=json.dumps(message),
+            MessageStructure='json'
         )
-        
-        # Send the notification
-        await apns.send_notification(request)
-        logger.info(f"Sent reminder notification to device {apns_token[:8]}...")
-        
+        logger.info(f"Sent reminder notification to endpoint {endpoint_arn}")
+    
     except Exception as e:
-        logger.error(f"Error sending reminder notification: {e}")
+        logger.error(f"Error sending reminder notification via SNS: {e}", exc_info=True)
+
 
 # ---------------------- Reminders API ----------------------
 
@@ -2446,3 +2485,71 @@ async def get_reminder_by_date(date: str, current_user = Depends(get_current_use
     except Exception as e:
         logger.error(f"Error getting reminder by date: {e}")
         raise HTTPException(status_code=500, detail="Failed to get reminder")
+
+@app.post("/api/user/location")
+async def update_user_location(location_data: LocationUpdateRequest, current_user = Depends(get_current_user)):
+    """
+    Update the current user's last known location.
+    """
+    location_str = f"{location_data.latitude},{location_data.longitude}"
+    timestamp = datetime.now(timezone.utc)
+    
+    update_query = users.update().where(users.c.id == current_user['id']).values(
+        last_known_location=location_str,
+        last_known_location_timestamp=timestamp
+    )
+    
+    try:
+        await database.execute(update_query)
+        return {"status": "success", "message": "Location updated successfully."}
+    except Exception as e:
+        logger.error(f"Failed to update user location for user {current_user['id']}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to update user location.")
+
+@app.post("/api/family/request-location/{target_user_id}")
+async def request_location(target_user_id: str, current_user = Depends(get_current_user)):
+    """
+    Send a silent push notification to request a user's location.
+    """
+    if not sns_client:
+        logger.warning("SNS client not configured. Cannot send location request.")
+        raise HTTPException(status_code=500, detail="Notification service is not configured.")
+
+    try:
+        target_user_uuid = uuid.UUID(target_user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid target user ID format.")
+
+    # Fetch the target user's SNS endpoint ARN
+    user_query = users.select().where(users.c.id == target_user_uuid)
+    target_user = await database.fetch_one(user_query)
+
+    if not target_user or not target_user['sns_endpoint_arn']:
+        logger.warning(f"Target user {target_user_id} not found or has no SNS endpoint.")
+        raise HTTPException(status_code=404, detail="Target user not found or not registered for notifications.")
+
+    # Construct the special APNS payload for a silent location request
+    aps_payload = {
+        "aps": {
+            "content-available": 1
+        },
+        "type": "location_request",
+        "requester_name": current_user['first_name']
+    }
+
+    platform_key = "APNS_SANDBOX" if "APNS_SANDBOX" in SNS_PLATFORM_APPLICATION_ARN else "APNS"
+    message = {
+        platform_key: json.dumps(aps_payload)
+    }
+
+    try:
+        logger.info(f"Sending location request to user {target_user_id} from user {current_user['id']}")
+        sns_client.publish(
+            TargetArn=target_user['sns_endpoint_arn'],
+            Message=json.dumps(message),
+            MessageStructure='json'
+        )
+        return {"status": "success", "message": "Location request sent."}
+    except Exception as e:
+        logger.error(f"Failed to send location request via SNS: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to send location request.")
