@@ -12,10 +12,10 @@ struct FamilyView: View {
         NavigationView {
             List {
                 Section {
-                    if viewModel.familyMembers.isEmpty && !viewModel.isLoading {
-                        Text("No co-parents found.")
-                    } else if viewModel.isLoading {
+                    if viewModel.isLoading {
                         ProgressView()
+                    } else if viewModel.familyMembers.filter({ $0.id != viewModel.currentUserID }).isEmpty {
+                        Text("No co-parents found.")
                     } else {
                         ForEach(viewModel.familyMembers.filter { $0.id != viewModel.currentUserID }, id: \.id) { member in
                             VStack(alignment: .leading, spacing: 10) {
@@ -64,7 +64,9 @@ struct FamilyView: View {
                 }
                 
                 Section {
-                    if viewModel.emergencyContacts.isEmpty && !viewModel.isLoading {
+                    if viewModel.isLoading {
+                        ProgressView()
+                    } else if viewModel.emergencyContacts.isEmpty {
                         Text("No emergency contacts found.")
                     } else {
                         ForEach(viewModel.emergencyContacts) { contact in
@@ -77,7 +79,9 @@ struct FamilyView: View {
                 }
 
                 Section {
-                    if viewModel.babysitters.isEmpty && !viewModel.isLoading {
+                    if viewModel.isLoading {
+                        ProgressView()
+                    } else if viewModel.babysitters.isEmpty {
                         Text("No babysitters found.")
                     } else {
                         ForEach(viewModel.babysitters) { sitter in
