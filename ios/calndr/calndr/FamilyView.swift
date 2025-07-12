@@ -61,15 +61,14 @@ struct CoParentsSection: View {
                 Text("No co-parents found.")
             } else if viewModel.isLoading {
                 ProgressView()
-            }
-            
-            ForEach(viewModel.familyMembers.filter { $0.id != viewModel.currentUserID }, id: \.id) { member in
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Image(systemName: "person.circle.fill")
-                            .resizable()
-                            .frame(width: 40, height: 40)
-                            .foregroundColor(themeManager.selectedTheme.secondaryColor)
+            } else {
+                ForEach(viewModel.familyMembers.filter { $0.id != viewModel.currentUserID }, id: \.id) { member in
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Image(systemName: "person.circle.fill")
+                                .resizable()
+                                .frame(width: 40, height: 40)
+                                .foregroundColor(themeManager.selectedTheme.secondaryColor)
 
                         VStack(alignment: .leading) {
                             Text(member.fullName)
