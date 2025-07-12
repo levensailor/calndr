@@ -1834,4 +1834,55 @@ class APIService {
         }.resume()
     }
 
+    func requestLocation(for userId: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/family/request-location/\(userId)")
+        
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            completion(.success(()))
+        }.resume()
+    }
+    
+    func updateUserLocation(latitude: Double, longitude: Double, completion: @escaping (Result<Void, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/user/location")
+        
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body = ["latitude": latitude, "longitude": longitude]
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(body)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            completion(.success(()))
+        }.resume()
+    }
 } 

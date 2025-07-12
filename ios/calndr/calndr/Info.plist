@@ -15,7 +15,11 @@
 			</array>
 		</dict>
 	</array>
-	<key>NSContactsUsageDescription</key>
-	<string>This app needs access to your contacts to help you add family members quickly.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>A coparent on calndr is requesting your location.</string>
 </dict>
 </plist>

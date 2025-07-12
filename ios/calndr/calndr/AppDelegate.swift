@@ -31,6 +31,49 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         print("Failed to register for remote notifications: \(error.localizedDescription)")
     }
 
+    // This method is called when a remote notification arrives and the app is in the background or foreground.
+    func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        
+        print("Received remote notification: \(userInfo)")
+        
+        // Check if this is a location request notification
+        if let aps = userInfo["aps"] as? [String: Any],
+           let _ = aps["content-available"] as? Int,
+           let type = userInfo["type"] as? String, type == "location_request" {
+            
+            print("Received silent location request notification.")
+            
+            // Use the LocationManager to get the current location
+            LocationManager.shared.requestCurrentLocation { location in
+                guard let location = location else {
+                    print("Failed to get location.")
+                    completionHandler(.failed)
+                    return
+                }
+                
+                print("Successfully retrieved location: \(location.coordinate)")
+                
+                // Send the location to the server
+                let latitude = location.coordinate.latitude
+                let longitude = location.coordinate.longitude
+                
+                APIService.shared.updateUserLocation(latitude: latitude, longitude: longitude) { result in
+                    switch result {
+                    case .success:
+                        print("Successfully sent location to server.")
+                        completionHandler(.newData)
+                    case .failure(let error):
+                        print("Failed to send location to server: \(error.localizedDescription)")
+                        completionHandler(.failed)
+                    }
+                }
+            }
+        } else {
+            // This is a standard notification, so no background fetch is needed.
+            completionHandler(.noData)
+        }
+    }
+
     // This method is called when a notification arrives while the app is in the foreground.
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification,
