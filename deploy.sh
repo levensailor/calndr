@@ -19,7 +19,7 @@ fi
 FILES_TO_DEPLOY=(
     "app.py"
     "requirements.txt"
-    "AuthKey_4LZC88RV85.p8"
+    "AuthKey_RZ6KL226Z5.p8"
     "setup.sh"
     ".env"
     "initial_setup.py"

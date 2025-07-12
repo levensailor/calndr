@@ -21,5 +21,5 @@ python-jose[pycryptodome]
 psycopg2-binary
 asyncpg==0.29.0
 python-multipart
-aioapns>=3.0.0
+boto3
 pytz

@@ -607,6 +607,60 @@ struct SittersGroupTextSheetView: View {
     }
 }
 
+// MARK: - Add Babysitter View
+
+struct AddBabysitterView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var firstName = ""
+    @State private var lastName = ""
+    @State private var phoneNumber = ""
+    @State private var rate = ""
+    @State private var notes = ""
+    
+    let onSave: (BabysitterCreate) -> Void
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Babysitter Information")) {
+                    TextField("First Name", text: $firstName)
+                    TextField("Last Name", text: $lastName)
+                    TextField("Phone Number", text: $phoneNumber)
+                        .keyboardType(.phonePad)
+                    TextField("Hourly Rate (optional)", text: $rate)
+                        .keyboardType(.decimalPad)
+                    TextField("Notes (optional)", text: $notes, axis: .vertical)
+                        .lineLimit(3)
+                }
+            }
+            .navigationTitle("Add Babysitter")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        let rateValue = Double(rate.isEmpty ? "0" : rate)
+                        let babysitter = BabysitterCreate(
+                            first_name: firstName,
+                            last_name: lastName,
+                            phone_number: phoneNumber,
+                            rate: rateValue,
+                            notes: notes.isEmpty ? nil : notes
+                        )
+                        onSave(babysitter)
+                        dismiss()
+                    }
+                    .disabled(firstName.isEmpty || lastName.isEmpty || phoneNumber.isEmpty)
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Edit Babysitter View
 
 struct EditBabysitterView: View {
