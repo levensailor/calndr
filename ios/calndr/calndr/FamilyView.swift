@@ -5,16 +5,89 @@ struct FamilyView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @StateObject private var viewModel = FamilyViewModel()
     
-    // State for presenting sheets
     @State private var showingAddEmergencyContact = false
     @State private var showingAddBabysitter = false
 
     var body: some View {
         NavigationView {
             List {
-                CoParentsSection(viewModel: viewModel)
-                EmergencyContactsList(viewModel: viewModel, showingAddContact: $showingAddEmergencyContact)
-                BabysittersList(viewModel: viewModel, showingAddContact: $showingAddBabysitter)
+                Section {
+                    if viewModel.familyMembers.isEmpty && !viewModel.isLoading {
+                        Text("No co-parents found.")
+                    } else if viewModel.isLoading {
+                        ProgressView()
+                    } else {
+                        ForEach(viewModel.familyMembers.filter { $0.id != viewModel.currentUserID }, id: \.id) { member in
+                            VStack(alignment: .leading, spacing: 10) {
+                                HStack {
+                                    Image(systemName: "person.circle.fill")
+                                        .resizable()
+                                        .frame(width: 40, height: 40)
+                                        .foregroundColor(themeManager.selectedTheme.secondaryColor)
+                                    
+                                    VStack(alignment: .leading) {
+                                        Text(member.fullName)
+                                            .font(.headline)
+                                        Text(member.email)
+                                            .font(.subheadline)
+                                            .foregroundColor(.gray)
+                                    }
+                                    Spacer()
+                                    
+                                    Button(action: {
+                                        viewModel.requestLocation(for: member)
+                                    }) {
+                                        Image(systemName: "location.circle.fill")
+                                            .foregroundColor(themeManager.selectedTheme.accentColor)
+                                            .imageScale(.large)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                                
+                                if let location = member.last_known_location, !location.isEmpty, let timestamp = member.last_known_location_timestamp {
+                                    HStack {
+                                        Image(systemName: "mappin.and.ellipse")
+                                            .font(.caption)
+                                            .foregroundColor(.gray)
+                                        Text("Last seen: \(formattedTimestamp(from: timestamp))")
+                                            .font(.caption)
+                                            .foregroundColor(.gray)
+                                    }
+                                    .padding(.leading, 50)
+                                }
+                            }
+                            .padding(.vertical, 5)
+                        }
+                    }
+                } header: {
+                    Text("CO-PARENTS").font(.headline)
+                }
+                
+                Section {
+                    if viewModel.emergencyContacts.isEmpty && !viewModel.isLoading {
+                        Text("No emergency contacts found.")
+                    } else {
+                        ForEach(viewModel.emergencyContacts) { contact in
+                            Text(contact.first_name) // Placeholder
+                        }
+                        .onDelete(perform: viewModel.deleteEmergencyContact)
+                    }
+                } header: {
+                    Text("EMERGENCY CONTACTS").font(.headline)
+                }
+
+                Section {
+                    if viewModel.babysitters.isEmpty && !viewModel.isLoading {
+                        Text("No babysitters found.")
+                    } else {
+                        ForEach(viewModel.babysitters) { sitter in
+                            Text(sitter.first_name) // Placeholder
+                        }
+                        .onDelete(perform: viewModel.deleteBabysitter)
+                    }
+                } header: {
+                    Text("BABYSITTERS").font(.headline)
+                }
             }
             .listStyle(InsetGroupedListStyle())
             .navigationTitle("Family")
@@ -34,11 +107,9 @@ struct FamilyView: View {
             }
             .onAppear(perform: viewModel.fetchFamilyData)
             .sheet(isPresented: $showingAddEmergencyContact) {
-                // AddContactView will be created here
                 Text("Add Emergency Contact (View Pending)")
             }
             .sheet(isPresented: $showingAddBabysitter) {
-                // AddContactView will be created here
                 Text("Add Babysitter (View Pending)")
             }
             .alert(isPresented: .constant(viewModel.errorMessage != nil), content: {
@@ -48,66 +119,7 @@ struct FamilyView: View {
             })
         }
     }
-}
 
-// MARK: - Subviews
-struct CoParentsSection: View {
-    @ObservedObject var viewModel: FamilyViewModel
-    @EnvironmentObject var themeManager: ThemeManager
-
-    var body: some View {
-        Section {
-            if viewModel.familyMembers.isEmpty && !viewModel.isLoading {
-                Text("No co-parents found.")
-            } else if viewModel.isLoading {
-                ProgressView()
-            } else {
-                ForEach(viewModel.familyMembers.filter { $0.id != viewModel.currentUserID }, id: \.id) { member in
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack {
-                            Image(systemName: "person.circle.fill")
-                                .resizable()
-                                .frame(width: 40, height: 40)
-                                .foregroundColor(themeManager.selectedTheme.secondaryColor)
-
-                        VStack(alignment: .leading) {
-                            Text(member.fullName)
-                                .font(.headline)
-                            Text(member.email)
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
-                        }
-                        Spacer()
-                        
-                        Button(action: {
-                            viewModel.requestLocation(for: member)
-                        }) {
-                            Image(systemName: "location.circle.fill")
-                                .foregroundColor(themeManager.selectedTheme.accentColor)
-                                .imageScale(.large)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                    
-                    if let location = member.last_known_location, !location.isEmpty, let timestamp = member.last_known_location_timestamp {
-                        HStack {
-                            Image(systemName: "mappin.and.ellipse")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                            Text("Last seen: \(formattedTimestamp(from: timestamp))")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                        }
-                        .padding(.leading, 50)
-                    }
-                }
-                .padding(.vertical, 5)
-            }
-        } header: {
-            Text("CO-PARENTS").font(.headline)
-        }
-    }
-    
     private func formattedTimestamp(from dateString: String) -> String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -122,48 +134,6 @@ struct CoParentsSection: View {
     }
 }
 
-struct EmergencyContactsList: View {
-    @ObservedObject var viewModel: FamilyViewModel
-    @Binding var showingAddContact: Bool
-    
-    var body: some View {
-        Section {
-            if viewModel.emergencyContacts.isEmpty && !viewModel.isLoading {
-                Text("No emergency contacts found.")
-            } else {
-                ForEach(viewModel.emergencyContacts) { contact in
-                    Text(contact.first_name) // Placeholder
-                }
-                .onDelete(perform: viewModel.deleteEmergencyContact)
-            }
-        } header: {
-            Text("EMERGENCY CONTACTS").font(.headline)
-        }
-    }
-}
-
-struct BabysittersList: View {
-    @ObservedObject var viewModel: FamilyViewModel
-    @Binding var showingAddContact: Bool
-
-    var body: some View {
-        Section {
-            if viewModel.babysitters.isEmpty && !viewModel.isLoading {
-                Text("No babysitters found.")
-            } else {
-                ForEach(viewModel.babysitters) { sitter in
-                    Text(sitter.first_name) // Placeholder
-                }
-                .onDelete(perform: viewModel.deleteBabysitter)
-            }
-        } header: {
-            Text("BABYSITTERS").font(.headline)
-        }
-    }
-}
-
-
-// MARK: - ViewModel
 class FamilyViewModel: ObservableObject {
     @Published var familyMembers: [FamilyMember] = []
     @Published var emergencyContacts: [EmergencyContact] = []
@@ -171,8 +141,7 @@ class FamilyViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    // Assuming you have a way to get the current user's ID
-    let currentUserID: String = "" // This needs to be fetched from your auth manager
+    let currentUserID: String = ""
 
     private let apiService = APIService.shared
     
@@ -181,7 +150,6 @@ class FamilyViewModel: ObservableObject {
         errorMessage = nil
         let dispatchGroup = DispatchGroup()
         
-        // Fetch Family Members
         dispatchGroup.enter()
         apiService.fetchFamilyMembers { [weak self] result in
             DispatchQueue.main.async {
@@ -195,7 +163,6 @@ class FamilyViewModel: ObservableObject {
             }
         }
         
-        // Fetch Emergency Contacts
         dispatchGroup.enter()
         apiService.fetchEmergencyContacts { [weak self] result in
             DispatchQueue.main.async {
@@ -209,7 +176,6 @@ class FamilyViewModel: ObservableObject {
             }
         }
         
-        // Fetch Babysitters
         dispatchGroup.enter()
         apiService.fetchBabysitters { [weak self] result in
             DispatchQueue.main.async {
@@ -283,7 +249,6 @@ class FamilyViewModel: ObservableObject {
     }
 }
 
-// MARK: - Preview
 #Preview {
     FamilyView()
         .environmentObject(ThemeManager())
