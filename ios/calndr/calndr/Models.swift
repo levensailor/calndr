@@ -32,7 +32,7 @@ struct Event: Codable, Identifiable {
     }
 }
 
-struct Custodian: Codable, Identifiable {
+struct Custodian: Codable, Identifiable, Hashable {
     let id: String
     let first_name: String
 }
@@ -186,7 +186,7 @@ struct FamilyMemberEmail: Codable {
     let email: String
 }
 
-struct FamilyMember: Codable {
+struct FamilyMember: Codable, Identifiable {
     let id: String
     let first_name: String
     let last_name: String
@@ -194,6 +194,8 @@ struct FamilyMember: Codable {
     let phone_number: String?
     let status: String?
     let last_signed_in: String?
+    let last_known_location: String?
+    let last_known_location_timestamp: String?
     
     var fullName: String {
         return "\(first_name) \(last_name)"

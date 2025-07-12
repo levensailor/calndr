@@ -17,7 +17,7 @@ struct FamilyView: View {
                     } else if viewModel.familyMembers.filter({ $0.id != viewModel.currentUserID }).isEmpty {
                         Text("No co-parents found.")
                     } else {
-                        ForEach(viewModel.familyMembers.filter { $0.id != viewModel.currentUserID }, id: \.id) { member in
+                        ForEach(viewModel.familyMembers.filter { $0.id != viewModel.currentUserID }) { member in
                             VStack(alignment: .leading, spacing: 10) {
                                 HStack {
                                     Image(systemName: "person.circle.fill")
