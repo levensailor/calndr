@@ -104,11 +104,41 @@ struct AccountsView: View {
                         
                         // Profile Information
                         VStack(spacing: 16) {
-                            ProfileRowView(title: "First Name", value: profile.first_name)
-                            ProfileRowView(title: "Last Name", value: profile.last_name)
-                            ProfileRowView(title: "Email", value: profile.email)
-                            ProfileRowView(title: "Phone Number", value: profile.phone_number ?? "Not provided")
-                            ProfileRowView(title: "Subscription", value: formatSubscription(profile))
+                            EditablePhoneRowView(
+                                title: "Phone Number", 
+                                value: profile.phone_number ?? "Not provided",
+                                onSave: { newPhone in
+                                    updatePhoneNumber(newPhone)
+                                }
+                            )
+                            
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text("Subscription")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                    Text(formatSubscription(profile))
+                                        .font(.subheadline)
+                                }
+                                
+                                Spacer()
+                                
+                                Button(action: {
+                                    showSubscriptionModal = true
+                                }) {
+                                    Text(storeManager.isPremiumActive() ? "Manage" : "Upgrade")
+                                        .font(.caption)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(storeManager.isPremiumActive() ? Color.orange : Color.blue)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(8)
+                                }
+                            }
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 16)
+                            .background(Color.gray.opacity(0.1))
+                            .cornerRadius(8)
                         }
                         .padding(.horizontal)
                         
@@ -116,20 +146,6 @@ struct AccountsView: View {
                         
                         // Action Buttons
                         VStack(spacing: 12) {
-                            Button(action: {
-                                showSubscriptionModal = true
-                            }) {
-                                HStack {
-                                    Image(systemName: "crown.fill")
-                                    Text(storeManager.isPremiumActive() ? "Manage Subscription" : "Upgrade to Premium")
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(storeManager.isPremiumActive() ? Color.orange : Color.blue)
-                                .foregroundColor(.white)
-                                .cornerRadius(10)
-                            }
-                            
                             Button(action: {
                                 showPasswordModal = true
                             }) {
@@ -244,6 +260,26 @@ struct AccountsView: View {
         }
     }
     
+    private func updatePhoneNumber(_ newPhone: String) {
+        // TODO: Implement phone number update API call
+        print("Updating phone number to: \(newPhone)")
+        // For now, just update the local profile
+        if var profile = userProfile {
+            userProfile = UserProfile(
+                id: profile.id,
+                first_name: profile.first_name,
+                last_name: profile.last_name,
+                email: profile.email,
+                phone_number: newPhone.isEmpty ? nil : newPhone,
+                subscription_type: profile.subscription_type,
+                subscription_status: profile.subscription_status,
+                created_at: profile.created_at,
+                profile_photo_url: profile.profile_photo_url,
+                selected_theme: profile.selected_theme
+            )
+        }
+    }
+    
     private func formatSubscription(_ profile: UserProfile) -> String {
         if let activeSubscription = storeManager.getActiveSubscription() {
             return activeSubscription
@@ -315,6 +351,76 @@ struct ProfileRowView: View {
         .padding(.horizontal, 16)
         .background(Color.gray.opacity(0.1))
         .cornerRadius(8)
+    }
+}
+
+struct EditablePhoneRowView: View {
+    let title: String
+    let value: String
+    let onSave: (String) -> Void
+    
+    @State private var isEditing = false
+    @State private var editingValue: String = ""
+    
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .frame(width: 120, alignment: .leading)
+            
+            Spacer()
+            
+            if isEditing {
+                TextField("Phone Number", text: $editingValue)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .keyboardType(.phonePad)
+                    .onSubmit {
+                        saveChanges()
+                    }
+                
+                Button("Save") {
+                    saveChanges()
+                }
+                .font(.caption)
+                .foregroundColor(.blue)
+                
+                Button("Cancel") {
+                    cancelEditing()
+                }
+                .font(.caption)
+                .foregroundColor(.red)
+            } else {
+                Text(value)
+                    .font(.subheadline)
+                    .multilineTextAlignment(.trailing)
+                
+                Button("Edit") {
+                    startEditing()
+                }
+                .font(.caption)
+                .foregroundColor(.blue)
+            }
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 16)
+        .background(Color.gray.opacity(0.1))
+        .cornerRadius(8)
+    }
+    
+    private func startEditing() {
+        editingValue = value == "Not provided" ? "" : value
+        isEditing = true
+    }
+    
+    private func saveChanges() {
+        onSave(editingValue)
+        isEditing = false
+    }
+    
+    private func cancelEditing() {
+        editingValue = ""
+        isEditing = false
     }
 }
 
