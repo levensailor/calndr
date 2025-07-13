@@ -81,22 +81,12 @@ struct FamilyMemberCard: View {
                 
                 // Action buttons
                 HStack(spacing: 8) {
-                    if canGroupText {
-                        Button(action: { onGroupText?() }) {
-                            Image(systemName: "bubble.left.and.bubble.right")
-                                .font(.caption)
-                                .foregroundColor(.blue)
-                                .frame(width: 24, height: 24)
-                                .background(Circle().fill(Color.blue.opacity(0.1)))
-                        }
-                    }
-                    
                     if canEdit {
                         Button(action: { onEdit?() }) {
                             Image(systemName: "pencil")
                                 .font(.caption)
                                 .foregroundColor(.blue)
-                                .frame(width: 24, height: 24)
+                                .frame(width: 32, height: 32)
                                 .background(Circle().fill(Color.blue.opacity(0.1)))
                         }
                     }
@@ -106,26 +96,25 @@ struct FamilyMemberCard: View {
                             Image(systemName: "trash")
                                 .font(.caption)
                                 .foregroundColor(.red)
-                                .frame(width: 24, height: 24)
+                                .frame(width: 32, height: 32)
                                 .background(Circle().fill(Color.red.opacity(0.1)))
+                        }
+                    }
+                    if canGroupText {
+                        Button(action: { onGroupText?() }) {
+                                Image(systemName: "bubble.left.and.bubble.right.fill")
+                                    .font(.caption)
+                                    .foregroundColor(.blue)
+                                    .frame(width: 32, height: 32)
+                                    .background(Circle().fill(Color.blue.opacity(0.1)))
+                            .foregroundColor(.blue)
+//                            .padding(.horizontal, 8)
+//                            .padding(.vertical, 4)
+//                            .background(Capsule().fill(Color.blue.opacity(0.1)))
                         }
                     }
                 }
                 
-                if let detail = detail {
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("Last active:")
-                            .font(.caption2)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.5))
-                        
-                        Text(detail)
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
-                            .multilineTextAlignment(.trailing)
-                    }
-                    .frame(minWidth: 80, alignment: .trailing)
-                }
             }
             
             // Contact information with clickable phone numbers
@@ -144,24 +133,6 @@ struct FamilyMemberCard: View {
                     
                     Spacer()
                     
-                    Button(action: { 
-                        // Simple SMS fallback
-                        let cleanedNumber = phoneNumber.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
-                        if let url = URL(string: "sms:\(cleanedNumber)") {
-                            UIApplication.shared.open(url)
-                        }
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "message.fill")
-                                .font(.caption)
-                            Text("Text")
-                                .font(.caption)
-                        }
-                        .foregroundColor(.blue)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(Color.blue.opacity(0.1)))
-                    }
                 }
                 .padding(.top, 4)
             } else if let email = email {
@@ -260,16 +231,16 @@ struct FamilyView: View {
                             
                             Spacer()
                             
-                            Button(action: {
-                                // Request location for co-parent
-                                if let firstCoParent = filteredCoParents.first {
-                                    requestLocation(for: firstCoParent)
-                                }
-                            }) {
-                                Image(systemName: "location.circle.fill")
-                                    .font(.title3)
-                                    .foregroundColor(.blue)
-                            }
+//                            Button(action: {
+//                                // Request location for co-parent
+//                                if let firstCoParent = filteredCoParents.first {
+//                                    requestLocation(for: firstCoParent)
+//                                }
+//                            }) {
+//                                Image(systemName: "location.circle.fill")
+//                                    .font(.title3)
+//                                    .foregroundColor(.blue)
+//                            }
                         }
                         .padding(.horizontal)
                         
@@ -315,9 +286,9 @@ struct FamilyView: View {
                             ForEach(viewModel.children) { child in
                                 FamilyMemberCard(
                                     title: child.firstName,
-                                    subtitle: "Born: \(formatDate(child.dateOfBirth))",
+                                    subtitle: "\(child.age) years old",
                                     detail: "\(child.age) years old",
-                                    icon: "figure.2.and.child.holdinghands",
+                                    icon: "figure.child",
                                     color: .green,
                                     canEdit: true,
                                     canDelete: true,
@@ -369,7 +340,7 @@ struct FamilyView: View {
                                     subtitle: contact.displayRelationship,
                                     phoneNumber: contact.phone_number,
                                     email: contact.notes,
-                                    icon: "person.3",
+                                    icon: "person.badge.key",
                                     color: .purple,
                                     canEdit: true,
                                     canDelete: true,
@@ -671,7 +642,7 @@ struct CoParentRow: View {
                 Image(systemName: "person.circle.fill")
                     .resizable()
                     .frame(width: 40, height: 40)
-                    .foregroundColor(themeManager.currentTheme.textColor)
+                    .foregroundColor(.blue)
                 VStack(alignment: .leading) {
                     Text(member.fullName)
                         .font(.headline)
@@ -682,7 +653,7 @@ struct CoParentRow: View {
                 Spacer()
                 Button(action: onRequestLocation) {
                     Image(systemName: "location.circle.fill")
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(.blue)
                         .imageScale(.large)
                 }
                 .buttonStyle(PlainButtonStyle())

@@ -1228,6 +1228,11 @@ class CalendarViewModel: ObservableObject {
             dispatchGroup.leave()
         }
         
+        dispatchGroup.enter()
+        fetchDaycareProviders {
+            dispatchGroup.leave()
+        }
+        
         dispatchGroup.notify(queue: .main) {
             self.isDataLoading = false
             print("✅ All family data loaded")
@@ -1787,5 +1792,80 @@ class CalendarViewModel: ObservableObject {
     
     func getReminderTextForDate(_ date: Date) -> String {
         return getReminderForDate(date)?.text ?? ""
+    }
+    
+    // MARK: - Daycare Provider Management
+    
+    func fetchDaycareProviders(completion: (() -> Void)? = nil) {
+        APIService.shared.fetchDaycareProviders { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let providers):
+                    self?.daycareProviders = providers
+                    print("✅ Successfully fetched \(providers.count) daycare providers")
+                case .failure(let error):
+                    print("❌ Error fetching daycare providers: \(error.localizedDescription)")
+                }
+                completion?()
+            }
+        }
+    }
+    
+    func saveDaycareProvider(_ provider: DaycareProviderCreate, completion: @escaping (Bool) -> Void) {
+        APIService.shared.createDaycareProvider(provider) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let savedProvider):
+                    self?.daycareProviders.append(savedProvider)
+                    print("✅ Successfully saved daycare provider: \(savedProvider.name)")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error saving daycare provider: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func updateDaycareProvider(_ providerId: Int, provider: DaycareProviderCreate, completion: @escaping (Bool) -> Void) {
+        APIService.shared.updateDaycareProvider(providerId, providerData: provider) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let updatedProvider):
+                    if let index = self?.daycareProviders.firstIndex(where: { $0.id == providerId }) {
+                        self?.daycareProviders[index] = updatedProvider
+                    }
+                    print("✅ Successfully updated daycare provider: \(updatedProvider.name)")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error updating daycare provider: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func deleteDaycareProvider(_ providerId: Int, completion: @escaping (Bool) -> Void) {
+        APIService.shared.deleteDaycareProvider(providerId) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    self?.daycareProviders.removeAll { $0.id == providerId }
+                    print("✅ Successfully deleted daycare provider")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error deleting daycare provider: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func searchDaycareProviders(_ searchRequest: DaycareSearchRequest, completion: @escaping (Result<[DaycareSearchResult], Error>) -> Void) {
+        APIService.shared.searchDaycareProviders(searchRequest) { result in
+            DispatchQueue.main.async {
+                completion(result)
+            }
+        }
     }
 } 

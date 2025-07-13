@@ -1885,4 +1885,174 @@ class APIService {
             completion(.success(()))
         }.resume()
     }
+    
+    // MARK: - Daycare Provider API Methods
+    
+    func fetchDaycareProviders(completion: @escaping (Result<[DaycareProvider], Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/daycare-providers")
+        let request = createAuthenticatedRequest(url: url)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error"])))
+                return
+            }
+            
+            do {
+                let providers = try JSONDecoder().decode([DaycareProvider].self, from: data)
+                completion(.success(providers))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func createDaycareProvider(_ providerData: DaycareProviderCreate, completion: @escaping (Result<DaycareProvider, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/daycare-providers")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(providerData)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error"])))
+                return
+            }
+            
+            do {
+                let provider = try JSONDecoder().decode(DaycareProvider.self, from: data)
+                completion(.success(provider))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func updateDaycareProvider(_ providerId: Int, providerData: DaycareProviderCreate, completion: @escaping (Result<DaycareProvider, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/daycare-providers/\(providerId)")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "PUT"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(providerData)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error"])))
+                return
+            }
+            
+            do {
+                let provider = try JSONDecoder().decode(DaycareProvider.self, from: data)
+                completion(.success(provider))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func deleteDaycareProvider(_ providerId: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/daycare-providers/\(providerId)")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "DELETE"
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error"])))
+                return
+            }
+            
+            completion(.success(()))
+        }.resume()
+    }
+    
+    func searchDaycareProviders(_ searchRequest: DaycareSearchRequest, completion: @escaping (Result<[DaycareSearchResult], Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/daycare-providers/search")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(searchRequest)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error"])))
+                return
+            }
+            
+            do {
+                let searchResults = try JSONDecoder().decode([DaycareSearchResult].self, from: data)
+                completion(.success(searchResults))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
 } 
