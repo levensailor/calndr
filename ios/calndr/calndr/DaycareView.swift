@@ -387,6 +387,7 @@ struct DaycareSearchView: View {
                                 themeManager: themeManager
                             )
                             .keyboardType(.numberPad)
+                            .frame(maxWidth: 120)
                             
                             Button("Search") {
                                 searchDaycares()
