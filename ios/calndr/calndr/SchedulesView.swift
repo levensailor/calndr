@@ -614,15 +614,7 @@ struct WeeklyPatternBuilder: View {
                         selectedParent: Binding(
                             get: { pattern[keyPath: keyPath] },
                             set: { newValue in
-                                pattern = WeeklySchedulePattern(
-                                    sunday: keyPath == \.sunday ? newValue : pattern.sunday,
-                                    monday: keyPath == \.monday ? newValue : pattern.monday,
-                                    tuesday: keyPath == \.tuesday ? newValue : pattern.tuesday,
-                                    wednesday: keyPath == \.wednesday ? newValue : pattern.wednesday,
-                                    thursday: keyPath == \.thursday ? newValue : pattern.thursday,
-                                    friday: keyPath == \.friday ? newValue : pattern.friday,
-                                    saturday: keyPath == \.saturday ? newValue : pattern.saturday
-                                )
+                                pattern[keyPath: keyPath] = newValue
                             }
                         ),
                         custodianOneName: custodianOneName,
@@ -631,6 +623,11 @@ struct WeeklyPatternBuilder: View {
                 }
             }
         }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
+        )
     }
 }
 
@@ -659,12 +656,8 @@ struct DayAssignmentRow: View {
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(
-                            RoundedRectangle(cornerRadius: 6)
+                            RoundedRectangle(cornerRadius: 4)
                                 .fill(selectedParent == nil ? Color.gray : Color.clear)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .stroke(Color.gray, lineWidth: 1)
-                                )
                         )
                 }
                 
@@ -676,12 +669,8 @@ struct DayAssignmentRow: View {
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(selectedParent == "parent1" ? themeManager.currentTheme.parentOneColor : Color.clear)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .stroke(themeManager.currentTheme.parentOneColor, lineWidth: 1)
-                                )
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(selectedParent == "parent1" ? themeManager.currentTheme.parentOneColor.color : Color.clear)
                         )
                 }
                 
@@ -693,22 +682,12 @@ struct DayAssignmentRow: View {
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(selectedParent == "parent2" ? themeManager.currentTheme.parentTwoColor : Color.clear)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .stroke(themeManager.currentTheme.parentTwoColor, lineWidth: 1)
-                                )
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(selectedParent == "parent2" ? themeManager.currentTheme.parentTwoColor.color : Color.clear)
                         )
                 }
             }
         }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
-        )
     }
 }
 
@@ -727,77 +706,62 @@ struct SchedulePreviewSection: View {
                 .foregroundColor(themeManager.currentTheme.textColor.color)
             
             if patternType == .weekly {
-                WeeklySchedulePreview(
-                    pattern: weeklyPattern,
-                    custodianOneName: custodianOneName,
-                    custodianTwoName: custodianTwoName
-                )
-            } else {
-                Text("Preview for \(patternType.displayName) coming soon")
-                    .font(.subheadline)
-                    .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
-                    .italic()
-            }
-        }
-    }
-}
-
-struct WeeklySchedulePreview: View {
-    let pattern: WeeklySchedulePattern
-    let custodianOneName: String
-    let custodianTwoName: String
-    @EnvironmentObject var themeManager: ThemeManager
-    
-    private let daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 4) {
-                ForEach(Array(daysOfWeek.enumerated()), id: \.offset) { index, day in
-                    VStack(spacing: 4) {
-                        Text(day)
-                            .font(.caption)
-                            .foregroundColor(themeManager.currentTheme.textColor.color)
-                        
-                        Rectangle()
-                            .fill(colorForDay(index + 1))
-                            .frame(height: 40)
-                            .cornerRadius(4)
+                VStack(spacing: 8) {
+                    HStack {
+                        ForEach(Array(daysOfWeek.enumerated()), id: \.offset) { index, day in
+                            Text(day)
+                                .font(.caption)
+                                .foregroundColor(themeManager.currentTheme.textColor.color)
+                                .frame(maxWidth: .infinity)
+                        }
                     }
-                    .frame(maxWidth: .infinity)
+                    
+                    HStack {
+                        ForEach(Array(daysOfWeek.enumerated()), id: \.offset) { index, day in
+                            Rectangle()
+                                .fill(getParentColor(for: day))
+                                .frame(height: 20)
+                                .cornerRadius(2)
+                        }
+                    }
+                }
+            } else {
+                HStack {
+                    Image(systemName: "info.circle")
+                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
+                    Text("Preview for \(patternType.displayName) coming soon")
+                        .font(.subheadline)
+                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
+                        .italic()
                 }
             }
             
-            HStack {
-                HStack(spacing: 4) {
+            // Legend
+            HStack(spacing: 24) {
+                HStack(spacing: 8) {
                     Rectangle()
-                        .fill(themeManager.currentTheme.parentOneColor)
-                        .frame(width: 12, height: 12)
+                        .fill(themeManager.currentTheme.parentOneColor.color)
+                        .frame(width: 16, height: 16)
                         .cornerRadius(2)
                     Text(custodianOneName)
                         .font(.caption)
                         .foregroundColor(themeManager.currentTheme.textColor.color)
                 }
                 
-                Spacer()
-                
-                HStack(spacing: 4) {
+                HStack(spacing: 8) {
                     Rectangle()
-                        .fill(themeManager.currentTheme.parentTwoColor)
-                        .frame(width: 12, height: 12)
+                        .fill(themeManager.currentTheme.parentTwoColor.color)
+                        .frame(width: 16, height: 16)
                         .cornerRadius(2)
                     Text(custodianTwoName)
                         .font(.caption)
                         .foregroundColor(themeManager.currentTheme.textColor.color)
                 }
                 
-                Spacer()
-                
-                HStack(spacing: 4) {
+                HStack(spacing: 8) {
                     Rectangle()
-                        .fill(Color.gray.opacity(0.3))
-                        .frame(width: 12, height: 12)
-                        .cornerRadius(2)
+                        .stroke(themeManager.currentTheme.textColor.color, lineWidth: 1)
+                        .frame(width: 15, height: 15)
                     Text("Unassigned")
                         .font(.caption)
                         .foregroundColor(themeManager.currentTheme.textColor.color)
@@ -811,19 +775,30 @@ struct WeeklySchedulePreview: View {
         )
     }
     
-    private func colorForDay(_ weekday: Int) -> Color {
-        let assignment = pattern.custodianFor(weekday: weekday)
+    private func getParentColor(for day: String) -> Color {
+        let parent: String?
+        switch day {
+        case "Sun": parent = weeklyPattern.sunday
+        case "Mon": parent = weeklyPattern.monday
+        case "Tue": parent = weeklyPattern.tuesday
+        case "Wed": parent = weeklyPattern.wednesday
+        case "Thu": parent = weeklyPattern.thursday
+        case "Fri": parent = weeklyPattern.friday
+        case "Sat": parent = weeklyPattern.saturday
+        default: parent = nil
+        }
         
-        switch assignment {
-        case "parent1":
-            return themeManager.currentTheme.parentOneColor
-        case "parent2":
-            return themeManager.currentTheme.parentTwoColor
-        default:
-            return Color.gray.opacity(0.3)
+        if parent == "parent1" {
+            return themeManager.currentTheme.parentOneColor.color
+        } else if parent == "parent2" {
+            return themeManager.currentTheme.parentTwoColor.color
+        } else {
+            return Color.clear
         }
     }
 }
+
+// MARK: - Date Range Picker
 
 struct DateRangePickerView: View {
     @Binding var startDate: Date
@@ -833,24 +808,31 @@ struct DateRangePickerView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 20) {
-                DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
-                    .datePickerStyle(GraphicalDatePickerStyle())
+            VStack {
+                DatePicker(
+                    "Start Date",
+                    selection: $startDate,
+                    displayedComponents: .date
+                )
+                .datePickerStyle(GraphicalDatePickerStyle())
+                .padding()
                 
-                DatePicker("End Date", selection: $endDate, displayedComponents: .date)
-                    .datePickerStyle(GraphicalDatePickerStyle())
+                DatePicker(
+                    "End Date",
+                    selection: $endDate,
+                    in: startDate...,
+                    displayedComponents: .date
+                )
+                .datePickerStyle(GraphicalDatePickerStyle())
+                .padding()
+                
+                Spacer()
             }
             .padding()
             .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
             .navigationTitle("Select Date Range")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         dismiss()
