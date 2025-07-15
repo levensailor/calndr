@@ -8,12 +8,12 @@ struct LoginView: View {
 
     var body: some View {
         ZStack {
-            themeManager.currentTheme.mainBackgroundColor.ignoresSafeArea()
+            themeManager.currentTheme.mainBackgroundColorSwiftUI.ignoresSafeArea()
             
             VStack(spacing: 20) {
                 Text("calndr")
                     .font(.system(size: 60, weight: .bold, design: .default))
-                    .foregroundColor(themeManager.currentTheme.textColor)
+                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                 
                 VStack(spacing: 15) {
                     FloatingLabelTextField(
@@ -59,7 +59,7 @@ struct LoginView: View {
                     .foregroundColor(.white)
                     .padding()
                     .frame(maxWidth: .infinity)
-                    .background(themeManager.currentTheme.todayBorderColor)
+                    .background(themeManager.currentTheme.accentColorSwiftUI)
                     .cornerRadius(10)
                     .padding(.horizontal)
                 }
@@ -70,7 +70,7 @@ struct LoginView: View {
                 }) {
                     Text("Don't have an account? Sign Up")
                         .font(.footnote)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                         .padding()
                 }
             }
