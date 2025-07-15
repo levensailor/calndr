@@ -1,45 +1,41 @@
 import SwiftUI
 import Combine
 
-struct Theme: Identifiable, Equatable, Hashable {
-    let id = UUID()
-    let name: String
-    let font: Font
-    let mainBackgroundColor: Color
-    let secondaryBackgroundColor: Color
-    let textColor: Color
-    let dayNumberColor: Color
-    let otherMonthBackgroundColor: Color
-    let otherMonthForegroundColor: Color
-    let highlightColor: Color
-    let bubbleBackgroundColor: Color
-    let gridLinesColor: Color
-    let headerBackgroundColor: Color
-    let footerBackgroundColor: Color
-    let iconColor: Color
-    let iconActiveColor: Color
-    let parentOneColor: Color
-    let parentTwoColor: Color
-    let todayBorderColor: Color
-    
+struct Theme: Identifiable, Equatable, Hashable, Codable {
+    var id: UUID
+    var name: String
+    var mainBackgroundColor: CodableColor
+    var secondaryBackgroundColor: CodableColor
+    var textColor: CodableColor
+    var headerTextColor: CodableColor
+    var iconColor: CodableColor
+    var iconActiveColor: CodableColor
+    var accentColor: CodableColor
+    var parentOneColor: CodableColor
+    var parentTwoColor: CodableColor
+
+    // Computed properties for SwiftUI Colors
+    var mainBackgroundColorSwiftUI: Color { mainBackgroundColor.color }
+    var secondaryBackgroundColorSwiftUI: Color { secondaryBackgroundColor.color }
+    var textColorSwiftUI: Color { textColor.color }
+    var headerTextColorSwiftUI: Color { headerTextColor.color }
+    var iconColorSwiftUI: Color { iconColor.color }
+    var iconActiveColorSwiftUI: Color { iconActiveColor.color }
+    var accentColorSwiftUI: Color { accentColor.color }
+    var parentOneColorSwiftUI: Color { parentOneColor.color }
+    var parentTwoColorSwiftUI: Color { parentTwoColor.color }
+
     var allColors: [Color] {
         [
-            mainBackgroundColor,
-            secondaryBackgroundColor,
-            textColor,
-            dayNumberColor,
-            otherMonthBackgroundColor,
-            otherMonthForegroundColor,
-            highlightColor,
-            bubbleBackgroundColor,
-            gridLinesColor,
-            headerBackgroundColor,
-            footerBackgroundColor,
-            iconColor,
-            iconActiveColor,
-            parentOneColor,
-            parentTwoColor,
-            todayBorderColor
+            mainBackgroundColorSwiftUI,
+            secondaryBackgroundColorSwiftUI,
+            textColorSwiftUI,
+            headerTextColorSwiftUI,
+            iconColorSwiftUI,
+            iconActiveColorSwiftUI,
+            accentColorSwiftUI,
+            parentOneColorSwiftUI,
+            parentTwoColorSwiftUI
         ]
     }
 
@@ -50,130 +46,134 @@ struct Theme: Identifiable, Equatable, Hashable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
+    
+    static let defaultTheme = Theme(
+        id: UUID(),
+        name: "Default",
+        mainBackgroundColor: CodableColor(color: Color(hex: "#FFFFFF")),
+        secondaryBackgroundColor: CodableColor(color: Color(hex: "#F2F2F7")),
+        textColor: CodableColor(color: Color(hex: "#000000")),
+        headerTextColor: CodableColor(color: Color(hex: "#000000")),
+        iconColor: CodableColor(color: Color(hex: "#000000")),
+        iconActiveColor: CodableColor(color: Color(hex: "#007AFF")),
+        accentColor: CodableColor(color: Color(hex: "#007AFF")),
+        parentOneColor: CodableColor(color: Color(hex: "#96CBFC")),
+        parentTwoColor: CodableColor(color: Color(hex: "#FFC2D9"))
+    )
+}
+
+struct CodableColor: Codable, Equatable, Hashable {
+    var red: Double
+    var green: Double
+    var blue: Double
+    var opacity: Double
+
+    init(color: Color) {
+        let uiColor = UIColor(color)
+        var r: CGFloat = 0
+        var g: CGFloat = 0
+        var b: CGFloat = 0
+        var a: CGFloat = 0
+        uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+        self.red = Double(r)
+        self.green = Double(g)
+        self.blue = Double(b)
+        self.opacity = Double(a)
+    }
+
+    var color: Color {
+        Color(red: red, green: green, blue: blue, opacity: opacity)
+    }
 }
 
 class ThemeManager: ObservableObject {
     @Published var currentTheme: Theme
+    @Published var themes: [Theme]
     
-    let themes: [Theme] = [
-        Theme(name: "Stork",
-              font: .system(size: 24, weight: .bold, design: .default),
-              mainBackgroundColor: Color(hex: "#fff"),
-              secondaryBackgroundColor: Color(hex: "#f2f2f2"),
-              textColor: Color(hex: "#000"),
-              dayNumberColor: Color(hex: "#000"),
-              otherMonthBackgroundColor: Color(hex: "#f7f7f7"),
-              otherMonthForegroundColor: Color(hex: "#999"),
-              highlightColor: Color(hex: "#2a64c4"),
-              bubbleBackgroundColor: Color(hex: "#f0f0f0"),
-              gridLinesColor: Color(hex: "#e0e0e0"),
-              headerBackgroundColor: Color(hex: "#e0e0e0"),
-              footerBackgroundColor: Color(hex: "#f0f0f0"),
-              iconColor: Color(hex: "#555"),
-              iconActiveColor: Color(hex: "#007bff"),
-              parentOneColor: Color(hex: "#96CBFC"),
-              parentTwoColor: Color(hex: "#FFC2D9"),
-              todayBorderColor: Color(hex: "#007bff")),
-        Theme(name: "Dracula",
-              font: .system(size: 24, weight: .bold, design: .default),
-              mainBackgroundColor: Color(hex: "#282a36"),
-              secondaryBackgroundColor: Color(red: 0.1, green: 0.1, blue: 0.15),
-              textColor: Color(hex: "#f8f8f2"),
-              dayNumberColor: Color(red: 0.7, green: 0.7, blue: 0.7),
-              otherMonthBackgroundColor: Color(hex: "#21222c"),
-              otherMonthForegroundColor: Color(hex: "#555"),
-              highlightColor: Color(hex: "#ff79c6"),
-              bubbleBackgroundColor: Color(hex: "#21222c"),
-              gridLinesColor: Color(hex: "#191a21"),
-              headerBackgroundColor: Color(hex: "#191a21"),
-              footerBackgroundColor: Color(hex: "#191a21"),
-              iconColor: Color(hex: "#bd93f9"),
-              iconActiveColor: Color(hex: "#ff79c6"),
-              parentOneColor: Color(hex: "#96CBFC"),
-              parentTwoColor: Color(hex: "#FFC2D9"),
-              todayBorderColor: Color(hex: "#ff79c6")),
-        Theme(name: "Vibe",
-              font: .system(size: 24, weight: .bold, design: .default),
-              mainBackgroundColor: Color(hex: "#251758"),
-              secondaryBackgroundColor: Color(red: 0.9, green: 0.95, blue: 1.0),
-              textColor: Color(hex: "#e0d8ff"),
-              dayNumberColor: Color(red: 0.5, green: 0.6, blue: 0.8),
-              otherMonthBackgroundColor: Color(hex: "#1a103c"),
-              otherMonthForegroundColor: Color(hex: "#666"),
-              highlightColor: Color(hex: "#00fddc"),
-              bubbleBackgroundColor: Color(hex: "#1a103c"),
-              gridLinesColor: Color(hex: "#12092a"),
-              headerBackgroundColor: Color(hex: "#12092a"),
-              footerBackgroundColor: Color(hex: "#12092a"),
-              iconColor: Color(hex: "#b3a5ef"),
-              iconActiveColor: Color(hex: "#00fddc"),
-              parentOneColor: Color(hex: "#96CBFC"),
-              parentTwoColor: Color(hex: "#FFC2D9"),
-              todayBorderColor: Color(hex: "#00fddc")),
-        Theme(name: "Crayola",
-              font: .system(size: 24, weight: .bold, design: .default),
-              mainBackgroundColor: Color(hex: "#fff"),
-              secondaryBackgroundColor: Color(red: 0.98, green: 0.98, blue: 0.98),
-              textColor: Color(hex: "#000"),
-              dayNumberColor: Color(red: 0.4, green: 0.4, blue: 0.4),
-              otherMonthBackgroundColor: Color(hex: "#f0f8ff"),
-              otherMonthForegroundColor: Color(hex: "#ccc"),
-              highlightColor: Color(hex: "#32cd32"),
-              bubbleBackgroundColor: Color(hex: "#f0f8ff"),
-              gridLinesColor: Color(hex: "#ffd700"),
-              headerBackgroundColor: Color(hex: "#ffd700"),
-              footerBackgroundColor: Color(hex: "#ff7f50"),
-              iconColor: Color(hex: "#000"),
-              iconActiveColor: Color(hex: "#1e90ff"),
-              parentOneColor: Color(hex: "#96CBFC"),
-              parentTwoColor: Color(hex: "#FFC2D9"),
-              todayBorderColor: Color(hex: "#1e90ff")),
-        Theme(name: "Princess",
-              font: .system(size: 24, weight: .bold, design: .default),
-              mainBackgroundColor: Color(hex: "#fffafb"),
-              secondaryBackgroundColor: Color(red: 0.94, green: 0.97, blue: 0.94),
-              textColor: Color(hex: "#5e3c58"),
-              dayNumberColor: Color(red: 0.3, green: 0.5, blue: 0.4),
-              otherMonthBackgroundColor: Color(hex: "#fdf4f5"),
-              otherMonthForegroundColor: Color(hex: "#bbb"),
-              highlightColor: Color(hex: "#ffd700"),
-              bubbleBackgroundColor: Color(hex: "#fdf4f5"),
-              gridLinesColor: Color(hex: "#fae3f5"),
-              headerBackgroundColor: Color(hex: "#fae3f5"),
-              footerBackgroundColor: Color(hex: "#fae3f5"),
-              iconColor: Color(hex: "#c789a8"),
-              iconActiveColor: Color(hex: "#e6a4b4"),
-              parentOneColor: Color(hex: "#96CBFC"),
-              parentTwoColor: Color(hex: "#FFC2D9"),
-              todayBorderColor: Color(hex: "#e6a4b4")),
-        Theme(name: "Vanilla",
-              font: .system(size: 24, weight: .bold, design: .default),
-              mainBackgroundColor: Color(hex: "#FFFFFF"),
-              secondaryBackgroundColor: Color(red: 0.98, green: 0.98, blue: 0.98),
-              textColor: Color(hex: "#000000"),
-              dayNumberColor: Color(red: 0.4, green: 0.4, blue: 0.4),
-              otherMonthBackgroundColor: Color(hex: "#F2F2F7"),
-              otherMonthForegroundColor: Color(hex: "#C7C7CC"),
-              highlightColor: Color(hex: "#007AFF"),
-              bubbleBackgroundColor: Color(hex: "#F2F2F7"),
-              gridLinesColor: Color(hex: "#E5E5EA"),
-              headerBackgroundColor: Color(hex: "#E5E5EA"),
-              footerBackgroundColor: Color(hex: "#E5E5EA"),
-              iconColor: Color(hex: "#000000"),
-              iconActiveColor: Color(hex: "#007AFF"),
-              parentOneColor: Color(hex: "#96CBFC"),
-              parentTwoColor: Color(hex: "#FFC2D9"),
-              todayBorderColor: Color(hex: "#007AFF")),
-    ]
+    private let customThemesKey = "customThemes"
 
     init() {
+        // Initialize properties first
+        self.themes = []
+        self.currentTheme = Theme.defaultTheme
+        
+        // Now load the themes
+        self.themes = loadThemes()
+        
+        // Set the current theme based on user defaults
         let storedThemeName = UserDefaults.standard.string(forKey: "selectedTheme") ?? "Stork"
-        self.currentTheme = themes.first { $0.name == storedThemeName } ?? themes[0]
+        self.currentTheme = themes.first { $0.name == storedThemeName } ?? Theme.defaultTheme
     }
 
     func setTheme(to theme: Theme) {
         currentTheme = theme
         UserDefaults.standard.set(theme.name, forKey: "selectedTheme")
+    }
+
+    func addTheme(_ theme: Theme) {
+        themes.append(theme)
+        saveThemes()
+    }
+
+    func updateTheme(_ theme: Theme) {
+        if let index = themes.firstIndex(where: { $0.id == theme.id }) {
+            themes[index] = theme
+            saveThemes()
+        }
+    }
+
+    private func loadThemes() -> [Theme] {
+        var loadedThemes = defaultThemes
+        if let data = UserDefaults.standard.data(forKey: customThemesKey) {
+            do {
+                let customThemes = try JSONDecoder().decode([Theme].self, from: data)
+                loadedThemes.append(contentsOf: customThemes)
+            } catch {
+                print("Failed to load custom themes: \(error)")
+            }
+        }
+        return loadedThemes
+    }
+
+    private func saveThemes() {
+        let customThemes = themes.filter { theme in !defaultThemes.contains(where: { $0.id == theme.id }) }
+        do {
+            let data = try JSONEncoder().encode(customThemes)
+            UserDefaults.standard.set(data, forKey: customThemesKey)
+        } catch {
+            print("Failed to save custom themes: \(error)")
+        }
+    }
+    
+    private var defaultThemes: [Theme] {
+        return [
+            Theme(
+                id: UUID(),
+                name: "Stork",
+                mainBackgroundColor: CodableColor(color: Color(hex: "#FFFFFF")),
+                secondaryBackgroundColor: CodableColor(color: Color(hex: "#F2F2F7")),
+                textColor: CodableColor(color: Color(hex: "#000000")),
+                headerTextColor: CodableColor(color: Color(hex: "#000000")),
+                iconColor: CodableColor(color: Color(hex: "#000000")),
+                iconActiveColor: CodableColor(color: Color(hex: "#007AFF")),
+                accentColor: CodableColor(color: Color(hex: "#007AFF")),
+                parentOneColor: CodableColor(color: Color(hex: "#96CBFC")),
+                parentTwoColor: CodableColor(color: Color(hex: "#FFC2D9"))
+            ),
+            Theme(
+                id: UUID(),
+                name: "Dracula",
+                mainBackgroundColor: CodableColor(color: Color(hex: "#282a36")),
+                secondaryBackgroundColor: CodableColor(color: Color(hex: "#21222c")),
+                textColor: CodableColor(color: Color(hex: "#f8f8f2")),
+                headerTextColor: CodableColor(color: Color(hex: "#f8f8f2")),
+                iconColor: CodableColor(color: Color(hex: "#bd93f9")),
+                iconActiveColor: CodableColor(color: Color(hex: "#ff79c6")),
+                accentColor: CodableColor(color: Color(hex: "#ff79c6")),
+                parentOneColor: CodableColor(color: Color(hex: "#96CBFC")),
+                parentTwoColor: CodableColor(color: Color(hex: "#FFC2D9"))
+            )
+        ]
     }
 }
 
