@@ -26,17 +26,17 @@ struct SettingsSectionCard: View {
                 
                 Image(systemName: "chevron.right")
                     .font(.caption)
-                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                    .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
             }
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(section.title)
                     .font(.headline)
-                    .foregroundColor(themeManager.currentTheme.textColor)
+                    .foregroundColor(themeManager.currentTheme.textColor.color)
                 
                 Text(section.description)
                     .font(.caption)
-                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                    .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
             }
@@ -44,8 +44,8 @@ struct SettingsSectionCard: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(themeManager.currentTheme.otherMonthBackgroundColor)
-                .shadow(color: themeManager.currentTheme.textColor.opacity(0.1), radius: 3, x: 0, y: 2)
+                .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
+                .shadow(color: themeManager.currentTheme.textColor.color.opacity(0.1), radius: 3, x: 0, y: 2)
         )
     }
 }
@@ -69,11 +69,11 @@ struct SettingsView: View {
                         Text("Settings")
                             .font(.largeTitle)
                             .fontWeight(.bold)
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
                         
                         Text("Manage your account, family, and preferences")
                             .font(.subheadline)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                     }
                     .padding(.horizontal)
                     .padding(.top)
@@ -92,14 +92,14 @@ struct SettingsView: View {
                     Spacer(minLength: 80)
                 }
             }
-            .background(themeManager.currentTheme.mainBackgroundColor)
+            .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }
-                    .foregroundColor(themeManager.currentTheme.textColor)
+                    .foregroundColor(themeManager.currentTheme.textColor.color)
                 }
             }
         }
