@@ -20,10 +20,10 @@ struct ThemeSettingsView: View {
                     }) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 8)
-                                .fill(themeManager.currentTheme.secondaryBackgroundColor)
+                                .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
                             Image(systemName: "plus")
                                 .font(.largeTitle)
-                                .foregroundColor(themeManager.currentTheme.iconColor)
+                                .foregroundColor(themeManager.currentTheme.iconColorSwiftUI)
                         }
                         .frame(height: 100)
                     }
@@ -56,7 +56,7 @@ struct ThemeSettingsView: View {
 
         }
         .navigationTitle("Themes")
-        .background(themeManager.currentTheme.mainBackgroundColor)
+        .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
         .sheet(isPresented: $showThemeCreator) {
             ThemeCreatorView(
                 theme: $themeToEdit,
