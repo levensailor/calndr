@@ -44,8 +44,8 @@ struct FocusedDayView: View {
                         .font(.body)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(themeManager.currentTheme.textColor.opacity(eventContents[index, default: ""].isEmpty ? 0.1 : 0.3))
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .background(themeManager.currentTheme.textColor.color.opacity(eventContents[index, default: ""].isEmpty ? 0.1 : 0.3))
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
                         .cornerRadius(6)
                     }
                     
@@ -59,8 +59,8 @@ struct FocusedDayView: View {
                             .font(.headline.bold())
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                            .background(ownerId == viewModel.custodianOneId ? Color(hex: "#FFC2D9") : Color(hex: "#96CBFC"))
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .background(ownerId == viewModel.custodianOneId ? themeManager.currentTheme.parentTwoColor.color : themeManager.currentTheme.parentOneColor.color)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
                             .cornerRadius(10)
                             .contentShape(Rectangle())
                             .onTapGesture {
@@ -77,7 +77,7 @@ struct FocusedDayView: View {
             .padding()
             .matchedGeometryEffect(id: date, in: namespace)
             .frame(width: 300, height: 400)
-            .background(themeManager.currentTheme.mainBackgroundColor)
+            .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
             .cornerRadius(20)
             .shadow(radius: 10)
             .onAppear(perform: loadEvents)
