@@ -53,7 +53,7 @@ struct HandoffTimeModal: View {
                 Text(formatDate(date))
                     .font(.headline)
                     .frame(maxWidth: .infinity, alignment: .center)
-                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.8))
+                    .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.8))
                 
                 // Time Selection
                 VStack(alignment: .leading, spacing: 10) {
@@ -65,9 +65,9 @@ struct HandoffTimeModal: View {
                                 Text(handoffTimes[index].display)
                                 Spacer()
                             }
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
                             .padding(10)
-                            .background(themeManager.currentTheme.textColor.opacity(selectedTimeIndex == index ? 0.2 : 0.05))
+                            .background(themeManager.currentTheme.textColor.color.opacity(selectedTimeIndex == index ? 0.2 : 0.05))
                             .cornerRadius(8)
                         }
                     }
@@ -86,9 +86,9 @@ struct HandoffTimeModal: View {
                             Spacer()
                             Image(systemName: "chevron.up.chevron.down")
                         }
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
                         .padding(12)
-                        .background(themeManager.currentTheme.textColor.opacity(0.1))
+                        .background(themeManager.currentTheme.textColor.color.opacity(0.1))
                         .cornerRadius(8)
                     }
                 }
@@ -111,7 +111,7 @@ struct HandoffTimeModal: View {
             }
             .padding()
             .frame(width: 300, height: 450) // Slightly taller to accommodate content
-            .background(themeManager.currentTheme.mainBackgroundColor)
+            .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
             .cornerRadius(20)
             .shadow(radius: 10)
             .onAppear(perform: initializeTimeAndLocation)
