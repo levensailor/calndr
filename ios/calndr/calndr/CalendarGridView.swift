@@ -19,7 +19,7 @@ struct CalendarGridView: View {
                 }
             }
             .padding(.vertical, 4)
-            .background(themeManager.currentTheme.headerBackgroundColor)
+            .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
             
             // Calendar grid with fixed height - cells adapt to fill space
             let numberOfWeeks = calculateNumberOfWeeks()
@@ -47,7 +47,7 @@ struct CalendarGridView: View {
                         .opacity(viewModel.showHandoffTimeline ? 0.3 : 1.0) // Dim calendar when handoff timeline is active
                     }
                 }
-                .background(themeManager.currentTheme.gridLinesColor)
+                .background(themeManager.currentTheme.accentColorSwiftUI)
                 .allowsHitTesting(!viewModel.showHandoffTimeline) // Disable all interactions when handoff timeline is active
                 
                 // Handoff Timeline Overlay
