@@ -355,9 +355,9 @@ struct HandoffTimelineView: View {
     
     private func getCustodyColor(for custodyID: String) -> Color {
         if custodyID == viewModel.custodianOneId {
-            return themeManager.currentTheme.parentOneColor
+            return themeManager.currentTheme.parentOneColorSwiftUI
         } else {
-            return themeManager.currentTheme.parentTwoColor
+            return themeManager.currentTheme.parentTwoColorSwiftUI
         }
     }
     
