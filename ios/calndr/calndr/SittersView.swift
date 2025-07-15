@@ -55,11 +55,11 @@ struct SittersView: View {
                         Text("Babysitters")
                             .font(.largeTitle)
                             .fontWeight(.bold)
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                         
                         Text("Manage your trusted babysitters")
                             .font(.subheadline)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
                     }
                     .padding(.horizontal)
                     
@@ -69,7 +69,7 @@ struct SittersView: View {
                             Text("Babysitters")
                                 .font(.title2)
                                 .fontWeight(.semibold)
-                                .foregroundColor(themeManager.currentTheme.textColor)
+                                .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                             
                             Spacer()
                             
@@ -84,7 +84,7 @@ struct SittersView: View {
                         if viewModel.babysitters.isEmpty {
                             Text("No babysitters added yet")
                                 .font(.subheadline)
-                                .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                                .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.6))
                                 .padding(.horizontal)
                         } else {
                             ForEach(viewModel.babysitters) { babysitter in
@@ -112,7 +112,7 @@ struct SittersView: View {
                             Text("Find Babysitters")
                                 .font(.title2)
                                 .fontWeight(.semibold)
-                                .foregroundColor(themeManager.currentTheme.textColor)
+                                .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                             
                             Spacer()
                             
@@ -153,7 +153,7 @@ struct SittersView: View {
                     Spacer(minLength: 80)
                 }
             }
-            .background(themeManager.currentTheme.mainBackgroundColor)
+            .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
             .onAppear {
                 loadFamilyData()
             }
@@ -361,11 +361,11 @@ struct BabysitterCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(babysitter.fullName)
                         .font(.headline)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                     
                     Text(babysitter.formattedRate)
                         .font(.subheadline)
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
                 }
                 
                 Spacer()
@@ -414,15 +414,15 @@ struct BabysitterCard: View {
             if let notes = babysitter.notes {
                 Text(notes)
                     .font(.caption)
-                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.6))
                     .padding(.top, 4)
             }
         }
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(themeManager.currentTheme.otherMonthBackgroundColor)
-                .shadow(color: themeManager.currentTheme.textColor.opacity(0.1), radius: 2, x: 0, y: 1)
+                .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
+                .shadow(color: themeManager.currentTheme.textColorSwiftUI.opacity(0.1), radius: 2, x: 0, y: 1)
         )
     }
 }
@@ -450,24 +450,24 @@ struct FindBabysitterCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.headline)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                     
                     Text(subtitle)
                         .font(.subheadline)
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
                 }
                 
                 Spacer()
                 
                 Image(systemName: "arrow.up.right")
                     .font(.caption)
-                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.5))
+                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.5))
             }
             .padding()
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(themeManager.currentTheme.otherMonthBackgroundColor)
-                    .shadow(color: themeManager.currentTheme.textColor.opacity(0.1), radius: 2, x: 0, y: 1)
+                    .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
+                    .shadow(color: themeManager.currentTheme.textColorSwiftUI.opacity(0.1), radius: 2, x: 0, y: 1)
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -611,126 +611,125 @@ struct SittersGroupTextSheetView: View {
 
 struct AddBabysitterView: View {
     @Environment(\.dismiss) private var dismiss
+    var onSave: (BabysitterCreate) -> Void
+    
     @State private var firstName = ""
     @State private var lastName = ""
     @State private var phoneNumber = ""
-    @State private var rate = ""
+    @State private var rate: Double = 20.0
     @State private var notes = ""
-    
-    let onSave: (BabysitterCreate) -> Void
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Babysitter Information")) {
+                Section(header: Text("Personal Details")) {
                     TextField("First Name", text: $firstName)
                     TextField("Last Name", text: $lastName)
                     TextField("Phone Number", text: $phoneNumber)
                         .keyboardType(.phonePad)
-                    TextField("Hourly Rate (optional)", text: $rate)
-                        .keyboardType(.decimalPad)
-                    TextField("Notes (optional)", text: $notes, axis: .vertical)
-                        .lineLimit(3)
                 }
+                .listRowBackground(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
+                
+                Section(header: Text("Rate and Notes")) {
+                    VStack(alignment: .leading) {
+                        Text("Rate per hour: \(rate, specifier: "%.2f")")
+                        Slider(value: $rate, in: 10...50, step: 1)
+                    }
+                    
+                    TextEditor(text: $notes)
+                        .frame(height: 100)
+                }
+                .listRowBackground(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
             }
             .navigationTitle("Add Babysitter")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
+            .navigationBarItems(
+                leading: Button("Cancel") { dismiss() },
+                trailing: Button("Save") {
+                    let newBabysitter = BabysitterCreate(
+                        first_name: firstName,
+                        last_name: lastName,
+                        phone_number: phoneNumber,
+                        rate: rate,
+                        notes: notes
+                    )
+                    onSave(newBabysitter)
+                    dismiss()
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        let rateValue = Double(rate.isEmpty ? "0" : rate)
-                        let babysitter = BabysitterCreate(
-                            first_name: firstName,
-                            last_name: lastName,
-                            phone_number: phoneNumber,
-                            rate: rateValue,
-                            notes: notes.isEmpty ? nil : notes
-                        )
-                        onSave(babysitter)
-                        dismiss()
-                    }
-                    .disabled(firstName.isEmpty || lastName.isEmpty || phoneNumber.isEmpty)
-                }
-            }
+            )
+            .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
         }
+        .accentColor(themeManager.currentTheme.accentColorSwiftUI)
     }
 }
 
 // MARK: - Edit Babysitter View
 
 struct EditBabysitterView: View {
-    @EnvironmentObject var viewModel: CalendarViewModel
-    @EnvironmentObject var themeManager: ThemeManager
-    @Environment(\.dismiss) private var dismiss
-    
     let babysitter: Babysitter
-    let onSave: (BabysitterCreate) -> Void
+    var onSave: (Babysitter) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var themeManager: ThemeManager
     
-    @State private var firstName = ""
-    @State private var lastName = ""
-    @State private var phoneNumber = ""
-    @State private var rate = ""
-    @State private var notes = ""
+    @State private var firstName: String
+    @State private var lastName: String
+    @State private var phoneNumber: String
+    @State private var rate: Double
+    @State private var notes: String
+    
+    init(babysitter: Babysitter, onSave: @escaping (Babysitter) -> Void) {
+        self.babysitter = babysitter
+        self.onSave = onSave
+        _firstName = State(initialValue: babysitter.first_name)
+        _lastName = State(initialValue: babysitter.last_name)
+        _phoneNumber = State(initialValue: babysitter.phone_number)
+        _rate = State(initialValue: babysitter.rate ?? 20.0)
+        _notes = State(initialValue: babysitter.notes ?? "")
+    }
     
     var body: some View {
         NavigationView {
             Form {
-                Section("Babysitter Information") {
+                Section(header: Text("Personal Details")) {
                     TextField("First Name", text: $firstName)
                     TextField("Last Name", text: $lastName)
                     TextField("Phone Number", text: $phoneNumber)
                         .keyboardType(.phonePad)
-                    TextField("Hourly Rate", text: $rate)
-                        .keyboardType(.decimalPad)
                 }
+                .listRowBackground(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
                 
-                Section("Notes") {
-                    TextField("Additional notes (optional)", text: $notes, axis: .vertical)
-                        .lineLimit(3...6)
+                Section(header: Text("Rate and Notes")) {
+                    VStack(alignment: .leading) {
+                        Text("Rate per hour: \(rate, specifier: "%.2f")")
+                        Slider(value: $rate, in: 10...50, step: 1)
+                    }
+                    
+                    TextEditor(text: $notes)
+                        .frame(height: 100)
                 }
+                .listRowBackground(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
             }
             .navigationTitle("Edit Babysitter")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
+            .navigationBarItems(
+                leading: Button("Cancel") { dismiss() },
+                trailing: Button("Save") {
+                    let updatedBabysitter = Babysitter(
+                        id: babysitter.id,
+                        first_name: firstName,
+                        last_name: lastName,
+                        phone_number: phoneNumber,
+                        rate: rate,
+                        notes: notes,
+                        created_by_user_id: babysitter.created_by_user_id,
+                        created_at: babysitter.created_at
+                    )
+                    onSave(updatedBabysitter)
+                    dismiss()
                 }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        saveBabysitter()
-                    }
-                    .disabled(firstName.isEmpty || lastName.isEmpty || phoneNumber.isEmpty)
-                }
-            }
+            )
+            .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
         }
-        .onAppear {
-            firstName = babysitter.first_name
-            lastName = babysitter.last_name
-            phoneNumber = babysitter.phone_number
-            rate = babysitter.rate != nil ? String(format: "%.2f", babysitter.rate!) : ""
-            notes = babysitter.notes ?? ""
-        }
-    }
-    
-    private func saveBabysitter() {
-        let updatedBabysitter = BabysitterCreate(
-            first_name: firstName,
-            last_name: lastName,
-            phone_number: phoneNumber,
-            rate: Double(rate) ?? 0.0,
-            notes: notes.isEmpty ? nil : notes
-        )
-        
-        onSave(updatedBabysitter)
-        dismiss()
+        .accentColor(themeManager.currentTheme.accentColorSwiftUI)
     }
 }
 
