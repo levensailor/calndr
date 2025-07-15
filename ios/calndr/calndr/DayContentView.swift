@@ -20,9 +20,9 @@ struct DayContentView: View {
                         Text("\(Int(weather.temperature.rounded()))°")
                             .font(.caption2)
                             .fontWeight(.bold)
-                            .foregroundColor(themeManager.currentTheme.dayNumberColor)
+                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                             .padding(1)
-                            .background(themeManager.currentTheme.bubbleBackgroundColor)
+                            .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
                             .cornerRadius(2)
                         Spacer()
                     }
@@ -47,9 +47,9 @@ struct DayContentView: View {
                 Text(event.content)
                     .font(.system(size: 7))
                     .lineLimit(4)
-                    .foregroundColor(themeManager.currentTheme.textColor)
+                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                     .padding(.horizontal, 1)
-                    .background(themeManager.currentTheme.iconActiveColor.opacity(0.1))
+                    .background(themeManager.currentTheme.iconActiveColorSwiftUI.opacity(0.1))
                     .cornerRadius(3)
             }
             
@@ -62,7 +62,7 @@ struct DayContentView: View {
                     .bold()
                     .foregroundColor(.black) // Always black for good contrast on light backgrounds
                     .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24) // Fixed height
-                .background(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColor : themeManager.currentTheme.parentTwoColor)            } else if !custodyOwner.isEmpty && viewModel.showHandoffTimeline {
+                    .background(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColorSwiftUI : themeManager.currentTheme.parentTwoColorSwiftUI)            } else if !custodyOwner.isEmpty && viewModel.showHandoffTimeline {
                 // Invisible placeholder to maintain layout space when handoff timeline is active
                 Text("")
                     .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24) // Same dimensions as custody badge
