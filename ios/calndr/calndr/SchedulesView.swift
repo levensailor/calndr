@@ -16,11 +16,11 @@ struct SchedulesView: View {
                         Text("Default Schedules")
                             .font(.largeTitle)
                             .fontWeight(.bold)
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
                         
                         Text("Create and manage custody schedule templates")
                             .font(.subheadline)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                     }
                     .padding(.horizontal)
                     
@@ -28,7 +28,7 @@ struct SchedulesView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Quick Start")
                             .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
                             .padding(.horizontal)
                         
                         // Popular Presets
@@ -50,7 +50,7 @@ struct SchedulesView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("All Schedule Patterns")
                             .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
                             .padding(.horizontal)
                         
                         LazyVGrid(columns: [
@@ -71,7 +71,7 @@ struct SchedulesView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Custom Schedule")
                             .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
                             .padding(.horizontal)
                         
                         Button(action: {
@@ -111,7 +111,7 @@ struct SchedulesView: View {
                         VStack(alignment: .leading, spacing: 16) {
                             Text("Saved Templates")
                                 .font(.headline)
-                                .foregroundColor(themeManager.currentTheme.textColor)
+                                .foregroundColor(themeManager.currentTheme.textColor.color)
                                 .padding(.horizontal)
                             
                             ForEach(viewModel.scheduleTemplates) { template in
@@ -124,7 +124,7 @@ struct SchedulesView: View {
                     Spacer(minLength: 80)
                 }
             }
-            .background(themeManager.currentTheme.mainBackgroundColor)
+            .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
             .navigationBarHidden(true)
         }
         .sheet(isPresented: $showingScheduleBuilder) {
@@ -168,12 +168,12 @@ struct SchedulePresetCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(preset.name)
                         .font(.headline)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
                         .multilineTextAlignment(.leading)
                     
                     Text(preset.description)
                         .font(.caption)
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                         .multilineTextAlignment(.leading)
                         .lineLimit(2)
                 }
@@ -184,8 +184,8 @@ struct SchedulePresetCard: View {
             .frame(height: 100)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(themeManager.currentTheme.otherMonthBackgroundColor)
-                    .shadow(color: themeManager.currentTheme.textColor.opacity(0.1), radius: 2, x: 0, y: 1)
+                    .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
+                    .shadow(color: themeManager.currentTheme.textColor.color.opacity(0.1), radius: 2, x: 0, y: 1)
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -208,12 +208,12 @@ struct ScheduleTemplateCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(template.name)
                         .font(.headline)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
                     
                     if let description = template.description {
                         Text(description)
                             .font(.subheadline)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                     }
                 }
                 
@@ -247,8 +247,8 @@ struct ScheduleTemplateCard: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(themeManager.currentTheme.otherMonthBackgroundColor)
-                .shadow(color: themeManager.currentTheme.textColor.opacity(0.1), radius: 2, x: 0, y: 1)
+                .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
+                .shadow(color: themeManager.currentTheme.textColor.color.opacity(0.1), radius: 2, x: 0, y: 1)
         )
     }
     
@@ -310,11 +310,11 @@ struct ScheduleBuilderView: View {
                         Text(selectedPreset?.name ?? "Custom Schedule")
                             .font(.largeTitle)
                             .fontWeight(.bold)
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
                         
                         Text(selectedPreset?.description ?? "Create a custom custody schedule")
                             .font(.subheadline)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                     }
                     .padding(.horizontal)
                     
@@ -322,7 +322,7 @@ struct ScheduleBuilderView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Schedule Information")
                             .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
                         
                         VStack(spacing: 12) {
                             FloatingLabelTextField(
@@ -346,7 +346,7 @@ struct ScheduleBuilderView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Pattern Type")
                             .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
                         
                         ForEach(SchedulePatternType.allCases, id: \.self) { type in
                             PatternTypeCard(
@@ -382,14 +382,14 @@ struct ScheduleBuilderView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Apply Schedule")
                             .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
                         
                         VStack(spacing: 12) {
                             Button(action: { showingDatePicker = true }) {
                                 HStack {
                                     Text("Date Range")
                                         .font(.subheadline)
-                                        .foregroundColor(themeManager.currentTheme.textColor)
+                                        .foregroundColor(themeManager.currentTheme.textColor.color)
                                     
                                     Spacer()
                                     
@@ -400,12 +400,12 @@ struct ScheduleBuilderView: View {
                                 .padding()
                                 .background(
                                     RoundedRectangle(cornerRadius: 8)
-                                        .fill(themeManager.currentTheme.otherMonthBackgroundColor)
+                                        .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
                                 )
                             }
                             
                             Toggle("Overwrite Existing Schedule", isOn: $overwriteExisting)
-                                .foregroundColor(themeManager.currentTheme.textColor)
+                                .foregroundColor(themeManager.currentTheme.textColor.color)
                         }
                     }
                     .padding(.horizontal)
@@ -413,14 +413,14 @@ struct ScheduleBuilderView: View {
                     Spacer(minLength: 80)
                 }
             }
-            .background(themeManager.currentTheme.mainBackgroundColor)
+            .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(themeManager.currentTheme.textColor)
+                    .foregroundColor(themeManager.currentTheme.textColor.color)
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -558,11 +558,11 @@ struct PatternTypeCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(type.displayName)
                         .font(.headline)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
                     
                     Text(type.description)
                         .font(.subheadline)
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                 }
                 
                 Spacer()
@@ -574,7 +574,7 @@ struct PatternTypeCard: View {
             .padding()
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(themeManager.currentTheme.otherMonthBackgroundColor)
+                    .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 2)
@@ -605,7 +605,7 @@ struct WeeklyPatternBuilder: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Weekly Schedule")
                 .font(.headline)
-                .foregroundColor(themeManager.currentTheme.textColor)
+                .foregroundColor(themeManager.currentTheme.textColor.color)
             
             VStack(spacing: 8) {
                 ForEach(daysOfWeek, id: \.0) { day, keyPath in
@@ -645,7 +645,7 @@ struct DayAssignmentRow: View {
         HStack {
             Text(dayName)
                 .font(.subheadline)
-                .foregroundColor(themeManager.currentTheme.textColor)
+                .foregroundColor(themeManager.currentTheme.textColor.color)
                 .frame(width: 80, alignment: .leading)
             
             Spacer()
@@ -655,7 +655,7 @@ struct DayAssignmentRow: View {
                 Button(action: { selectedParent = nil }) {
                     Text("None")
                         .font(.caption)
-                        .foregroundColor(selectedParent == nil ? .white : themeManager.currentTheme.textColor)
+                        .foregroundColor(selectedParent == nil ? .white : themeManager.currentTheme.textColor.color)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(
@@ -672,7 +672,7 @@ struct DayAssignmentRow: View {
                 Button(action: { selectedParent = "parent1" }) {
                     Text(custodianOneName)
                         .font(.caption)
-                        .foregroundColor(selectedParent == "parent1" ? .white : themeManager.currentTheme.textColor)
+                        .foregroundColor(selectedParent == "parent1" ? .white : themeManager.currentTheme.textColor.color)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(
@@ -689,7 +689,7 @@ struct DayAssignmentRow: View {
                 Button(action: { selectedParent = "parent2" }) {
                     Text(custodianTwoName)
                         .font(.caption)
-                        .foregroundColor(selectedParent == "parent2" ? .white : themeManager.currentTheme.textColor)
+                        .foregroundColor(selectedParent == "parent2" ? .white : themeManager.currentTheme.textColor.color)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(
@@ -707,7 +707,7 @@ struct DayAssignmentRow: View {
         .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(themeManager.currentTheme.otherMonthBackgroundColor)
+                .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
         )
     }
 }
@@ -724,7 +724,7 @@ struct SchedulePreviewSection: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Schedule Preview")
                 .font(.headline)
-                .foregroundColor(themeManager.currentTheme.textColor)
+                .foregroundColor(themeManager.currentTheme.textColor.color)
             
             if patternType == .weekly {
                 WeeklySchedulePreview(
@@ -735,7 +735,7 @@ struct SchedulePreviewSection: View {
             } else {
                 Text("Preview for \(patternType.displayName) coming soon")
                     .font(.subheadline)
-                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                    .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
                     .italic()
             }
         }
@@ -757,7 +757,7 @@ struct WeeklySchedulePreview: View {
                     VStack(spacing: 4) {
                         Text(day)
                             .font(.caption)
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
                         
                         Rectangle()
                             .fill(colorForDay(index + 1))
@@ -776,7 +776,7 @@ struct WeeklySchedulePreview: View {
                         .cornerRadius(2)
                     Text(custodianOneName)
                         .font(.caption)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
                 }
                 
                 Spacer()
@@ -788,7 +788,7 @@ struct WeeklySchedulePreview: View {
                         .cornerRadius(2)
                     Text(custodianTwoName)
                         .font(.caption)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
                 }
                 
                 Spacer()
@@ -800,14 +800,14 @@ struct WeeklySchedulePreview: View {
                         .cornerRadius(2)
                     Text("Unassigned")
                         .font(.caption)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
                 }
             }
         }
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(themeManager.currentTheme.otherMonthBackgroundColor)
+                .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
         )
     }
     
@@ -841,7 +841,7 @@ struct DateRangePickerView: View {
                     .datePickerStyle(GraphicalDatePickerStyle())
             }
             .padding()
-            .background(themeManager.currentTheme.mainBackgroundColor)
+            .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
             .navigationTitle("Select Date Range")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
