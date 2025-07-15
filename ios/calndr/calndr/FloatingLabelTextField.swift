@@ -12,10 +12,10 @@ struct FloatingLabelTextField: View {
             ZStack(alignment: .leading) {
                 // Background and border
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(themeManager.currentTheme.otherMonthBackgroundColor)
+                    .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
-                            .stroke(isFocused ? Color.blue : themeManager.currentTheme.textColor.opacity(0.3), lineWidth: isFocused ? 2 : 1)
+                            .stroke(isFocused ? Color.blue : themeManager.currentTheme.textColorSwiftUI.opacity(0.3), lineWidth: isFocused ? 2 : 1)
                     )
                 
                 VStack(alignment: .leading, spacing: 0) {
@@ -39,7 +39,7 @@ struct FloatingLabelTextField: View {
                                 .focused($isFocused)
                         }
                     }
-                    .foregroundColor(themeManager.currentTheme.textColor)
+                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                     .padding(.horizontal, 16)
                     .padding(.top, 2)
                     .padding(.bottom, 16)
