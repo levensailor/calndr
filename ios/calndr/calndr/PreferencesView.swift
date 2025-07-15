@@ -36,17 +36,17 @@ struct PreferenceRow: View {
         HStack(spacing: 15) {
             Image(systemName: item.icon)
                 .font(.title2)
-                .foregroundColor(item.isToggle && item.toggleBinding?.wrappedValue == true ? item.activeColor : themeManager.currentTheme.iconColor)
+                .foregroundColor(item.isToggle && item.toggleBinding?.wrappedValue == true ? item.activeColor : themeManager.currentTheme.iconColorSwiftUI)
                 .frame(width: 30, height: 30)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.title)
                     .font(.headline)
-                    .foregroundColor(themeManager.currentTheme.textColor)
+                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                 
                 Text(item.description)
                     .font(.caption)
-                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
             }
             
             Spacer()
@@ -58,7 +58,7 @@ struct PreferenceRow: View {
                 Button(action: action) {
                     Image(systemName: "chevron.right")
                         .font(.body)
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.6))
                 }
             }
         }
@@ -76,39 +76,38 @@ struct ThemeSpotlightView: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(theme.name)
-                        .font(theme.font)
-                        .foregroundColor(theme.textColor)
                         .font(.largeTitle)
+                        .foregroundColor(theme.textColor.color)
                     
                     Button("Set Theme", action: action)
                         .buttonStyle(.borderedProminent)
-                        .tint(theme.highlightColor)
+                        .tint(theme.accentColor.color)
                 }
                 
                 Spacer()
                 
                 HStack(spacing: 0) {
-                    theme.mainBackgroundColor
+                    theme.mainBackgroundColor.color
                         .frame(width: 20, height: 60)
-                    theme.highlightColor
+                    theme.accentColor.color
                         .frame(width: 15, height: 60)
-                    theme.secondaryBackgroundColor
+                    theme.secondaryBackgroundColor.color
                         .frame(width: 15, height: 60)
-                    theme.parentOneColor
+                    theme.parentOneColor.color
                         .frame(width: 10, height: 60)
-                    theme.parentTwoColor
+                    theme.parentTwoColor.color
                         .frame(width: 10, height: 60)
-                    theme.otherMonthBackgroundColor
+                    theme.secondaryBackgroundColor.color
                         .frame(width: 10, height: 60)
                 }
                 .cornerRadius(8)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(theme.textColor.opacity(0.5), lineWidth: 1)
+                        .stroke(theme.textColor.color.opacity(0.5), lineWidth: 1)
                 )
             }
             .padding()
-            .background(theme.secondaryBackgroundColor)
+            .background(theme.secondaryBackgroundColor.color)
             .cornerRadius(12)
         }
     }
@@ -186,7 +185,7 @@ struct PreferencesView: View {
             }
         }
         .navigationTitle("Preferences")
-        .background(themeManager.currentTheme.mainBackgroundColor)
+        .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
         .onChange(of: allowPastCustodyEditing) { oldValue, newValue in
             UserDefaults.standard.set(newValue, forKey: "allowPastCustodyEditing")
         }
