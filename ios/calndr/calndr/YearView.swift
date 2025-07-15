@@ -20,9 +20,9 @@ struct YearView: View {
                             VStack(spacing: 2) {
                                 Text(viewModel.custodianOneName)
                                     .font(.caption)
-                                    .foregroundColor(themeManager.currentTheme.textColor)
+                                    .foregroundColor(themeManager.currentTheme.textColor.color)
                                 Rectangle()
-                                    .fill(themeManager.currentTheme.parentOneColor)
+                                    .fill(themeManager.currentTheme.parentOneColor.color)
                                     .frame(width: 50, height: 12)
                                     .cornerRadius(2)
                             }
@@ -30,10 +30,10 @@ struct YearView: View {
                                 Text("\(totals.custodianOneDays)")
                                     .font(.title2)
                                     .bold()
-                                    .foregroundColor(themeManager.currentTheme.textColor)
+                                    .foregroundColor(themeManager.currentTheme.textColor.color)
                                 Text("days")
                                     .font(.caption2)
-                                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                                    .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                             }
                         }
                         
@@ -47,9 +47,9 @@ struct YearView: View {
                             VStack(spacing: 2) {
                                 Text(viewModel.custodianTwoName)
                                     .font(.caption)
-                                    .foregroundColor(themeManager.currentTheme.textColor)
+                                    .foregroundColor(themeManager.currentTheme.textColor.color)
                                 Rectangle()
-                                    .fill(themeManager.currentTheme.parentTwoColor)
+                                    .fill(themeManager.currentTheme.parentTwoColor.color)
                                     .frame(width: 50, height: 12)
                                     .cornerRadius(2)
                             }
@@ -57,10 +57,10 @@ struct YearView: View {
                                 Text("\(totals.custodianTwoDays)")
                                     .font(.title2)
                                     .bold()
-                                    .foregroundColor(themeManager.currentTheme.textColor)
+                                    .foregroundColor(themeManager.currentTheme.textColor.color)
                                 Text("days")
                                     .font(.caption2)
-                                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                                    .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                             }
                         }
                         
@@ -87,7 +87,7 @@ struct YearView: View {
                 
                 Spacer(minLength: 50)
             }
-        .background(themeManager.currentTheme.mainBackgroundColor)
+        .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
         .onAppear {
             viewModel.fetchCustodyRecordsForYear()
         }
@@ -112,7 +112,7 @@ struct MonthMiniView: View {
             Text(monthName)
                 .font(.caption)
                 .bold()
-                .foregroundColor(themeManager.currentTheme.textColor)
+                .foregroundColor(themeManager.currentTheme.textColor.color)
             
             // Mini calendar grid
 //            let daysInMonth = getDaysInMonth()
@@ -144,11 +144,11 @@ struct MonthMiniView: View {
             }
         }
         .padding(8)
-        .background(themeManager.currentTheme.mainBackgroundColor.opacity(0.5))
+        .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
         .cornerRadius(8)
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(themeManager.currentTheme.gridLinesColor, lineWidth: 1)
+                .stroke(themeManager.currentTheme.accentColorSwiftUI, lineWidth: 1)
         )
     }
     
@@ -174,9 +174,9 @@ struct MonthMiniView: View {
     
     private func getCustodyColor(custodyID: String) -> Color {
         if custodyID == viewModel.custodianOneId {
-            return themeManager.currentTheme.parentOneColor
+            return themeManager.currentTheme.parentOneColor.color
         } else if custodyID == viewModel.custodianTwoId {
-            return themeManager.currentTheme.parentTwoColor
+            return themeManager.currentTheme.parentTwoColor.color
         } else {
             return Color.gray.opacity(0.3) // Gray for no custody info
         }
