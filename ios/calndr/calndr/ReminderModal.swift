@@ -35,11 +35,11 @@ struct ReminderModal: View {
                     Text("Reminder")
                         .font(.title2)
                         .fontWeight(.bold)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
                     
                     Text(dateFormatter.string(from: date))
                         .font(.subheadline)
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                 }
                 .padding(.top)
                 
@@ -47,20 +47,20 @@ struct ReminderModal: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Reminder Text")
                         .font(.headline)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
                     
                     TextEditor(text: $reminderText)
                         .frame(minHeight: 150)
                         .padding(12)
                         .background(
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(themeManager.currentTheme.otherMonthBackgroundColor)
+                                .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(themeManager.currentTheme.textColor.opacity(0.3), lineWidth: 1)
+                                        .stroke(themeManager.currentTheme.textColor.color.opacity(0.3), lineWidth: 1)
                                 )
                         )
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
                         .font(.body)
                         .focused($isTextEditorFocused)
                 }
@@ -70,17 +70,17 @@ struct ReminderModal: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Push Notification")
                         .font(.headline)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
                     
                     Toggle("Send notification", isOn: $notificationEnabled)
                         .toggleStyle(SwitchToggleStyle(tint: Color.blue))
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
                     
                     if notificationEnabled {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Notification Time")
                                 .font(.subheadline)
-                                .foregroundColor(themeManager.currentTheme.textColor.opacity(0.8))
+                                .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.8))
                             
                             DatePicker("", selection: $notificationTime, displayedComponents: .hourAndMinute)
                                 .datePickerStyle(WheelDatePickerStyle())
@@ -137,14 +137,14 @@ struct ReminderModal: View {
                 .padding(.horizontal)
                 .padding(.bottom)
             }
-            .background(themeManager.currentTheme.mainBackgroundColor)
+            .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(themeManager.currentTheme.textColor)
+                    .foregroundColor(themeManager.currentTheme.textColor.color)
                     .disabled(isLoading)
                 }
                 
@@ -154,7 +154,7 @@ struct ReminderModal: View {
                         Button("Done") {
                             isTextEditorFocused = false
                         }
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
                         .disabled(isLoading)
                     }
                 }
