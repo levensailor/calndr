@@ -172,7 +172,7 @@ struct SittersView: View {
         .sheet(isPresented: $showingEditBabysitter) {
             if let babysitter = selectedBabysitter {
                 EditBabysitterView(babysitter: babysitter) { updatedBabysitter in
-                    viewModel.updateBabysitter(updatedBabysitter) { success in
+                    viewModel.updateBabysitter(id: babysitter.id, babysitter: updatedBabysitter) { success in
                         if success {
                             print("✅ Babysitter updated successfully")
                         } else {
@@ -667,7 +667,7 @@ struct AddBabysitterView: View {
 
 struct EditBabysitterView: View {
     let babysitter: Babysitter
-    var onSave: (Babysitter) -> Void
+    var onSave: (BabysitterCreate) -> Void
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var themeManager: ThemeManager
     
@@ -677,7 +677,7 @@ struct EditBabysitterView: View {
     @State private var rate: Double
     @State private var notes: String
     
-    init(babysitter: Babysitter, onSave: @escaping (Babysitter) -> Void) {
+    init(babysitter: Babysitter, onSave: @escaping (BabysitterCreate) -> Void) {
         self.babysitter = babysitter
         self.onSave = onSave
         _firstName = State(initialValue: babysitter.first_name)
@@ -713,15 +713,12 @@ struct EditBabysitterView: View {
             .navigationBarItems(
                 leading: Button("Cancel") { dismiss() },
                 trailing: Button("Save") {
-                    let updatedBabysitter = Babysitter(
-                        id: babysitter.id,
+                    let updatedBabysitter = BabysitterCreate(
                         first_name: firstName,
                         last_name: lastName,
                         phone_number: phoneNumber,
                         rate: rate,
-                        notes: notes,
-                        created_by_user_id: babysitter.created_by_user_id,
-                        created_at: babysitter.created_at
+                        notes: notes
                     )
                     onSave(updatedBabysitter)
                     dismiss()

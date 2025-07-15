@@ -1338,23 +1338,12 @@ class CalendarViewModel: ObservableObject {
         }
     }
     
-    func updateBabysitter(_ babysitter: BabysitterCreate, completion: @escaping (Bool) -> Void) {
-        // Find the babysitter to update (we need the ID)
-        guard let existingBabysitter = babysitters.first(where: { 
-            $0.first_name == babysitter.first_name && 
-            $0.last_name == babysitter.last_name && 
-            $0.phone_number == babysitter.phone_number 
-        }) else {
-            print("❌ Could not find babysitter to update")
-            completion(false)
-            return
-        }
-        
-        APIService.shared.updateBabysitter(id: existingBabysitter.id, babysitter: babysitter) { [weak self] result in
+    func updateBabysitter(id: Int, babysitter: BabysitterCreate, completion: @escaping (Bool) -> Void) {
+        APIService.shared.updateBabysitter(id: id, babysitter: babysitter) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let updatedBabysitter):
-                    if let index = self?.babysitters.firstIndex(where: { $0.id == existingBabysitter.id }) {
+                    if let index = self?.babysitters.firstIndex(where: { $0.id == id }) {
                         self?.babysitters[index] = updatedBabysitter
                     }
                     print("✅ Successfully updated babysitter: \(updatedBabysitter.fullName)")
