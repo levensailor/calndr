@@ -591,16 +591,6 @@ struct WeeklyPatternBuilder: View {
     let custodianTwoName: String
     @EnvironmentObject var themeManager: ThemeManager
     
-    private let daysOfWeek = [
-        ("Sunday", \WeeklySchedulePattern.sunday),
-        ("Monday", \WeeklySchedulePattern.monday),
-        ("Tuesday", \WeeklySchedulePattern.tuesday),
-        ("Wednesday", \WeeklySchedulePattern.wednesday),
-        ("Thursday", \WeeklySchedulePattern.thursday),
-        ("Friday", \WeeklySchedulePattern.friday),
-        ("Saturday", \WeeklySchedulePattern.saturday)
-    ]
-    
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Weekly Schedule")
@@ -608,19 +598,48 @@ struct WeeklyPatternBuilder: View {
                 .foregroundColor(themeManager.currentTheme.textColor.color)
             
             VStack(spacing: 8) {
-                ForEach(daysOfWeek, id: \.0) { day, keyPath in
-                    DayAssignmentRow(
-                        dayName: day,
-                        selectedParent: Binding(
-                            get: { pattern[keyPath: keyPath] },
-                            set: { newValue in
-                                pattern[keyPath: keyPath] = newValue
-                            }
-                        ),
-                        custodianOneName: custodianOneName,
-                        custodianTwoName: custodianTwoName
-                    )
-                }
+                DayAssignmentRow(
+                    dayName: "Sunday",
+                    selectedParent: $pattern.sunday,
+                    custodianOneName: custodianOneName,
+                    custodianTwoName: custodianTwoName
+                )
+                DayAssignmentRow(
+                    dayName: "Monday",
+                    selectedParent: $pattern.monday,
+                    custodianOneName: custodianOneName,
+                    custodianTwoName: custodianTwoName
+                )
+                DayAssignmentRow(
+                    dayName: "Tuesday",
+                    selectedParent: $pattern.tuesday,
+                    custodianOneName: custodianOneName,
+                    custodianTwoName: custodianTwoName
+                )
+                DayAssignmentRow(
+                    dayName: "Wednesday",
+                    selectedParent: $pattern.wednesday,
+                    custodianOneName: custodianOneName,
+                    custodianTwoName: custodianTwoName
+                )
+                DayAssignmentRow(
+                    dayName: "Thursday",
+                    selectedParent: $pattern.thursday,
+                    custodianOneName: custodianOneName,
+                    custodianTwoName: custodianTwoName
+                )
+                DayAssignmentRow(
+                    dayName: "Friday",
+                    selectedParent: $pattern.friday,
+                    custodianOneName: custodianOneName,
+                    custodianTwoName: custodianTwoName
+                )
+                DayAssignmentRow(
+                    dayName: "Saturday",
+                    selectedParent: $pattern.saturday,
+                    custodianOneName: custodianOneName,
+                    custodianTwoName: custodianTwoName
+                )
             }
         }
         .padding()
@@ -699,6 +718,8 @@ struct SchedulePreviewSection: View {
     let custodianTwoName: String
     @EnvironmentObject var themeManager: ThemeManager
     
+    private let daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Schedule Preview")
@@ -708,7 +729,7 @@ struct SchedulePreviewSection: View {
             if patternType == .weekly {
                 VStack(spacing: 8) {
                     HStack {
-                        ForEach(Array(daysOfWeek.enumerated()), id: \.offset) { index, day in
+                        ForEach(daysOfWeek, id: \.self) { day in
                             Text(day)
                                 .font(.caption)
                                 .foregroundColor(themeManager.currentTheme.textColor.color)
@@ -717,7 +738,7 @@ struct SchedulePreviewSection: View {
                     }
                     
                     HStack {
-                        ForEach(Array(daysOfWeek.enumerated()), id: \.offset) { index, day in
+                        ForEach(daysOfWeek, id: \.self) { day in
                             Rectangle()
                                 .fill(getParentColor(for: day))
                                 .frame(height: 20)
@@ -774,7 +795,7 @@ struct SchedulePreviewSection: View {
                 .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
         )
     }
-    
+
     private func getParentColor(for day: String) -> Color {
         let parent: String?
         switch day {
@@ -793,7 +814,7 @@ struct SchedulePreviewSection: View {
         } else if parent == "parent2" {
             return themeManager.currentTheme.parentTwoColor.color
         } else {
-            return Color.clear
+            return Color.gray.opacity(0.3)
         }
     }
 }
