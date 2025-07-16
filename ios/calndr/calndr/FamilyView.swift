@@ -70,11 +70,11 @@ struct FamilyMemberCard: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .font(.headline)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
                     
                     Text(subtitle)
                         .font(.subheadline)
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                 }
                 
                 Spacer()
@@ -160,8 +160,8 @@ struct FamilyMemberCard: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(themeManager.currentTheme.otherMonthBackgroundColor)
-                .shadow(color: themeManager.currentTheme.textColor.opacity(0.1), radius: 2, x: 0, y: 1)
+                .fill(themeManager.currentTheme.secondaryBackgroundColor.color)
+                .shadow(color: themeManager.currentTheme.textColor.color.opacity(0.1), radius: 2, x: 0, y: 1)
         )
     }
     
@@ -213,11 +213,11 @@ struct FamilyView: View {
                         Text("Family")
                             .font(.largeTitle)
                             .fontWeight(.bold)
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
                         
                         Text("Manage your family members and relationships")
                             .font(.subheadline)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                     }
                     .padding(.horizontal)
                     
@@ -227,7 +227,7 @@ struct FamilyView: View {
                             Text("Coparents")
                                 .font(.title2)
                                 .fontWeight(.semibold)
-                                .foregroundColor(themeManager.currentTheme.textColor)
+                                .foregroundColor(themeManager.currentTheme.textColor.color)
                             
                             Spacer()
                             
@@ -247,7 +247,7 @@ struct FamilyView: View {
                         if filteredCoParents.isEmpty {
                             Text("No coparents found")
                                 .font(.subheadline)
-                                .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                                .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
                                 .padding(.horizontal)
                         } else {
                             ForEach(filteredCoParents) { member in
@@ -265,7 +265,7 @@ struct FamilyView: View {
                             Text("Children")
                                 .font(.title2)
                                 .fontWeight(.semibold)
-                                .foregroundColor(themeManager.currentTheme.textColor)
+                                .foregroundColor(themeManager.currentTheme.textColor.color)
                             
                             Spacer()
                             
@@ -280,7 +280,7 @@ struct FamilyView: View {
                         if viewModel.children.isEmpty {
                             Text("No children added yet")
                                 .font(.subheadline)
-                                .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                                .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
                                 .padding(.horizontal)
                         } else {
                             ForEach(viewModel.children) { child in
@@ -306,7 +306,7 @@ struct FamilyView: View {
                             Text("Emergency Contacts")
                                 .font(.title2)
                                 .fontWeight(.semibold)
-                                .foregroundColor(themeManager.currentTheme.textColor)
+                                .foregroundColor(themeManager.currentTheme.textColor.color)
                             
                             Spacer()
                             
@@ -324,14 +324,14 @@ struct FamilyView: View {
                                     .scaleEffect(0.8)
                                 Text("Loading emergency contacts...")
                                     .font(.subheadline)
-                                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                                    .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
                                 Spacer()
                             }
                             .padding(.horizontal)
                         } else if filteredEmergencyContacts.isEmpty {
                             Text("No emergency contacts added yet")
                                 .font(.subheadline)
-                                .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                                .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
                                 .padding(.horizontal)
                         } else {
                             ForEach(filteredEmergencyContacts) { contact in
@@ -357,7 +357,7 @@ struct FamilyView: View {
                     Spacer(minLength: 80)
                 }
             }
-            .background(themeManager.currentTheme.mainBackgroundColor)
+            .background(themeManager.currentTheme.mainBackgroundColor.color)
         }
         .sheet(isPresented: $showingAddChild) {
             AddChildView()
@@ -714,10 +714,10 @@ struct AddChildView: View {
                     )
                     
                     DatePicker("Date of Birth", selection: $dateOfBirth, displayedComponents: .date)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
                 }
             }
-            .background(themeManager.currentTheme.mainBackgroundColor)
+            .background(themeManager.currentTheme.mainBackgroundColor.color)
             .navigationTitle("Add Child")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -788,10 +788,10 @@ struct EditChildView: View {
                     )
                     
                     DatePicker("Date of Birth", selection: $dateOfBirth, displayedComponents: .date)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
                 }
             }
-            .background(themeManager.currentTheme.mainBackgroundColor)
+            .background(themeManager.currentTheme.mainBackgroundColor.color)
             .navigationTitle("Edit Child")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
@@ -902,7 +902,7 @@ struct AddEmergencyContactView: View {
                     )
                 }
             }
-            .background(themeManager.currentTheme.mainBackgroundColor)
+            .background(themeManager.currentTheme.mainBackgroundColor.color)
             .navigationTitle("Add Emergency Contact")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
@@ -1009,7 +1009,7 @@ struct EditEmergencyContactView: View {
                     )
                 }
             }
-            .background(themeManager.currentTheme.mainBackgroundColor)
+            .background(themeManager.currentTheme.mainBackgroundColor.color)
             .navigationTitle("Edit Emergency Contact")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
