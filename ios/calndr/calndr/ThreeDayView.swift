@@ -234,7 +234,7 @@ struct ThreeDayView: View {
     }
     
     private func getDayBorderColor(for day: Date) -> Color {
-        return isToday(day) ? themeManager.currentTheme.accentColor.color : themeManager.currentTheme.borderColor.color
+        return isToday(day) ? themeManager.currentTheme.accentColor.color : themeManager.currentTheme.secondaryBackgroundColor.color.opacity(0.5)
     }
     
     private func getDayBorderWidth(for day: Date) -> CGFloat {
