@@ -522,13 +522,13 @@ enum SchedulePatternType: String, Codable, CaseIterable {
 }
 
 struct WeeklySchedulePattern: Codable {
-    let sunday: String?
-    let monday: String?
-    let tuesday: String?
-    let wednesday: String?
-    let thursday: String?
-    let friday: String?
-    let saturday: String?
+    var sunday: String?
+    var monday: String?
+    var tuesday: String?
+    var wednesday: String?
+    var thursday: String?
+    var friday: String?
+    var saturday: String?
     
     func custodianFor(weekday: Int) -> String? {
         // weekday: 1=Sunday, 2=Monday, ..., 7=Saturday
@@ -546,10 +546,10 @@ struct WeeklySchedulePattern: Codable {
 }
 
 struct AlternatingWeeksPattern: Codable {
-    let weekAPattern: WeeklySchedulePattern
-    let weekBPattern: WeeklySchedulePattern
-    let startingWeek: String // "A" or "B"
-    let referenceDate: String // ISO date string to determine which week is A/B
+    var weekAPattern: WeeklySchedulePattern
+    var weekBPattern: WeeklySchedulePattern
+    var startingWeek: String // "A" or "B"
+    var referenceDate: String // ISO date string to determine which week is A/B
 }
 
 struct ScheduleTemplateDetailed: Codable, Identifiable {
