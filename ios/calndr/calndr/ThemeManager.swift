@@ -38,6 +38,25 @@ struct Theme: Identifiable, Equatable, Hashable, Codable {
             parentTwoColorSwiftUI
         ]
     }
+    
+    // Computed properties for adaptive parent colors with proper contrast
+    var adaptiveParentOneColor: Color {
+        // If main background is light, use darker parent colors
+        if mainBackgroundColorSwiftUI.isLight {
+            return Color(hex: "#1E3A8A") // Dark blue for light backgrounds
+        } else {
+            return Color(hex: "#96CBFC") // Light blue for dark backgrounds
+        }
+    }
+    
+    var adaptiveParentTwoColor: Color {
+        // If main background is light, use darker parent colors
+        if mainBackgroundColorSwiftUI.isLight {
+            return Color(hex: "#BE185D") // Dark pink for light backgrounds
+        } else {
+            return Color(hex: "#FFC2D9") // Light pink for dark backgrounds
+        }
+    }
 
     static func == (lhs: Theme, rhs: Theme) -> Bool {
         lhs.id == rhs.id
@@ -157,8 +176,8 @@ class ThemeManager: ObservableObject {
                 iconColor: CodableColor(color: Color(hex: "#000000")),
                 iconActiveColor: CodableColor(color: Color(hex: "#007AFF")),
                 accentColor: CodableColor(color: Color(hex: "#007AFF")),
-                parentOneColor: CodableColor(color: Color(hex: "#96CBFC")),
-                parentTwoColor: CodableColor(color: Color(hex: "#FFC2D9"))
+                parentOneColor: CodableColor(color: Color(hex: "#1E3A8A")), // Darker blue for better contrast
+                parentTwoColor: CodableColor(color: Color(hex: "#BE185D")) // Darker pink for better contrast
             ),
             Theme(
                 id: UUID(),
@@ -170,8 +189,74 @@ class ThemeManager: ObservableObject {
                 iconColor: CodableColor(color: Color(hex: "#bd93f9")),
                 iconActiveColor: CodableColor(color: Color(hex: "#ff79c6")),
                 accentColor: CodableColor(color: Color(hex: "#ff79c6")),
-                parentOneColor: CodableColor(color: Color(hex: "#96CBFC")),
-                parentTwoColor: CodableColor(color: Color(hex: "#FFC2D9"))
+                parentOneColor: CodableColor(color: Color(hex: "#96CBFC")), // Light blue works on dark background
+                parentTwoColor: CodableColor(color: Color(hex: "#FFC2D9")) // Light pink works on dark background
+            ),
+            // VSCode-inspired themes
+            Theme(
+                id: UUID(),
+                name: "Monokai",
+                mainBackgroundColor: CodableColor(color: Color(hex: "#272822")),
+                secondaryBackgroundColor: CodableColor(color: Color(hex: "#1d1e19")),
+                textColor: CodableColor(color: Color(hex: "#f8f8f2")),
+                headerTextColor: CodableColor(color: Color(hex: "#f8f8f2")),
+                iconColor: CodableColor(color: Color(hex: "#f92672")),
+                iconActiveColor: CodableColor(color: Color(hex: "#a6e22e")),
+                accentColor: CodableColor(color: Color(hex: "#fd971f")),
+                parentOneColor: CodableColor(color: Color(hex: "#66d9ef")), // Light blue
+                parentTwoColor: CodableColor(color: Color(hex: "#f92672")) // Pink
+            ),
+            Theme(
+                id: UUID(),
+                name: "Solarized Dark",
+                mainBackgroundColor: CodableColor(color: Color(hex: "#002b36")),
+                secondaryBackgroundColor: CodableColor(color: Color(hex: "#073642")),
+                textColor: CodableColor(color: Color(hex: "#839496")),
+                headerTextColor: CodableColor(color: Color(hex: "#fdf6e3")),
+                iconColor: CodableColor(color: Color(hex: "#586e75")),
+                iconActiveColor: CodableColor(color: Color(hex: "#268bd2")),
+                accentColor: CodableColor(color: Color(hex: "#859900")),
+                parentOneColor: CodableColor(color: Color(hex: "#268bd2")), // Blue
+                parentTwoColor: CodableColor(color: Color(hex: "#d33682")) // Magenta
+            ),
+            Theme(
+                id: UUID(),
+                name: "GitHub Dark",
+                mainBackgroundColor: CodableColor(color: Color(hex: "#0d1117")),
+                secondaryBackgroundColor: CodableColor(color: Color(hex: "#161b22")),
+                textColor: CodableColor(color: Color(hex: "#c9d1d9")),
+                headerTextColor: CodableColor(color: Color(hex: "#f0f6fc")),
+                iconColor: CodableColor(color: Color(hex: "#7d8590")),
+                iconActiveColor: CodableColor(color: Color(hex: "#58a6ff")),
+                accentColor: CodableColor(color: Color(hex: "#238636")),
+                parentOneColor: CodableColor(color: Color(hex: "#58a6ff")), // Blue
+                parentTwoColor: CodableColor(color: Color(hex: "#f85149")) // Red
+            ),
+            Theme(
+                id: UUID(),
+                name: "One Dark",
+                mainBackgroundColor: CodableColor(color: Color(hex: "#282c34")),
+                secondaryBackgroundColor: CodableColor(color: Color(hex: "#21252b")),
+                textColor: CodableColor(color: Color(hex: "#abb2bf")),
+                headerTextColor: CodableColor(color: Color(hex: "#ffffff")),
+                iconColor: CodableColor(color: Color(hex: "#5c6370")),
+                iconActiveColor: CodableColor(color: Color(hex: "#61afef")),
+                accentColor: CodableColor(color: Color(hex: "#98c379")),
+                parentOneColor: CodableColor(color: Color(hex: "#61afef")), // Blue
+                parentTwoColor: CodableColor(color: Color(hex: "#e06c75")) // Red
+            ),
+            Theme(
+                id: UUID(),
+                name: "Light+",
+                mainBackgroundColor: CodableColor(color: Color(hex: "#ffffff")),
+                secondaryBackgroundColor: CodableColor(color: Color(hex: "#f3f3f3")),
+                textColor: CodableColor(color: Color(hex: "#000000")),
+                headerTextColor: CodableColor(color: Color(hex: "#000000")),
+                iconColor: CodableColor(color: Color(hex: "#424242")),
+                iconActiveColor: CodableColor(color: Color(hex: "#007acc")),
+                accentColor: CodableColor(color: Color(hex: "#267f99")),
+                parentOneColor: CodableColor(color: Color(hex: "#1e3a8a")), // Dark blue
+                parentTwoColor: CodableColor(color: Color(hex: "#be185d")) // Dark pink
             )
         ]
     }
