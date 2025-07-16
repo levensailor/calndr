@@ -14,11 +14,11 @@ struct DaycareView: View {
                         Text("Daycare")
                             .font(.largeTitle)
                             .fontWeight(.bold)
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
                         
                         Text("Manage daycare providers and childcare information")
                             .font(.subheadline)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                     }
                     .padding(.horizontal)
                     
@@ -45,15 +45,15 @@ struct DaycareView: View {
                         VStack(spacing: 16) {
                             Image(systemName: "building.2")
                                 .font(.largeTitle)
-                                .foregroundColor(themeManager.currentTheme.textColor.opacity(0.3))
+                                .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.3))
                             
                             Text("No daycare providers added yet")
                                 .font(.headline)
-                                .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                                .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
                             
                             Text("Add your first daycare provider to get started")
                                 .font(.subheadline)
-                                .foregroundColor(themeManager.currentTheme.textColor.opacity(0.5))
+                                .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.5))
                                 .multilineTextAlignment(.center)
                         }
                         .padding()
@@ -68,7 +68,7 @@ struct DaycareView: View {
                     Spacer(minLength: 80)
                 }
             }
-            .background(themeManager.currentTheme.mainBackgroundColor)
+            .background(themeManager.currentTheme.mainBackgroundColor.color)
         }
         .sheet(isPresented: $showingAddDaycare) {
             AddDaycareView()
@@ -93,12 +93,12 @@ struct DaycareProviderCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(provider.name)
                         .font(.headline)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
                     
                     if let address = provider.address {
                         Text(address)
                             .font(.subheadline)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                     }
                 }
                 
@@ -109,11 +109,11 @@ struct DaycareProviderCard: View {
                 HStack {
                     Image(systemName: "clock")
                         .font(.caption)
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
                     
                     Text(hours)
                         .font(.caption)
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                 }
             }
             
@@ -122,11 +122,11 @@ struct DaycareProviderCard: View {
                     HStack {
                         Image(systemName: "phone")
                             .font(.caption)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
                         
                         Text(phone)
                             .font(.caption)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                     }
                 }
                 
@@ -136,11 +136,11 @@ struct DaycareProviderCard: View {
                     HStack {
                         Image(systemName: "envelope")
                             .font(.caption)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
                         
                         Text(email)
                             .font(.caption)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                     }
                 }
             }
@@ -148,15 +148,15 @@ struct DaycareProviderCard: View {
             if let notes = provider.notes {
                 Text(notes)
                     .font(.caption)
-                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                    .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
                     .padding(.top, 4)
             }
         }
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(themeManager.currentTheme.otherMonthBackgroundColor)
-                .shadow(color: themeManager.currentTheme.textColor.opacity(0.1), radius: 2, x: 0, y: 1)
+                .fill(themeManager.currentTheme.secondaryBackgroundColor.color)
+                .shadow(color: themeManager.currentTheme.textColor.color.opacity(0.1), radius: 2, x: 0, y: 1)
         )
     }
 }
@@ -251,7 +251,7 @@ struct AddDaycareView: View {
                     if let rating = rating {
                         HStack {
                             Text("Rating:")
-                                .foregroundColor(themeManager.currentTheme.textColor)
+                                .foregroundColor(themeManager.currentTheme.textColor.color)
                             Spacer()
                             HStack {
                                 ForEach(1...5, id: \.self) { star in
@@ -259,7 +259,7 @@ struct AddDaycareView: View {
                                         .foregroundColor(.yellow)
                                 }
                                 Text(String(format: "%.1f", rating))
-                                    .foregroundColor(themeManager.currentTheme.textColor)
+                                    .foregroundColor(themeManager.currentTheme.textColor.color)
                             }
                         }
                     }
@@ -272,7 +272,7 @@ struct AddDaycareView: View {
                     )
                 }
             }
-            .background(themeManager.currentTheme.mainBackgroundColor)
+            .background(themeManager.currentTheme.mainBackgroundColor.color)
             .navigationTitle("Add Daycare Provider")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -428,7 +428,7 @@ struct DaycareSearchView: View {
                     }
                 }
                 .padding()
-                .background(themeManager.currentTheme.mainBackgroundColor)
+                .background(themeManager.currentTheme.mainBackgroundColor.color)
                 
                 Divider()
                 
@@ -437,15 +437,15 @@ struct DaycareSearchView: View {
                     VStack(spacing: 16) {
                         Image(systemName: "magnifyingglass")
                             .font(.largeTitle)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.3))
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.3))
                         
                         Text("Search for daycare providers")
                             .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
                         
                         Text("Use your current location or enter a ZIP code to find nearby daycare facilities")
                             .font(.subheadline)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.5))
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.5))
                             .multilineTextAlignment(.center)
                     }
                     .padding()
@@ -459,7 +459,7 @@ struct DaycareSearchView: View {
                     .listStyle(PlainListStyle())
                 }
             }
-            .background(themeManager.currentTheme.mainBackgroundColor)
+            .background(themeManager.currentTheme.mainBackgroundColor.color)
             .navigationTitle("Find Daycare")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -559,7 +559,7 @@ struct DaycareSearchResultRow: View {
                 HStack {
                     Text(result.name)
                         .font(.headline)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
                     
                     Spacer()
                     
@@ -570,21 +570,21 @@ struct DaycareSearchResultRow: View {
                                 .font(.caption)
                             Text(String(format: "%.1f", rating))
                                 .font(.caption)
-                                .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                                .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                         }
                     }
                 }
                 
                 Text(result.address)
                     .font(.subheadline)
-                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                    .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                     .multilineTextAlignment(.leading)
                 
                 HStack {
                     if let phoneNumber = result.phoneNumber {
                         Label(phoneNumber, systemImage: "phone")
                             .font(.caption)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
                     }
                     
                     Spacer()
@@ -593,21 +593,21 @@ struct DaycareSearchResultRow: View {
                         let distanceInKm = distance / 1000
                         Text(String(format: "%.1f km", distanceInKm))
                             .font(.caption)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
                     }
                 }
                 
                 if let hours = result.hours {
                     Text(hours)
                         .font(.caption)
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
                         .lineLimit(2)
                 }
             }
             .padding()
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(themeManager.currentTheme.otherMonthBackgroundColor)
+                    .fill(themeManager.currentTheme.secondaryBackgroundColor.color)
             )
         }
         .buttonStyle(PlainButtonStyle())
