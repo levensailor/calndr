@@ -23,12 +23,7 @@ struct ThemePreviewView: View {
         .cornerRadius(8)
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(themeManager.currentTheme == theme ? Color.blue : Color.clear, lineWidth: 3)
+                .stroke(themeManager.currentTheme == theme ? Color.green : Color.clear, lineWidth: 3)
         )
-        .onTapGesture {
-            withAnimation {
-                themeManager.setTheme(to: theme)
-            }
-        }
     }
 } 

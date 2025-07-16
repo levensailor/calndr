@@ -956,43 +956,52 @@ async def get_weather(
     longitude: float, 
     start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
     end_date: str = Query(..., description="End date in YYYY-MM-DD format"),
+    temperature_unit: Optional[str] = Query("celsius", description="Temperature unit (celsius or fahrenheit)"),
     current_user = Depends(get_current_user)
 ):
     """
-    Fetches weather data from Open-Meteo API.
+    Fetches weather forecast data.
     """
-    # logger.info(f"Fetching weather data for {start_date} to {end_date}")
-    cache_key = get_cache_key(latitude, longitude, start_date, end_date, "forecast")
+    logger.info(f"Fetching weather for lat={latitude}, lon={longitude} from {start_date} to {end_date}")
     
+    # --- Caching ---
+    cache_key = get_cache_key(latitude, longitude, start_date, end_date, f"forecast-{temperature_unit}")
     cached_data = get_cached_weather(cache_key)
     if cached_data:
-        logger.info(f"Returning cached weather data for forecast: {start_date} to {end_date}")
+        logger.info("Returning cached forecast weather data.")
         return cached_data
-    
-    api_url = f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&daily=temperature_2m_max,precipitation_probability_mean,cloudcover_mean&timezone=auto&start_date={start_date}&end_date={end_date}"
+
+    # --- API Call ---
+    base_url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "start_date": start_date,
+        "end_date": end_date,
+        "daily": "temperature_2m_max,precipitation_probability_mean,cloudcover_mean",
+        "timezone": "auto",
+        "temperature_unit": temperature_unit
+    }
     
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(api_url)
+            response = await client.get(base_url, params=params)
             response.raise_for_status()
-            data = response.json()
+            weather_data = response.json()
             
-            # Replace None with 0.0 for robust handling
-            daily_data = data.get("daily", {})
-            for key in ['temperature_2m_max', 'precipitation_probability_mean', 'cloudcover_mean']:
-                if key in daily_data:
-                    daily_data[key] = [v if v is not None else 0.0 for v in daily_data[key]]
+            # Cache the new data
+            cache_weather_data(cache_key, weather_data)
             
-            # Cache the response
-            cache_weather_data(cache_key, data)
-            
-            return data
+            return weather_data
     except httpx.HTTPStatusError as e:
-        logger.error(f"HTTP error fetching weather data: {e.response.status_code} - {e.response.text}")
-        raise HTTPException(status_code=e.response.status_code, detail=f"Error from weather API: {e.response.text}")
+        logger.error(f"HTTP error fetching weather data: {e.response.status_code} - {e.response.text}", exc_info=True)
+        raise HTTPException(status_code=e.response.status_code, detail="Failed to fetch weather data")
+    except httpx.RequestError as e:
+        logger.error(f"Request error fetching weather data: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An error occurred while communicating with the weather service")
     except Exception as e:
-        logger.error(f"Error fetching weather data: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error while fetching weather data")
+        logger.error(f"An unexpected error occurred while fetching weather data: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred")
 
 @app.get("/api/weather/historic/{latitude}/{longitude}", response_model=WeatherAPIResponse)
 async def get_historic_weather(
@@ -1000,43 +1009,52 @@ async def get_historic_weather(
     longitude: float, 
     start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
     end_date: str = Query(..., description="End date in YYYY-MM-DD format"),
+    temperature_unit: Optional[str] = Query("celsius", description="Temperature unit (celsius or fahrenheit)"),
     current_user = Depends(get_current_user)
 ):
     """
-    Fetches historic weather data from Open-Meteo API.
+    Fetches historic weather data.
     """
-    # logger.info(f"Fetching historic weather data for {start_date} to {end_date}")
-    cache_key = get_cache_key(latitude, longitude, start_date, end_date, "historic")
-    
+    logger.info(f"Fetching historic weather for lat={latitude}, lon={longitude} from {start_date} to {end_date}")
+
+    # --- Caching ---
+    cache_key = get_cache_key(latitude, longitude, start_date, end_date, f"historic-{temperature_unit}")
     cached_data = get_cached_weather(cache_key)
     if cached_data:
-        # logger.info(f"Returning cached weather data for historic: {start_date} to {end_date}")
+        logger.info("Returning cached historic weather data.")
         return cached_data
-        
-    api_url = f"https://archive-api.open-meteo.com/v1/archive?latitude={latitude}&longitude={longitude}&start_date={start_date}&end_date={end_date}&daily=temperature_2m_max,precipitation_probability_mean,cloudcover_mean&timezone=auto"
 
+    # --- API Call ---
+    base_url = "https://archive-api.open-meteo.com/v1/archive"
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "start_date": start_date,
+        "end_date": end_date,
+        "daily": "temperature_2m_max,precipitation_probability_mean,cloudcover_mean",
+        "timezone": "auto",
+        "temperature_unit": temperature_unit
+    }
+    
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(api_url)
+            response = await client.get(base_url, params=params)
             response.raise_for_status()
-            data = response.json()
-            
-            # Replace None with 0.0 for robust handling
-            daily_data = data.get("daily", {})
-            for key in ['temperature_2m_max', 'precipitation_probability_mean', 'cloudcover_mean']:
-                if key in daily_data:
-                    daily_data[key] = [v if v is not None else 0.0 for v in daily_data[key]]
-            
-            # Cache the response
-            cache_weather_data(cache_key, data)
-            
-            return data
+            weather_data = response.json()
+
+            # Cache the new data
+            cache_weather_data(cache_key, weather_data)
+
+            return weather_data
     except httpx.HTTPStatusError as e:
-        logger.error(f"HTTP error fetching historic weather: {e.response.status_code} - {e.response.text}")
-        raise HTTPException(status_code=e.response.status_code, detail=f"Error from historic weather API: {e.response.text}")
+        logger.error(f"HTTP error fetching historic weather data: {e.response.status_code} - {e.response.text}", exc_info=True)
+        raise HTTPException(status_code=e.response.status_code, detail="Failed to fetch historic weather data")
+    except httpx.RequestError as e:
+        logger.error(f"Request error fetching historic weather data: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An error occurred while communicating with the weather service")
     except Exception as e:
-        logger.error(f"Error fetching historic weather: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error while fetching historic weather")
+        logger.error(f"An unexpected error occurred while fetching historic weather data: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred")
 
 @app.get("/api/user/profile", response_model=UserProfile)
 async def get_user_profile(current_user = Depends(get_current_user)):

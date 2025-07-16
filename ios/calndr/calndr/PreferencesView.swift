@@ -156,12 +156,7 @@ struct PreferencesView: View {
     @EnvironmentObject var viewModel: CalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
     @State private var allowPastCustodyEditing = UserDefaults.standard.bool(forKey: "allowPastCustodyEditing")
-    @State private var previewTheme: Theme
-
-    init(themeManager: ThemeManager) {
-        _previewTheme = State(initialValue: themeManager.currentTheme)
-    }
-
+    
     var body: some View {
         Form {
             // Features Section
@@ -173,24 +168,20 @@ struct PreferencesView: View {
             
             // Theme Selection Section
             Section(header: Text("Themes")) {
-                VStack {
-                    ThemeSpotlightView(theme: previewTheme, action: {
-                        themeManager.setTheme(to: previewTheme)
-                        viewModel.saveThemePreference(themeName: previewTheme.name)
-                    })
-                    
-                    ThemeSelectorView(selectedTheme: $previewTheme, themes: themeManager.themes)
+                NavigationLink(destination: ThemeSettingsView().environmentObject(themeManager)) {
+                    PreferenceRow(item: PreferenceItem(
+                        title: "Manage Themes",
+                        icon: "paintbrush.fill",
+                        description: "Create, edit, and select app themes",
+                        action: {}
+                    ))
                 }
-                .padding(.vertical)
             }
         }
         .navigationTitle("Preferences")
         .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
         .onChange(of: allowPastCustodyEditing) { oldValue, newValue in
             UserDefaults.standard.set(newValue, forKey: "allowPastCustodyEditing")
-        }
-        .onAppear {
-            self.previewTheme = themeManager.currentTheme
         }
     }
     

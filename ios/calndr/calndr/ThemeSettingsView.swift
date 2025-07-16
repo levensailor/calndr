@@ -2,7 +2,6 @@ import SwiftUI
 
 struct ThemeSettingsView: View {
     @EnvironmentObject var themeManager: ThemeManager
-    @State private var selectedTheme: Theme? = nil
     @State private var showThemeCreator = false
     @State private var isEditing = false
     @State private var themeToEdit: Theme = Theme.defaultTheme
@@ -13,49 +12,38 @@ struct ThemeSettingsView: View {
         VStack {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 20) {
-                    Button(action: {
-                        isEditing = false
-                        themeToEdit = Theme.defaultTheme
-                        showThemeCreator = true
-                    }) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
-                            Image(systemName: "plus")
-                                .font(.largeTitle)
-                                .foregroundColor(themeManager.currentTheme.iconColorSwiftUI)
-                        }
-                        .frame(height: 100)
-                    }
-
                     ForEach(themeManager.themes) { theme in
-                        ThemePreviewView(theme: theme, selectedTheme: $selectedTheme)
+                        ThemePreviewView(theme: theme)
+                            .contextMenu {
+                                Button {
+                                    self.themeToEdit = theme
+                                    self.isEditing = true
+                                    self.showThemeCreator = true
+                                } label: {
+                                    Label("Edit Theme", systemImage: "pencil")
+                                }
+
+                                Button {
+                                    themeManager.setTheme(to: theme)
+                                } label: {
+                                    Label("Set as Current", systemImage: "paintbrush")
+                                }
+                            }
                     }
                 }
                 .padding()
             }
-            
-            HStack {
-                Button("Edit Theme") {
-                    if let theme = selectedTheme {
-                        isEditing = true
-                        themeToEdit = theme
-                        showThemeCreator = true
-                    }
-                }
-                .disabled(selectedTheme == nil)
-                
-                Button("Set Theme") {
-                    if let theme = selectedTheme {
-                        themeManager.setTheme(to: theme)
-                    }
-                }
-                .disabled(selectedTheme == nil)
-            }
-            .padding()
-
         }
         .navigationTitle("Themes")
+        .navigationBarItems(trailing:
+            Button(action: {
+                isEditing = false
+                themeToEdit = Theme.defaultTheme
+                showThemeCreator = true
+            }) {
+                Image(systemName: "plus")
+            }
+        )
         .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
         .sheet(isPresented: $showThemeCreator) {
             ThemeCreatorView(

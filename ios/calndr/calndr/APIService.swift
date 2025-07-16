@@ -113,7 +113,8 @@ class APIService {
         var components = URLComponents(url: baseURL.appendingPathComponent("/weather/\(latitude)/\(longitude)"), resolvingAgainstBaseURL: false)!
         components.queryItems = [
             URLQueryItem(name: "start_date", value: startDate),
-            URLQueryItem(name: "end_date", value: endDate)
+            URLQueryItem(name: "end_date", value: endDate),
+            URLQueryItem(name: "temperature_unit", value: "fahrenheit")
         ]
 
         guard let url = components.url else {
@@ -173,7 +174,8 @@ class APIService {
         var components = URLComponents(url: baseURL.appendingPathComponent("/weather/historic/\(latitude)/\(longitude)"), resolvingAgainstBaseURL: false)!
         components.queryItems = [
             URLQueryItem(name: "start_date", value: startDate),
-            URLQueryItem(name: "end_date", value: endDate)
+            URLQueryItem(name: "end_date", value: endDate),
+            URLQueryItem(name: "temperature_unit", value: "fahrenheit")
         ]
 
         guard let url = components.url else {
