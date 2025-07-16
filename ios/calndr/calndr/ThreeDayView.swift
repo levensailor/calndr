@@ -17,7 +17,7 @@ struct ThreeDayView: View {
                             Text(getDayHeaderText(for: day))
                                 .font(.headline)
                                 .fontWeight(.semibold)
-                                .foregroundColor(themeManager.currentTheme.textColor)
+                                .foregroundColor(themeManager.currentTheme.textColor.color)
                             
                             Spacer()
                             
@@ -35,7 +35,7 @@ struct ThreeDayView: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
-                        .background(themeManager.currentTheme.headerBackgroundColor)
+                        .background(themeManager.currentTheme.secondaryBackgroundColor.color)
                         
                         // Content area for events and info
                         VStack(alignment: .leading, spacing: 8) {
@@ -44,15 +44,15 @@ struct ThreeDayView: View {
                                 HStack(spacing: 8) {
                                     Image(systemName: getWeatherIconName(for: day))
                                         .font(.title3)
-                                        .foregroundColor(themeManager.currentTheme.iconActiveColor)
+                                        .foregroundColor(themeManager.currentTheme.iconActiveColor.color)
                                     
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("Weather")
                                             .font(.caption)
-                                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                                         Text(getTemperatureText(for: day))
                                             .font(.subheadline)
-                                            .foregroundColor(themeManager.currentTheme.textColor)
+                                            .foregroundColor(themeManager.currentTheme.textColor.color)
                                     }
                                     
                                     Spacer()
@@ -70,10 +70,10 @@ struct ThreeDayView: View {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("School")
                                             .font(.caption)
-                                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                                         Text(schoolEvent)
                                             .font(.subheadline)
-                                            .foregroundColor(themeManager.currentTheme.textColor)
+                                            .foregroundColor(themeManager.currentTheme.textColor.color)
                                     }
                                     
                                     Spacer()
@@ -87,11 +87,11 @@ struct ThreeDayView: View {
                                     HStack(spacing: 8) {
                                         Image(systemName: "calendar")
                                             .font(.title3)
-                                            .foregroundColor(themeManager.currentTheme.iconActiveColor)
+                                            .foregroundColor(themeManager.currentTheme.iconActiveColor.color)
                                         
                                         Text("Events")
                                             .font(.caption)
-                                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                                         
                                         Spacer()
                                     }
@@ -101,7 +101,7 @@ struct ThreeDayView: View {
                                         ForEach(getFilteredEvents(for: day)) { event in
                                             Text(event.content)
                                                 .font(.subheadline)
-                                                .foregroundColor(themeManager.currentTheme.textColor)
+                                                .foregroundColor(themeManager.currentTheme.textColor.color)
                                                 .padding(.horizontal, 16)
                                         }
                                     }
@@ -118,10 +118,10 @@ struct ThreeDayView: View {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("Reminder")
                                             .font(.caption)
-                                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                                         Text(viewModel.getReminderTextForDate(day))
                                             .font(.subheadline)
-                                            .foregroundColor(themeManager.currentTheme.textColor)
+                                            .foregroundColor(themeManager.currentTheme.textColor.color)
                                             .lineLimit(2)
                                     }
                                     
@@ -147,7 +147,7 @@ struct ThreeDayView: View {
                 }
             }
         }
-        .background(themeManager.currentTheme.mainBackgroundColor)
+        .background(themeManager.currentTheme.mainBackgroundColor.color)
         .onAppear {
             viewModel.fetchEvents()
         }
@@ -198,9 +198,9 @@ struct ThreeDayView: View {
     private func getCustodyBackgroundColor(for day: Date) -> Color {
         let custodyInfo = viewModel.getCustodyInfo(for: day)
         if custodyInfo.owner == viewModel.custodianOneId {
-            return themeManager.currentTheme.parentOneColor
+            return themeManager.currentTheme.parentOneColor.color
         } else {
-            return themeManager.currentTheme.parentTwoColor
+            return themeManager.currentTheme.parentTwoColor.color
         }
     }
     
@@ -230,11 +230,11 @@ struct ThreeDayView: View {
     }
     
     private func getDayBackgroundColor(for day: Date) -> Color {
-        return isToday(day) ? themeManager.currentTheme.todayBorderColor.opacity(0.1) : Color.clear
+        return isToday(day) ? themeManager.currentTheme.accentColor.color.opacity(0.1) : Color.clear
     }
     
     private func getDayBorderColor(for day: Date) -> Color {
-        return isToday(day) ? themeManager.currentTheme.todayBorderColor : themeManager.currentTheme.gridLinesColor
+        return isToday(day) ? themeManager.currentTheme.accentColor.color : themeManager.currentTheme.borderColor.color
     }
     
     private func getDayBorderWidth(for day: Date) -> CGFloat {
