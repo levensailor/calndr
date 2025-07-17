@@ -13,6 +13,8 @@ struct Theme: Identifiable, Equatable, Hashable, Codable {
     var accentColor: CodableColor
     var parentOneColor: CodableColor
     var parentTwoColor: CodableColor
+    var isPublic: Bool?
+    var createdByUserId: Int?
 
     // Computed properties for SwiftUI Colors
     var mainBackgroundColorSwiftUI: Color { mainBackgroundColor.color }
@@ -90,90 +92,77 @@ class ThemeManager: ObservableObject {
     @Published var currentTheme: Theme
     @Published var themes: [Theme]
     
-    private let customThemesKey = "customThemes"
+    private let apiService = APIService.shared
 
     init() {
-        // Initialize properties first
         self.themes = []
         self.currentTheme = Theme.defaultTheme
-        
-        // Now load the themes
-        self.themes = loadThemes()
-        
-        // Set the current theme based on user defaults
-        let storedThemeName = UserDefaults.standard.string(forKey: "selectedTheme") ?? "Stork"
-        self.currentTheme = themes.first { $0.name == storedThemeName } ?? Theme.defaultTheme
+        loadThemes()
+    }
+
+    func loadThemes() {
+        apiService.fetchThemes { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let themes):
+                    self?.themes = themes
+                    // Set current theme based on user preference from backend
+                    // This part needs an endpoint to fetch user preferences
+                case .failure(let error):
+                    print("Failed to load themes: \(error)")
+                }
+            }
+        }
     }
 
     func setTheme(to theme: Theme) {
         currentTheme = theme
-        UserDefaults.standard.set(theme.name, forKey: "selectedTheme")
+        apiService.setThemePreference(themeId: theme.id) { result in
+            if case .failure(let error) = result {
+                print("Failed to set theme preference: \(error)")
+            }
+        }
     }
 
     func addTheme(_ theme: Theme) {
-        themes.append(theme)
-        saveThemes()
+        apiService.createTheme(theme) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let newTheme):
+                    self?.themes.append(newTheme)
+                case .failure(let error):
+                    print("Failed to add theme: \(error)")
+                }
+            }
+        }
     }
 
     func updateTheme(_ theme: Theme) {
-        if let index = themes.firstIndex(where: { $0.id == theme.id }) {
-            themes[index] = theme
-            saveThemes()
-        }
-    }
-
-    private func loadThemes() -> [Theme] {
-        var loadedThemes = defaultThemes
-        if let data = UserDefaults.standard.data(forKey: customThemesKey) {
-            do {
-                let customThemes = try JSONDecoder().decode([Theme].self, from: data)
-                loadedThemes.append(contentsOf: customThemes)
-            } catch {
-                print("Failed to load custom themes: \(error)")
+        apiService.updateTheme(theme) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let updatedTheme):
+                    if let index = self?.themes.firstIndex(where: { $0.id == updatedTheme.id }) {
+                        self?.themes[index] = updatedTheme
+                    }
+                case .failure(let error):
+                    print("Failed to update theme: \(error)")
+                }
             }
-        }
-        return loadedThemes
-    }
-
-    private func saveThemes() {
-        let customThemes = themes.filter { theme in !defaultThemes.contains(where: { $0.id == theme.id }) }
-        do {
-            let data = try JSONEncoder().encode(customThemes)
-            UserDefaults.standard.set(data, forKey: customThemesKey)
-        } catch {
-            print("Failed to save custom themes: \(error)")
         }
     }
     
-    private var defaultThemes: [Theme] {
-        return [
-            Theme(
-                id: UUID(),
-                name: "Stork",
-                mainBackgroundColor: CodableColor(color: Color(hex: "#FFFFFF")),
-                secondaryBackgroundColor: CodableColor(color: Color(hex: "#F2F2F7")),
-                textColor: CodableColor(color: Color(hex: "#000000")),
-                headerTextColor: CodableColor(color: Color(hex: "#000000")),
-                iconColor: CodableColor(color: Color(hex: "#000000")),
-                iconActiveColor: CodableColor(color: Color(hex: "#007AFF")),
-                accentColor: CodableColor(color: Color(hex: "#007AFF")),
-                parentOneColor: CodableColor(color: Color(hex: "#96CBFC")),
-                parentTwoColor: CodableColor(color: Color(hex: "#FFC2D9"))
-            ),
-            Theme(
-                id: UUID(),
-                name: "Dracula",
-                mainBackgroundColor: CodableColor(color: Color(hex: "#282a36")),
-                secondaryBackgroundColor: CodableColor(color: Color(hex: "#21222c")),
-                textColor: CodableColor(color: Color(hex: "#f8f8f2")),
-                headerTextColor: CodableColor(color: Color(hex: "#f8f8f2")),
-                iconColor: CodableColor(color: Color(hex: "#bd93f9")),
-                iconActiveColor: CodableColor(color: Color(hex: "#ff79c6")),
-                accentColor: CodableColor(color: Color(hex: "#ff79c6")),
-                parentOneColor: CodableColor(color: Color(hex: "#96CBFC")),
-                parentTwoColor: CodableColor(color: Color(hex: "#FFC2D9"))
-            )
-        ]
+    func deleteTheme(_ theme: Theme) {
+        apiService.deleteTheme(theme.id) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    self?.themes.removeAll { $0.id == theme.id }
+                case .failure(let error):
+                    print("Failed to delete theme: \(error)")
+                }
+            }
+        }
     }
 }
 

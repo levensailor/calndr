@@ -37,6 +37,7 @@ struct MainTabView: View {
     @State private var currentView: CalendarViewType = .month
     @State private var focusedDate: Date?
     @State private var showSettings = false
+    @State private var showHelp = false
     @State private var isAnimating = false
     @State private var animationOpacity: Double = 1.0
     @State private var animationScale: CGFloat = 1.0
@@ -46,7 +47,7 @@ struct MainTabView: View {
 
     var body: some View {
         ZStack {
-            themeManager.currentTheme.mainBackgroundColor.ignoresSafeArea()
+            themeManager.currentTheme.mainBackgroundColorSwiftUI.ignoresSafeArea()
             
             VStack {
                 if calendarViewModel.isOffline {
@@ -115,7 +116,7 @@ struct MainTabView: View {
                             .overlay(
                                 Rectangle()
                                     .frame(height: 3)
-                                    .foregroundColor(themeManager.currentTheme.parentOneColor)
+                                    .foregroundColor(themeManager.currentTheme.parentOneColorSwiftUI)
                                     .offset(y: 12)
                             )
                         
@@ -144,7 +145,7 @@ struct MainTabView: View {
                             .overlay(
                                 Rectangle()
                                     .frame(height: 3)
-                                    .foregroundColor(themeManager.currentTheme.parentTwoColor)
+                                    .foregroundColor(themeManager.currentTheme.parentTwoColorSwiftUI)
                                     .offset(y: 12)
                             )
                         
@@ -180,7 +181,7 @@ struct MainTabView: View {
                         }
                         Text("Handoff")
                             .font(.caption2)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
                     }
                     
                     VStack(spacing: 4) {
@@ -189,11 +190,24 @@ struct MainTabView: View {
                         }) {
                             Image(systemName: "gear")
                                 .font(.title2)
-                                .foregroundColor(themeManager.currentTheme.iconColor)
+                                .foregroundColor(themeManager.currentTheme.iconColorSwiftUI)
                         }
                         Text("Settings")
                             .font(.caption2)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
+                    }
+
+                    VStack(spacing: 4) {
+                        Button(action: {
+                            showHelp = true
+                        }) {
+                            Image(systemName: "questionmark.circle")
+                                .font(.title2)
+                                .foregroundColor(themeManager.currentTheme.iconColorSwiftUI)
+                        }
+                        Text("Help")
+                            .font(.caption2)
+                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
                     }
                 }
                 .padding(.bottom)
@@ -203,12 +217,15 @@ struct MainTabView: View {
                 FocusedDayView(viewModel: calendarViewModel, focusedDate: $focusedDate, namespace: namespace)
             }
         }
-        .foregroundColor(themeManager.currentTheme.textColor)
+        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
         .onAppear {
             calendarViewModel.fetchEvents()
         }
         .sheet(isPresented: $showSettings) {
             SettingsView(viewModel: calendarViewModel)
+        }
+        .sheet(isPresented: $showHelp) {
+            HelpView()
         }
         .onReceive(navigationManager.$shouldNavigateToSchedule) { shouldNavigate in
             if shouldNavigate {
@@ -504,7 +521,7 @@ struct MainTabView: View {
     }
     
     private func getHandoffIconColor() -> Color {
-        return calendarViewModel.showHandoffTimeline ? Color.purple : themeManager.currentTheme.iconColor
+        return calendarViewModel.showHandoffTimeline ? Color.purple : themeManager.currentTheme.iconColorSwiftUI
     }
 }
 

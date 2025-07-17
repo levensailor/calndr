@@ -54,7 +54,7 @@ class WeatherCacheManager {
     }
 
     func pruneCache() {
-        var currentCache = load()
+        let currentCache = load()
         let fortyEightHoursAgo = Date().addingTimeInterval(-48 * 3600)
         
         let prunedCache = currentCache.filter { $0.value.timestamp > fortyEightHoursAgo }

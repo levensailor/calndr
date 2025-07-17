@@ -264,7 +264,7 @@ struct AccountsView: View {
         // TODO: Implement phone number update API call
         print("Updating phone number to: \(newPhone)")
         // For now, just update the local profile
-        if var profile = userProfile {
+        if let profile = userProfile {
             userProfile = UserProfile(
                 id: profile.id,
                 first_name: profile.first_name,

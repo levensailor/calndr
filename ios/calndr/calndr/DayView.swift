@@ -18,7 +18,7 @@ struct DayView: View {
                 VStack(spacing: 8) {
 //                    Text(viewModel.currentDate.formatted(.dateTime.weekday(.wide)))
 //                        .font(.largeTitle.bold())
-//                        .foregroundColor(themeManager.currentTheme.textColor)
+//                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
 //                        .frame(maxWidth: .infinity, alignment: .center)
                     
                     // Temperature display
@@ -26,10 +26,10 @@ struct DayView: View {
                         Text("\(Int(weatherInfo.temperature.rounded()))°F")
                             .font(.title2)
                             .fontWeight(.semibold)
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
-                            .background(themeManager.currentTheme.bubbleBackgroundColor)
+                            .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
                             .cornerRadius(12)
                             .frame(maxWidth: .infinity, alignment: .center)
 
@@ -40,7 +40,7 @@ struct DayView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Custody")
                     .font(.headline)
-                    .foregroundColor(themeManager.currentTheme.textColor)
+                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                 
                 let custodyInfo = viewModel.getCustodyInfo(for: viewModel.currentDate)
                 let ownerName = custodyInfo.text
@@ -55,7 +55,7 @@ struct DayView: View {
                             .foregroundColor(.black)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                            .background(ownerId == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColor : themeManager.currentTheme.parentTwoColor)
+                            .background(ownerId == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColorSwiftUI : themeManager.currentTheme.parentTwoColorSwiftUI)
                             .cornerRadius(10)
                     }
                     .disabled(isDateInPast(viewModel.currentDate) && !UserDefaults.standard.bool(forKey: "allowPastCustodyEditing"))
@@ -68,7 +68,7 @@ struct DayView: View {
                 HStack {
                     Text("Reminder")
                         .font(.headline)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                     
                     Spacer()
                     
@@ -84,7 +84,7 @@ struct DayView: View {
                 if viewModel.hasReminderForDate(viewModel.currentDate) {
                     Text(viewModel.getReminderTextForDate(viewModel.currentDate))
                         .font(.body)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                         .padding()
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(
@@ -101,7 +101,7 @@ struct DayView: View {
                 } else {
                     Text("No reminder set")
                         .font(.body)
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.6))
                         .italic()
                 }
             }
@@ -110,7 +110,7 @@ struct DayView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Events")
                     .font(.headline)
-                    .foregroundColor(themeManager.currentTheme.textColor)
+                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                 
                 let events = viewModel.eventsForDate(viewModel.currentDate).filter { $0.position < 4 }
                 let schoolEvent = viewModel.schoolEventForDate(viewModel.currentDate)
@@ -118,14 +118,14 @@ struct DayView: View {
                 
                 if !hasAnyEvents {
                     Text("No events scheduled.")
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.6))
                 } else {
                     // Regular Events
                     ForEach(events) { event in
                         Text(event.content)
                             .padding()
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(themeManager.currentTheme.iconActiveColor.opacity(0.8))
+                            .background(themeManager.currentTheme.iconActiveColorSwiftUI.opacity(0.8))
                             .foregroundColor(.white)
                             .cornerRadius(10)
                     }
@@ -154,7 +154,9 @@ struct DayView: View {
             Spacer()
             }
             .padding()
-            .background(themeManager.currentTheme.mainBackgroundColor.opacity(0.8))
+            .background(themeManager.currentTheme.mainBackgroundColorSwiftUI.opacity(0.8))
+            .cornerRadius(12)
+            .shadow(radius: 5)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .sheet(isPresented: $showingReminderModal) {

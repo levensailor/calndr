@@ -8,14 +8,14 @@ struct SignUpView: View {
 
     var body: some View {
         ZStack {
-            themeManager.currentTheme.mainBackgroundColor.ignoresSafeArea()
+            themeManager.currentTheme.mainBackgroundColorSwiftUI.ignoresSafeArea()
             
             ScrollView {
                 LazyVStack(spacing: 20) {
                     Text("Create Account")
                         .font(.system(size: 32, weight: .bold, design: .default))
                         .fontWeight(.bold)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                         .padding(.top, 40)
                     
                     VStack(spacing: 15) {
@@ -106,7 +106,7 @@ struct SignUpView: View {
                         .foregroundColor(.white)
                         .padding()
                         .frame(maxWidth: .infinity)
-                        .background(themeManager.currentTheme.todayBorderColor)
+                        .background(themeManager.currentTheme.accentColorSwiftUI)
                         .cornerRadius(10)
                         .padding(.horizontal)
                     }
@@ -117,7 +117,7 @@ struct SignUpView: View {
                     }) {
                         Text("Already have an account? Sign In")
                             .font(.footnote)
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                             .padding()
                     }
                     .padding(.bottom, 40)

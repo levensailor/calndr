@@ -21,22 +21,22 @@ struct WeekView: View {
                             HStack {
                                 Text(day.formatted(.dateTime.weekday(.wide)))
                                     .font(.headline)
-                                    .foregroundColor(themeManager.currentTheme.textColor)
+                                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                                 Spacer()
                                 // Temperature display
                                 if viewModel.showWeather, let weatherInfo = viewModel.weatherInfoForDate(day) {
                                     Text("\(Int(weatherInfo.temperature.rounded()))°")
                                         .font(.caption)
                                         .fontWeight(.bold)
-                                        .foregroundColor(themeManager.currentTheme.dayNumberColor)
+                                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                                         .padding(3)
-                                        .background(themeManager.currentTheme.bubbleBackgroundColor)
+                                        .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
                                         .cornerRadius(4)
                                 }
                             }
                             Text(day.formatted(.dateTime.month().day()))
                                 .font(.caption)
-                                .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                                .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
                         }
                         .frame(width: 200, alignment: .leading)
                         
@@ -76,7 +76,7 @@ struct WeekView: View {
                                     .foregroundColor(.black)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 12)
-                                    .background(ownerId == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColor : themeManager.currentTheme.parentTwoColor)
+                                    .background(ownerId == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColorSwiftUI : themeManager.currentTheme.parentTwoColorSwiftUI)
                                     .cornerRadius(8)
                             }
                             .disabled(isDateInPast(day) && !UserDefaults.standard.bool(forKey: "allowPastCustodyEditing"))
@@ -86,7 +86,7 @@ struct WeekView: View {
                 }
                 .padding()
                 .frame(minHeight: 60)
-                .background(themeManager.currentTheme.mainBackgroundColor.opacity(0.5))
+                .background(themeManager.currentTheme.mainBackgroundColorSwiftUI.opacity(0.5))
                 .cornerRadius(8)
             }
         }

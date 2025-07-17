@@ -137,17 +137,6 @@ children = sqlalchemy.Table(
     sqlalchemy.Column("dob", sqlalchemy.Date, nullable=False),
 )
 
-# User preferences table
-user_preferences = sqlalchemy.Table(
-    "user_preferences",
-    metadata,
-    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
-    sqlalchemy.Column("user_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True),
-    sqlalchemy.Column("selected_theme", sqlalchemy.String(100), nullable=True),
-    sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
-    sqlalchemy.Column("updated_at", sqlalchemy.DateTime, nullable=True, default=datetime.now, onupdate=datetime.now),
-)
-
 # Reminders table
 reminders = sqlalchemy.Table(
     "reminders",
@@ -161,6 +150,32 @@ reminders = sqlalchemy.Table(
     sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
     sqlalchemy.Column("updated_at", sqlalchemy.DateTime, nullable=True, default=datetime.now, onupdate=datetime.now),
     sqlalchemy.UniqueConstraint("family_id", "date", name="unique_family_date_reminder"),
+)
+
+themes = sqlalchemy.Table(
+    "themes",
+    metadata,
+    sqlalchemy.Column("id", sqlalchemy.String, primary_key=True),
+    sqlalchemy.Column("name", sqlalchemy.String, nullable=False),
+    sqlalchemy.Column("mainBackgroundColor", sqlalchemy.String, nullable=False),
+    sqlalchemy.Column("secondaryBackgroundColor", sqlalchemy.String, nullable=False),
+    sqlalchemy.Column("textColor", sqlalchemy.String, nullable=False),
+    sqlalchemy.Column("headerTextColor", sqlalchemy.String, nullable=False),
+    sqlalchemy.Column("iconColor", sqlalchemy.String, nullable=False),
+    sqlalchemy.Column("iconActiveColor", sqlalchemy.String, nullable=False),
+    sqlalchemy.Column("accentColor", sqlalchemy.String, nullable=False),
+    sqlalchemy.Column("parentOneColor", sqlalchemy.String, nullable=False),
+    sqlalchemy.Column("parentTwoColor", sqlalchemy.String, nullable=False),
+    sqlalchemy.Column("is_public", sqlalchemy.Boolean, nullable=False, default=False),
+    sqlalchemy.Column("created_by_user_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("users.id")),
+)
+
+user_preferences = sqlalchemy.Table(
+    "user_preferences",
+    metadata,
+    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
+    sqlalchemy.Column("user_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True),
+    sqlalchemy.Column("selected_theme_id", sqlalchemy.String, sqlalchemy.ForeignKey("themes.id")),
 )
 
 # Daycare providers table
