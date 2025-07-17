@@ -135,9 +135,9 @@ struct WeatherAPIResponse: Codable {
 // Represents the "daily" object in the weather API response
 struct DailyWeather: Codable {
     let time: [String]
-    let temperature_2m_max: [Double]
-    let precipitation_probability_mean: [Double]
-    let cloudcover_mean: [Double]
+    let temperature_2m_max: [Double?]
+    let precipitation_probability_mean: [Double?]
+    let cloudcover_mean: [Double?]
 }
 
 // A simplified representation for weather data for a single day

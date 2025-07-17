@@ -236,10 +236,16 @@ class APIService {
         let daily = apiResponse.daily
         for i in 0..<daily.time.count {
             let dateString = daily.time[i]
+            
+            // Safely unwrap optional values, providing a default of 0.0 if nil
+            let temp = daily.temperature_2m_max[i] ?? 0.0
+            let precip = daily.precipitation_probability_mean[i] ?? 0.0
+            let cover = daily.cloudcover_mean[i] ?? 0.0
+            
             let info = WeatherInfo(
-                temperature: daily.temperature_2m_max[i],
-                precipitation: daily.precipitation_probability_mean[i],
-                cloudCover: daily.cloudcover_mean[i]
+                temperature: temp,
+                precipitation: precip,
+                cloudCover: cover
             )
             weatherInfos[dateString] = info
         }
