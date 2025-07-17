@@ -27,6 +27,7 @@
 		E744AF062E0C54D000DA25AB /* calndr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = calndr.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E744AF132E0C54D600DA25AB /* calndrTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = calndrTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E744AF1D2E0C54D700DA25AB /* calndrUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = calndrUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+        E744AF2E2E0C54D700DA25AC /* WeatherCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherCacheManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -249,6 +250,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+                E744AF2F2E0C54D700DA25AD /* WeatherCacheManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -605,6 +607,7 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+        E744AF2F2E0C54D700DA25AD /* WeatherCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E744AF2E2E0C54D700DA25AC /* WeatherCacheManager.swift */; };
 	};
 	rootObject = E744AEFE2E0C54D000DA25AB /* Project object */;
 }

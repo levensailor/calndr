@@ -83,6 +83,9 @@ class CalendarViewModel: ObservableObject {
         setupBindings()
         setupAppLifecycleObservers()
         fetchInitialData()
+        
+        // Prune the weather cache on app launch
+        WeatherCacheManager.shared.pruneCache()
     }
     
     deinit {
@@ -365,7 +368,7 @@ class CalendarViewModel: ObservableObject {
             print("Successfully fetched \(allCustodyRecords.count) custody records for year \(year).")
         }
     }
-    
+
     func getYearlyCustodyTotals() -> (custodianOneDays: Int, custodianTwoDays: Int) {
         let calendar = Calendar.current
         let year = calendar.component(.year, from: currentDate)
@@ -808,6 +811,16 @@ class CalendarViewModel: ObservableObject {
             print("Offline, not fetching weather.")
             return
         }
+        
+        // First, load any valid cached data to display immediately
+        let cachedWeather = WeatherCacheManager.shared.getValidCache()
+        if !cachedWeather.isEmpty {
+            DispatchQueue.main.async {
+                self.weatherData = cachedWeather
+                print("Loaded weather data from cache.")
+            }
+        }
+        
         print("fetchWeather called with startDate: \(startDate ?? "nil"), endDate: \(endDate ?? "nil")")
         let calendar = Calendar.current
         let today = Date()
@@ -868,8 +881,8 @@ class CalendarViewModel: ObservableObject {
                 return
             }
             
-            // Combine historic and forecast data
-            var combinedWeatherData: [String: WeatherInfo] = [:]
+            // Combine historic and forecast data, preferring fresh data
+            var combinedWeatherData = self.weatherData // Start with existing (cached) data
             
             // Add historic data first
             for (dateString, weatherInfo) in historicData {
@@ -882,6 +895,13 @@ class CalendarViewModel: ObservableObject {
             }
             
             self.weatherData = combinedWeatherData
+            
+            // Save the newly fetched data to the cache
+            var dataToCache: [String: WeatherInfo] = [:]
+            historicData.forEach { dataToCache[$0] = $1 }
+            forecastData.forEach { dataToCache[$0] = $1 }
+            WeatherCacheManager.shared.save(weatherData: dataToCache)
+            
             print("Successfully combined weather data: \(historicData.count) historic + \(forecastData.count) forecast = \(combinedWeatherData.count) total days")
         }
     }
