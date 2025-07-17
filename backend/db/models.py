@@ -155,7 +155,7 @@ reminders = sqlalchemy.Table(
 themes = sqlalchemy.Table(
     "themes",
     metadata,
-    sqlalchemy.Column("id", sqlalchemy.String, primary_key=True),
+    sqlalchemy.Column("id", UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
     sqlalchemy.Column("name", sqlalchemy.String, nullable=False),
     sqlalchemy.Column("mainBackgroundColor", sqlalchemy.String, nullable=False),
     sqlalchemy.Column("secondaryBackgroundColor", sqlalchemy.String, nullable=False),
@@ -168,6 +168,8 @@ themes = sqlalchemy.Table(
     sqlalchemy.Column("parentTwoColor", sqlalchemy.String, nullable=False),
     sqlalchemy.Column("is_public", sqlalchemy.Boolean, nullable=False, default=False),
     sqlalchemy.Column("created_by_user_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("users.id")),
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime, default=datetime.utcnow, nullable=False),
+    sqlalchemy.Column("updated_at", sqlalchemy.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False),
 )
 
 user_preferences = sqlalchemy.Table(
@@ -175,7 +177,7 @@ user_preferences = sqlalchemy.Table(
     metadata,
     sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
     sqlalchemy.Column("user_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True),
-    sqlalchemy.Column("selected_theme_id", sqlalchemy.String, sqlalchemy.ForeignKey("themes.id")),
+    sqlalchemy.Column("selected_theme_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("themes.id")),
 )
 
 # Daycare providers table

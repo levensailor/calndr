@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
+import uuid
+from datetime import datetime
 
 class ThemeBase(BaseModel):
     name: str
@@ -12,7 +14,7 @@ class ThemeBase(BaseModel):
     accentColor: str
     parentOneColor: str
     parentTwoColor: str
-    is_public: bool
+    is_public: bool = False
 
 class ThemeCreate(ThemeBase):
     pass
@@ -31,8 +33,10 @@ class ThemeUpdate(BaseModel):
     is_public: Optional[bool] = None
 
 class Theme(ThemeBase):
-    id: str
-    created_by_user_id: int
+    id: uuid.UUID
+    created_by_user_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         orm_mode = True 

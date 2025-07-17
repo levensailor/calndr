@@ -6,7 +6,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Settings(BaseSettings):
-    """Application settings."""
+    """
+    Application settings.
+    """
     
     # Application
     PROJECT_NAME: str = "Calndr API"
@@ -28,23 +30,17 @@ class Settings(BaseSettings):
     
     @property
     def DATABASE_URL(self) -> str:
-        return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
     
     # AWS
-    AWS_ACCESS_KEY_ID: Optional[str] = os.getenv("AWS_ACCESS_KEY_ID")
-    AWS_SECRET_ACCESS_KEY: Optional[str] = os.getenv("AWS_SECRET_ACCESS_KEY")
-    AWS_REGION: Optional[str] = os.getenv("AWS_REGION")
-    AWS_S3_BUCKET_NAME: Optional[str] = os.getenv("AWS_S3_BUCKET_NAME")
-    SNS_PLATFORM_APPLICATION_ARN: Optional[str] = os.getenv("SNS_PLATFORM_APPLICATION_ARN")
-    
-    # External APIs
-    GOOGLE_PLACES_API_KEY: Optional[str] = os.getenv("GOOGLE_PLACES_API_KEY")
-    
-    # CORS
-    ALLOWED_ORIGINS: List[str] = ["*"]
+    AWS_ACCESS_KEY_ID: str = os.getenv("AWS_ACCESS_KEY_ID", "")
+    AWS_SECRET_ACCESS_KEY: str = os.getenv("AWS_SECRET_ACCESS_KEY", "")
+    AWS_REGION: str = os.getenv("AWS_REGION", "us-east-1")
+    S3_BUCKET_NAME: str = os.getenv("S3_BUCKET_NAME", "")
     
     class Config:
-        env_file = ".env"
         case_sensitive = True
+        env_file = ".env"
+        extra = "ignore"
 
 settings = Settings()
