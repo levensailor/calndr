@@ -398,7 +398,7 @@ export default {
     },
     async fetchEmails() {
       try {
-        const response = await axios.get('/api/notifications/emails');
+        const response = await axios.get('/notifications/emails');
         this.emails = response.data;
       } catch (error) {
         console.error('Error fetching notification emails:', error);
@@ -407,7 +407,7 @@ export default {
     async addEmail() {
       if (this.newEmail && this.newEmail.includes('@')) {
         try {
-          const response = await axios.post('/api/notifications/emails', { email: this.newEmail });
+          const response = await axios.post('/notifications/emails', { email: this.newEmail });
           this.emails.push(response.data);
           this.newEmail = '';
         } catch (error) {
@@ -418,7 +418,7 @@ export default {
     },
     async deleteEmail(id) {
       try {
-        await axios.delete(`/api/notifications/emails/${id}`);
+        await axios.delete(`/notifications/emails/${id}`);
         this.emails = this.emails.filter(e => e.id !== id);
       } catch (error) {
         console.error('Error deleting email:', error);
@@ -461,7 +461,7 @@ export default {
           'Authorization': `Bearer ${authToken}`
         };
         
-        const response = await axios.get('/api/user/profile', { headers });
+        const response = await axios.get('/user/profile', { headers });
         this.userProfile = response.data;
         console.log('Profile loaded successfully:', this.userProfile);
       } catch (error) {
@@ -512,7 +512,7 @@ export default {
         formData.append('username', this.loginEmail);
         formData.append('password', this.loginPassword);
         
-        const response = await axios.post('/api/auth/token', formData, {
+        const response = await axios.post('/auth/token', formData, {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
           }
@@ -598,7 +598,7 @@ export default {
           family_name: this.signupFamilyName.trim() || null
         };
         
-        const response = await axios.post('/api/auth/register', registrationData);
+        const response = await axios.post('/auth/register', registrationData);
         
         const { access_token } = response.data;
         

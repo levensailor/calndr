@@ -1,6 +1,7 @@
 import time
 import hashlib
 from typing import Optional, Dict
+from core.logging import logger
 
 # Simple in-memory cache with TTL (time-to-live) expiration
 weather_cache = {}

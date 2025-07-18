@@ -523,7 +523,7 @@ export default {
     },
     async fetchCustodianInfo() {
       try {
-        const response = await axios.get('/api/family/custodians');
+        const response = await axios.get('/family/custodians');
         this.custodianOne = response.data.custodian_one;
         this.custodianTwo = response.data.custodian_two;
         console.log("Calendar.vue: Fetched custodian info", this.custodianOne, this.custodianTwo);
@@ -601,7 +601,7 @@ export default {
       console.log('Sending custody request to NEW CUSTODY API:', { date, custodian_id: newCustodianId });
 
       try {
-        const response = await axios.post('/api/custody', {
+        const response = await axios.post('/custody', {
           date: date,
           custodian_id: newCustodianId,
         });
@@ -630,7 +630,7 @@ export default {
 
       console.log(`Calendar.vue: fetchWeather() called for ${startDate} to ${endDate}`);
       try {
-        const response = await axios.get(`/api/weather/34.29/-77.97?start_date=${startDate}&end_date=${endDate}`);
+        const response = await axios.get(`/weather/34.29/-77.97?start_date=${startDate}&end_date=${endDate}`);
         const weatherData = response.data;
         const newWeather = {};
         if (weatherData.daily) {
@@ -652,7 +652,7 @@ export default {
       console.log("Calendar.vue: fetchEvents() called");
       try {
         // Fetch regular events (if any exist)
-        const eventsResponse = await axios.get(`/api/events/${this.currentYear}/${this.currentMonth + 1}`);
+        const eventsResponse = await axios.get(`/events/${this.currentYear}/${this.currentMonth + 1}`);
         this.events = {};
         eventsResponse.data.forEach(event => {
           if (!this.events[event.event_date]) {
@@ -662,7 +662,7 @@ export default {
         });
         
         // Fetch custody data from the new custody API
-        const custodyResponse = await axios.get(`/api/custody/${this.currentYear}/${this.currentMonth + 1}`);
+        const custodyResponse = await axios.get(`/custody/${this.currentYear}/${this.currentMonth + 1}`);
         custodyResponse.data.forEach(custodyEvent => {
           if (!this.events[custodyEvent.event_date]) {
             this.events[custodyEvent.event_date] = [];
@@ -681,7 +681,7 @@ export default {
     async fetchSchoolEvents() {
         console.log("Calendar.vue: fetchSchoolEvents() called");
         try {
-            const response = await axios.get('/api/school-events');
+            const response = await axios.get('/school-events');
             this.schoolEvents = response.data;
             console.log("Calendar.vue: School events fetched successfully", this.schoolEvents);
             this.adjustFontSize();
@@ -699,7 +699,7 @@ export default {
         console.log(`Calendar.vue: fetchWaves() called for ${startDate} to ${endDate}`);
         try {
             // Coords for Wrightsville Beach, NC
-            const response = await axios.get(`/api/waves/34.21/-77.80?start_date=${startDate}&end_date=${endDate}`);
+            const response = await axios.get(`/waves/34.21/-77.80?start_date=${startDate}&end_date=${endDate}`);
             const waveData = response.data;
             const newWaves = {};
             if (waveData.daily) {
@@ -732,7 +732,7 @@ export default {
       console.log('Sending old format event request:', { event_date: date, content, position });
       
       try {
-        const response = await axios.post('/api/events', {
+        const response = await axios.post('/events', {
           event_date: date,
           content: content,
           position: position,

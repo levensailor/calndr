@@ -6,7 +6,7 @@ import axios from 'axios'
 console.log("main.js: Starting Vue application");
 
 // Set the base URL for your backend API
-axios.defaults.baseURL = 'https://calndr.club'
+axios.defaults.baseURL = 'https://calndr.club/api/v1'
 
 // Remove the ngrok header since we're using your production domain
 // axios.defaults.headers.common['ngrok-skip-browser-warning'] = 'true'

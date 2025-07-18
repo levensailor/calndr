@@ -6,13 +6,14 @@ from core.security import get_current_user, uuid_to_string
 from core.logging import logger
 from db.models import users
 from schemas.user import FamilyMember, FamilyMemberEmail
+from schemas.custody import Custodian
 
 router = APIRouter()
 
-@router.get("/custodians")
+@router.get("/custodians", response_model=List[Custodian])
 async def get_family_custodians(current_user = Depends(get_current_user)):
     """
-    Returns the two primary custodians (parents) for the current user's family.
+    Returns the two primary custodians (parents) for the current user's family as an array.
     """
     family_id = current_user['family_id']
     family_members = await database.fetch_all(users.select().where(users.c.family_id == family_id).order_by(users.c.created_at))
@@ -23,16 +24,16 @@ async def get_family_custodians(current_user = Depends(get_current_user)):
     custodian_one = family_members[0]
     custodian_two = family_members[1]
     
-    return {
-        "custodian_one": {
-            "id": uuid_to_string(custodian_one['id']),
-            "first_name": custodian_one['first_name']
-        },
-        "custodian_two": {
-            "id": uuid_to_string(custodian_two['id']),
-            "first_name": custodian_two['first_name']
-        }
-    }
+    return [
+        Custodian(
+            id=uuid_to_string(custodian_one['id']),
+            first_name=custodian_one['first_name']
+        ),
+        Custodian(
+            id=uuid_to_string(custodian_two['id']),
+            first_name=custodian_two['first_name']
+        )
+    ]
 
 @router.get("/emails", response_model=List[FamilyMemberEmail])
 async def get_family_member_emails(current_user = Depends(get_current_user)):

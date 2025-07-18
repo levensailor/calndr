@@ -8,13 +8,14 @@ from .endpoints import (
 
 api_router = APIRouter()
 
+# Note: These routes will be mounted under /api by main.py
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(family.router, prefix="/family", tags=["family"])
 api_router.include_router(events.router, prefix="/events", tags=["events"])
 api_router.include_router(custody.router, prefix="/custody", tags=["custody"])
 api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
-api_router.include_router(profile.router, prefix="/profile", tags=["profile"])
+api_router.include_router(profile.router, prefix="/user/profile", tags=["profile"])
 api_router.include_router(reminders.router, prefix="/reminders", tags=["reminders"])
 api_router.include_router(babysitters.router, prefix="/babysitters", tags=["babysitters"])
 api_router.include_router(emergency_contacts.router, prefix="/emergency-contacts", tags=["emergency_contacts"])

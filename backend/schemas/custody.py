@@ -1,5 +1,5 @@
 import uuid
-from typing import Optional
+from typing import Optional, List
 from datetime import date
 from pydantic import BaseModel
 
@@ -20,3 +20,10 @@ class CustodyResponse(BaseModel):
     handoff_day: Optional[bool] = None
     handoff_time: Optional[str] = None
     handoff_location: Optional[str] = None
+
+class Custodian(BaseModel):
+    id: str
+    first_name: str
+
+class CustodianListResponse(BaseModel):
+    custodians: List[Custodian]

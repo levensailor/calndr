@@ -2,6 +2,7 @@ import uuid
 from typing import List
 from datetime import date, datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
+import traceback
 
 from core.database import database
 from core.security import get_current_user, uuid_to_string
@@ -154,4 +155,5 @@ async def set_custody(custody_data: CustodyRecord, current_user = Depends(get_cu
         )
     except Exception as e:
         logger.error(f"Error setting custody: {e}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Internal server error while setting custody: {e}")
