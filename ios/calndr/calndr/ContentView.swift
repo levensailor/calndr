@@ -34,7 +34,7 @@ struct ContentView: View {
             print("🖼️ ContentView: onAppear called")
             print("🖼️ ContentView: Initial state - isLoading: \(authManager.isLoading), isAuthenticated: \(authManager.isAuthenticated)")
             AuthenticationService.configure(with: authManager)
-            authManager.checkAuthentication()
+            // Removed duplicate checkAuthentication() call - it's already called in AuthenticationManager.init()
             NotificationManager.shared.requestAuthorizationAndRegister()
         }
         .onChange(of: authManager.isLoading) { oldValue, newValue in

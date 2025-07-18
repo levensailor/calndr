@@ -15,18 +15,30 @@ class AuthenticationService: ObservableObject {
             print("🔄 AuthenticationService: AuthManager configured, setting up subscription...")
             // Once the auth manager is configured, subscribe to its state
             authManager.$isAuthenticated
+                .removeDuplicates() // Prevent duplicate notifications
+                .debounce(for: .milliseconds(100), scheduler: DispatchQueue.main) // Debounce rapid changes
                 .receive(on: DispatchQueue.main)
                 .sink { [weak self] isAuthenticated in
+                    guard let self = self else { return }
+                    
                     print("🔄 AuthenticationService: isAuthenticated changed to: \(isAuthenticated)")
-                    self?.isLoggedIn = isAuthenticated
-                    if isAuthenticated {
-                        print("🔄 AuthenticationService: User authenticated, updating familyId...")
-                        self?.updateFamilyId()
+                    
+                    // Only process if the state actually changed
+                    if self.isLoggedIn != isAuthenticated {
+                        self.isLoggedIn = isAuthenticated
+                        
+                        if isAuthenticated {
+                            print("🔄 AuthenticationService: User authenticated, updating familyId...")
+                            self.updateFamilyId()
+                        } else {
+                            print("🔄 AuthenticationService: User not authenticated, clearing familyId")
+                            self.familyId = nil
+                        }
+                        
+                        print("🔄 AuthenticationService: Final state - isLoggedIn: \(self.isLoggedIn), familyId: \(self.familyId ?? "nil")")
                     } else {
-                        print("🔄 AuthenticationService: User not authenticated, clearing familyId")
-                        self?.familyId = nil
+                        print("🔄 AuthenticationService: State unchanged, skipping update")
                     }
-                    print("🔄 AuthenticationService: Final state - isLoggedIn: \(self?.isLoggedIn ?? false), familyId: \(self?.familyId ?? "nil")")
                 }
                 .store(in: &cancellables)
         }

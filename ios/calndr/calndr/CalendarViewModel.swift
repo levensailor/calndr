@@ -98,7 +98,7 @@ class CalendarViewModel: ObservableObject {
         // When the user logs in AND has a family ID, fetch initial data.
         AuthenticationService.shared.$isLoggedIn
             .combineLatest(AuthenticationService.shared.$familyId)
-            // .first() // This was causing the subscription to terminate after one successful fetch.
+            .debounce(for: .milliseconds(200), scheduler: DispatchQueue.main) // Debounce rapid changes
             .receive(on: DispatchQueue.main)
             .sink { [weak self] isLoggedIn, familyId in
                 guard let self = self else { return }

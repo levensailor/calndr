@@ -50,10 +50,59 @@ class APIService {
     // Helper function to create an authenticated request
     private func createAuthenticatedRequest(url: URL) -> URLRequest {
         var request = URLRequest(url: url)
+        print("🔐 APIService: Creating authenticated request for: \(url.path)")
+        
         if let token = KeychainManager.shared.loadToken(for: "currentUser") {
-            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            print("🔐 APIService: Token found in keychain (length: \(token.count))")
+            
+            // Validate token before using it
+            if isTokenValid(token) {
+                print("🔐✅ APIService: Token is valid, adding to request")
+                request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            } else {
+                print("🔐❌ APIService: Token is expired or invalid, not adding to request")
+                // Note: The request will proceed without Authorization header,
+                // which will result in 401 and trigger logout in the caller
+            }
+        } else {
+            print("🔐❌ APIService: No token found in keychain")
         }
         return request
+    }
+    
+    // Helper function to validate JWT token
+    private func isTokenValid(_ token: String) -> Bool {
+        let segments = token.components(separatedBy: ".")
+        guard segments.count > 1 else { 
+            print("🔐❌ APIService: Token has invalid format")
+            return false
+        }
+        
+        var base64String = segments[1]
+        
+        // Add padding if needed
+        while base64String.count % 4 != 0 {
+            base64String += "="
+        }
+        
+        guard let data = Data(base64Encoded: base64String) else { 
+            print("🔐❌ APIService: Unable to decode token payload")
+            return false
+        }
+        
+        do {
+            if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+               let exp = json["exp"] as? TimeInterval {
+                let currentTime = Date().timeIntervalSince1970
+                let isValid = exp > currentTime
+                print("🔐 APIService: Token expiry: \(exp), current time: \(currentTime), valid: \(isValid)")
+                return isValid
+            }
+        } catch {
+            print("🔐❌ APIService: Error decoding token: \(error)")
+        }
+        
+        return false
     }
 
     func fetchEvents(from startDate: String, to endDate: String, completion: @escaping (Result<[Event], Error>) -> Void) {
