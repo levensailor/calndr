@@ -38,6 +38,12 @@ def create_app() -> FastAPI:
     # Include API routes under /api (not /api/v1)
     app.include_router(api_router, prefix="/api")
     
+    # Add health check endpoint
+    @app.get("/health")
+    async def health_check():
+        """Health check endpoint for monitoring."""
+        return {"status": "healthy", "service": "calndr-backend", "version": settings.VERSION}
+    
     return app
 
 app = create_app()
