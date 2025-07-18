@@ -1382,25 +1382,56 @@ class APIService {
     // MARK: - Children
     
     func fetchChildren(completion: @escaping (Result<[Child], Error>) -> Void) {
+        print("👶 APIService: fetchChildren() called")
         let url = baseURL.appendingPathComponent("/children")
         let request = createAuthenticatedRequest(url: url)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
+                print("👶❌ APIService: Network error in fetchChildren: \(error.localizedDescription)")
                 completion(.failure(error))
                 return
             }
             
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("👶❌ APIService: Invalid HTTP response in fetchChildren")
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            print("👶 APIService: fetchChildren HTTP status: \(httpResponse.statusCode)")
+            
+            if let data = data, let jsonString = String(data: data, encoding: .utf8) {
+                print("👶 APIService: fetchChildren response: \(jsonString)")
+            }
+            
+            if httpResponse.statusCode == 401 {
+                print("👶❌🔐 APIService: 401 UNAUTHORIZED in fetchChildren - token invalid!")
+                completion(.failure(NSError(domain: "APIService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Unauthorized"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                print("👶❌ APIService: HTTP error \(httpResponse.statusCode) in fetchChildren")
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error"])))
+                return
+            }
+            
             guard let data = data else {
+                print("👶❌ APIService: No data in successful fetchChildren response")
                 completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
                 return
             }
             
             do {
                 let children = try JSONDecoder().decode([Child].self, from: data)
+                print("👶✅ APIService: Successfully decoded \(children.count) children")
                 completion(.success(children))
             } catch {
-                print("Failed to decode children: \(error)")
+                print("👶❌ APIService: Failed to decode children: \(error)")
+                if let decodingError = error as? DecodingError {
+                    print("👶❌ APIService: Detailed decoding error: \(decodingError)")
+                }
                 completion(.failure(error))
             }
         }.resume()
