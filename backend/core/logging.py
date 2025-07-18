@@ -5,10 +5,17 @@ from datetime import datetime
 import pytz
 
 class ESTFormatter(logging.Formatter):
-    """Custom formatter to show EST timezone."""
+    """Custom formatter to show EST timezone with 12-hour format."""
     def converter(self, timestamp):
         dt = datetime.fromtimestamp(timestamp, tz=pytz.timezone('US/Eastern'))
         return dt.timetuple()
+    
+    def formatTime(self, record, datefmt=None):
+        dt = datetime.fromtimestamp(record.created, tz=pytz.timezone('US/Eastern'))
+        if datefmt:
+            return dt.strftime(datefmt)
+        else:
+            return dt.strftime('%Y-%m-%d %I:%M:%S %p')
 
 def setup_logging():
     """Setup application logging with file rotation and console output."""
