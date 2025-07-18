@@ -21,6 +21,19 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 30  # 30 days
     
+    # CORS
+    ALLOWED_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "https://calndr.club",
+        "https://www.calndr.club",
+        "http://localhost:8080",
+        "capacitor://localhost",
+        "ionic://localhost",
+        "http://localhost",
+        "http://localhost:8100",
+        "https://localhost:8100"
+    ]
+    
     # Database
     DB_USER: str = os.getenv("DB_USER", "")
     DB_PASSWORD: str = os.getenv("DB_PASSWORD", "")
