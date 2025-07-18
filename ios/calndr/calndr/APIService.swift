@@ -1432,7 +1432,7 @@ class APIService {
     
     func fetchChildren(completion: @escaping (Result<[Child], Error>) -> Void) {
         print("👶 APIService: fetchChildren() called")
-        let url = baseURL.appendingPathComponent("/children")
+        let url = baseURL.appendingPathComponent("/children/")
         let request = createAuthenticatedRequest(url: url)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
@@ -1487,7 +1487,7 @@ class APIService {
     }
     
     func createChild(_ child: ChildCreate, completion: @escaping (Result<Child, Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/children")
+        let url = baseURL.appendingPathComponent("/children/")
         var request = createAuthenticatedRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
