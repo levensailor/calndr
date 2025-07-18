@@ -1,5 +1,249 @@
-from fastapi import APIRouter
+import json
+import traceback
+from typing import List, Optional
+from datetime import date, datetime, timedelta
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.dialects import postgresql
+
+from core.database import database
+from core.security import get_current_user
+from core.logging import logger
+from db.models import events
+from schemas.event import LegacyEvent
 
 router = APIRouter()
 
-# Event endpoints will be implemented here
+@router.get("/{year}/{month}")
+async def get_events_by_month(year: int, month: int, current_user = Depends(get_current_user)):
+    """
+    Returns non-custody events for the specified month.
+    Custody events are now handled by the separate custody API.
+    """
+    logger.info(f"Getting events for {year}/{month}")
+    # Calculate start and end dates for the month
+    start_date = date(year, month, 1)
+    if month == 12:
+        end_date = date(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        end_date = date(year, month + 1, 1) - timedelta(days=1)
+        
+    query = events.select().where(
+        (events.c.family_id == current_user['family_id']) &
+        (events.c.date.between(start_date, end_date)) &
+        (events.c.event_type != 'custody')  # Exclude custody events
+    )
+    db_events = await database.fetch_all(query)
+    
+    # Convert events to the format expected by frontend
+    frontend_events = []
+    try:
+        for event in db_events:
+            event_data = {
+                'id': event['id'],
+                'family_id': str(event['family_id']),
+                'event_date': str(event['date']),
+                'content': event['content'],
+                'position': event['position']
+            }
+            frontend_events.append(event_data)
+    except Exception as e:
+        logger.error(f"Error processing event records for /api/events/{{year}}/{{month}}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error processing event data")
+        
+    logger.info(f"Payload for /api/events/{{year}}/{{month}}: {json.dumps(frontend_events, indent=2)}")
+    return frontend_events
+
+@router.get("/")
+async def get_events_by_date_range(
+    start_date: str = Query(..., description="Start date in YYYY-MM-DD format"), 
+    end_date: str = Query(..., description="End date in YYYY-MM-DD format"), 
+    current_user = Depends(get_current_user)
+):
+    """
+    Returns non-custody events for the specified date range (iOS app compatibility).
+    Custody events are now handled by the separate custody API.
+    """
+    logger.info(f"iOS app requesting events from {start_date} to {end_date}")
+    
+    if not start_date or not end_date:
+        raise HTTPException(status_code=400, detail="start_date and end_date query parameters are required")
+    
+    try:
+        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+        
+    query = events.select().where(
+        (events.c.family_id == current_user['family_id']) &
+        (events.c.date.between(start_date_obj, end_date_obj)) &
+        (events.c.event_type != 'custody')  # Exclude custody events
+    )
+    
+    db_events = await database.fetch_all(query)
+    
+    # Convert events to the format expected by iOS app
+    frontend_events = []
+    try:
+        for event in db_events:
+            event_data = {
+                'id': event['id'],
+                'family_id': str(event['family_id']),
+                'event_date': str(event['date']),
+                'content': event['content'],
+                'position': event['position']
+            }
+            frontend_events.append(event_data)
+    except Exception as e:
+        logger.error(f"Error processing event records for /api/events: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error processing event data")
+        
+    return frontend_events
+
+@router.post("/")
+async def save_event(request: dict, current_user = Depends(get_current_user)):
+    """
+    Handles non-custody events only. Custody events should use the /api/custody endpoint.
+    """
+    logger.info(f"Saving event: {request}")
+    try:
+        logger.info(f"[Line 587] Received non-custody event request: {request}")
+        
+        # Check if this is a custody event (position 4) and reject it
+        if 'position' in request and request['position'] == 4:
+            logger.error(f"[Line 591] Rejecting custody event - position 4 should use /api/custody endpoint")
+            raise HTTPException(status_code=400, detail="Custody events should use /api/custody endpoint")
+        
+        # Handle legacy event format for non-custody events
+        if 'event_date' in request and 'position' in request and 'content' in request:
+            logger.info(f"[Line 596] Processing legacy event format")
+            legacy_event = LegacyEvent(**request)
+            logger.info(f"[Line 598] Created LegacyEvent object: {legacy_event}")
+            
+            event_date = datetime.strptime(legacy_event.event_date, '%Y-%m-%d').date()
+            logger.info(f"[Line 601] Parsed event_date: {event_date}")
+            
+            logger.info(f"[Line 603] Creating insert query with values:")
+            logger.info(f"[Line 604]   - family_id: {current_user['family_id']}")
+            logger.info(f"[Line 605]   - date: {event_date}")
+            logger.info(f"[Line 606]   - content: {legacy_event.content}")
+            logger.info(f"[Line 607]   - position: {legacy_event.position}")
+            logger.info(f"[Line 608]   - event_type: 'regular'")
+            
+            insert_query = events.insert().values(
+                family_id=current_user['family_id'],
+                date=event_date,
+                content=legacy_event.content,
+                position=legacy_event.position,
+                event_type='regular'
+            )
+            logger.info(f"[Line 617] Insert query created successfully")
+            logger.info(f"[Line 618] About to execute database insert...")
+            
+            event_id = await database.execute(insert_query)
+            logger.info(f"[Line 621] Successfully executed insert, got event_id: {event_id}")
+            
+            logger.info(f"[Line 623] Successfully created event with ID {event_id}: position={legacy_event.position}, content={legacy_event.content}")
+            
+            return {
+                'id': event_id,  # Return the actual database-generated ID
+                'event_date': legacy_event.event_date,
+                'content': legacy_event.content,
+                'position': legacy_event.position
+            }
+        else:
+            logger.error(f"[Line 632] Invalid event format - missing required fields")
+            logger.error(f"[Line 633] Request keys: {list(request.keys())}")
+            raise HTTPException(status_code=400, detail="Invalid event format - use legacy format with event_date, content, and position")
+    
+    except HTTPException:
+        logger.error(f"[Line 637] HTTPException occurred")
+        raise
+    except Exception as e:
+        logger.error(f"[Line 640] Exception in save_event: {e}")
+        logger.error(f"[Line 642] Full traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@router.put("/{event_id}")
+async def update_event(event_id: int, request: dict, current_user = Depends(get_current_user)):
+    """
+    Updates an existing non-custody event.
+    """
+    logger.info(f"Updating event {event_id}: {request}")
+    try:
+        # Check if this is a custody event (position 4) and reject it
+        if 'position' in request and request['position'] == 4:
+            logger.error(f"Rejecting custody event - position 4 should use /api/custody endpoint")
+            raise HTTPException(status_code=400, detail="Custody events should use /api/custody endpoint")
+        
+        # Verify the event exists and belongs to the user's family
+        verify_query = events.select().where(
+            (events.c.id == event_id) & 
+            (events.c.family_id == current_user['family_id']) &
+            (events.c.event_type != 'custody')
+        )
+        existing_event = await database.fetch_one(verify_query)
+        
+        if not existing_event:
+            raise HTTPException(status_code=404, detail="Event not found or access denied")
+        
+        # Handle legacy event format
+        if 'event_date' in request and 'position' in request and 'content' in request:
+            legacy_event = LegacyEvent(**request)
+            event_date = datetime.strptime(legacy_event.event_date, '%Y-%m-%d').date()
+            
+            # Update the event
+            update_query = events.update().where(events.c.id == event_id).values(
+                date=event_date,
+                content=legacy_event.content,
+                position=legacy_event.position
+            )
+            await database.execute(update_query)
+            
+            logger.info(f"Successfully updated event {event_id}: position={legacy_event.position}, content={legacy_event.content}")
+            
+            return {
+                'id': event_id,
+                'event_date': legacy_event.event_date,
+                'content': legacy_event.content,
+                'position': legacy_event.position
+            }
+        else:
+            raise HTTPException(status_code=400, detail="Invalid event format - use legacy format with event_date, content, and position")
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Exception in update_event: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@router.delete("/{event_id}")
+async def delete_event(event_id: int, current_user = Depends(get_current_user)):
+    """
+    Deletes an existing non-custody event.
+    """
+    logger.info(f"Deleting event {event_id}")
+    try:
+        # Verify the event exists and belongs to the user's family
+        verify_query = events.select().where(
+            (events.c.id == event_id) & 
+            (events.c.family_id == current_user['family_id']) &
+            (events.c.event_type != 'custody')
+        )
+        existing_event = await database.fetch_one(verify_query)
+        
+        if not existing_event:
+            raise HTTPException(status_code=404, detail="Event not found or access denied")
+        
+        # Delete the event
+        delete_query = events.delete().where(events.c.id == event_id)
+        await database.execute(delete_query)
+        
+        logger.info(f"Successfully deleted event {event_id}")
+        return {"status": "success", "message": "Event deleted successfully"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Exception in delete_event: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

@@ -86,9 +86,14 @@ class FamilyMember(BaseSchema):
     first_name: str
     last_name: str
     email: str
+    phone_number: Optional[str] = None
+    status: Optional[str] = "active"
+    last_signed_in: Optional[str] = None
     last_known_location: Optional[str] = None
     last_known_location_timestamp: Optional[str] = None
 
 class FamilyMemberEmail(BaseSchema):
     """Schema for family member email invitation."""
-    email: EmailStr
+    id: str
+    first_name: str
+    email: str
