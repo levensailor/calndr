@@ -180,15 +180,20 @@ async def search_daycare_providers(search_data: DaycareSearchRequest, current_us
         
         # Search for daycare providers using Google Places API
         if search_data.location_type == "zipcode" and search_data.zipcode:
-            # Use Text Search API for ZIP code searches
-            places_url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
-            params = {
-                "query": f"daycare centers near {search_data.zipcode}",
-                "key": google_api_key
+            # Use new Places API (New) Text Search for ZIP code searches
+            places_url = "https://places.googleapis.com/v1/places:searchText"
+            headers = {
+                "Content-Type": "application/json",
+                "X-Goog-Api-Key": google_api_key,
+                "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.rating,places.websiteUri,places.businessStatus,places.regularOpeningHours"
+            }
+            body = {
+                "textQuery": f"daycare centers near {search_data.zipcode}"
             }
             use_distance_calculation = False  # No reference point for distance
+            use_new_api = True
         elif search_data.location_type == "current" and search_data.latitude and search_data.longitude:
-            # Use Nearby Search API for current location searches
+            # Use legacy Nearby Search API for current location searches
             places_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
             params = {
                 "location": f"{search_data.latitude},{search_data.longitude}",
@@ -198,61 +203,106 @@ async def search_daycare_providers(search_data: DaycareSearchRequest, current_us
                 "key": google_api_key
             }
             use_distance_calculation = True
+            use_new_api = False
             latitude = search_data.latitude
             longitude = search_data.longitude
         else:
             raise HTTPException(status_code=400, detail="Invalid location data")
         
         async with httpx.AsyncClient() as client:
-            places_response = await client.get(places_url, params=params)
+            if use_new_api:
+                # Use POST for new Places API
+                places_response = await client.post(places_url, headers=headers, json=body)
+            else:
+                # Use GET for legacy API
+                places_response = await client.get(places_url, params=params)
+            
             places_data = places_response.json()
             
-            if places_data.get("status") != "OK":
-                logger.error(f"Google Places API error: {places_data.get('status')}")
-                return []
+            # Handle different response formats between new and legacy APIs
+            if use_new_api:
+                # New Places API (New) format
+                if "places" not in places_data:
+                    logger.error(f"New Places API error: {places_data}")
+                    return []
+                places_list = places_data.get("places", [])
+            else:
+                # Legacy API format
+                if places_data.get("status") != "OK":
+                    logger.error(f"Google Places API error: {places_data.get('status')}")
+                    return []
+                places_list = places_data.get("results", [])
             
             results = []
-            for place in places_data.get("results", []):
-                # Get additional details for each place
-                place_id = place.get("place_id")
-                details_url = "https://maps.googleapis.com/maps/api/place/details/json"
-                details_params = {
-                    "place_id": place_id,
-                    "fields": "name,formatted_address,formatted_phone_number,rating,website,opening_hours",
-                    "key": google_api_key
-                }
-                
-                details_response = await client.get(details_url, params=details_params)
-                details_data = details_response.json()
-                
-                if details_data.get("status") == "OK":
-                    result = details_data.get("result", {})
+            for place in places_list:
+                if use_new_api:
+                    # New API format - data is already included in the response
+                    place_id = place.get("id", "")
+                    name = place.get("displayName", {}).get("text", "")
+                    address = place.get("formattedAddress", "")
+                    phone_number = place.get("nationalPhoneNumber")
+                    rating = place.get("rating")
+                    website = place.get("websiteUri")
                     
-                    # Calculate distance (approximate) only for current location searches
-                    distance = None
-                    if use_distance_calculation:
-                        place_location = place.get("geometry", {}).get("location", {})
-                        if place_location:
-                            # Simple distance calculation (not precise, but good enough for sorting)
-                            lat_diff = abs(latitude - place_location.get("lat", 0))
-                            lng_diff = abs(longitude - place_location.get("lng", 0))
-                            distance = (lat_diff + lng_diff) * 111000  # Rough conversion to meters
-                    
-                    # Format opening hours
+                    # Format opening hours from new API
                     hours = None
-                    if result.get("opening_hours"):
-                        hours = "; ".join(result["opening_hours"].get("weekday_text", []))
+                    if place.get("regularOpeningHours") and place["regularOpeningHours"].get("weekdayDescriptions"):
+                        hours = "; ".join(place["regularOpeningHours"]["weekdayDescriptions"])
+                    
+                    # No distance calculation for ZIP code searches
+                    distance = None
                     
                     results.append(DaycareSearchResult(
                         place_id=place_id,
-                        name=result.get("name", ""),
-                        address=result.get("formatted_address", ""),
-                        phone_number=result.get("formatted_phone_number"),
-                        rating=result.get("rating"),
-                        website=result.get("website"),
+                        name=name,
+                        address=address,
+                        phone_number=phone_number,
+                        rating=rating,
+                        website=website,
                         hours=hours,
                         distance=distance
                     ))
+                else:
+                    # Legacy API format - need to fetch additional details
+                    place_id = place.get("place_id")
+                    details_url = "https://maps.googleapis.com/maps/api/place/details/json"
+                    details_params = {
+                        "place_id": place_id,
+                        "fields": "name,formatted_address,formatted_phone_number,rating,website,opening_hours",
+                        "key": google_api_key
+                    }
+                    
+                    details_response = await client.get(details_url, params=details_params)
+                    details_data = details_response.json()
+                    
+                    if details_data.get("status") == "OK":
+                        result = details_data.get("result", {})
+                        
+                        # Calculate distance (approximate) only for current location searches
+                        distance = None
+                        if use_distance_calculation:
+                            place_location = place.get("geometry", {}).get("location", {})
+                            if place_location:
+                                # Simple distance calculation (not precise, but good enough for sorting)
+                                lat_diff = abs(latitude - place_location.get("lat", 0))
+                                lng_diff = abs(longitude - place_location.get("lng", 0))
+                                distance = (lat_diff + lng_diff) * 111000  # Rough conversion to meters
+                        
+                        # Format opening hours
+                        hours = None
+                        if result.get("opening_hours"):
+                            hours = "; ".join(result["opening_hours"].get("weekday_text", []))
+                        
+                        results.append(DaycareSearchResult(
+                            place_id=place_id,
+                            name=result.get("name", ""),
+                            address=result.get("formatted_address", ""),
+                            phone_number=result.get("formatted_phone_number"),
+                            rating=result.get("rating"),
+                            website=result.get("website"),
+                            hours=hours,
+                            distance=distance
+                        ))
             
             # Sort by distance if available (current location searches) or by name (ZIP code searches)
             if use_distance_calculation:
