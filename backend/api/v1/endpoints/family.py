@@ -15,25 +15,45 @@ async def get_family_custodians(current_user = Depends(get_current_user)):
     """
     Returns the two primary custodians (parents) for the current user's family as an array.
     """
-    family_id = current_user['family_id']
-    family_members = await database.fetch_all(users.select().where(users.c.family_id == family_id).order_by(users.c.created_at))
-    
-    if len(family_members) < 2:
-        raise HTTPException(status_code=404, detail="Family must have at least two members to determine custodians")
+    try:
+        family_id = current_user['family_id']
+        logger.info(f"Fetching custodians for family_id: {family_id}")
         
-    custodian_one = family_members[0]
-    custodian_two = family_members[1]
-    
-    return [
-        Custodian(
-            id=uuid_to_string(custodian_one['id']),
-            first_name=custodian_one['first_name']
-        ),
-        Custodian(
-            id=uuid_to_string(custodian_two['id']),
-            first_name=custodian_two['first_name']
+        # Order by created_at, but handle NULLs properly
+        query = users.select().where(users.c.family_id == family_id).order_by(
+            users.c.created_at.asc().nulls_last()
         )
-    ]
+        family_members = await database.fetch_all(query)
+        
+        logger.info(f"Found {len(family_members)} family members")
+        
+        if len(family_members) < 2:
+            logger.warning(f"Not enough family members found: {len(family_members)}")
+            raise HTTPException(status_code=404, detail="Family must have at least two members to determine custodians")
+            
+        custodian_one = family_members[0]
+        custodian_two = family_members[1]
+        
+        logger.info(f"Custodian 1: {custodian_one['first_name']} (ID: {custodian_one['id']})")
+        logger.info(f"Custodian 2: {custodian_two['first_name']} (ID: {custodian_two['id']})")
+        
+        result = [
+            Custodian(
+                id=uuid_to_string(custodian_one['id']),
+                first_name=custodian_one['first_name']
+            ),
+            Custodian(
+                id=uuid_to_string(custodian_two['id']),
+                first_name=custodian_two['first_name']
+            )
+        ]
+        
+        logger.info(f"Returning custodians: {result}")
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error fetching custodians: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error fetching custodians: {str(e)}")
 
 @router.get("/emails", response_model=List[FamilyMemberEmail])
 async def get_family_member_emails(current_user = Depends(get_current_user)):
