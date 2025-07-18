@@ -14,43 +14,59 @@ class AuthenticationManager: ObservableObject {
     }
     
     func checkAuthentication() {
+        print("🔐 AuthenticationManager: Starting authentication check...")
         // Show splash screen for at least 2 seconds for better UX
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             if let token = KeychainManager.shared.loadToken(for: "currentUser") {
-                self.isAuthenticated = true
+                print("🔐 AuthenticationManager: Found token in keychain")
                 let decodedToken = self.decode(jwtToken: token)
+                print("🔐 AuthenticationManager: Decoded token: \(decodedToken)")
+                
+                self.isAuthenticated = true
                 self.username = decodedToken["name"] as? String
                 self.userID = decodedToken["sub"] as? String
+                
+                print("🔐 AuthenticationManager: Set isAuthenticated = true, username = \(self.username ?? "nil"), userID = \(self.userID ?? "nil")")
             } else {
+                print("🔐 AuthenticationManager: No token found in keychain")
                 self.isAuthenticated = false
                 self.username = nil
                 self.userID = nil
+                print("🔐 AuthenticationManager: Set isAuthenticated = false")
             }
             self.isLoading = false
+            print("🔐 AuthenticationManager: Set isLoading = false, final state: isAuthenticated = \(self.isAuthenticated)")
         }
     }
     
     func login(email: String, password: String, completion: @escaping (Bool) -> Void) {
+        print("🔐 AuthenticationManager: Starting login for email: \(email)")
         APIService.shared.login(email: email, password: password) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let token):
+                    print("🔐 AuthenticationManager: Login API success, saving token...")
                     let saved = KeychainManager.shared.save(token: token, for: "currentUser")
                     if saved {
-                        self?.isAuthenticated = true
-                        self?.isLoading = false // Ensure loading is false after successful login
+                        print("🔐 AuthenticationManager: Token saved successfully")
                         let decodedToken = self?.decode(jwtToken: token) ?? [:]
+                        print("🔐 AuthenticationManager: Decoded login token: \(decodedToken)")
+                        
+                        self?.isAuthenticated = true
+                        self?.isLoading = false
                         self?.username = decodedToken["name"] as? String
                         self?.userID = decodedToken["sub"] as? String
+                        
+                        print("🔐 AuthenticationManager: Login complete - isAuthenticated = true, username = \(self?.username ?? "nil"), userID = \(self?.userID ?? "nil")")
                         completion(true)
                     } else {
-                        print("Error: Could not save token to keychain.")
+                        print("🔐❌ AuthenticationManager: Error - Could not save token to keychain")
                         self?.isAuthenticated = false
                         self?.isLoading = false
                         completion(false)
                     }
                 case .failure(let error):
-                    print("Login failed: \(error.localizedDescription)")
+                    print("🔐❌ AuthenticationManager: Login failed: \(error.localizedDescription)")
                     self?.isAuthenticated = false
                     self?.isLoading = false
                     completion(false)
@@ -89,12 +105,18 @@ class AuthenticationManager: ObservableObject {
     }
     
     func logout() {
+        print("🔐❌ AuthenticationManager: LOGOUT CALLED")
+        print("🔐❌ AuthenticationManager: Call stack:")
+        Thread.callStackSymbols.forEach { print("🔐❌   \($0)") }
+        
         KeychainManager.shared.deleteToken(for: "currentUser")
         DispatchQueue.main.async {
+            print("🔐❌ AuthenticationManager: Clearing authentication state...")
             self.isAuthenticated = false
             self.isLoading = false
             self.username = nil
             self.userID = nil
+            print("🔐❌ AuthenticationManager: Logout complete - isAuthenticated = false")
         }
     }
 

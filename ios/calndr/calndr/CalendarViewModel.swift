@@ -94,6 +94,7 @@ class CalendarViewModel: ObservableObject {
     }
 
     private func setupBindings() {
+        print("📱 CalendarViewModel: setupBindings() called")
         // When the user logs in AND has a family ID, fetch initial data.
         AuthenticationService.shared.$isLoggedIn
             .combineLatest(AuthenticationService.shared.$familyId)
@@ -102,15 +103,21 @@ class CalendarViewModel: ObservableObject {
             .sink { [weak self] isLoggedIn, familyId in
                 guard let self = self else { return }
 
+                print("📱 CalendarViewModel: Auth state changed - isLoggedIn: \(isLoggedIn), familyId: \(familyId ?? "nil")")
+                print("📱 CalendarViewModel: Current isDataLoaded: \(self.isDataLoaded)")
+
                 if isLoggedIn, familyId != nil {
                     // Only fetch data if it hasn't been loaded yet for this session.
                     if !self.isDataLoaded {
-                        print("Login detected and data not loaded. Fetching initial data...")
+                        print("📱✅ CalendarViewModel: Login detected and data not loaded. Fetching initial data...")
                         self.fetchInitialData()
+                    } else {
+                        print("📱 CalendarViewModel: Login detected but data already loaded, skipping fetch")
                     }
                 } else {
                     // User logged out or familyId is nil
-                    print("Logout detected or missing familyId. Resetting data.")
+                    print("📱❌ CalendarViewModel: Logout detected or missing familyId. Resetting data.")
+                    print("📱❌ CalendarViewModel: isLoggedIn = \(isLoggedIn), familyId = \(familyId ?? "nil")")
                     self.resetData()
                 }
             }
@@ -119,21 +126,36 @@ class CalendarViewModel: ObservableObject {
 
     func fetchInitialData() {
         // isDataLoaded guard is now handled in setupBindings to allow re-fetch on new login
+        print("📅 CalendarViewModel: fetchInitialData() called")
+        print("📅 CalendarViewModel: AuthenticationService.shared.isLoggedIn = \(AuthenticationService.shared.isLoggedIn)")
+        print("📅 CalendarViewModel: AuthenticationService.shared.familyId = \(AuthenticationService.shared.familyId ?? "nil")")
+        
         guard AuthenticationService.shared.isLoggedIn else {
-            print("User not logged in, aborting initial data fetch.")
+            print("📅❌ CalendarViewModel: User not logged in, aborting initial data fetch.")
             return
         }
-        print("--- Starting initial data fetch ---")
+        print("📅 CalendarViewModel: --- Starting initial data fetch ---")
         self.isDataLoaded = true // Set this immediately to prevent re-entry for the same session
+        
+        print("📅 CalendarViewModel: Starting fetchHandoffsAndCustody()...")
         fetchHandoffsAndCustody()
+        
+        print("📅 CalendarViewModel: Starting fetchFamilyData()...")
         fetchFamilyData()
+        
+        print("📅 CalendarViewModel: Starting fetchUserThemePreference()...")
         fetchUserThemePreference() // Load saved theme from database
+        
+        print("📅 CalendarViewModel: Starting fetchReminders()...")
         fetchReminders() // Load reminders
         
         // Fetch school events if enabled
         if showSchoolEvents && schoolEvents.isEmpty {
+            print("📅 CalendarViewModel: Starting fetchSchoolEvents()...")
             fetchSchoolEvents()
         }
+        
+        print("📅 CalendarViewModel: All initial fetch methods started")
     }
     
     func resetData() {
@@ -162,34 +184,46 @@ class CalendarViewModel: ObservableObject {
     }
 
     func fetchHandoffsAndCustody() {
+        print("🏠 CalendarViewModel: fetchHandoffsAndCustody() called")
+        print("🏠 CalendarViewModel: familyId = \(AuthenticationService.shared.familyId ?? "nil")")
+        
         guard AuthenticationService.shared.familyId != nil else {
-            print("No family ID, cannot fetch handoffs or custody.")
+            print("🏠❌ CalendarViewModel: No family ID, cannot fetch handoffs or custody.")
             return
         }
 
+        print("🏠 CalendarViewModel: Setting loading states...")
         self.isDataLoading = true
         self.isHandoffDataReady = false
         
         let dispatchGroup = DispatchGroup()
 
         // Fetch custodian names
+        print("🏠 CalendarViewModel: Starting custodian names fetch...")
         dispatchGroup.enter()
         APIService.shared.fetchCustodianNames { [weak self] result in
             defer { dispatchGroup.leave() }
             DispatchQueue.main.async {
+                print("🏠 CalendarViewModel: Custodian names fetch completed")
                 switch result {
                 case .success(let custodians):
+                    print("🏠✅ CalendarViewModel: Custodian names fetch success - received \(custodians.count) custodians")
                     if custodians.count >= 2 {
                         self?.custodianOneName = custodians[0].first_name
                         self?.custodianTwoName = custodians[1].first_name
                         self?.custodianOneId = custodians[0].id
                         self?.custodianTwoId = custodians[1].id
-                        print("✅ Successfully fetched custodian names: \(custodians[0].first_name), \(custodians[1].first_name)")
+                        print("🏠✅ CalendarViewModel: Successfully set custodian names: \(custodians[0].first_name), \(custodians[1].first_name)")
+                        print("🏠✅ CalendarViewModel: Custodian IDs: \(custodians[0].id), \(custodians[1].id)")
                     } else {
-                        print("❌ Error: Not enough custodians in response (found \(custodians.count))")
+                        print("🏠❌ CalendarViewModel: Error: Not enough custodians in response (found \(custodians.count))")
                     }
                 case .failure(let error):
-                    print("❌ Error fetching custodian names: \(error.localizedDescription)")
+                    print("🏠❌ CalendarViewModel: Error fetching custodian names: \(error.localizedDescription)")
+                    print("🏠❌ CalendarViewModel: Error code: \((error as NSError).code)")
+                    if (error as NSError).code == 401 {
+                        print("🏠❌🔐 CalendarViewModel: 401 error in custodian fetch - this will likely trigger logout")
+                    }
                 }
             }
         }
@@ -243,17 +277,23 @@ class CalendarViewModel: ObservableObject {
     }
     
     private func fetchRegularEvents(from startDate: String, to endDate: String) {
+        print("📅 CalendarViewModel: fetchRegularEvents() called for \(startDate) to \(endDate)")
         APIService.shared.fetchEvents(from: startDate, to: endDate) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let events):
                     self?.events = events
-                    print("Successfully fetched \(events.count) regular events for the visible date range.")
+                    print("📅✅ CalendarViewModel: Successfully fetched \(events.count) regular events for the visible date range.")
                 case .failure(let error):
+                    print("📅❌ CalendarViewModel: Error fetching regular events: \(error.localizedDescription)")
+                    print("📅❌ CalendarViewModel: Error code: \((error as NSError).code)")
+                    print("📅❌ CalendarViewModel: Error domain: \((error as NSError).domain)")
+                    
                     if (error as NSError).code == 401 {
+                        print("📅❌🔐 CalendarViewModel: 401 UNAUTHORIZED ERROR - TRIGGERING LOGOUT!")
+                        print("📅❌🔐 CalendarViewModel: This means the token is invalid/expired")
                         self?.authManager.logout()
                     }
-                    print("Error fetching regular events: \(error.localizedDescription)")
                 }
             }
         }

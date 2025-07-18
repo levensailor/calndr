@@ -12,16 +12,21 @@ class AuthenticationService: ObservableObject {
     
     private(set) var authManager: AuthenticationManager! {
         didSet {
+            print("🔄 AuthenticationService: AuthManager configured, setting up subscription...")
             // Once the auth manager is configured, subscribe to its state
             authManager.$isAuthenticated
                 .receive(on: DispatchQueue.main)
                 .sink { [weak self] isAuthenticated in
+                    print("🔄 AuthenticationService: isAuthenticated changed to: \(isAuthenticated)")
                     self?.isLoggedIn = isAuthenticated
                     if isAuthenticated {
+                        print("🔄 AuthenticationService: User authenticated, updating familyId...")
                         self?.updateFamilyId()
                     } else {
+                        print("🔄 AuthenticationService: User not authenticated, clearing familyId")
                         self?.familyId = nil
                     }
+                    print("🔄 AuthenticationService: Final state - isLoggedIn: \(self?.isLoggedIn ?? false), familyId: \(self?.familyId ?? "nil")")
                 }
                 .store(in: &cancellables)
         }
@@ -36,16 +41,23 @@ class AuthenticationService: ObservableObject {
     }
     
     private func updateFamilyId() {
+        print("🔄 AuthenticationService: updateFamilyId() called")
         guard let token = KeychainManager.shared.loadToken(for: "currentUser") else {
+            print("🔄❌ AuthenticationService: No token found when updating familyId")
             self.familyId = nil
             return
         }
+        
+        print("🔄 AuthenticationService: Token found, decoding...")
         let decodedToken = decode(jwtToken: token)
         
         // Log the entire decoded profile for debugging
-        print("👤 User Profile from Token: \(decodedToken)")
+        print("👤 AuthenticationService: User Profile from Token: \(decodedToken)")
         
-        self.familyId = decodedToken["family_id"] as? String
+        let extractedFamilyId = decodedToken["family_id"] as? String
+        self.familyId = extractedFamilyId
+        print("🔄 AuthenticationService: Extracted familyId: \(extractedFamilyId ?? "nil")")
+        print("🔄 AuthenticationService: Set self.familyId = \(self.familyId ?? "nil")")
     }
     
     private func decode(jwtToken jwt: String) -> [String: Any] {

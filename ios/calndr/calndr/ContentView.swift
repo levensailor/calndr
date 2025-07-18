@@ -7,12 +7,15 @@ struct ContentView: View {
     var body: some View {
         Group {
             if authManager.isLoading {
+                print("🖼️ ContentView: Showing SplashScreenView (isLoading = true)")
                 SplashScreenView()
                     .transition(.opacity)
             } else if authManager.isAuthenticated {
+                print("🖼️ ContentView: Showing MainTabView (isAuthenticated = true, isLoading = false)")
                 MainTabView(calendarViewModel: CalendarViewModel(authManager: authManager, themeManager: themeManager))
                     .transition(.opacity)
             } else {
+                print("🖼️ ContentView: Showing LoginView (isAuthenticated = false, isLoading = false)")
                 LoginView()
                     .transition(.opacity)
             }
@@ -22,9 +25,17 @@ struct ContentView: View {
         .environmentObject(authManager)
         .environmentObject(themeManager)
         .onAppear {
+            print("🖼️ ContentView: onAppear called")
+            print("🖼️ ContentView: Initial state - isLoading: \(authManager.isLoading), isAuthenticated: \(authManager.isAuthenticated)")
             AuthenticationService.configure(with: authManager)
             authManager.checkAuthentication()
             NotificationManager.shared.requestAuthorizationAndRegister()
+        }
+        .onChange(of: authManager.isLoading) { oldValue, newValue in
+            print("🖼️ ContentView: isLoading changed from \(oldValue) to \(newValue)")
+        }
+        .onChange(of: authManager.isAuthenticated) { oldValue, newValue in
+            print("🖼️ ContentView: isAuthenticated changed from \(oldValue) to \(newValue)")
         }
     }
 }
