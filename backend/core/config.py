@@ -49,7 +49,13 @@ class Settings(BaseSettings):
     AWS_ACCESS_KEY_ID: str = os.getenv("AWS_ACCESS_KEY_ID", "")
     AWS_SECRET_ACCESS_KEY: str = os.getenv("AWS_SECRET_ACCESS_KEY", "")
     AWS_REGION: str = os.getenv("AWS_REGION", "us-east-1")
-    S3_BUCKET_NAME: str = os.getenv("S3_BUCKET_NAME", "")
+    AWS_S3_BUCKET_NAME: str = os.getenv("AWS_S3_BUCKET_NAME", "")
+    
+    # Push Notifications
+    SNS_PLATFORM_APPLICATION_ARN: Optional[str] = os.getenv("SNS_PLATFORM_APPLICATION_ARN")
+    
+    # External APIs
+    GOOGLE_PLACES_API_KEY: Optional[str] = os.getenv("GOOGLE_PLACES_API_KEY")
     
     class Config:
         case_sensitive = True
