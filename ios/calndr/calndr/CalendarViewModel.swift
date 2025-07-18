@@ -178,12 +178,16 @@ class CalendarViewModel: ObservableObject {
             defer { dispatchGroup.leave() }
             DispatchQueue.main.async {
                 switch result {
-                case .success(let response):
-                    self?.custodianOneName = response.custodian_one.first_name
-                    self?.custodianTwoName = response.custodian_two.first_name
-                    self?.custodianOneId = response.custodian_one.id
-                    self?.custodianTwoId = response.custodian_two.id
-                    print("✅ Successfully fetched custodian names: \(response.custodian_one.first_name), \(response.custodian_two.first_name)")
+                case .success(let custodians):
+                    if custodians.count >= 2 {
+                        self?.custodianOneName = custodians[0].first_name
+                        self?.custodianTwoName = custodians[1].first_name
+                        self?.custodianOneId = custodians[0].id
+                        self?.custodianTwoId = custodians[1].id
+                        print("✅ Successfully fetched custodian names: \(custodians[0].first_name), \(custodians[1].first_name)")
+                    } else {
+                        print("❌ Error: Not enough custodians in response (found \(custodians.count))")
+                    }
                 case .failure(let error):
                     print("❌ Error fetching custodian names: \(error.localizedDescription)")
                 }

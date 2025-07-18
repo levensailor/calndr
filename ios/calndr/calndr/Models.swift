@@ -37,10 +37,8 @@ struct Custodian: Codable, Identifiable, Hashable {
     let first_name: String
 }
 
-struct CustodianResponse: Codable {
-    let custodian_one: Custodian
-    let custodian_two: Custodian
-}
+// Use array-based response instead
+typealias CustodiansResponse = [Custodian]
 
 // Represents a custody record for the new custody API
 struct CustodyRecord: Codable, Identifiable {

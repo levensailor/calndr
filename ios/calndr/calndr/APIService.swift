@@ -24,11 +24,6 @@ struct AuthTokenResponse: Codable {
     let token_type: String
 }
 
-struct CustodianNamesResponse: Codable {
-    let custodian_one: Custodian
-    let custodian_two: Custodian
-}
-
 struct UserRegistrationRequest: Codable {
     let first_name: String
     let last_name: String
@@ -820,7 +815,7 @@ class APIService {
         }.resume()
     }
 
-    func fetchCustodianNames(completion: @escaping (Result<CustodianNamesResponse, Error>) -> Void) {
+    func fetchCustodianNames(completion: @escaping (Result<[Custodian], Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/family/custodians")
         let request = createAuthenticatedRequest(url: url)
         
@@ -865,8 +860,8 @@ class APIService {
             }
             
             do {
-                let custodianResponse = try JSONDecoder().decode(CustodianNamesResponse.self, from: data)
-                completion(.success(custodianResponse))
+                let custodians = try JSONDecoder().decode([Custodian].self, from: data)
+                completion(.success(custodians))
             } catch {
                 print("❌ JSON decoding error for custodian names: \(error)")
                 if let decodingError = error as? DecodingError {
