@@ -29,14 +29,20 @@ def create_app() -> FastAPI:
     # Add CORS middleware
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.ALLOWED_ORIGINS,
+        allow_origins=["*"],  # Allow all origins like the original app.py
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"]
     )
     
-    # Include API routes
-    app.include_router(api_router, prefix=settings.API_V1_STR)
+    # Include API routes under /api/v1 to match client expectations
+    app.include_router(api_router, prefix="/api/v1")
+    
+    # Add health check endpoint
+    @app.get("/health")
+    async def health_check():
+        """Health check endpoint for monitoring."""
+        return {"status": "healthy", "service": "calndr-backend", "version": settings.VERSION}
     
     return app
 
