@@ -106,7 +106,7 @@ class APIService {
     }
 
     func fetchEvents(from startDate: String, to endDate: String, completion: @escaping (Result<[Event], Error>) -> Void) {
-        var components = URLComponents(url: baseURL.appendingPathComponent("/events"), resolvingAgainstBaseURL: false)!
+        var components = URLComponents(url: baseURL.appendingPathComponent("/events/"), resolvingAgainstBaseURL: false)!
         components.queryItems = [
             URLQueryItem(name: "start_date", value: startDate),
             URLQueryItem(name: "end_date", value: endDate)
@@ -530,7 +530,7 @@ class APIService {
             url = baseURL.appendingPathComponent("/events/\(eventToUpdate.id)")
             httpMethod = "PUT"
         } else {
-            url = baseURL.appendingPathComponent("/events")
+            url = baseURL.appendingPathComponent("/events/")
             httpMethod = "POST"
         }
         
