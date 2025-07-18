@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from backend.api.v1.endpoints import (
+from .endpoints import (
     auth, users, family, events, custody, notifications, profile, reminders,
     babysitters, emergency_contacts, group_chat, children, daycare_providers,
     weather, school_events, themes
