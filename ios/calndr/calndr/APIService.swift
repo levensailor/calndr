@@ -2172,7 +2172,7 @@ class APIService {
     // MARK: - Themes
     
     func fetchThemes(completion: @escaping (Result<[Theme], Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/themes")
+        let url = baseURL.appendingPathComponent("/themes/")
         let request = createAuthenticatedRequest(url: url)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
