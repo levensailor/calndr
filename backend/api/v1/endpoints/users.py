@@ -209,3 +209,60 @@ async def update_user_location(location_data: LocationUpdateRequest, current_use
     except Exception as e:
         logger.error(f"Failed to update user location for user {current_user['id']}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to update user location.")
+
+@router.post("/profile/photo", response_model=UserProfile)
+async def upload_profile_photo(
+    photo: UploadFile = File(...),
+    current_user = Depends(get_current_user)
+):
+    """
+    Uploads a profile photo for the current user.
+    """
+    try:
+        # Validate file type
+        if not photo.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="File must be an image")
+        
+        # Generate a unique filename
+        file_extension = os.path.splitext(photo.filename)[1]
+        unique_filename = f"{uuid.uuid4()}{file_extension}"
+        object_name = f"profile_photos/{unique_filename}"
+
+        # Upload to S3
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_REGION
+        )
+
+        # Read file content
+        file_content = await photo.read()
+
+        # Upload to S3
+        s3_client.put_object(
+            Bucket=settings.AWS_S3_BUCKET_NAME,
+            Key=object_name,
+            Body=file_content,
+            ContentType=photo.content_type,
+            ACL='public-read'  # Make the file publicly accessible
+        )
+
+        # Construct the S3 URL
+        s3_url = f"https://{settings.AWS_S3_BUCKET_NAME}.s3.{settings.AWS_REGION}.amazonaws.com/{object_name}"
+
+        # Update user's profile_photo_url in the database
+        await database.execute(
+            users.update().where(users.c.id == current_user['id']).values(profile_photo_url=s3_url)
+        )
+
+        # Re-fetch user to return updated profile
+        return await get_user_profile(current_user)
+        
+    except ClientError as e:
+        logger.error(f"S3 upload error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to upload profile photo: {e.response['Error']['Message']}")
+    except Exception as e:
+        logger.error(f"Error uploading profile photo: {e}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Failed to upload profile photo")
