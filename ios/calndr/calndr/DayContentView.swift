@@ -60,7 +60,7 @@ struct DayContentView: View {
                 Text(custodyOwner.capitalized)
                     .font(.system(size: 9))
                     .bold()
-                    .foregroundColor(.black) // Always black for good contrast on light backgrounds
+                    .foregroundColor(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneTextColor : themeManager.currentTheme.parentTwoTextColor)
                     .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24) // Fixed height
                     .background(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColorSwiftUI : themeManager.currentTheme.parentTwoColorSwiftUI)            } else if !custodyOwner.isEmpty && viewModel.showHandoffTimeline {
                 // Invisible placeholder to maintain layout space when handoff timeline is active

@@ -26,7 +26,7 @@ struct ThreeDayView: View {
                                 Text(getCustodyText(for: day))
                                     .font(.caption)
                                     .bold()
-                                    .foregroundColor(.black)
+                                    .foregroundColor(themeManager.currentTheme.smartTextColor(for: getCustodyBackgroundColor(for: day)))
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 6)
                                     .background(getCustodyBackgroundColor(for: day))

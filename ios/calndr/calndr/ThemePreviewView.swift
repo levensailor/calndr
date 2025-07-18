@@ -15,15 +15,17 @@ struct ThemePreviewView: View {
 
             Text(theme.name)
                 .font(.system(size: 12, weight: .bold, design: .default))
+                .foregroundColor(themeManager.currentTheme.smartTextColor(for: themeManager.currentTheme.secondaryBackgroundColor))
                 .padding(.vertical, 8)
                 .frame(maxWidth: .infinity)
-                .background(.thinMaterial)
+                .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
             
         }
         .cornerRadius(8)
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(themeManager.currentTheme == theme ? Color.green : Color.clear, lineWidth: 3)
+                .stroke(themeManager.currentTheme == theme ? themeManager.currentTheme.accentColorSwiftUI : themeManager.currentTheme.textColorSwiftUI.opacity(0.2), lineWidth: themeManager.currentTheme == theme ? 3 : 1)
         )
+        .animateThemeChanges(themeManager)
     }
 } 

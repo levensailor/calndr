@@ -35,6 +35,7 @@ struct ThemeSettingsView: View {
             }
         }
         .navigationTitle("Themes")
+        .navigationBarTitleDisplayMode(.large)
         .navigationBarItems(trailing:
             Button(action: {
                 isEditing = false
@@ -42,9 +43,12 @@ struct ThemeSettingsView: View {
                 showThemeCreator = true
             }) {
                 Image(systemName: "plus")
+                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
             }
         )
         .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
+        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+        .animateThemeChanges(themeManager)
         .sheet(isPresented: $showThemeCreator) {
             ThemeCreatorView(
                 theme: $themeToEdit,

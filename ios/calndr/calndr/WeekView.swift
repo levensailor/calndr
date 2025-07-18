@@ -73,7 +73,7 @@ struct WeekView: View {
                             }) {
                                 Text(ownerName.capitalized)
                                     .font(.headline.bold())
-                                    .foregroundColor(.black)
+                                    .foregroundColor(ownerId == viewModel.custodianOneId ? themeManager.currentTheme.parentOneTextColor : themeManager.currentTheme.parentTwoTextColor)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 12)
                                     .background(ownerId == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColorSwiftUI : themeManager.currentTheme.parentTwoColorSwiftUI)

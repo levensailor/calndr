@@ -28,6 +28,38 @@ struct Theme: Identifiable, Equatable, Hashable, Codable {
     var accentColorSwiftUI: Color { accentColor.color }
     var parentOneColorSwiftUI: Color { parentOneColor.color }
     var parentTwoColorSwiftUI: Color { parentTwoColor.color }
+    
+    // Smart contrast text colors - automatically choose black/white based on background
+    var smartTextColor: Color {
+        mainBackgroundColor.color.isLight ? Color.black : textColor.color
+    }
+    
+    var smartHeaderTextColor: Color {
+        mainBackgroundColor.color.isLight ? Color.black : headerTextColor.color
+    }
+    
+    // Smart text color for specific backgrounds
+    func smartTextColor(for backgroundColor: Color) -> Color {
+        backgroundColor.isLight ? Color.black : Color.white
+    }
+    
+    func smartTextColor(for backgroundColor: CodableColor) -> Color {
+        backgroundColor.color.isLight ? Color.black : Color.white
+    }
+    
+    // Enhanced contrast detection for parent colors
+    var parentOneTextColor: Color {
+        parentOneColor.color.isLight ? Color.black : Color.white
+    }
+    
+    var parentTwoTextColor: Color {
+        parentTwoColor.color.isLight ? Color.black : Color.white
+    }
+    
+    // Smart accent colors with good contrast
+    var smartAccentColor: Color {
+        mainBackgroundColor.color.isLight ? accentColor.color : accentColor.color
+    }
 
     // Custom CodingKeys to handle snake_case from backend
     enum CodingKeys: String, CodingKey {
@@ -251,6 +283,16 @@ struct CodableColor: Codable, Equatable, Hashable {
         return String(format: "#%02X%02X%02X", r, g, b)
     }
     
+    // Smart contrast text color for this background
+    var contrastTextColor: Color {
+        self.color.isLight ? Color.black : Color.white
+    }
+    
+    // Check if this color is light
+    var isLight: Bool {
+        return self.color.isLight
+    }
+    
     enum CodingKeys: String, CodingKey {
         case red, green, blue, opacity
     }
@@ -259,6 +301,7 @@ struct CodableColor: Codable, Equatable, Hashable {
 class ThemeManager: ObservableObject {
     @Published var currentTheme: Theme
     @Published var themes: [Theme]
+    @Published var isThemeChanging: Bool = false
     
     private let apiService = APIService.shared
 
@@ -284,12 +327,36 @@ class ThemeManager: ObservableObject {
         }
     }
 
-    func setTheme(to theme: Theme) {
-        currentTheme = theme
+    func setTheme(to theme: Theme, animated: Bool = true) {
+        if animated {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                isThemeChanging = true
+                currentTheme = theme
+            }
+            
+            // Reset the changing flag after animation
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.isThemeChanging = false
+            }
+        } else {
+            currentTheme = theme
+        }
+        
+        // Save preference to backend
         apiService.setThemePreference(themeId: theme.id) { result in
             if case .failure(let error) = result {
                 print("Failed to set theme preference: \(error)")
             }
+        }
+        
+        print("🎨 ThemeManager: Theme changed to '\(theme.name)'")
+    }
+    
+    // Force a UI refresh for all theme-dependent components
+    func refreshTheme() {
+        DispatchQueue.main.async {
+            // Trigger a re-render by updating the published property
+            self.objectWillChange.send()
         }
     }
 
@@ -361,5 +428,58 @@ extension Color {
             (a, r, g, b) = (255, 0, 0, 0)
         }
         self.init(.sRGB, red: Double(r) / 255, green: Double(g) / 255, blue: Double(b) / 255, opacity: Double(a) / 255)
+    }
+} 
+
+// MARK: - Theme View Modifiers
+
+struct ThemedText: ViewModifier {
+    let themeManager: ThemeManager
+    let useSmartContrast: Bool
+    
+    func body(content: Content) -> some View {
+        content
+            .foregroundColor(useSmartContrast ? themeManager.currentTheme.smartTextColor : themeManager.currentTheme.textColorSwiftUI)
+    }
+}
+
+struct ThemedBackground: ViewModifier {
+    let themeManager: ThemeManager
+    let isSecondary: Bool
+    
+    func body(content: Content) -> some View {
+        content
+            .background(isSecondary ? themeManager.currentTheme.secondaryBackgroundColorSwiftUI : themeManager.currentTheme.mainBackgroundColorSwiftUI)
+    }
+}
+
+struct ThemedButton: ViewModifier {
+    let themeManager: ThemeManager
+    let backgroundColor: Color?
+    
+    func body(content: Content) -> some View {
+        content
+            .foregroundColor(backgroundColor != nil ? themeManager.currentTheme.smartTextColor(for: backgroundColor!) : .white)
+    }
+}
+
+// MARK: - Convenient View Extensions
+
+extension View {
+    func themedText(_ themeManager: ThemeManager, smartContrast: Bool = false) -> some View {
+        self.modifier(ThemedText(themeManager: themeManager, useSmartContrast: smartContrast))
+    }
+    
+    func themedBackground(_ themeManager: ThemeManager, secondary: Bool = false) -> some View {
+        self.modifier(ThemedBackground(themeManager: themeManager, isSecondary: secondary))
+    }
+    
+    func themedButton(_ themeManager: ThemeManager, backgroundColor: Color? = nil) -> some View {
+        self.modifier(ThemedButton(themeManager: themeManager, backgroundColor: backgroundColor))
+    }
+    
+    // Animate theme changes
+    func animateThemeChanges(_ themeManager: ThemeManager) -> some View {
+        self.animation(.easeInOut(duration: 0.3), value: themeManager.currentTheme.id)
     }
 } 

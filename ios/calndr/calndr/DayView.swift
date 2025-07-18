@@ -52,7 +52,7 @@ struct DayView: View {
                     }) {
                         Text(ownerName.capitalized)
                             .font(.title2.bold())
-                            .foregroundColor(.black)
+                            .foregroundColor(ownerId == viewModel.custodianOneId ? themeManager.currentTheme.parentOneTextColor : themeManager.currentTheme.parentTwoTextColor)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
                             .background(ownerId == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColorSwiftUI : themeManager.currentTheme.parentTwoColorSwiftUI)

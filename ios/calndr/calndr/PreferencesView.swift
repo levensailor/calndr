@@ -160,14 +160,17 @@ struct PreferencesView: View {
     var body: some View {
         Form {
             // Features Section
-            Section(header: Text("Features")) {
+            Section(header: Text("Features")
+                .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))) {
                 ForEach(featurePreferences) { item in
                     PreferenceRow(item: item)
                 }
             }
+            .listRowBackground(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
             
             // Theme Selection Section
-            Section(header: Text("Themes")) {
+            Section(header: Text("Themes")
+                .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))) {
                 NavigationLink(destination: ThemeSettingsView().environmentObject(themeManager)) {
                     PreferenceRow(item: PreferenceItem(
                         title: "Manage Themes",
@@ -177,11 +180,19 @@ struct PreferencesView: View {
                     ))
                 }
             }
+            .listRowBackground(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
         }
         .navigationTitle("Preferences")
         .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
+        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+        .scrollContentBackground(.hidden)
+        .animateThemeChanges(themeManager)
         .onChange(of: allowPastCustodyEditing) { oldValue, newValue in
             UserDefaults.standard.set(newValue, forKey: "allowPastCustodyEditing")
+        }
+        .onAppear {
+            // Configure form appearance for current theme
+            UITableView.appearance().backgroundColor = UIColor(themeManager.currentTheme.mainBackgroundColorSwiftUI)
         }
     }
     
