@@ -4,7 +4,7 @@ from pydantic import BaseModel, EmailStr
 from schemas.base import BaseSchema
 
 class UserBase(BaseSchema):
-    """Base user schema."""
+    """Base schema for user data."""
     first_name: str
     last_name: str
     email: EmailStr
@@ -15,7 +15,7 @@ class UserCreate(UserBase):
     password: str
 
 class UserUpdate(BaseSchema):
-    """Schema for updating user information."""
+    """Schema for updating user data."""
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     email: Optional[EmailStr] = None
@@ -31,11 +31,7 @@ class UserResponse(UserBase):
     status: Optional[str] = "active"
     last_signed_in: Optional[str] = None
     created_at: Optional[str] = None
-    selected_theme: Optional[str] = None
-
-class UserProfile(UserResponse):
-    """Extended user profile schema."""
-    pass
+    selected_theme_id: Optional[uuid.UUID] = None
 
 class UserRegistration(BaseSchema):
     """Schema for user registration."""
@@ -51,22 +47,36 @@ class UserRegistrationResponse(BaseSchema):
     user_id: str
     family_id: str
     access_token: str
-    token_type: str = "bearer"
+    token_type: str
     message: str
+
+class UserProfile(BaseSchema):
+    """Schema for user profile information."""
+    id: str
+    first_name: str
+    last_name: str
+    email: str
+    phone_number: Optional[str] = None
+    subscription_type: Optional[str] = "Free"
+    subscription_status: Optional[str] = "Active"
+    profile_photo_url: Optional[str] = None
+    status: Optional[str] = "active"
+    last_signed_in: Optional[str] = None
+    created_at: Optional[str] = None
+    family_id: str
+    selected_theme_id: Optional[uuid.UUID] = None
+
+class UserPreferenceUpdate(BaseSchema):
+    """Schema for updating user preferences."""
+    selected_theme_id: uuid.UUID
 
 class PasswordUpdate(BaseSchema):
     """Schema for password update."""
     current_password: str
     new_password: str
-    dob: str  # Date string in YYYY-MM-DD format
-    family_id: str
-
-class UserPreferenceUpdate(BaseSchema):
-    """Schema for updating user preferences."""
-    selected_theme: str
 
 class LocationUpdateRequest(BaseSchema):
-    """Schema for updating user location."""
+    """Schema for location update requests."""
     latitude: float
     longitude: float
 
@@ -76,14 +86,9 @@ class FamilyMember(BaseSchema):
     first_name: str
     last_name: str
     email: str
-    phone_number: Optional[str] = None
-    status: Optional[str] = "active"
-    last_signed_in: Optional[str] = None
     last_known_location: Optional[str] = None
     last_known_location_timestamp: Optional[str] = None
 
 class FamilyMemberEmail(BaseSchema):
-    """Schema for family member email information."""
-    id: str
-    first_name: str
-    email: str
+    """Schema for family member email invitation."""
+    email: EmailStr

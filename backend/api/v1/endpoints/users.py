@@ -44,7 +44,7 @@ async def get_user_profile(current_user = Depends(get_current_user)):
             profile_photo_url=user_record['profile_photo_url'],
             status=user_record['status'] or "active",
             last_signed_in=str(user_record['last_signed_in']) if user_record['last_signed_in'] else None,
-            selected_theme=user_prefs['selected_theme'] if user_prefs else None,
+            selected_theme_id=user_prefs['selected_theme_id'] if user_prefs else None,
             created_at=str(user_record['created_at']) if user_record['created_at'] else None,
             family_id=uuid_to_string(user_record['family_id'])
         )
@@ -171,18 +171,18 @@ async def update_user_preferences(
             update_query = user_preferences.update().where(
                 user_preferences.c.user_id == user_id
             ).values(
-                selected_theme=preferences_data.selected_theme
+                selected_theme_id=preferences_data.selected_theme_id
             )
             await database.execute(update_query)
-            logger.info(f"Updated theme for user {user_id} to {preferences_data.selected_theme}")
+            logger.info(f"Updated theme for user {user_id} to {preferences_data.selected_theme_id}")
         else:
             # Insert new preferences
             insert_query = user_preferences.insert().values(
                 user_id=user_id,
-                selected_theme=preferences_data.selected_theme
+                selected_theme_id=preferences_data.selected_theme_id
             )
             await database.execute(insert_query)
-            logger.info(f"Set initial theme for user {user_id} to {preferences_data.selected_theme}")
+            logger.info(f"Set initial theme for user {user_id} to {preferences_data.selected_theme_id}")
             
         return {"status": "success", "message": "Preferences updated successfully"}
     except Exception as e:

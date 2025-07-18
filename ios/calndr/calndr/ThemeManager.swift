@@ -14,7 +14,9 @@ struct Theme: Identifiable, Equatable, Hashable, Codable {
     var parentOneColor: CodableColor
     var parentTwoColor: CodableColor
     var isPublic: Bool?
-    var createdByUserId: Int?
+    var createdByUserId: UUID?
+    var createdAt: Date?
+    var updatedAt: Date?
 
     // Computed properties for SwiftUI Colors
     var mainBackgroundColorSwiftUI: Color { mainBackgroundColor.color }
@@ -26,6 +28,16 @@ struct Theme: Identifiable, Equatable, Hashable, Codable {
     var accentColorSwiftUI: Color { accentColor.color }
     var parentOneColorSwiftUI: Color { parentOneColor.color }
     var parentTwoColorSwiftUI: Color { parentTwoColor.color }
+
+    // Custom CodingKeys to handle snake_case from backend
+    enum CodingKeys: String, CodingKey {
+        case id, name, isPublic, mainBackgroundColor, secondaryBackgroundColor
+        case textColor, headerTextColor, iconColor, iconActiveColor, accentColor
+        case parentOneColor, parentTwoColor
+        case createdByUserId = "created_by_user_id"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
 
     var allColors: [Color] {
         [

@@ -284,9 +284,10 @@ class APIService {
     // MARK: - User Preferences
     
     func saveThemePreference(themeName: String, completion: @escaping (Result<Void, Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/user/preferences")
+        let url = baseURL.appendingPathComponent("/api/v1/users/preferences")
         var request = createAuthenticatedRequest(url: url)
         request.httpMethod = "PUT"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         
         let body = ["selected_theme": themeName]
         
@@ -973,7 +974,7 @@ class APIService {
     }
     
     func fetchUserProfile(completion: @escaping (Result<UserProfile, Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/user/profile")
+        let url = baseURL.appendingPathComponent("/api/v1/users/profile")
         let request = createAuthenticatedRequest(url: url)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
@@ -2096,7 +2097,7 @@ class APIService {
     // MARK: - Themes
     
     func fetchThemes(completion: @escaping (Result<[Theme], Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/themes")
+        let url = baseURL.appendingPathComponent("/api/v1/themes")
         let request = createAuthenticatedRequest(url: url)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
@@ -2125,7 +2126,7 @@ class APIService {
     }
     
     func createTheme(_ theme: Theme, completion: @escaping (Result<Theme, Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/themes")
+        let url = baseURL.appendingPathComponent("/api/v1/themes")
         var request = createAuthenticatedRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -2163,7 +2164,7 @@ class APIService {
     }
     
     func updateTheme(_ theme: Theme, completion: @escaping (Result<Theme, Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/themes/\(theme.id)")
+        let url = baseURL.appendingPathComponent("/api/v1/themes/\(theme.id)")
         var request = createAuthenticatedRequest(url: url)
         request.httpMethod = "PUT"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -2201,7 +2202,7 @@ class APIService {
     }
     
     func deleteTheme(_ themeId: UUID, completion: @escaping (Result<Void, Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/themes/\(themeId)")
+        let url = baseURL.appendingPathComponent("/api/v1/themes/\(themeId)")
         var request = createAuthenticatedRequest(url: url)
         request.httpMethod = "DELETE"
         
@@ -2226,7 +2227,7 @@ class APIService {
     }
     
     func setThemePreference(themeId: UUID, completion: @escaping (Result<Void, Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/themes/set-preference/\(themeId)")
+        let url = baseURL.appendingPathComponent("/api/v1/themes/set-preference/\(themeId)")
         var request = createAuthenticatedRequest(url: url)
         request.httpMethod = "PUT"
         
