@@ -5,6 +5,7 @@ databases[postgresql]
 sqlalchemy
 python-dotenv
 passlib[bcrypt]
+bcrypt==4.1.3
 python-jose[cryptography]
 python-multipart
 httpx
