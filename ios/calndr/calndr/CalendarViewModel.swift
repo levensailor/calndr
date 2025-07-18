@@ -82,7 +82,7 @@ class CalendarViewModel: ObservableObject {
         
         setupBindings()
         setupAppLifecycleObservers()
-        fetchInitialData()
+        // fetchInitialData() - Removed, will be called from setupBindings when auth is ready
         
         // Prune the weather cache on app launch
         WeatherCacheManager.shared.pruneCache()
