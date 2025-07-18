@@ -1,13 +1,13 @@
-import json
 import uuid
-import boto3
 from datetime import date
-from typing import Optional
-
-from core.config import settings
+import json
+import boto3
+from botocore.exceptions import ClientError
 from core.database import database
+from core.config import settings
 from core.logging import logger
 from db.models import users, custody
+import os
 
 # Initialize SNS client
 sns_client = None
@@ -20,14 +20,15 @@ if settings.SNS_PLATFORM_APPLICATION_ARN:
 else:
     logger.warning("SNS_PLATFORM_APPLICATION_ARN not set. Push notifications will be disabled.")
 
+
 async def send_custody_change_notification(sender_id: uuid.UUID, family_id: uuid.UUID, event_date: date):
-    """Send push notification for custody changes."""
+    """Send push notification when custody is changed."""
     if not sns_client:
         logger.warning("SNS client not configured. Skipping push notification.")
         return
 
     other_user_query = users.select().where(
-        (users.c.family_id == family_id) &
+        (users.c.family_id == family_id) & 
         (users.c.id != sender_id) &
         (users.c.sns_endpoint_arn.isnot(None))
     )
@@ -41,7 +42,7 @@ async def send_custody_change_notification(sender_id: uuid.UUID, family_id: uuid
     sender_name = sender['first_name'] if sender else "Someone"
     
     custodian_query = custody.select().where(
-        (custody.c.family_id == family_id) &
+        (custody.c.family_id == family_id) & 
         (custody.c.date == event_date)
     )
     custody_record = await database.fetch_one(custodian_query)
