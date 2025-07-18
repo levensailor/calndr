@@ -186,8 +186,18 @@ async def search_daycare_providers(search_data: DaycareSearchRequest, current_us
                 geocoding_response = await client.get(geocoding_url)
                 geocoding_data = geocoding_response.json()
                 
-                if geocoding_data.get("status") != "OK" or not geocoding_data.get("results"):
-                    raise HTTPException(status_code=400, detail="Invalid ZIP code")
+                status = geocoding_data.get("status")
+                if status != "OK" or not geocoding_data.get("results"):
+                    if status == "REQUEST_DENIED":
+                        logger.error(f"Google Geocoding API permission denied: {geocoding_data.get('error_message', 'Unknown error')}")
+                        raise HTTPException(status_code=500, detail="Location search service is not properly configured")
+                    elif status == "ZERO_RESULTS":
+                        raise HTTPException(status_code=400, detail="ZIP code not found")
+                    elif status == "INVALID_REQUEST":
+                        raise HTTPException(status_code=400, detail="Invalid ZIP code format")
+                    else:
+                        logger.error(f"Google Geocoding API error: {status} - {geocoding_data.get('error_message', 'Unknown error')}")
+                        raise HTTPException(status_code=400, detail=f"Unable to process ZIP code: {status}")
                 
                 location = geocoding_data["results"][0]["geometry"]["location"]
                 latitude = location["lat"]
