@@ -51,16 +51,16 @@ struct PreferenceRow: View {
             
             Spacer()
             
-            // if item.isToggle, let binding = item.toggleBinding {
-            //     Toggle("", isOn: binding)
-            //         .labelsHidden()
-            // } else if let action = item.action {
-            //     Button(action: action) {
-            //         Image(systemName: "chevron.right")
-            //             .font(.body)
-            //             .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.6))
-            //     }
-            // }
+            if item.isToggle, let binding = item.toggleBinding {
+                Toggle("", isOn: binding)
+                    .labelsHidden()
+            } else if let action = item.action {
+                Button(action: action) {
+                    Image(systemName: "chevron.right")
+                        .font(.body)
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.6))
+                }
+            }
         }
         .padding(.vertical, 8)
     }
