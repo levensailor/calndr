@@ -29,14 +29,14 @@ def create_app() -> FastAPI:
     # Add CORS middleware
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.ALLOWED_ORIGINS,
+        allow_origins=["*"],  # Allow all origins like the original app.py
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"]
     )
     
-    # Include API routes
-    app.include_router(api_router, prefix=settings.API_V1_STR)
+    # Include API routes under /api (not /api/v1)
+    app.include_router(api_router, prefix="/api")
     
     return app
 
