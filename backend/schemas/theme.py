@@ -34,7 +34,7 @@ class ThemeUpdate(BaseModel):
 
 class Theme(ThemeBase):
     id: uuid.UUID
-    created_by_user_id: uuid.UUID
+    created_by_user_id: Optional[uuid.UUID]
     created_at: datetime
     updated_at: datetime
 
