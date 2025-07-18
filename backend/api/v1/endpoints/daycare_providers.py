@@ -178,45 +178,30 @@ async def search_daycare_providers(search_data: DaycareSearchRequest, current_us
         if not google_api_key:
             raise HTTPException(status_code=500, detail="Google Places API key not configured")
         
-        # Determine search location
+        # Search for daycare providers using Google Places API
         if search_data.location_type == "zipcode" and search_data.zipcode:
-            # Convert ZIP code to coordinates using Google Geocoding API
-            geocoding_url = f"https://maps.googleapis.com/maps/api/geocode/json?address={search_data.zipcode}&key={google_api_key}"
-            async with httpx.AsyncClient() as client:
-                geocoding_response = await client.get(geocoding_url)
-                geocoding_data = geocoding_response.json()
-                
-                status = geocoding_data.get("status")
-                if status != "OK" or not geocoding_data.get("results"):
-                    if status == "REQUEST_DENIED":
-                        logger.error(f"Google Geocoding API permission denied: {geocoding_data.get('error_message', 'Unknown error')}")
-                        raise HTTPException(status_code=500, detail="Location search service is not properly configured")
-                    elif status == "ZERO_RESULTS":
-                        raise HTTPException(status_code=400, detail="ZIP code not found")
-                    elif status == "INVALID_REQUEST":
-                        raise HTTPException(status_code=400, detail="Invalid ZIP code format")
-                    else:
-                        logger.error(f"Google Geocoding API error: {status} - {geocoding_data.get('error_message', 'Unknown error')}")
-                        raise HTTPException(status_code=400, detail=f"Unable to process ZIP code: {status}")
-                
-                location = geocoding_data["results"][0]["geometry"]["location"]
-                latitude = location["lat"]
-                longitude = location["lng"]
+            # Use Text Search API for ZIP code searches
+            places_url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
+            params = {
+                "query": f"daycare centers near {search_data.zipcode}",
+                "key": google_api_key
+            }
+            use_distance_calculation = False  # No reference point for distance
         elif search_data.location_type == "current" and search_data.latitude and search_data.longitude:
+            # Use Nearby Search API for current location searches
+            places_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+            params = {
+                "location": f"{search_data.latitude},{search_data.longitude}",
+                "radius": search_data.radius,
+                "type": "school",
+                "keyword": "daycare OR childcare OR preschool OR nursery",
+                "key": google_api_key
+            }
+            use_distance_calculation = True
             latitude = search_data.latitude
             longitude = search_data.longitude
         else:
             raise HTTPException(status_code=400, detail="Invalid location data")
-        
-        # Search for daycare providers using Google Places API
-        places_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-        params = {
-            "location": f"{latitude},{longitude}",
-            "radius": search_data.radius,
-            "type": "school",
-            "keyword": "daycare OR childcare OR preschool OR nursery",
-            "key": google_api_key
-        }
         
         async with httpx.AsyncClient() as client:
             places_response = await client.get(places_url, params=params)
@@ -243,14 +228,15 @@ async def search_daycare_providers(search_data: DaycareSearchRequest, current_us
                 if details_data.get("status") == "OK":
                     result = details_data.get("result", {})
                     
-                    # Calculate distance (approximate)
-                    place_location = place.get("geometry", {}).get("location", {})
+                    # Calculate distance (approximate) only for current location searches
                     distance = None
-                    if place_location:
-                        # Simple distance calculation (not precise, but good enough for sorting)
-                        lat_diff = abs(latitude - place_location.get("lat", 0))
-                        lng_diff = abs(longitude - place_location.get("lng", 0))
-                        distance = (lat_diff + lng_diff) * 111000  # Rough conversion to meters
+                    if use_distance_calculation:
+                        place_location = place.get("geometry", {}).get("location", {})
+                        if place_location:
+                            # Simple distance calculation (not precise, but good enough for sorting)
+                            lat_diff = abs(latitude - place_location.get("lat", 0))
+                            lng_diff = abs(longitude - place_location.get("lng", 0))
+                            distance = (lat_diff + lng_diff) * 111000  # Rough conversion to meters
                     
                     # Format opening hours
                     hours = None
@@ -268,8 +254,11 @@ async def search_daycare_providers(search_data: DaycareSearchRequest, current_us
                         distance=distance
                     ))
             
-            # Sort by distance if available
-            results.sort(key=lambda x: x.distance if x.distance else float('inf'))
+            # Sort by distance if available (current location searches) or by name (ZIP code searches)
+            if use_distance_calculation:
+                results.sort(key=lambda x: x.distance if x.distance else float('inf'))
+            else:
+                results.sort(key=lambda x: x.name.lower())
             
             return results
             
