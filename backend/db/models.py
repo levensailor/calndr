@@ -175,9 +175,11 @@ themes = sqlalchemy.Table(
 user_preferences = sqlalchemy.Table(
     "user_preferences",
     metadata,
-    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
+    sqlalchemy.Column("id", UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
     sqlalchemy.Column("user_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True),
     sqlalchemy.Column("selected_theme_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("themes.id")),
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime, default=datetime.utcnow, nullable=True),
+    sqlalchemy.Column("updated_at", sqlalchemy.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True),
 )
 
 # Daycare providers table

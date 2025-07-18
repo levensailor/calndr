@@ -1,5 +1,15 @@
 # Calendar App
 
+A family calendar application with iOS app, web interface, and Python backend.
+
+## Deployment
+
+**Use `./deploy.sh` for backend deployment** - This script properly deploys the refactored backend structure.
+
+**DO NOT USE** `deploy-backend.sh.OLD` - This is the old deployment script that uses the legacy app.py structure.
+
+## Development
+
 ## Quick Start
 
 To run the application, make sure you have Python, pip, and Node.js with npm installed. Then, simply run the `run.sh` script:

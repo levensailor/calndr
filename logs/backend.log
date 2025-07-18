@@ -6,3 +6,5 @@
 2025-07-10 12:06:52,745 EST - INFO - [app.py:122] - APNs client initialized successfully.
 2025-07-10 15:46:29,191 EST - INFO - [app.py:122] - APNs client initialized successfully.
 2025-07-10 15:47:05,379 EST - INFO - [app.py:122] - APNs client initialized successfully.
+2025-07-17 10:00:30 PM EST - INFO - [<string>:35] - Direct file write test with AM/PM format
+2025-07-17 10:00:30 PM EST - WARNING - [<string>:36] - Testing file handler directly
