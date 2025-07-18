@@ -7,17 +7,23 @@ struct ContentView: View {
     var body: some View {
         Group {
             if authManager.isLoading {
-                print("🖼️ ContentView: Showing SplashScreenView (isLoading = true)")
                 SplashScreenView()
                     .transition(.opacity)
+                    .onAppear {
+                        print("🖼️ ContentView: Showing SplashScreenView (isLoading = true)")
+                    }
             } else if authManager.isAuthenticated {
-                print("🖼️ ContentView: Showing MainTabView (isAuthenticated = true, isLoading = false)")
                 MainTabView(calendarViewModel: CalendarViewModel(authManager: authManager, themeManager: themeManager))
                     .transition(.opacity)
+                    .onAppear {
+                        print("🖼️ ContentView: Showing MainTabView (isAuthenticated = true, isLoading = false)")
+                    }
             } else {
-                print("🖼️ ContentView: Showing LoginView (isAuthenticated = false, isLoading = false)")
                 LoginView()
                     .transition(.opacity)
+                    .onAppear {
+                        print("🖼️ ContentView: Showing LoginView (isAuthenticated = false, isLoading = false)")
+                    }
             }
         }
         .animation(.easeInOut(duration: 0.5), value: authManager.isLoading)
