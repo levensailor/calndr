@@ -275,7 +275,7 @@ struct AccountsView: View {
                 subscription_status: profile.subscription_status,
                 created_at: profile.created_at,
                 profile_photo_url: profile.profile_photo_url,
-                selected_theme: profile.selected_theme
+                selected_theme_id: profile.selected_theme_id
             )
         }
     }

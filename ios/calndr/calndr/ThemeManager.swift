@@ -94,9 +94,60 @@ struct CodableColor: Codable, Equatable, Hashable {
         self.blue = Double(b)
         self.opacity = Double(a)
     }
+    
+    // Convenience initializer for hex strings
+    init(hex: String) {
+        let color = Color(hex: hex)
+        self.init(color: color)
+    }
 
     var color: Color {
         Color(red: red, green: green, blue: blue, opacity: opacity)
+    }
+    
+    // Custom decoding to handle both hex strings and object format
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        
+        if let hexString = try? container.decode(String.self) {
+            // Backend sent a hex string - convert to RGBA
+            let color = Color(hex: hexString)
+            let uiColor = UIColor(color)
+            var r: CGFloat = 0
+            var g: CGFloat = 0
+            var b: CGFloat = 0
+            var a: CGFloat = 0
+            uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+            self.red = Double(r)
+            self.green = Double(g)
+            self.blue = Double(b)
+            self.opacity = Double(a)
+        } else {
+            // Decode as object with red/green/blue/opacity properties
+            let keyedContainer = try decoder.container(keyedBy: CodingKeys.self)
+            self.red = try keyedContainer.decode(Double.self, forKey: .red)
+            self.green = try keyedContainer.decode(Double.self, forKey: .green)
+            self.blue = try keyedContainer.decode(Double.self, forKey: .blue)
+            self.opacity = try keyedContainer.decode(Double.self, forKey: .opacity)
+        }
+    }
+    
+    // Encode as hex string for sending to backend
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(self.hexString)
+    }
+    
+    // Convert to hex string representation
+    var hexString: String {
+        let r = Int(red * 255)
+        let g = Int(green * 255)
+        let b = Int(blue * 255)
+        return String(format: "#%02X%02X%02X", r, g, b)
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case red, green, blue, opacity
     }
 }
 
