@@ -38,6 +38,111 @@ struct Theme: Identifiable, Equatable, Hashable, Codable {
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
+    
+    // Custom date formatters for backend date strings (handle different microsecond precisions)
+    private static let dateFormatters: [DateFormatter] = {
+        let formats = [
+            "yyyy-MM-dd HH:mm:ss.SSSSSS",  // 6 digits microseconds
+            "yyyy-MM-dd HH:mm:ss.SSSSS",   // 5 digits
+            "yyyy-MM-dd HH:mm:ss.SSSS",    // 4 digits
+            "yyyy-MM-dd HH:mm:ss.SSS",     // 3 digits
+            "yyyy-MM-dd HH:mm:ss"          // No microseconds
+        ]
+        return formats.map { format in
+            let formatter = DateFormatter()
+            formatter.dateFormat = format
+            formatter.timeZone = TimeZone(abbreviation: "UTC")
+            return formatter
+        }
+    }()
+    
+    private static func parseDate(from string: String) -> Date? {
+        for formatter in dateFormatters {
+            if let date = formatter.date(from: string) {
+                return date
+            }
+        }
+        return nil
+    }
+    
+    // Custom decoding to handle date strings from backend
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        mainBackgroundColor = try container.decode(CodableColor.self, forKey: .mainBackgroundColor)
+        secondaryBackgroundColor = try container.decode(CodableColor.self, forKey: .secondaryBackgroundColor)
+        textColor = try container.decode(CodableColor.self, forKey: .textColor)
+        headerTextColor = try container.decode(CodableColor.self, forKey: .headerTextColor)
+        iconColor = try container.decode(CodableColor.self, forKey: .iconColor)
+        iconActiveColor = try container.decode(CodableColor.self, forKey: .iconActiveColor)
+        accentColor = try container.decode(CodableColor.self, forKey: .accentColor)
+        parentOneColor = try container.decode(CodableColor.self, forKey: .parentOneColor)
+        parentTwoColor = try container.decode(CodableColor.self, forKey: .parentTwoColor)
+        isPublic = try container.decodeIfPresent(Bool.self, forKey: .isPublic)
+        createdByUserId = try container.decodeIfPresent(UUID.self, forKey: .createdByUserId)
+        
+        // Custom date decoding
+        if let createdAtString = try container.decodeIfPresent(String.self, forKey: .createdAt) {
+            createdAt = Theme.parseDate(from: createdAtString)
+        } else {
+            createdAt = nil
+        }
+        
+        if let updatedAtString = try container.decodeIfPresent(String.self, forKey: .updatedAt) {
+            updatedAt = Theme.parseDate(from: updatedAtString)
+        } else {
+            updatedAt = nil
+        }
+    }
+    
+    // Memberwise initializer (required since we have custom init(from decoder:))
+    init(id: UUID = UUID(), name: String, mainBackgroundColor: CodableColor, secondaryBackgroundColor: CodableColor, textColor: CodableColor, headerTextColor: CodableColor, iconColor: CodableColor, iconActiveColor: CodableColor, accentColor: CodableColor, parentOneColor: CodableColor, parentTwoColor: CodableColor, isPublic: Bool? = nil, createdByUserId: UUID? = nil, createdAt: Date? = nil, updatedAt: Date? = nil) {
+        self.id = id
+        self.name = name
+        self.mainBackgroundColor = mainBackgroundColor
+        self.secondaryBackgroundColor = secondaryBackgroundColor
+        self.textColor = textColor
+        self.headerTextColor = headerTextColor
+        self.iconColor = iconColor
+        self.iconActiveColor = iconActiveColor
+        self.accentColor = accentColor
+        self.parentOneColor = parentOneColor
+        self.parentTwoColor = parentTwoColor
+        self.isPublic = isPublic
+        self.createdByUserId = createdByUserId
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+    
+    // Custom encoding to handle date formatting for backend
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(mainBackgroundColor, forKey: .mainBackgroundColor)
+        try container.encode(secondaryBackgroundColor, forKey: .secondaryBackgroundColor)
+        try container.encode(textColor, forKey: .textColor)
+        try container.encode(headerTextColor, forKey: .headerTextColor)
+        try container.encode(iconColor, forKey: .iconColor)
+        try container.encode(iconActiveColor, forKey: .iconActiveColor)
+        try container.encode(accentColor, forKey: .accentColor)
+        try container.encode(parentOneColor, forKey: .parentOneColor)
+        try container.encode(parentTwoColor, forKey: .parentTwoColor)
+        try container.encodeIfPresent(isPublic, forKey: .isPublic)
+        try container.encodeIfPresent(createdByUserId, forKey: .createdByUserId)
+        
+        // Custom date encoding (use first formatter with full precision)
+        if let createdAt = createdAt {
+            try container.encode(Theme.dateFormatters[0].string(from: createdAt), forKey: .createdAt)
+        }
+        
+        if let updatedAt = updatedAt {
+            try container.encode(Theme.dateFormatters[0].string(from: updatedAt), forKey: .updatedAt)
+        }
+    }
 
     var allColors: [Color] {
         [
