@@ -16,7 +16,6 @@ class AuthenticationService: ObservableObject {
             // Once the auth manager is configured, subscribe to its state
             authManager.$isAuthenticated
                 .removeDuplicates() // Prevent duplicate notifications
-                .debounce(for: .milliseconds(100), scheduler: DispatchQueue.main) // Debounce rapid changes
                 .receive(on: DispatchQueue.main)
                 .sink { [weak self] isAuthenticated in
                     guard let self = self else { return }
