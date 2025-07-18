@@ -112,16 +112,17 @@ class ThemeManager: ObservableObject {
         loadThemes()
     }
 
-    func loadThemes() {
+    func loadThemes(completion: @escaping () -> Void = {}) {
         apiService.fetchThemes { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let themes):
+                    print("🎨 ThemeManager: Loaded \(themes.count) themes")
                     self?.themes = themes
-                    // Set current theme based on user preference from backend
-                    // This part needs an endpoint to fetch user preferences
+                    completion() // Notify that themes are loaded
                 case .failure(let error):
-                    print("Failed to load themes: \(error)")
+                    print("❌ Failed to load themes: \(error)")
+                    completion() // Still call completion even on failure
                 }
             }
         }

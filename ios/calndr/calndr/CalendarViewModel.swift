@@ -143,8 +143,12 @@ class CalendarViewModel: ObservableObject {
         print("📅 CalendarViewModel: Starting fetchFamilyData()...")
         fetchFamilyData()
         
-        print("📅 CalendarViewModel: Starting fetchUserThemePreference()...")
-        fetchUserThemePreference() // Load saved theme from database
+        print("📅 CalendarViewModel: Loading themes and applying user preference...")
+        // Load themes first, then apply user preference
+        themeManager.loadThemes { [weak self] in
+            print("📅 CalendarViewModel: Themes loaded, now fetching user theme preference...")
+            self?.fetchUserThemePreference()
+        }
         
         print("📅 CalendarViewModel: Starting fetchReminders()...")
         fetchReminders() // Load reminders
@@ -1540,42 +1544,25 @@ class CalendarViewModel: ObservableObject {
         }
     }
 
-    func saveThemePreference(themeName: String) {
-        // Optimistically update local state
-        UserDefaults.standard.set(themeName, forKey: "selectedTheme")
-        
-        // Call API to save preference
-        APIService.shared.saveThemePreference(themeName: themeName) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success:
-                    print("✅ Successfully saved theme preference: \(themeName)")
-                case .failure(let error):
-                    print("❌ Error saving theme preference: \(error.localizedDescription)")
-                    // Optionally, revert the optimistic update or show an error
-                }
-            }
-        }
-    }
+
     
     func fetchUserThemePreference() {
         APIService.shared.fetchUserProfile { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let userProfile):
-                    if let savedTheme = userProfile.selected_theme {
-                        print("🎨 Found saved theme in database: \(savedTheme)")
-                        // Update UserDefaults to match database
-                        UserDefaults.standard.set(savedTheme, forKey: "selectedTheme")
+                    if let savedThemeId = userProfile.selected_theme_id, let themeUUID = UUID(uuidString: savedThemeId) {
+                        print("🎨 Found saved theme ID in database: \(savedThemeId)")
                         // Apply the theme if it exists in available themes
-                        if let theme = self?.themeManager.themes.first(where: { $0.name == savedTheme }) {
+                        if let theme = self?.themeManager.themes.first(where: { $0.id == themeUUID }) {
                             self?.themeManager.setTheme(to: theme)
-                            print("✅ Applied saved theme: \(savedTheme)")
+                            print("✅ Applied saved theme: \(theme.name) (ID: \(savedThemeId))")
                         } else {
-                            print("⚠️ Saved theme '\(savedTheme)' not found in available themes")
+                            print("⚠️ Saved theme ID '\(savedThemeId)' not found in available themes")
+                            print("📋 Available themes: \(self?.themeManager.themes.map { "\($0.name) (\($0.id))" } ?? [])")
                         }
                     } else {
-                        print("ℹ️ No saved theme found in database, using default")
+                        print("ℹ️ No saved theme ID found in database, using default")
                     }
                 case .failure(let error):
                     print("❌ Error fetching user theme preference: \(error.localizedDescription)")
