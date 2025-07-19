@@ -1698,7 +1698,7 @@ class APIService {
             
             do {
                 if let jsonString = String(data: data, encoding: .utf8) {
-                    print("📄 Raw JSON for updated schedule template: \(jsonSring)")
+                    print("📄 Raw JSON for updated schedule template: \(jsonString)")
                 }
                 let template = try JSONDecoder().decode(ScheduleTemplate.self, from: data)
                 completion(.success(template))
