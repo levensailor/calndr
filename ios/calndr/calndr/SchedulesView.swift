@@ -722,7 +722,7 @@ struct ScheduleEditView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var isLoading = true
-    @State private var detailedTemplate: ScheduleTemplateDetailed?
+    @State private var detailedTemplate: ScheduleTemplate?
     @State private var scheduleName = ""
     @State private var scheduleDescription = ""
     @State private var patternType: SchedulePatternType = .weekly

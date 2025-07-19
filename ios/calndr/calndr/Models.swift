@@ -468,6 +468,9 @@ struct ScheduleTemplate: Codable, Identifiable {
     let id: Int
     let name: String
     let description: String?
+    let patternType: SchedulePatternType
+    let weeklyPattern: WeeklySchedulePattern?
+    let alternatingWeeksPattern: AlternatingWeeksPattern?
     let isActive: Bool
     let familyId: String
     let createdAt: String
@@ -477,6 +480,9 @@ struct ScheduleTemplate: Codable, Identifiable {
         case id
         case name
         case description
+        case patternType = "pattern_type"
+        case weeklyPattern = "weekly_pattern"
+        case alternatingWeeksPattern = "alternating_weeks_pattern"
         case isActive = "is_active"
         case familyId = "family_id"
         case createdAt = "created_at"
@@ -550,31 +556,7 @@ struct AlternatingWeeksPattern: Codable {
     var referenceDate: String // ISO date string to determine which week is A/B
 }
 
-struct ScheduleTemplateDetailed: Codable, Identifiable {
-    let id: Int
-    let name: String
-    let description: String?
-    let patternType: SchedulePatternType
-    let weeklyPattern: WeeklySchedulePattern?
-    let alternatingWeeksPattern: AlternatingWeeksPattern?
-    let isActive: Bool
-    let familyId: String
-    let createdAt: String
-    let updatedAt: String
-    
-    enum CodingKeys: String, CodingKey {
-        case id
-        case name
-        case description
-        case patternType = "pattern_type"
-        case weeklyPattern = "weekly_pattern"
-        case alternatingWeeksPattern = "alternating_weeks_pattern"
-        case isActive = "is_active"
-        case familyId = "family_id"
-        case createdAt = "created_at"
-        case updatedAt = "updated_at"
-    }
-}
+
 
 struct ScheduleTemplateCreate: Codable {
     let name: String

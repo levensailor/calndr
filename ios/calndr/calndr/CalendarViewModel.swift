@@ -1615,7 +1615,7 @@ class CalendarViewModel: ObservableObject {
         }
     }
     
-    func fetchScheduleTemplate(_ templateId: Int, completion: @escaping (Result<ScheduleTemplateDetailed, Error>) -> Void) {
+    func fetchScheduleTemplate(_ templateId: Int, completion: @escaping (Result<ScheduleTemplate, Error>) -> Void) {
         APIService.shared.fetchScheduleTemplate(templateId) { result in
             DispatchQueue.main.async {
                 switch result {

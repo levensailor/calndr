@@ -1592,7 +1592,7 @@ class APIService {
         }.resume()
     }
     
-    func fetchScheduleTemplate(_ templateId: Int, completion: @escaping (Result<ScheduleTemplateDetailed, Error>) -> Void) {
+    func fetchScheduleTemplate(_ templateId: Int, completion: @escaping (Result<ScheduleTemplate, Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/schedule-templates/\(templateId)")
         let request = createAuthenticatedRequest(url: url)
         
@@ -1613,10 +1613,10 @@ class APIService {
             }
             
             do {
-                let template = try JSONDecoder().decode(ScheduleTemplateDetailed.self, from: data)
+                let template = try JSONDecoder().decode(ScheduleTemplate.self, from: data)
                 completion(.success(template))
             } catch {
-                print("❌ Error decoding detailed template: \(error)")
+                print("❌ Error decoding template: \(error)")
                 completion(.failure(error))
             }
         }.resume()

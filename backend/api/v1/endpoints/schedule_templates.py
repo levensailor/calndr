@@ -26,21 +26,39 @@ async def get_schedule_templates(current_user = Depends(get_current_user)):
         
         template_records = await database.fetch_all(query)
         
-        return [
-            ScheduleTemplate(
+        templates = []
+        for record in template_records:
+            # Deserialize pattern data from JSON
+            weekly_pattern = None
+            if record['weekly_pattern']:
+                try:
+                    weekly_pattern = WeeklySchedulePattern(**record['weekly_pattern'])
+                except Exception as e:
+                    logger.error(f"Error deserializing weekly pattern: {e}")
+                    weekly_pattern = None
+            
+            alternating_weeks_pattern = None
+            if record['alternating_weeks_pattern']:
+                try:
+                    alternating_weeks_pattern = AlternatingWeeksPattern(**record['alternating_weeks_pattern'])
+                except Exception as e:
+                    logger.error(f"Error deserializing alternating weeks pattern: {e}")
+                    alternating_weeks_pattern = None
+            
+            templates.append(ScheduleTemplate(
                 id=record['id'],
                 name=record['name'],
                 description=record['description'],
                 pattern_type=record['pattern_type'],
-                weekly_pattern=record['weekly_pattern'],
-                alternating_weeks_pattern=record['alternating_weeks_pattern'],
+                weekly_pattern=weekly_pattern,
+                alternating_weeks_pattern=alternating_weeks_pattern,
                 is_active=record['is_active'],
                 family_id=uuid_to_string(record['family_id']),
                 created_at=str(record['created_at']),
                 updated_at=str(record['updated_at'])
-            )
-            for record in template_records
-        ]
+            ))
+        
+        return templates
     except Exception as e:
         logger.error(f"Error fetching schedule templates: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch schedule templates")
@@ -61,13 +79,30 @@ async def get_schedule_template(template_id: int, current_user = Depends(get_cur
         if not template_record:
             raise HTTPException(status_code=404, detail="Schedule template not found")
         
+        # Deserialize pattern data from JSON
+        weekly_pattern = None
+        if template_record['weekly_pattern']:
+            try:
+                weekly_pattern = WeeklySchedulePattern(**template_record['weekly_pattern'])
+            except Exception as e:
+                logger.error(f"Error deserializing weekly pattern: {e}")
+                weekly_pattern = None
+        
+        alternating_weeks_pattern = None
+        if template_record['alternating_weeks_pattern']:
+            try:
+                alternating_weeks_pattern = AlternatingWeeksPattern(**template_record['alternating_weeks_pattern'])
+            except Exception as e:
+                logger.error(f"Error deserializing alternating weeks pattern: {e}")
+                alternating_weeks_pattern = None
+        
         return ScheduleTemplate(
             id=template_record['id'],
             name=template_record['name'],
             description=template_record['description'],
             pattern_type=template_record['pattern_type'],
-            weekly_pattern=template_record['weekly_pattern'],
-            alternating_weeks_pattern=template_record['alternating_weeks_pattern'],
+            weekly_pattern=weekly_pattern,
+            alternating_weeks_pattern=alternating_weeks_pattern,
             is_active=template_record['is_active'],
             family_id=uuid_to_string(template_record['family_id']),
             created_at=str(template_record['created_at']),
@@ -169,13 +204,30 @@ async def update_schedule_template(template_id: int, template_data: ScheduleTemp
             schedule_templates.select().where(schedule_templates.c.id == template_id)
         )
         
+        # Deserialize pattern data from JSON
+        weekly_pattern = None
+        if template_record['weekly_pattern']:
+            try:
+                weekly_pattern = WeeklySchedulePattern(**template_record['weekly_pattern'])
+            except Exception as e:
+                logger.error(f"Error deserializing weekly pattern: {e}")
+                weekly_pattern = None
+        
+        alternating_weeks_pattern = None
+        if template_record['alternating_weeks_pattern']:
+            try:
+                alternating_weeks_pattern = AlternatingWeeksPattern(**template_record['alternating_weeks_pattern'])
+            except Exception as e:
+                logger.error(f"Error deserializing alternating weeks pattern: {e}")
+                alternating_weeks_pattern = None
+        
         return ScheduleTemplate(
             id=template_record['id'],
             name=template_record['name'],
             description=template_record['description'],
             pattern_type=template_record['pattern_type'],
-            weekly_pattern=template_record['weekly_pattern'],
-            alternating_weeks_pattern=template_record['alternating_weeks_pattern'],
+            weekly_pattern=weekly_pattern,
+            alternating_weeks_pattern=alternating_weeks_pattern,
             is_active=template_record['is_active'],
             family_id=uuid_to_string(template_record['family_id']),
             created_at=str(template_record['created_at']),
