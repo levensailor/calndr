@@ -1214,7 +1214,11 @@ class CalendarViewModel: ObservableObject {
         // Mark this date as having an in-flight request
         inFlightCustodyUpdates.insert(dateString)
         
-        APIService.shared.updateHandoffDayOnly(for: dateString, handoffDay: handoffDay) { result in
+        // Get current custodian for this date
+        let (currentCustodianId, _) = getCustodyInfo(for: date)
+        
+        // Use the main updateCustodyRecord function instead of the broken updateHandoffDayOnly
+        APIService.shared.updateCustodyRecord(for: dateString, custodianId: currentCustodianId, handoffDay: handoffDay) { result in
             DispatchQueue.main.async {
                 // Always remove from in-flight set when request completes
                 self.inFlightCustodyUpdates.remove(dateString)
