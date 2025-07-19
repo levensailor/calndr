@@ -9,7 +9,8 @@ from core.logging import logger
 from db.models import schedule_templates, custody
 from schemas.schedule import (
     ScheduleTemplate, ScheduleTemplateCreate, ScheduleApplication, 
-    ScheduleApplicationResponse, SchedulePatternType
+    ScheduleApplicationResponse, SchedulePatternType, WeeklySchedulePattern,
+    AlternatingWeeksPattern
 )
 
 router = APIRouter()
