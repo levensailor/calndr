@@ -171,6 +171,18 @@ struct PreferencesView: View {
             // Theme Selection Section
             Section(header: Text("Themes")
                 .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))) {
+                
+                // Quick Theme Switcher
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Current Theme: \(themeManager.currentTheme.name)")
+                        .font(.subheadline)
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+                    
+                    HorizontalThemeSwitcher()
+                        .frame(height: 80)
+                }
+                .padding(.vertical, 8)
+                
                 NavigationLink(destination: ThemeSettingsView().environmentObject(themeManager)) {
                     PreferenceRow(item: PreferenceItem(
                         title: "Manage Themes",

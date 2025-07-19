@@ -14,19 +14,24 @@ struct ThemeSettingsView: View {
                 LazyVGrid(columns: columns, spacing: 20) {
                     ForEach(themeManager.themes) { theme in
                         ThemePreviewView(theme: theme)
+                            .onTapGesture {
+                                themeManager.setTheme(to: theme)
+                            }
                             .contextMenu {
-                                Button {
-                                    self.themeToEdit = theme
-                                    self.isEditing = true
-                                    self.showThemeCreator = true
-                                } label: {
-                                    Label("Edit Theme", systemImage: "pencil")
-                                }
-
                                 Button {
                                     themeManager.setTheme(to: theme)
                                 } label: {
-                                    Label("Set as Current", systemImage: "paintbrush")
+                                    Label("Apply Theme", systemImage: "paintbrush.fill")
+                                }
+                                
+                                if theme.isPublic != true {
+                                    Button {
+                                        self.themeToEdit = theme
+                                        self.isEditing = true
+                                        self.showThemeCreator = true
+                                    } label: {
+                                        Label("Edit Theme", systemImage: "pencil")
+                                    }
                                 }
                             }
                     }
