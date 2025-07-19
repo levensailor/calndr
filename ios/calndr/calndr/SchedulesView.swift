@@ -11,116 +11,11 @@ struct SchedulesView: View {
         NavigationView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    // Header
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Default Schedules")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                            .foregroundColor(themeManager.currentTheme.textColor.color)
-                        
-                        Text("Create and manage custody schedule templates")
-                            .font(.subheadline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
-                    }
-                    .padding(.horizontal)
-                    
-                    // Quick Start Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Quick Start")
-                            .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color)
-                            .padding(.horizontal)
-                        
-                        // Popular Presets
-                        LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: 12) {
-                            ForEach(SchedulePreset.commonPresets.filter { $0.isPopular }, id: \.id) { preset in
-                                SchedulePresetCard(preset: preset) {
-                                    selectedPreset = preset
-                                    showingScheduleBuilder = true
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                    
-                    // All Presets Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("All Schedule Patterns")
-                            .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color)
-                            .padding(.horizontal)
-                        
-                        LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: 12) {
-                            ForEach(SchedulePreset.commonPresets, id: \.id) { preset in
-                                SchedulePresetCard(preset: preset) {
-                                    selectedPreset = preset
-                                    showingScheduleBuilder = true
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                    
-                    // Custom Schedule Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Custom Schedule")
-                            .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color)
-                            .padding(.horizontal)
-                        
-                        Button(action: {
-                            selectedPreset = nil
-                            showingScheduleBuilder = true
-                        }) {
-                            HStack {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.title2)
-                                    .foregroundColor(.white)
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Create Custom Schedule")
-                                        .font(.headline)
-                                        .foregroundColor(.white)
-                                    
-                                    Text("Build your own schedule pattern")
-                                        .font(.subheadline)
-                                        .foregroundColor(.white.opacity(0.8))
-                                }
-                                
-                                Spacer()
-                                
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundColor(.white.opacity(0.7))
-                            }
-                            .padding()
-                            .background(Color.indigo)
-                            .cornerRadius(12)
-                        }
-                        .padding(.horizontal)
-                    }
-                    
-                    // Saved Templates Section
-                    if !viewModel.scheduleTemplates.isEmpty {
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text("Saved Templates")
-                                .font(.headline)
-                                .foregroundColor(themeManager.currentTheme.textColor.color)
-                                .padding(.horizontal)
-                            
-                            ForEach(viewModel.scheduleTemplates) { template in
-                                ScheduleTemplateCard(template: template)
-                                    .padding(.horizontal)
-                            }
-                        }
-                    }
-                    
+                    SchedulesHeaderView()
+                    QuickStartSection(onPresetSelected: selectPreset)
+                    AllPresetsSection(onPresetSelected: selectPreset)
+                    CustomScheduleSection(onCreateCustom: createCustomSchedule)
+                    SavedTemplatesSection()
                     Spacer(minLength: 80)
                 }
             }
@@ -134,6 +29,165 @@ struct SchedulesView: View {
         }
         .onAppear {
             viewModel.fetchScheduleTemplates()
+        }
+    }
+    
+    private func selectPreset(_ preset: SchedulePreset) {
+        selectedPreset = preset
+        showingScheduleBuilder = true
+    }
+    
+    private func createCustomSchedule() {
+        selectedPreset = nil
+        showingScheduleBuilder = true
+    }
+}
+
+// MARK: - Header Section
+
+struct SchedulesHeaderView: View {
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Default Schedules")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .foregroundColor(themeManager.currentTheme.textColor.color)
+            
+            Text("Create and manage custody schedule templates")
+                .font(.subheadline)
+                .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+        }
+        .padding(.horizontal)
+    }
+}
+
+// MARK: - Quick Start Section
+
+struct QuickStartSection: View {
+    let onPresetSelected: (SchedulePreset) -> Void
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Quick Start")
+                .font(.headline)
+                .foregroundColor(themeManager.currentTheme.textColor.color)
+                .padding(.horizontal)
+            
+            LazyVGrid(columns: [
+                GridItem(.flexible()),
+                GridItem(.flexible())
+            ], spacing: 12) {
+                ForEach(SchedulePreset.commonPresets.filter { $0.isPopular }, id: \.id) { preset in
+                    SchedulePresetCard(preset: preset) {
+                        onPresetSelected(preset)
+                    }
+                }
+            }
+            .padding(.horizontal)
+        }
+    }
+}
+
+// MARK: - All Presets Section
+
+struct AllPresetsSection: View {
+    let onPresetSelected: (SchedulePreset) -> Void
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("All Schedule Patterns")
+                .font(.headline)
+                .foregroundColor(themeManager.currentTheme.textColor.color)
+                .padding(.horizontal)
+            
+            LazyVGrid(columns: [
+                GridItem(.flexible()),
+                GridItem(.flexible())
+            ], spacing: 12) {
+                ForEach(SchedulePreset.commonPresets, id: \.id) { preset in
+                    SchedulePresetCard(preset: preset) {
+                        onPresetSelected(preset)
+                    }
+                }
+            }
+            .padding(.horizontal)
+        }
+    }
+}
+
+// MARK: - Custom Schedule Section
+
+struct CustomScheduleSection: View {
+    let onCreateCustom: () -> Void
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Custom Schedule")
+                .font(.headline)
+                .foregroundColor(themeManager.currentTheme.textColor.color)
+                .padding(.horizontal)
+            
+            Button(action: onCreateCustom) {
+                CustomScheduleButton()
+            }
+            .padding(.horizontal)
+        }
+    }
+}
+
+struct CustomScheduleButton: View {
+    var body: some View {
+        HStack {
+            Image(systemName: "plus.circle.fill")
+                .font(.title2)
+                .foregroundColor(.white)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Create Custom Schedule")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                
+                Text("Build your own schedule pattern")
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.8))
+            }
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(.white.opacity(0.7))
+        }
+        .padding()
+        .background(Color.indigo)
+        .cornerRadius(12)
+    }
+}
+
+// MARK: - Saved Templates Section
+
+struct SavedTemplatesSection: View {
+    @EnvironmentObject var viewModel: CalendarViewModel
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    var body: some View {
+        if !viewModel.scheduleTemplates.isEmpty {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Saved Templates")
+                    .font(.headline)
+                    .foregroundColor(themeManager.currentTheme.textColor.color)
+                    .padding(.horizontal)
+                
+                ForEach(viewModel.scheduleTemplates) { template in
+                    ScheduleTemplateCard(template: template)
+                        .padding(.horizontal)
+                }
+            }
         }
     }
 }
@@ -354,70 +408,14 @@ struct ScheduleBuilderView: View {
         NavigationView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    // Header
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(selectedPreset?.name ?? "Custom Schedule")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                            .foregroundColor(themeManager.currentTheme.textColor.color)
-                        
-                        Text(selectedPreset?.description ?? "Create a custom custody schedule")
-                            .font(.subheadline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
-                    }
-                    .padding(.horizontal)
+                    ScheduleBuilderHeaderView(selectedPreset: selectedPreset)
+                    ScheduleInformationSection(scheduleName: $scheduleName, scheduleDescription: $scheduleDescription)
+                    PatternTypeSelectionSection(patternType: $patternType)
                     
-                    // Schedule Information
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Schedule Information")
-                            .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color)
-                        
-                        VStack(spacing: 12) {
-                            FloatingLabelTextField(
-                                title: "Schedule Name",
-                                text: $scheduleName,
-                                isSecure: false,
-                                themeManager: themeManager
-                            )
-                            
-                            FloatingLabelTextField(
-                                title: "Description (Optional)",
-                                text: $scheduleDescription,
-                                isSecure: false,
-                                themeManager: themeManager
-                            )
-                        }
-                    }
-                    .padding(.horizontal)
-                    
-                    // Pattern Type Selection
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Pattern Type")
-                            .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color)
-                        
-                        ForEach(SchedulePatternType.allCases, id: \.self) { type in
-                            PatternTypeCard(
-                                type: type,
-                                isSelected: patternType == type,
-                                action: { patternType = type }
-                            )
-                        }
-                    }
-                    .padding(.horizontal)
-                    
-                    // Schedule Pattern Configuration
                     if patternType == .weekly {
-                        WeeklyPatternBuilder(
-                            pattern: $weeklyPattern,
-                            custodianOneName: viewModel.custodianOneName,
-                            custodianTwoName: viewModel.custodianTwoName
-                        )
-                        .padding(.horizontal)
+                        WeeklyPatternConfigurationSection(weeklyPattern: $weeklyPattern)
                     }
                     
-                    // Schedule Preview
                     SchedulePreviewSection(
                         patternType: patternType,
                         weeklyPattern: weeklyPattern,
@@ -427,37 +425,13 @@ struct ScheduleBuilderView: View {
                     )
                     .padding(.horizontal)
                     
-                    // Application Settings
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Apply Schedule")
-                            .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color)
-                        
-                        VStack(spacing: 12) {
-                            Button(action: { showingDatePicker = true }) {
-                                HStack {
-                                    Text("Date Range")
-                                        .font(.subheadline)
-                                        .foregroundColor(themeManager.currentTheme.textColor.color)
-                                    
-                                    Spacer()
-                                    
-                                    Text("\(startDate, formatter: dateFormatter) - \(endDate, formatter: dateFormatter)")
-                                        .font(.subheadline)
-                                        .foregroundColor(.blue)
-                                }
-                                .padding()
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
-                                )
-                            }
-                            
-                            Toggle("Overwrite Existing Schedule", isOn: $overwriteExisting)
-                                .foregroundColor(themeManager.currentTheme.textColor.color)
-                        }
-                    }
-                    .padding(.horizontal)
+                    ApplicationSettingsSection(
+                        startDate: $startDate,
+                        endDate: $endDate,
+                        overwriteExisting: $overwriteExisting,
+                        showingDatePicker: $showingDatePicker,
+                        dateFormatter: dateFormatter
+                    )
                     
                     Spacer(minLength: 80)
                 }
@@ -595,6 +569,136 @@ struct ScheduleBuilderView: View {
     }
 }
 
+// MARK: - Schedule Builder Components
+
+struct ScheduleBuilderHeaderView: View {
+    let selectedPreset: SchedulePreset?
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(selectedPreset?.name ?? "Custom Schedule")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .foregroundColor(themeManager.currentTheme.textColor.color)
+            
+            Text(selectedPreset?.description ?? "Create a custom custody schedule")
+                .font(.subheadline)
+                .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+        }
+        .padding(.horizontal)
+    }
+}
+
+struct ScheduleInformationSection: View {
+    @Binding var scheduleName: String
+    @Binding var scheduleDescription: String
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Schedule Information")
+                .font(.headline)
+                .foregroundColor(themeManager.currentTheme.textColor.color)
+            
+            VStack(spacing: 12) {
+                FloatingLabelTextField(
+                    title: "Schedule Name",
+                    text: $scheduleName,
+                    isSecure: false,
+                    themeManager: themeManager
+                )
+                
+                FloatingLabelTextField(
+                    title: "Description (Optional)",
+                    text: $scheduleDescription,
+                    isSecure: false,
+                    themeManager: themeManager
+                )
+            }
+        }
+        .padding(.horizontal)
+    }
+}
+
+struct PatternTypeSelectionSection: View {
+    @Binding var patternType: SchedulePatternType
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Pattern Type")
+                .font(.headline)
+                .foregroundColor(themeManager.currentTheme.textColor.color)
+            
+            ForEach(SchedulePatternType.allCases, id: \.self) { type in
+                PatternTypeCard(
+                    type: type,
+                    isSelected: patternType == type,
+                    action: { patternType = type }
+                )
+            }
+        }
+        .padding(.horizontal)
+    }
+}
+
+struct WeeklyPatternConfigurationSection: View {
+    @Binding var weeklyPattern: WeeklySchedulePattern
+    @EnvironmentObject var viewModel: CalendarViewModel
+    
+    var body: some View {
+        WeeklyPatternBuilder(
+            pattern: $weeklyPattern,
+            custodianOneName: viewModel.custodianOneName,
+            custodianTwoName: viewModel.custodianTwoName
+        )
+        .padding(.horizontal)
+    }
+}
+
+struct ApplicationSettingsSection: View {
+    @Binding var startDate: Date
+    @Binding var endDate: Date
+    @Binding var overwriteExisting: Bool
+    @Binding var showingDatePicker: Bool
+    let dateFormatter: DateFormatter
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Apply Schedule")
+                .font(.headline)
+                .foregroundColor(themeManager.currentTheme.textColor.color)
+            
+            VStack(spacing: 12) {
+                Button(action: { showingDatePicker = true }) {
+                    HStack {
+                        Text("Date Range")
+                            .font(.subheadline)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
+                        
+                        Spacer()
+                        
+                        Text("\(startDate, formatter: dateFormatter) - \(endDate, formatter: dateFormatter)")
+                            .font(.subheadline)
+                            .foregroundColor(.blue)
+                    }
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
+                    )
+                }
+                
+                Toggle("Overwrite Existing Schedule", isOn: $overwriteExisting)
+                    .foregroundColor(themeManager.currentTheme.textColor.color)
+            }
+        }
+        .padding(.horizontal)
+    }
+}
+
 // MARK: - Schedule Edit View
 
 struct ScheduleEditView: View {
@@ -631,75 +735,16 @@ struct ScheduleEditView: View {
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
-                        // Header
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Edit Schedule")
-                                .font(.largeTitle)
-                                .fontWeight(.bold)
-                                .foregroundColor(themeManager.currentTheme.textColor.color)
-                            
-                            Text("Modify your custody schedule template")
-                                .font(.subheadline)
-                                .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
-                        }
-                        .padding(.horizontal)
+                        ScheduleEditHeaderView()
+                        ScheduleEditInformationSection(scheduleName: $scheduleName, scheduleDescription: $scheduleDescription)
+                        ScheduleEditStatusSection(isActive: $isActive)
                         
-                        // Schedule Information
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text("Schedule Information")
-                                .font(.headline)
-                                .foregroundColor(themeManager.currentTheme.textColor.color)
-                            
-                            VStack(spacing: 12) {
-                                FloatingLabelTextField(
-                                    title: "Schedule Name",
-                                    text: $scheduleName,
-                                    isSecure: false,
-                                    themeManager: themeManager
-                                )
-                                
-                                FloatingLabelTextField(
-                                    title: "Description (Optional)",
-                                    text: $scheduleDescription,
-                                    isSecure: false,
-                                    themeManager: themeManager
-                                )
-                            }
-                        }
-                        .padding(.horizontal)
-                        
-                        // Active Status Toggle
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Status")
-                                .font(.headline)
-                                .foregroundColor(themeManager.currentTheme.textColor.color)
-                                .padding(.horizontal)
-                            
-                            Toggle("Active", isOn: $isActive)
-                                .font(.subheadline)
-                                .foregroundColor(themeManager.currentTheme.textColor.color)
-                                .padding(.horizontal)
-                        }
-                        
-                        // Weekly Pattern Section (if weekly pattern type)
                         if patternType == .weekly {
-                            VStack(alignment: .leading, spacing: 16) {
-                                Text("Weekly Schedule")
-                                    .font(.headline)
-                                    .foregroundColor(themeManager.currentTheme.textColor.color)
-                                    .padding(.horizontal)
-                                
-                                ForEach(Array(daysOfWeek.enumerated()), id: \.offset) { index, day in
-                                    DayAssignmentRow(
-                                        dayName: day,
-                                        selectedParent: bindingForDay(index),
-                                        custodianOneName: viewModel.custodians.count > 0 ? viewModel.custodians[0].first_name : "Parent 1",
-                                        custodianTwoName: viewModel.custodians.count > 1 ? viewModel.custodians[1].first_name : "Parent 2",
-                                        themeManager: themeManager
-                                    )
-                                    .padding(.horizontal)
-                                }
-                            }
+                            ScheduleEditWeeklyPatternSection(
+                                weeklyPattern: $weeklyPattern,
+                                daysOfWeek: daysOfWeek,
+                                bindingForDay: bindingForDay
+                            )
                         }
                         
                         Spacer(minLength: 80)
@@ -807,6 +852,104 @@ struct ScheduleEditView: View {
             } else {
                 alertMessage = "Failed to update schedule template"
                 showingAlert = true
+            }
+        }
+    }
+}
+
+// MARK: - Schedule Edit Components
+
+struct ScheduleEditHeaderView: View {
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Edit Schedule")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .foregroundColor(themeManager.currentTheme.textColor.color)
+            
+            Text("Modify your custody schedule template")
+                .font(.subheadline)
+                .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+        }
+        .padding(.horizontal)
+    }
+}
+
+struct ScheduleEditInformationSection: View {
+    @Binding var scheduleName: String
+    @Binding var scheduleDescription: String
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Schedule Information")
+                .font(.headline)
+                .foregroundColor(themeManager.currentTheme.textColor.color)
+            
+            VStack(spacing: 12) {
+                FloatingLabelTextField(
+                    title: "Schedule Name",
+                    text: $scheduleName,
+                    isSecure: false,
+                    themeManager: themeManager
+                )
+                
+                FloatingLabelTextField(
+                    title: "Description (Optional)",
+                    text: $scheduleDescription,
+                    isSecure: false,
+                    themeManager: themeManager
+                )
+            }
+        }
+        .padding(.horizontal)
+    }
+}
+
+struct ScheduleEditStatusSection: View {
+    @Binding var isActive: Bool
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Status")
+                .font(.headline)
+                .foregroundColor(themeManager.currentTheme.textColor.color)
+                .padding(.horizontal)
+            
+            Toggle("Active", isOn: $isActive)
+                .font(.subheadline)
+                .foregroundColor(themeManager.currentTheme.textColor.color)
+                .padding(.horizontal)
+        }
+    }
+}
+
+struct ScheduleEditWeeklyPatternSection: View {
+    @Binding var weeklyPattern: WeeklySchedulePattern
+    let daysOfWeek: [String]
+    let bindingForDay: (Int) -> Binding<String?>
+    @EnvironmentObject var viewModel: CalendarViewModel
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Weekly Schedule")
+                .font(.headline)
+                .foregroundColor(themeManager.currentTheme.textColor.color)
+                .padding(.horizontal)
+            
+            ForEach(Array(daysOfWeek.enumerated()), id: \.offset) { index, day in
+                DayAssignmentRow(
+                    dayName: day,
+                    selectedParent: bindingForDay(index),
+                    custodianOneName: viewModel.custodians.count > 0 ? viewModel.custodians[0].first_name : "Parent 1",
+                    custodianTwoName: viewModel.custodians.count > 1 ? viewModel.custodians[1].first_name : "Parent 2",
+                    themeManager: themeManager
+                )
+                .padding(.horizontal)
             }
         }
     }
