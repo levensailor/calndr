@@ -78,7 +78,7 @@ struct MainTabView: View {
                 
                 // Header with month/year and view switcher
                 HStack {
-                    QuickThemeSwitcher()
+                    // QuickThemeSwitcher() - Removed per user request
                     
                     Spacer()
                     

@@ -21,16 +21,17 @@ struct ThemeCreatorView: View {
     init(theme: Binding<Theme>, isNew: Bool) {
         self._theme = theme
         self.isNew = isNew
-        _themeName = State(initialValue: theme.wrappedValue.name)
-        _mainBackgroundColor = State(initialValue: theme.wrappedValue.mainBackgroundColor.color)
-        _secondaryBackgroundColor = State(initialValue: theme.wrappedValue.secondaryBackgroundColor.color)
-        _textColor = State(initialValue: theme.wrappedValue.textColor.color)
-        _headerTextColor = State(initialValue: theme.wrappedValue.headerTextColor.color)
-        _iconColor = State(initialValue: theme.wrappedValue.iconColor.color)
-        _iconActiveColor = State(initialValue: theme.wrappedValue.iconActiveColor.color)
-        _accentColor = State(initialValue: theme.wrappedValue.accentColor.color)
-        _parentOneColor = State(initialValue: theme.wrappedValue.parentOneColor.color)
-        _parentTwoColor = State(initialValue: theme.wrappedValue.parentTwoColor.color)
+        // Initialize with empty/default values - will be set properly in onAppear
+        _themeName = State(initialValue: "")
+        _mainBackgroundColor = State(initialValue: .black)
+        _secondaryBackgroundColor = State(initialValue: .gray)
+        _textColor = State(initialValue: .white)
+        _headerTextColor = State(initialValue: .white)
+        _iconColor = State(initialValue: .blue)
+        _iconActiveColor = State(initialValue: .blue)
+        _accentColor = State(initialValue: .blue)
+        _parentOneColor = State(initialValue: .green)
+        _parentTwoColor = State(initialValue: .red)
     }
 
     var body: some View {
@@ -95,6 +96,27 @@ struct ThemeCreatorView: View {
             .animateThemeChanges(themeManager)
         }
         .environmentObject(themeManager)
+        .onAppear {
+            // Load theme data when view appears to ensure proper initialization
+            loadThemeData()
+        }
+        .onChange(of: theme.id) { _, _ in
+            // Reload theme data if the theme changes
+            loadThemeData()
+        }
+    }
+    
+    private func loadThemeData() {
+        themeName = theme.name
+        mainBackgroundColor = theme.mainBackgroundColor.color
+        secondaryBackgroundColor = theme.secondaryBackgroundColor.color
+        textColor = theme.textColor.color
+        headerTextColor = theme.headerTextColor.color
+        iconColor = theme.iconColor.color
+        iconActiveColor = theme.iconActiveColor.color
+        accentColor = theme.accentColor.color
+        parentOneColor = theme.parentOneColor.color
+        parentTwoColor = theme.parentTwoColor.color
     }
 
     private func saveTheme() {
