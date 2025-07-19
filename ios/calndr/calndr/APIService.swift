@@ -1691,7 +1691,7 @@ class APIService {
     }
     
     func updateScheduleTemplate(_ templateId: Int, templateData: ScheduleTemplateCreate, completion: @escaping (Result<ScheduleTemplate, Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/schedule-templates/\(templateId)/")
+        let url = baseURL.appendingPathComponent("/schedule-templates/\(templateId)")
         var request = createAuthenticatedRequest(url: url)
         request.httpMethod = "PUT"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -1743,7 +1743,7 @@ class APIService {
     }
     
     func deleteScheduleTemplate(_ templateId: Int, completion: @escaping (Result<Void, Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/schedule-templates/\(templateId)/")
+        let url = baseURL.appendingPathComponent("/schedule-templates/\(templateId)")
         var request = createAuthenticatedRequest(url: url)
         request.httpMethod = "DELETE"
         
@@ -1768,7 +1768,7 @@ class APIService {
     }
     
     func applyScheduleTemplate(_ application: ScheduleApplication, completion: @escaping (Result<ScheduleApplicationResponse, Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/schedule-templates/apply/")
+        let url = baseURL.appendingPathComponent("/schedule-templates/apply")
         var request = createAuthenticatedRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
