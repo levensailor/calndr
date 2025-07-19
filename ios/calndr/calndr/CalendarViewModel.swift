@@ -154,6 +154,9 @@ class CalendarViewModel: ObservableObject {
         print("📅 CalendarViewModel: Starting fetchReminders()...")
         fetchReminders() // Load reminders
         
+        print("📅 CalendarViewModel: Starting fetchJournalEntries()...")
+        fetchJournalEntries() // Load journal entries
+        
         // Fetch school events if enabled
         if showSchoolEvents && schoolEvents.isEmpty {
             print("📅 CalendarViewModel: Starting fetchSchoolEvents()...")

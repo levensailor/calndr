@@ -54,6 +54,7 @@ struct MainTabView: View {
     @State private var currentView: CalendarViewType = .month
     @State private var focusedDate: Date?
     @State private var showSettings = false
+    @State private var showJournal = false
     @State private var showHelp = false
     @State private var isAnimating = false
     @State private var animationOpacity: Double = 1.0
@@ -229,6 +230,19 @@ struct MainTabView: View {
 
                     VStack(spacing: 4) {
                         Button(action: {
+                            showJournal = true
+                        }) {
+                            Image(systemName: "book.closed")
+                                .font(.title2)
+                                .foregroundColor(themeManager.currentTheme.iconColorSwiftUI)
+                        }
+                        Text("Journal")
+                            .font(.caption2)
+                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
+                    }
+
+                    VStack(spacing: 4) {
+                        Button(action: {
                             showHelp = true
                         }) {
                             Image(systemName: "questionmark.circle")
@@ -253,6 +267,10 @@ struct MainTabView: View {
         }
         .sheet(isPresented: $showSettings) {
             SettingsView(viewModel: calendarViewModel)
+        }
+        .sheet(isPresented: $showJournal) {
+            JournalView(viewModel: calendarViewModel)
+                .environmentObject(themeManager)
         }
         .sheet(isPresented: $showHelp) {
             HelpView()
