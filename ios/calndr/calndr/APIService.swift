@@ -1618,9 +1618,12 @@ class APIService {
             
             // Log the raw response for debugging
             if let jsonString = String(data: data, encoding: .utf8) {
-                print("🔍 Raw schedule template response (Status: \(httpResponse.statusCode)):")
+                print("🔍🔍🔍 DEBUG: Raw schedule template response (Status: \(httpResponse.statusCode)) 🔍🔍🔍")
+                print("RAW JSON DATA:")
                 print(jsonString)
-                print("----------")
+                print("🔍🔍🔍 END RAW JSON 🔍🔍🔍")
+            } else {
+                print("❌❌❌ Failed to convert response data to string!")
             }
             
             guard (200...299).contains(httpResponse.statusCode) else {
@@ -1629,8 +1632,26 @@ class APIService {
             }
             
             do {
+                print("🔄 Attempting to decode as ScheduleTemplateDetailed...")
+                
+                // First, let's try to decode as a simple dictionary to see what fields are available
+                if let jsonDict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    print("📊 Available JSON fields:")
+                    for (key, value) in jsonDict {
+                        print("  - \(key): \(type(of: value))")
+                    }
+                } else {
+                    print("❌ Could not parse as JSON dictionary")
+                }
+                
                 // Try to decode as ScheduleTemplateDetailed first (which has all fields)
                 let detailedTemplate = try JSONDecoder().decode(ScheduleTemplateDetailed.self, from: data)
+                
+                print("✅ Successfully decoded ScheduleTemplateDetailed:")
+                print("  - ID: \(detailedTemplate.id)")
+                print("  - Name: \(detailedTemplate.name)")
+                print("  - Pattern Type: \(detailedTemplate.patternType)")
+                print("  - Family ID: \(detailedTemplate.familyId)")
                 
                 // Convert to basic ScheduleTemplate format for compatibility
                 let basicTemplate = ScheduleTemplate(
@@ -1643,10 +1664,28 @@ class APIService {
                     updatedAt: detailedTemplate.updatedAt
                 )
                 
+                print("✅ Successfully converted to basic ScheduleTemplate")
                 completion(.success(basicTemplate))
-            } catch {
-                print("❌ Error decoding schedule template response: \(error)")
-                completion(.failure(error))
+            } catch let decodingError {
+                print("❌❌❌ DECODING ERROR DETAILS:")
+                print("Error: \(decodingError)")
+                
+                if let decodingError = decodingError as? DecodingError {
+                    switch decodingError {
+                    case .typeMismatch(let type, let context):
+                        print("Type mismatch: \(type) at \(context.codingPath)")
+                    case .valueNotFound(let type, let context):
+                        print("Value not found: \(type) at \(context.codingPath)")
+                    case .keyNotFound(let key, let context):
+                        print("Key not found: \(key) at \(context.codingPath)")
+                    case .dataCorrupted(let context):
+                        print("Data corrupted at \(context.codingPath)")
+                    @unknown default:
+                        print("Unknown decoding error")
+                    }
+                }
+                
+                completion(.failure(decodingError))
             }
         }.resume()
     }
