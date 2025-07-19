@@ -10,6 +10,7 @@ struct DayContentView: View {
     let custodyOwner: String
     let custodyID: String
     let isCurrentMonth: Bool
+    let isToday: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
@@ -62,6 +63,7 @@ struct DayContentView: View {
                     .foregroundColor(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneTextColor : themeManager.currentTheme.parentTwoTextColor)
                     .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24) // Fixed height
                     .background(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColorSwiftUI : themeManager.currentTheme.parentTwoColorSwiftUI)
+                    .opacity(isToday ? 1.0 : 0.9)
             }
             // Custody row - always visible when custody owner exists
             if !custodyOwner.isEmpty && viewModel.showHandoffTimeline {
@@ -70,7 +72,8 @@ struct DayContentView: View {
                     .bold()
                     .foregroundColor(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneTextColor : themeManager.currentTheme.parentTwoTextColor)
                     .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24) // Fixed height
-                    .background(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColorSwiftUI : themeManager.currentTheme.parentTwoColorSwiftUI).opacity(0.4)
+                    .background(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColorSwiftUI : themeManager.currentTheme.parentTwoColorSwiftUI)
+                    .opacity(isToday ? 0.4 : 0.3)
             }
         }
         .animateThemeChanges(themeManager)

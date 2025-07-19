@@ -31,7 +31,8 @@ struct DayCellView: View {
                 weatherInfo: weatherInfo,
                 custodyOwner: custodyOwner,
                 custodyID: custodyID,
-                isCurrentMonth: isCurrentMonth
+                isCurrentMonth: isCurrentMonth,
+                isToday: isToday
             )
             
             // Day Number on top
