@@ -7,7 +7,7 @@ from services.school_events_service import fetch_school_events
 router = APIRouter()
 
 @router.get("/")
-async def get_school_events(current_user = Depends(get_current_user)):
+async def get_school_events():
     """Returns a JSON array of school events scraped from the Learning Tree website."""
     try:
         events = await fetch_school_events()
