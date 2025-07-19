@@ -205,12 +205,26 @@ struct MainTabView: View {
                 HStack(alignment: .top, spacing: 60) {
                     VStack(spacing: 4) {
                         Button(action: {
-                            calendarViewModel.showHandoffTimeline.toggle()
+                            if calendarViewModel.showHandoffTimeline {
+                                // If timeline is already showing, just hide it
+                                calendarViewModel.showHandoffTimeline = false
+                            } else {
+                                // If timeline is hidden, show it and refresh data
+                                calendarViewModel.showHandoffTimeline = true
+                                calendarViewModel.fetchHandoffsAndCustody()
+                            }
                         }) {
-                            Image(systemName: getHandoffIconName())
-                                .font(.title2)
-                                .foregroundColor(getHandoffIconColor())
+                            if calendarViewModel.isDataLoading && calendarViewModel.showHandoffTimeline {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: Color.purple))
+                                    .font(.title2)
+                            } else {
+                                Image(systemName: getHandoffIconName())
+                                    .font(.title2)
+                                    .foregroundColor(getHandoffIconColor())
+                            }
                         }
+                        .disabled(calendarViewModel.isDataLoading)
                         Text("Handoff")
                             .font(.caption2)
                             .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))

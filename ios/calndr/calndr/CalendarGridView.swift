@@ -53,10 +53,58 @@ struct CalendarGridView: View {
                 
                 // Handoff Timeline Overlay
                 if viewModel.showHandoffTimeline {
-                    HandoffTimelineView(viewModel: viewModel, calendarDays: getDaysForCurrentMonth())
-                        .environmentObject(themeManager)
-                        .allowsHitTesting(true) // Allow interactions with handoff bubbles
-                        .zIndex(1000) // Ensure handoff timeline is above everything else
+                    if viewModel.isHandoffDataReady {
+                        HandoffTimelineView(viewModel: viewModel, calendarDays: getDaysForCurrentMonth())
+                            .environmentObject(themeManager)
+                            .allowsHitTesting(true) // Allow interactions with handoff bubbles
+                            .zIndex(1000) // Ensure handoff timeline is above everything else
+                    } else {
+                        // Loading state overlay
+                        ZStack {
+                            Rectangle()
+                                .fill(.ultraThinMaterial.opacity(0.2))
+                                .allowsHitTesting(false)
+                            
+                            VStack(spacing: 16) {
+                                if viewModel.isDataLoading {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: Color.purple))
+                                        .scaleEffect(1.5)
+                                    
+                                    Text("Loading handoff data...")
+                                        .font(.headline)
+                                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+                                } else {
+                                    // Data failed to load
+                                    VStack(spacing: 12) {
+                                        Image(systemName: "exclamationmark.triangle")
+                                            .font(.title)
+                                            .foregroundColor(.orange)
+                                        
+                                        Text("Failed to load handoff data")
+                                            .font(.headline)
+                                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+                                        
+                                        Button("Retry") {
+                                            viewModel.fetchHandoffsAndCustody()
+                                        }
+                                        .padding(.horizontal, 20)
+                                        .padding(.vertical, 8)
+                                        .background(Color.purple)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(8)
+                                    }
+                                }
+                            }
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
+                                    .shadow(radius: 8)
+                            )
+                        }
+                        .zIndex(1000)
+                    }
                 }
             }
             .frame(height: fixedCalendarHeight) // Fixed calendar height

@@ -252,6 +252,12 @@ class CalendarViewModel: ObservableObject {
                 print("   - Custodian 2 ID: \(self.custodianTwoId ?? "nil")")
                 print("   - Custody Records count: \(self.custodyRecords.count)")
                 self.isHandoffDataReady = false
+                
+                // If we failed to load handoff data, hide the timeline
+                if self.showHandoffTimeline {
+                    print("⚠️ Hiding handoff timeline due to data load failure")
+                    self.showHandoffTimeline = false
+                }
             }
             self.isDataLoading = false // End loading state
             
