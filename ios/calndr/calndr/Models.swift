@@ -809,6 +809,47 @@ enum SettingsDestination: Hashable {
 
 // Handoff Time Models
 
+// MARK: - Journal Models
+
+// Represents a journal entry
+struct JournalEntry: Codable, Identifiable {
+    let id: Int
+    let family_id: String
+    let user_id: String
+    let title: String?
+    let content: String
+    let entry_date: String
+    let author_name: String
+    let created_at: String
+    let updated_at: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id, family_id, user_id, title, content, entry_date, author_name, created_at, updated_at
+    }
+}
+
+// For creating new journal entries
+struct JournalEntryCreate: Codable {
+    let title: String?
+    let content: String
+    let entry_date: String
+    
+    enum CodingKeys: String, CodingKey {
+        case title, content, entry_date
+    }
+}
+
+// For updating journal entries
+struct JournalEntryUpdate: Codable {
+    let title: String?
+    let content: String?
+    let entry_date: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case title, content, entry_date
+    }
+}
+
 // MARK: - Reminder Models
 struct Reminder: Codable, Identifiable {
     let id: Int

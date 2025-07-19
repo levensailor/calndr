@@ -16,7 +16,7 @@ def get_cached_weather(cache_key: str) -> Optional[Dict]:
     if cache_key in weather_cache:
         cached_data, timestamp = weather_cache[cache_key]
         # Cache expires after 1 hour for forecast, 24 hours for historic
-        cache_ttl = 3600 if "forecast" in cache_key else 86400
+        cache_ttl = 3600 if "forecast" in cache_key else 259200
         if time.time() - timestamp < cache_ttl:
             return cached_data
         else:

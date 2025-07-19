@@ -186,7 +186,7 @@ struct MainTabView: View {
                 .padding()
 
                 // Menu Bar
-                HStack(alignment: .top, spacing: 60) {
+                HStack(alignment: .top, spacing: 40) {
                     VStack(spacing: 4) {
                         Button(action: {
                             if calendarViewModel.showHandoffTimeline {

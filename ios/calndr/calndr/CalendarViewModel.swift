@@ -42,6 +42,7 @@ class CalendarViewModel: ObservableObject {
     @Published var babysitters: [Babysitter] = []
     @Published var emergencyContacts: [EmergencyContact] = []
     @Published var reminders: [Reminder] = []
+    @Published var journalEntries: [JournalEntry] = []
     @Published var showHandoffTimeline: Bool = false // Toggle for handoff timeline view
     @Published var custodiansLoaded: Bool = false // DEPRECATED: Use isHandoffDataReady instead
     @Published var isHandoffDataReady: Bool = false // NEW: True when all handoff data is loaded
@@ -185,6 +186,7 @@ class CalendarViewModel: ObservableObject {
         babysitters = []
         emergencyContacts = []
         reminders = []
+        journalEntries = []
     }
 
     func fetchHandoffsAndCustody() {
@@ -1953,6 +1955,90 @@ class CalendarViewModel: ObservableObject {
         APIService.shared.searchDaycareProviders(searchRequest) { result in
             DispatchQueue.main.async {
                 completion(result)
+            }
+        }
+    }
+    
+    // MARK: - Journal Management
+    
+    func fetchJournalEntries(startDate: String? = nil, endDate: String? = nil, completion: (() -> Void)? = nil) {
+        APIService.shared.fetchJournalEntries(startDate: startDate, endDate: endDate) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let entries):
+                    self?.journalEntries = entries
+                    print("✅ Successfully fetched \(entries.count) journal entries")
+                case .failure(let error):
+                    print("❌ Error fetching journal entries: \(error.localizedDescription)")
+                }
+                completion?()
+            }
+        }
+    }
+    
+    func createJournalEntry(title: String?, content: String, entryDate: Date, completion: @escaping (Bool) -> Void) {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: entryDate)
+        
+        let entryData = JournalEntryCreate(title: title, content: content, entry_date: dateString)
+        
+        APIService.shared.createJournalEntry(entryData) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let newEntry):
+                    self?.journalEntries.insert(newEntry, at: 0) // Add to beginning of list
+                    self?.journalEntries.sort { $0.entry_date > $1.entry_date } // Sort by date descending
+                    print("✅ Successfully created journal entry")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error creating journal entry: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func updateJournalEntry(id: Int, title: String?, content: String?, entryDate: Date?, completion: @escaping (Bool) -> Void) {
+        var dateString: String? = nil
+        if let entryDate = entryDate {
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            dateString = dateFormatter.string(from: entryDate)
+        }
+        
+        let entryData = JournalEntryUpdate(title: title, content: content, entry_date: dateString)
+        
+        APIService.shared.updateJournalEntry(id: id, entryData: entryData) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let updatedEntry):
+                    if let index = self?.journalEntries.firstIndex(where: { $0.id == id }) {
+                        self?.journalEntries[index] = updatedEntry
+                        self?.journalEntries.sort { $0.entry_date > $1.entry_date }
+                    }
+                    print("✅ Successfully updated journal entry")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error updating journal entry: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func deleteJournalEntry(id: Int, completion: @escaping (Bool) -> Void) {
+        APIService.shared.deleteJournalEntry(id: id) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    self?.journalEntries.removeAll { $0.id == id }
+                    print("✅ Successfully deleted journal entry")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error deleting journal entry: \(error.localizedDescription)")
+                    completion(false)
+                }
             }
         }
     }
