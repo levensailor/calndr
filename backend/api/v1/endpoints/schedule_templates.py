@@ -45,6 +45,40 @@ async def get_schedule_templates(current_user = Depends(get_current_user)):
         logger.error(f"Error fetching schedule templates: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch schedule templates")
 
+@router.get("/{template_id}", response_model=ScheduleTemplate)
+async def get_schedule_template(template_id: int, current_user = Depends(get_current_user)):
+    """
+    Get a specific schedule template by ID for the current user's family.
+    """
+    try:
+        query = schedule_templates.select().where(
+            (schedule_templates.c.id == template_id) &
+            (schedule_templates.c.family_id == current_user['family_id'])
+        )
+        
+        template_record = await database.fetch_one(query)
+        
+        if not template_record:
+            raise HTTPException(status_code=404, detail="Schedule template not found")
+        
+        return ScheduleTemplate(
+            id=template_record['id'],
+            name=template_record['name'],
+            description=template_record['description'],
+            pattern_type=template_record['pattern_type'],
+            weekly_pattern=template_record['weekly_pattern'],
+            alternating_weeks_pattern=template_record['alternating_weeks_pattern'],
+            is_active=template_record['is_active'],
+            family_id=uuid_to_string(template_record['family_id']),
+            created_at=str(template_record['created_at']),
+            updated_at=str(template_record['updated_at'])
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching schedule template {template_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch schedule template")
+
 @router.post("/", response_model=ScheduleTemplate)
 async def create_schedule_template(template_data: ScheduleTemplateCreate, current_user = Depends(get_current_user)):
     """

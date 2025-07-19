@@ -1615,6 +1615,21 @@ class CalendarViewModel: ObservableObject {
         }
     }
     
+    func fetchScheduleTemplate(_ templateId: Int, completion: @escaping (Result<ScheduleTemplateDetailed, Error>) -> Void) {
+        APIService.shared.fetchScheduleTemplate(templateId) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let template):
+                    print("✅ Successfully fetched detailed template: \(template.name)")
+                    completion(.success(template))
+                case .failure(let error):
+                    print("❌ Error fetching detailed template: \(error.localizedDescription)")
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+    
     func createScheduleTemplate(_ templateData: ScheduleTemplateCreate, completion: @escaping (Bool) -> Void) {
         APIService.shared.createScheduleTemplate(templateData) { [weak self] result in
             DispatchQueue.main.async {

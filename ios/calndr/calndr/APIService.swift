@@ -1592,6 +1592,36 @@ class APIService {
         }.resume()
     }
     
+    func fetchScheduleTemplate(_ templateId: Int, completion: @escaping (Result<ScheduleTemplateDetailed, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/schedule-templates/\(templateId)")
+        let request = createAuthenticatedRequest(url: url)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error"])))
+                return
+            }
+            
+            do {
+                let template = try JSONDecoder().decode(ScheduleTemplateDetailed.self, from: data)
+                completion(.success(template))
+            } catch {
+                print("❌ Error decoding detailed template: \(error)")
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
     func createScheduleTemplate(_ templateData: ScheduleTemplateCreate, completion: @escaping (Result<ScheduleTemplate, Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/schedule-templates/")
         var request = createAuthenticatedRequest(url: url)

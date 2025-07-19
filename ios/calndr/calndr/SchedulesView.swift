@@ -197,6 +197,7 @@ struct ScheduleTemplateCard: View {
     @EnvironmentObject var themeManager: ThemeManager
     @EnvironmentObject var viewModel: CalendarViewModel
     @State private var showingDeleteAlert = false
+    @State private var showingEditModal = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -245,6 +246,17 @@ struct ScheduleTemplateCard: View {
                         }
                         
                         Button(action: {
+                            showingEditModal = true
+                        }) {
+                            Image(systemName: "pencil")
+                                .font(.caption)
+                                .foregroundColor(.white)
+                                .padding(6)
+                                .background(Color.orange)
+                                .cornerRadius(4)
+                        }
+                        
+                        Button(action: {
                             showingDeleteAlert = true
                         }) {
                             Image(systemName: "trash")
@@ -271,6 +283,11 @@ struct ScheduleTemplateCard: View {
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("Are you sure you want to delete '\(template.name)'? This action cannot be undone.")
+        }
+        .sheet(isPresented: $showingEditModal) {
+            ScheduleEditView(template: template)
+                .environmentObject(viewModel)
+                .environmentObject(themeManager)
         }
     }
     
@@ -575,6 +592,223 @@ struct ScheduleBuilderView: View {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         return formatter
+    }
+}
+
+// MARK: - Schedule Edit View
+
+struct ScheduleEditView: View {
+    let template: ScheduleTemplate
+    @EnvironmentObject var viewModel: CalendarViewModel
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.dismiss) private var dismiss
+    
+    @State private var isLoading = true
+    @State private var detailedTemplate: ScheduleTemplateDetailed?
+    @State private var scheduleName = ""
+    @State private var scheduleDescription = ""
+    @State private var patternType: SchedulePatternType = .weekly
+    @State private var weeklyPattern = WeeklySchedulePattern()
+    @State private var alternatingWeeksPattern: AlternatingWeeksPattern?
+    @State private var isActive = true
+    @State private var showingAlert = false
+    @State private var alertMessage = ""
+    
+    private let daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    
+    var body: some View {
+        NavigationView {
+            if isLoading {
+                VStack {
+                    ProgressView()
+                    Text("Loading template...")
+                        .font(.subheadline)
+                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+                        .padding(.top)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        // Header
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Edit Schedule")
+                                .font(.largeTitle)
+                                .fontWeight(.bold)
+                                .foregroundColor(themeManager.currentTheme.textColor.color)
+                            
+                            Text("Modify your custody schedule template")
+                                .font(.subheadline)
+                                .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+                        }
+                        .padding(.horizontal)
+                        
+                        // Schedule Information
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Schedule Information")
+                                .font(.headline)
+                                .foregroundColor(themeManager.currentTheme.textColor.color)
+                            
+                            VStack(spacing: 12) {
+                                FloatingLabelTextField(
+                                    title: "Schedule Name",
+                                    text: $scheduleName,
+                                    isSecure: false,
+                                    themeManager: themeManager
+                                )
+                                
+                                FloatingLabelTextField(
+                                    title: "Description (Optional)",
+                                    text: $scheduleDescription,
+                                    isSecure: false,
+                                    themeManager: themeManager
+                                )
+                            }
+                        }
+                        .padding(.horizontal)
+                        
+                        // Active Status Toggle
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Status")
+                                .font(.headline)
+                                .foregroundColor(themeManager.currentTheme.textColor.color)
+                                .padding(.horizontal)
+                            
+                            Toggle("Active", isOn: $isActive)
+                                .font(.subheadline)
+                                .foregroundColor(themeManager.currentTheme.textColor.color)
+                                .padding(.horizontal)
+                        }
+                        
+                        // Weekly Pattern Section (if weekly pattern type)
+                        if patternType == .weekly {
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text("Weekly Schedule")
+                                    .font(.headline)
+                                    .foregroundColor(themeManager.currentTheme.textColor.color)
+                                    .padding(.horizontal)
+                                
+                                ForEach(Array(daysOfWeek.enumerated()), id: \.offset) { index, day in
+                                    DayAssignmentRow(
+                                        dayName: day,
+                                        selectedParent: bindingForDay(index),
+                                        custodianOneName: viewModel.custodians.count > 0 ? viewModel.custodians[0].first_name : "Parent 1",
+                                        custodianTwoName: viewModel.custodians.count > 1 ? viewModel.custodians[1].first_name : "Parent 2",
+                                        themeManager: themeManager
+                                    )
+                                    .padding(.horizontal)
+                                }
+                            }
+                        }
+                        
+                        Spacer(minLength: 80)
+                    }
+                }
+                .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
+            }
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Cancel") {
+                    dismiss()
+                }
+                .foregroundColor(themeManager.currentTheme.textColor.color)
+            }
+            
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Save") {
+                    saveChanges()
+                }
+                .disabled(scheduleName.isEmpty || isLoading)
+                .foregroundColor(scheduleName.isEmpty || isLoading ? .gray : .blue)
+            }
+        }
+        .alert("Edit Template", isPresented: $showingAlert) {
+            Button("OK") { }
+        } message: {
+            Text(alertMessage)
+        }
+        .onAppear {
+            loadTemplateDetails()
+        }
+    }
+    
+    private func loadTemplateDetails() {
+        viewModel.fetchScheduleTemplate(template.id) { result in
+            switch result {
+            case .success(let detailedTemplate):
+                self.detailedTemplate = detailedTemplate
+                self.scheduleName = detailedTemplate.name
+                self.scheduleDescription = detailedTemplate.description ?? ""
+                self.isActive = detailedTemplate.isActive
+                self.patternType = detailedTemplate.patternType
+                
+                // Load the weekly pattern if available
+                if let weeklyPattern = detailedTemplate.weeklyPattern {
+                    self.weeklyPattern = weeklyPattern
+                }
+                
+                // Load alternating weeks pattern if available
+                if let alternatingPattern = detailedTemplate.alternatingWeeksPattern {
+                    self.alternatingWeeksPattern = alternatingPattern
+                }
+                
+                self.isLoading = false
+                
+            case .failure(let error):
+                print("❌ Failed to load template details: \(error)")
+                // Fallback to basic template data
+                self.scheduleName = template.name
+                self.scheduleDescription = template.description ?? ""
+                self.isActive = template.isActive
+                self.patternType = .weekly
+                self.isLoading = false
+                
+                self.alertMessage = "Could not load full template details. Some features may be limited."
+                self.showingAlert = true
+            }
+        }
+    }
+    
+    private func bindingForDay(_ dayIndex: Int) -> Binding<String?> {
+        switch dayIndex {
+        case 0: return $weeklyPattern.sunday
+        case 1: return $weeklyPattern.monday
+        case 2: return $weeklyPattern.tuesday
+        case 3: return $weeklyPattern.wednesday
+        case 4: return $weeklyPattern.thursday
+        case 5: return $weeklyPattern.friday
+        case 6: return $weeklyPattern.saturday
+        default: return .constant(nil)
+        }
+    }
+    
+    private func saveChanges() {
+        let apiPattern = viewModel.convertPatternToAPIFormat(weeklyPattern)
+        
+        let templateData = ScheduleTemplateCreate(
+            name: scheduleName,
+            description: scheduleDescription.isEmpty ? nil : scheduleDescription,
+            patternType: patternType,
+            weeklyPattern: patternType == .weekly ? apiPattern : nil,
+            alternatingWeeksPattern: alternatingWeeksPattern,
+            isActive: isActive
+        )
+        
+        viewModel.updateScheduleTemplate(template.id, templateData: templateData) { success in
+            if success {
+                alertMessage = "Schedule template updated successfully"
+                showingAlert = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    dismiss()
+                }
+            } else {
+                alertMessage = "Failed to update schedule template"
+                showingAlert = true
+            }
+        }
     }
 }
 
