@@ -59,7 +59,7 @@ async def create_schedule_template(template_data: ScheduleTemplateCreate, curren
             family_id=current_user['family_id'],
             name=template_data.name,
             description=template_data.description,
-            pattern_type=template_data.pattern_type.value,
+            pattern_type=template_data.pattern_type,
             weekly_pattern=weekly_pattern_json,
             alternating_weeks_pattern=alternating_pattern_json,
             is_active=template_data.is_active,
@@ -115,7 +115,7 @@ async def update_schedule_template(template_id: int, template_data: ScheduleTemp
         update_query = schedule_templates.update().where(schedule_templates.c.id == template_id).values(
             name=template_data.name,
             description=template_data.description,
-            pattern_type=template_data.pattern_type.value,
+            pattern_type=template_data.pattern_type,
             weekly_pattern=weekly_pattern_json,
             alternating_weeks_pattern=alternating_pattern_json,
             is_active=template_data.is_active,
