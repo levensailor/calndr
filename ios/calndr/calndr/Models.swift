@@ -469,7 +469,7 @@ struct ScheduleTemplate: Codable, Identifiable {
     let name: String
     let description: String?
     let isActive: Bool
-    let familyId: Int
+    let familyId: String
     let createdAt: String
     let updatedAt: String
     

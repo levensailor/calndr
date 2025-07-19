@@ -4,8 +4,8 @@ from enum import Enum
 
 class SchedulePatternType(str, Enum):
     weekly = "weekly"
-    alternatingWeeks = "alternatingWeeks"
-    alternatingDays = "alternatingDays"
+    alternating_weeks = "alternating_weeks"
+    alternating_days = "alternating_days"
     custom = "custom"
 
 class WeeklySchedulePattern(BaseModel):
@@ -18,8 +18,10 @@ class WeeklySchedulePattern(BaseModel):
     saturday: Optional[str] = None
 
 class AlternatingWeeksPattern(BaseModel):
-    week1: WeeklySchedulePattern
-    week2: WeeklySchedulePattern
+    week_a_pattern: WeeklySchedulePattern
+    week_b_pattern: WeeklySchedulePattern
+    starting_week: str  # "A" or "B"
+    reference_date: str  # ISO date string to determine which week is A/B
 
 class ScheduleTemplateCreate(BaseModel):
     name: str
