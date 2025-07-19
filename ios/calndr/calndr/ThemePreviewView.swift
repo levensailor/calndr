@@ -23,40 +23,7 @@ struct ThemePreviewView: View {
                     }
                     .frame(height: 60)
                     
-                    // Top right buttons for edit and delete (always visible for non-public themes)
-                    if theme.isPublic != true {
-                        VStack {
-                            HStack {
-                                Spacer()
-                                
-                                // Edit button
-                                Button(action: {
-                                    onEdit(theme)
-                                }) {
-                                    Image(systemName: "pencil")
-                                        .font(.caption)
-                                        .foregroundColor(.white)
-                                        .padding(6)
-                                        .background(Color.gray)
-                                        .clipShape(Circle())
-                                }
-                                
-                                // Delete button
-                                Button(action: {
-                                    showingDeleteAlert = true
-                                }) {
-                                    Image(systemName: "trash")
-                                        .font(.caption)
-                                        .foregroundColor(.white)
-                                        .padding(6)
-                                        .background(Color.red)
-                                        .clipShape(Circle())
-                                }
-                            }
-                            .padding(8)
-                            Spacer()
-                        }
-                    }
+
                     
                     // Current theme indicator
                     if isCurrentTheme {
@@ -78,12 +45,46 @@ struct ThemePreviewView: View {
                     }
                 }
 
-                Text(theme.name)
-                    .font(.system(size: 12, weight: .bold, design: .default))
-                    .foregroundColor(themeManager.currentTheme.smartTextColor(for: themeManager.currentTheme.secondaryBackgroundColor))
-                    .padding(.vertical, 8)
-                    .frame(maxWidth: .infinity)
-                    .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
+                // Theme name with edit/delete buttons
+                HStack {
+                    Text(theme.name)
+                        .font(.system(size: 12, weight: .bold, design: .default))
+                        .foregroundColor(themeManager.currentTheme.smartTextColor(for: themeManager.currentTheme.secondaryBackgroundColor))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    // Edit and delete buttons (only for non-public themes)
+                    if theme.isPublic != true {
+                        HStack(spacing: 4) {
+                            // Edit button
+                            Button(action: {
+                                onEdit(theme)
+                            }) {
+                                Image(systemName: "pencil")
+                                    .font(.caption2)
+                                    .foregroundColor(.white)
+                                    .padding(4)
+                                    .background(Color.orange)
+                                    .clipShape(Circle())
+                            }
+                            
+                            // Delete button
+                            Button(action: {
+                                showingDeleteAlert = true
+                            }) {
+                                Image(systemName: "trash")
+                                    .font(.caption2)
+                                    .foregroundColor(.white)
+                                    .padding(4)
+                                    .background(Color.red)
+                                    .clipShape(Circle())
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
                 
             }
         }
