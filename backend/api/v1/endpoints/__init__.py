@@ -17,5 +17,6 @@ __all__ = [
     "weather",
     "school_events",
     "themes",
-    "schedule_templates"
+    "schedule_templates",
+    "journal"
 ]
