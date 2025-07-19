@@ -60,9 +60,10 @@ async def get_custody_records(year: int, month: int, current_user = Depends(get_
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.post("/", response_model=CustodyResponse)
-async def set_custody(custody_data: CustodyRecord, current_user = Depends(get_current_user)):
+async def create_custody(custody_data: CustodyRecord, current_user = Depends(get_current_user)):
     """
-    Creates or updates a custody record for a specific date.
+    Creates a new custody record for a specific date.
+    Returns 409 Conflict if a record already exists for the date.
     """
     logger.info(f"Received custody update request: {custody_data.model_dump_json(indent=2)}")
     
@@ -113,29 +114,24 @@ async def set_custody(custody_data: CustodyRecord, current_user = Depends(get_cu
                 handoff_day_value = False
 
         if existing_record:
-            # Update existing record
-            update_query = custody.update().where(custody.c.id == existing_record['id']).values(
-                custodian_id=custody_data.custodian_id,
-                actor_id=actor_id,
-                handoff_day=handoff_day_value,
-                handoff_time=datetime.strptime(custody_data.handoff_time, '%H:%M').time() if custody_data.handoff_time else None,
-                handoff_location=custody_data.handoff_location
+            # Return 409 Conflict if record already exists
+            raise HTTPException(
+                status_code=409, 
+                detail=f"Custody record already exists for date {custody_data.date}. Use PUT to update."
             )
-            await database.execute(update_query)
-            record_id = existing_record['id']
-        else:
-            # Insert new record
-            insert_query = custody.insert().values(
-                family_id=family_id,
-                date=custody_data.date,
-                custodian_id=custody_data.custodian_id,
-                actor_id=actor_id,
-                handoff_day=handoff_day_value,
-                handoff_time=datetime.strptime(custody_data.handoff_time, '%H:%M').time() if custody_data.handoff_time else None,
-                handoff_location=custody_data.handoff_location,
-                created_at=datetime.now()
-            )
-            record_id = await database.execute(insert_query)
+        
+        # Insert new record only
+        insert_query = custody.insert().values(
+            family_id=family_id,
+            date=custody_data.date,
+            custodian_id=custody_data.custodian_id,
+            actor_id=actor_id,
+            handoff_day=handoff_day_value,
+            handoff_time=datetime.strptime(custody_data.handoff_time, '%H:%M').time() if custody_data.handoff_time else None,
+            handoff_location=custody_data.handoff_location,
+            created_at=datetime.now()
+        )
+        record_id = await database.execute(insert_query)
             
         # Send push notification to the other parent
         await send_custody_change_notification(sender_id=actor_id, family_id=family_id, event_date=custody_data.date)
@@ -157,3 +153,127 @@ async def set_custody(custody_data: CustodyRecord, current_user = Depends(get_cu
         logger.error(f"Error setting custody: {e}")
         logger.error(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Internal server error while setting custody: {e}")
+
+@router.put("/date/{custody_date}", response_model=CustodyResponse)
+async def update_custody_by_date(custody_date: date, custody_data: CustodyRecord, current_user = Depends(get_current_user)):
+    """
+    Updates an existing custody record for a specific date.
+    Returns 404 if no record exists for the date.
+    """
+    logger.info(f"Received custody UPDATE request for {custody_date}: {custody_data.model_dump_json(indent=2)}")
+    
+    family_id = current_user['family_id']
+    actor_id = current_user['id']
+    
+    try:
+        # Check if record exists for this date
+        existing_record_query = custody.select().where(
+            (custody.c.family_id == family_id) &
+            (custody.c.date == custody_date)
+        )
+        existing_record = await database.fetch_one(existing_record_query)
+        
+        if not existing_record:
+            raise HTTPException(status_code=404, detail=f"No custody record found for date {custody_date}")
+        
+        # Determine handoff_day value
+        handoff_day_value = custody_data.handoff_day
+        if handoff_day_value is None and custody_data.handoff_time is not None:
+            handoff_day_value = True
+        elif handoff_day_value is None:
+            handoff_day_value = False
+        
+        # Update the existing record
+        update_query = custody.update().where(custody.c.id == existing_record['id']).values(
+            custodian_id=custody_data.custodian_id,
+            actor_id=actor_id,
+            handoff_day=handoff_day_value,
+            handoff_time=datetime.strptime(custody_data.handoff_time, '%H:%M').time() if custody_data.handoff_time else None,
+            handoff_location=custody_data.handoff_location
+        )
+        await database.execute(update_query)
+        
+        # Send push notification to the other parent
+        await send_custody_change_notification(sender_id=actor_id, family_id=family_id, event_date=custody_date)
+        
+        # Get custodian name for response
+        custodian_user = await database.fetch_one(users.select().where(users.c.id == custody_data.custodian_id))
+        custodian_name = custodian_user['first_name'] if custodian_user else "Unknown"
+
+        return CustodyResponse(
+            id=existing_record['id'],
+            event_date=str(custody_date),
+            content=custodian_name,
+            custodian_id=str(custody_data.custodian_id),
+            handoff_day=handoff_day_value,
+            handoff_time=custody_data.handoff_time,
+            handoff_location=custody_data.handoff_location
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating custody: {e}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal server error while updating custody: {e}")
+
+@router.put("/{custody_id}", response_model=CustodyResponse)
+async def update_custody_by_id(custody_id: int, custody_data: CustodyRecord, current_user = Depends(get_current_user)):
+    """
+    Updates an existing custody record by ID.
+    Returns 404 if record doesn't exist or doesn't belong to user's family.
+    """
+    logger.info(f"Received custody UPDATE request for ID {custody_id}: {custody_data.model_dump_json(indent=2)}")
+    
+    family_id = current_user['family_id']
+    actor_id = current_user['id']
+    
+    try:
+        # Check if record exists and belongs to family
+        existing_record_query = custody.select().where(
+            (custody.c.id == custody_id) &
+            (custody.c.family_id == family_id)
+        )
+        existing_record = await database.fetch_one(existing_record_query)
+        
+        if not existing_record:
+            raise HTTPException(status_code=404, detail=f"Custody record {custody_id} not found or access denied")
+        
+        # Determine handoff_day value
+        handoff_day_value = custody_data.handoff_day
+        if handoff_day_value is None and custody_data.handoff_time is not None:
+            handoff_day_value = True
+        elif handoff_day_value is None:
+            handoff_day_value = False
+        
+        # Update the existing record
+        update_query = custody.update().where(custody.c.id == custody_id).values(
+            custodian_id=custody_data.custodian_id,
+            actor_id=actor_id,
+            handoff_day=handoff_day_value,
+            handoff_time=datetime.strptime(custody_data.handoff_time, '%H:%M').time() if custody_data.handoff_time else None,
+            handoff_location=custody_data.handoff_location
+        )
+        await database.execute(update_query)
+        
+        # Send push notification to the other parent
+        await send_custody_change_notification(sender_id=actor_id, family_id=family_id, event_date=custody_data.date)
+        
+        # Get custodian name for response
+        custodian_user = await database.fetch_one(users.select().where(users.c.id == custody_data.custodian_id))
+        custodian_name = custodian_user['first_name'] if custodian_user else "Unknown"
+
+        return CustodyResponse(
+            id=custody_id,
+            event_date=str(custody_data.date),
+            content=custodian_name,
+            custodian_id=str(custody_data.custodian_id),
+            handoff_day=handoff_day_value,
+            handoff_time=custody_data.handoff_time,
+            handoff_location=custody_data.handoff_location
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating custody: {e}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal server error while updating custody: {e}")
