@@ -1080,6 +1080,7 @@ struct DayAssignmentRow: View {
     let custodianOneName: String
     let custodianTwoName: String
     @EnvironmentObject var themeManager: ThemeManager
+    @EnvironmentObject var viewModel: CalendarViewModel
     
     var body: some View {
         HStack {
@@ -1105,28 +1106,28 @@ struct DayAssignmentRow: View {
                 }
                 
                 // Parent 1
-                Button(action: { selectedParent = "parent1" }) {
+                Button(action: { selectedParent = viewModel.custodianOneId }) {
                     Text(custodianOneName)
                         .font(.caption)
-                        .foregroundColor(selectedParent == "parent1" ? .white : themeManager.currentTheme.textColor.color)
+                        .foregroundColor(selectedParent == viewModel.custodianOneId ? .white : themeManager.currentTheme.textColor.color)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(
                             RoundedRectangle(cornerRadius: 4)
-                                .fill(selectedParent == "parent1" ? themeManager.currentTheme.parentOneColor.color : Color.clear)
+                                .fill(selectedParent == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColor.color : Color.clear)
                         )
                 }
                 
                 // Parent 2
-                Button(action: { selectedParent = "parent2" }) {
+                Button(action: { selectedParent = viewModel.custodianTwoId }) {
                     Text(custodianTwoName)
                         .font(.caption)
-                        .foregroundColor(selectedParent == "parent2" ? .white : themeManager.currentTheme.textColor.color)
+                        .foregroundColor(selectedParent == viewModel.custodianTwoId ? .white : themeManager.currentTheme.textColor.color)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(
                             RoundedRectangle(cornerRadius: 4)
-                                .fill(selectedParent == "parent2" ? themeManager.currentTheme.parentTwoColor.color : Color.clear)
+                                .fill(selectedParent == viewModel.custodianTwoId ? themeManager.currentTheme.parentTwoColor.color : Color.clear)
                         )
                 }
             }
