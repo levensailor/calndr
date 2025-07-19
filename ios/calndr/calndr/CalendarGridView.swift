@@ -44,7 +44,7 @@ struct CalendarGridView: View {
                             custodyID: viewModel.getCustodyInfo(for: date).owner
                         )
                         .frame(height: rowHeight) // Adaptive height based on number of weeks
-                        .opacity(viewModel.showHandoffTimeline ? 0.95 : 1.0) // Very slight dim when handoff timeline is active
+                        .opacity(viewModel.showHandoffTimeline ? 0.90 : 1.0) // Very slight dim when handoff timeline is active
                     }
                 }
                 .background(themeManager.currentTheme.accentColorSwiftUI)

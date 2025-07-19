@@ -54,19 +54,23 @@ struct DayContentView: View {
             }
             
             Spacer()
-            
-            // Custody row - fixed height for consistency, with placeholder when hidden
+            // Custody row - always visible when custody owner exists
             if !custodyOwner.isEmpty && !viewModel.showHandoffTimeline {
                 Text(custodyOwner.capitalized)
                     .font(.system(size: 9))
                     .bold()
                     .foregroundColor(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneTextColor : themeManager.currentTheme.parentTwoTextColor)
                     .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24) // Fixed height
-                    .background(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColorSwiftUI : themeManager.currentTheme.parentTwoColorSwiftUI)            } else if !custodyOwner.isEmpty && viewModel.showHandoffTimeline {
-                // Invisible placeholder to maintain layout space when handoff timeline is active
-                Text("")
-                    .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24) // Same dimensions as custody badge
-                    .background(Color.clear)
+                    .background(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColorSwiftUI : themeManager.currentTheme.parentTwoColorSwiftUI)
+            }
+            // Custody row - always visible when custody owner exists
+            if !custodyOwner.isEmpty && viewModel.showHandoffTimeline {
+                Text(custodyOwner.capitalized)
+                    .font(.system(size: 9))
+                    .bold()
+                    .foregroundColor(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneTextColor : themeManager.currentTheme.parentTwoTextColor)
+                    .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24) // Fixed height
+                    .background(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColorSwiftUI : themeManager.currentTheme.parentTwoColorSwiftUI).opacity(0.4)
             }
         }
         .animateThemeChanges(themeManager)
