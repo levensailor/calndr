@@ -67,14 +67,21 @@ struct SignUpView: View {
                         .keyboardType(.phonePad)
 
                         FloatingLabelTextField(
-                            title: "Family Name (Optional)",
-                            text: $viewModel.familyName,
+                            title: "Coparent Email (Optional)",
+                            text: $viewModel.coparentEmail,
                             isSecure: false
                         )
                         .frame(height: 56)
-                        .autocapitalization(.words)
+                        .keyboardType(.emailAddress)
+                        .autocapitalization(.none)
                     }
                     .padding(.horizontal)
+                    
+                    Text("If your coparent already has an account, you'll be linked automatically. If not, they'll receive an invitation to join.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
                     
                     if let errorMessage = viewModel.errorMessage {
                         Text(errorMessage)

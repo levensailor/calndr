@@ -40,7 +40,7 @@ class UserRegistration(BaseSchema):
     email: EmailStr
     password: str
     phone_number: Optional[str] = None
-    family_name: Optional[str] = None
+    coparent_email: Optional[EmailStr] = None
 
 class UserRegistrationResponse(BaseSchema):
     """Schema for user registration response."""

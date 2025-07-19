@@ -57,6 +57,10 @@ class Settings(BaseSettings):
     # External APIs
     GOOGLE_PLACES_API_KEY: Optional[str] = os.getenv("GOOGLE_PLACES_API_KEY")
     
+    # Email Configuration
+    SMTP_USER: Optional[str] = os.getenv("SMTP_USER")
+    SMTP_PASSWORD: Optional[str] = os.getenv("SMTP_PASSWORD")
+    
     class Config:
         case_sensitive = True
         env_file = ".env"

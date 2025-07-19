@@ -9,6 +9,7 @@ from core.logging import logger
 from db.models import users, families
 from schemas.auth import Token
 from schemas.user import UserRegistration, UserRegistrationResponse
+from services.email_service import email_service
 import traceback
 
 router = APIRouter()
@@ -57,29 +58,45 @@ async def register_user(registration_data: UserRegistration):
         # Hash the password
         password_hash = get_password_hash(registration_data.password)
         
-        # Handle family creation/assignment
+        # Handle coparent linking or family creation
         family_id = None
-        if registration_data.family_name:
-            # Check if family already exists
-            family_query = families.select().where(families.c.name == registration_data.family_name)
-            existing_family = await database.fetch_one(family_query)
+        family_name = f"{registration_data.last_name} Family"  # Default family name
+        
+        if registration_data.coparent_email:
+            # Check if coparent already exists
+            coparent_query = users.select().where(users.c.email == registration_data.coparent_email)
+            existing_coparent = await database.fetch_one(coparent_query)
             
-            if existing_family:
-                family_id = existing_family['id']
-                logger.info(f"Adding user to existing family: {registration_data.family_name}")
+            if existing_coparent:
+                # Use existing coparent's family
+                family_id = existing_coparent['family_id']
+                logger.info(f"Linking user to existing coparent's family: {family_id}")
             else:
-                # Create new family with explicit UUID
+                # Create new family and send invitation email
                 family_id = uuid.uuid4()
-                family_insert = families.insert().values(id=family_id, name=registration_data.family_name)
+                family_insert = families.insert().values(id=family_id, name=family_name)
                 await database.execute(family_insert)
-                logger.info(f"Created new family: {registration_data.family_name} with ID: {family_id}")
+                logger.info(f"Created new family: {family_name} with ID: {family_id}")
+                
+                # Send invitation email to coparent
+                try:
+                    email_sent = await email_service.send_coparent_invitation(
+                        coparent_email=registration_data.coparent_email,
+                        inviter_name=registration_data.first_name,
+                        family_id=family_id
+                    )
+                    if email_sent:
+                        logger.info(f"Invitation email sent to {registration_data.coparent_email}")
+                    else:
+                        logger.warning(f"Failed to send invitation email to {registration_data.coparent_email}")
+                except Exception as e:
+                    logger.error(f"Error sending invitation email: {e}")
         else:
-            # Create family with user's last name if no family name provided
-            default_family_name = f"{registration_data.last_name} Family"
+            # Create family without coparent
             family_id = uuid.uuid4()
-            family_insert = families.insert().values(id=family_id, name=default_family_name)
+            family_insert = families.insert().values(id=family_id, name=family_name)
             await database.execute(family_insert)
-            logger.info(f"Created default family: {default_family_name} with ID: {family_id}")
+            logger.info(f"Created family without coparent: {family_name} with ID: {family_id}")
         
         # Create the user
         user_insert = users.insert().values(

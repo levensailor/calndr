@@ -286,14 +286,15 @@
           </div>
           
           <div class="form-group">
-            <label for="signup-family-name">Family Name (Optional)</label>
+            <label for="signup-coparent-email">Coparent Email (Optional)</label>
             <input 
-              type="text" 
-              id="signup-family-name" 
-              v-model="signupFamilyName" 
-              placeholder="Enter your family name"
+              type="email" 
+              id="signup-coparent-email" 
+              v-model="signupCoparentEmail" 
+              placeholder="Enter your coparent's email address"
               :disabled="signupLoading"
             >
+            <small class="help-text">If your coparent already has an account, you'll be linked automatically. If not, they'll receive an invitation to join.</small>
           </div>
           
           <div class="signup-actions">
@@ -352,7 +353,7 @@ export default {
       signupPassword: '',
       signupConfirmPassword: '',
       signupPhoneNumber: '',
-      signupFamilyName: '',
+      signupCoparentEmail: '',
       signupLoading: false,
       signupError: null,
     };
@@ -651,7 +652,7 @@ export default {
           email: this.signupEmail.trim(),
           password: this.signupPassword,
           phone_number: this.signupPhoneNumber.trim() || null,
-          family_name: this.signupFamilyName.trim() || null
+          coparent_email: this.signupCoparentEmail.trim() || null
         };
         
         const response = await axios.post('/auth/register', registrationData);
@@ -692,7 +693,7 @@ export default {
       this.signupPassword = '';
       this.signupConfirmPassword = '';
       this.signupPhoneNumber = '';
-      this.signupFamilyName = '';
+      this.signupCoparentEmail = '';
       this.signupError = null;
     },
     formatDate(dateString) {
