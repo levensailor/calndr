@@ -76,29 +76,13 @@ struct MainTabView: View {
                         .padding(.top, -8)
                 }
                 
-                // Header with month/year and view switcher
-                HStack {
-                    // QuickThemeSwitcher() - Removed per user request
-                    
-                    Spacer()
-                    
+                // Header with month/year centered
+                VStack {
                     Text(headerTitle(for: currentView))
                         .font(.title.bold())
                         .opacity(currentView == .month ? headerOpacity : 1.0)
                         .offset(y: currentView == .month ? headerOffset : 0.0)
-                    
-                    Spacer()
-                    
-                    // Calendar view type indicator
-                    Text(currentView.shortName)
-                        .font(.caption)
-                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule()
-                                .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
-                        )
+                        .frame(maxWidth: .infinity, alignment: .center)
                 }
                 .padding(.horizontal)
 
