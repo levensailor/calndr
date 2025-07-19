@@ -196,6 +196,7 @@ struct ScheduleTemplateCard: View {
     let template: ScheduleTemplate
     @EnvironmentObject var themeManager: ThemeManager
     @EnvironmentObject var viewModel: CalendarViewModel
+    @State private var showingDeleteAlert = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -230,16 +231,29 @@ struct ScheduleTemplateCard: View {
                                 .fill(template.isActive ? Color.green.opacity(0.1) : Color.gray.opacity(0.1))
                         )
                     
-                    Button(action: {
-                        applyTemplate()
-                    }) {
-                        Text("Apply")
-                            .font(.caption)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.indigo)
-                            .cornerRadius(4)
+                    HStack(spacing: 8) {
+                        Button(action: {
+                            applyTemplate()
+                        }) {
+                            Text("Apply")
+                                .font(.caption)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.indigo)
+                                .cornerRadius(4)
+                        }
+                        
+                        Button(action: {
+                            showingDeleteAlert = true
+                        }) {
+                            Image(systemName: "trash")
+                                .font(.caption)
+                                .foregroundColor(.white)
+                                .padding(6)
+                                .background(Color.red)
+                                .cornerRadius(4)
+                        }
                     }
                 }
             }
@@ -250,6 +264,14 @@ struct ScheduleTemplateCard: View {
                 .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
                 .shadow(color: themeManager.currentTheme.textColor.color.opacity(0.1), radius: 2, x: 0, y: 1)
         )
+        .alert("Delete Schedule Template", isPresented: $showingDeleteAlert) {
+            Button("Delete", role: .destructive) {
+                deleteTemplate()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Are you sure you want to delete '\(template.name)'? This action cannot be undone.")
+        }
     }
     
     private func applyTemplate() {
@@ -272,6 +294,16 @@ struct ScheduleTemplateCard: View {
                 print("✅ Successfully applied template '\(template.name)': \(message ?? "No message")")
             } else {
                 print("❌ Failed to apply template '\(template.name)': \(message ?? "Unknown error")")
+            }
+        }
+    }
+    
+    private func deleteTemplate() {
+        viewModel.deleteScheduleTemplate(template.id) { success in
+            if success {
+                print("✅ Successfully deleted template '\(template.name)'")
+            } else {
+                print("❌ Failed to delete template '\(template.name)'")
             }
         }
     }
