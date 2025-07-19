@@ -3,7 +3,6 @@ import SwiftUI
 struct ThemePreviewView: View {
     let theme: Theme
     @EnvironmentObject var themeManager: ThemeManager
-    @State private var showingActionButtons = false
     @State private var showingDeleteAlert = false
     
     // Callbacks for edit and delete actions
@@ -24,11 +23,45 @@ struct ThemePreviewView: View {
                     }
                     .frame(height: 60)
                     
+                    // Top right buttons for edit and delete (always visible for non-public themes)
+                    if theme.isPublic != true {
+                        VStack {
+                            HStack {
+                                Spacer()
+                                
+                                // Edit button
+                                Button(action: {
+                                    onEdit(theme)
+                                }) {
+                                    Image(systemName: "pencil")
+                                        .font(.caption)
+                                        .foregroundColor(.white)
+                                        .padding(6)
+                                        .background(Color.orange)
+                                        .clipShape(Circle())
+                                }
+                                
+                                // Delete button
+                                Button(action: {
+                                    showingDeleteAlert = true
+                                }) {
+                                    Image(systemName: "trash")
+                                        .font(.caption)
+                                        .foregroundColor(.white)
+                                        .padding(6)
+                                        .background(Color.red)
+                                        .clipShape(Circle())
+                                }
+                            }
+                            .padding(8)
+                            Spacer()
+                        }
+                    }
+                    
                     // Current theme indicator
                     if isCurrentTheme {
                         VStack {
                             HStack {
-                                Spacer()
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.title2)
                                     .foregroundColor(.white)
@@ -38,65 +71,10 @@ struct ThemePreviewView: View {
                                             .frame(width: 24, height: 24)
                                     )
                                     .padding(8)
+                                Spacer()
                             }
                             Spacer()
                         }
-                    }
-                    
-                    // Action buttons overlay (shown on long press)
-                    if showingActionButtons {
-                        VStack {
-                            Spacer()
-                            HStack(spacing: 8) {
-                                // Apply button
-                                Button(action: {
-                                    themeManager.setTheme(to: theme)
-                                    showingActionButtons = false
-                                }) {
-                                    Image(systemName: "paintbrush.fill")
-                                        .font(.caption)
-                                        .foregroundColor(.white)
-                                        .padding(6)
-                                        .background(Color.blue)
-                                        .clipShape(Circle())
-                                }
-                                
-                                // Edit button (if not a public theme)
-                                if theme.isPublic != true {
-                                    Button(action: {
-                                        onEdit(theme)
-                                        showingActionButtons = false
-                                    }) {
-                                        Image(systemName: "pencil")
-                                            .font(.caption)
-                                            .foregroundColor(.white)
-                                            .padding(6)
-                                            .background(Color.orange)
-                                            .clipShape(Circle())
-                                    }
-                                    
-                                    // Delete button
-                                    Button(action: {
-                                        showingDeleteAlert = true
-                                        showingActionButtons = false
-                                    }) {
-                                        Image(systemName: "trash")
-                                            .font(.caption)
-                                            .foregroundColor(.white)
-                                            .padding(6)
-                                            .background(Color.red)
-                                            .clipShape(Circle())
-                                    }
-                                }
-                            }
-                            .padding(8)
-                        }
-                        .background(
-                            Rectangle()
-                                .fill(.ultraThinMaterial)
-                                .opacity(0.8)
-                        )
-                        .transition(.opacity)
                     }
                 }
 
@@ -118,42 +96,6 @@ struct ThemePreviewView: View {
         .scaleEffect(isCurrentTheme ? 1.05 : 1.0)
         .shadow(color: isCurrentTheme ? theme.accentColorSwiftUI.opacity(0.3) : Color.clear, radius: isCurrentTheme ? 8 : 0)
         .animation(.easeInOut(duration: 0.2), value: isCurrentTheme)
-        .animation(.easeInOut(duration: 0.2), value: showingActionButtons)
-        .contextMenu {
-            Button(action: {
-                themeManager.setTheme(to: theme)
-            }) {
-                Label("Apply Theme", systemImage: "paintbrush.fill")
-            }
-            
-            if theme.isPublic != true {
-                Button(action: {
-                    onEdit(theme)
-                }) {
-                    Label("Edit Theme", systemImage: "pencil")
-                }
-                
-                Button(action: {
-                    showingDeleteAlert = true
-                }) {
-                    Label("Delete Theme", systemImage: "trash")
-                }
-            }
-        }
-        .onLongPressGesture(minimumDuration: 0.5) {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                showingActionButtons.toggle()
-            }
-        }
-        .onTapGesture {
-            if showingActionButtons {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    showingActionButtons = false
-                }
-            } else {
-                themeManager.setTheme(to: theme)
-            }
-        }
         .alert("Delete Theme", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
