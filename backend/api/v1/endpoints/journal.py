@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Optional
 from datetime import date, datetime
 from sqlalchemy import and_, or_, desc
+import sqlalchemy
 
 from core.database import database
 from core.security import get_current_user
@@ -22,24 +23,33 @@ async def get_journal_entries(
     Get journal entries for the family, optionally filtered by date range
     """
     try:
-        # Build the query
-        query = (
+        # Build the base query
+        query = sqlalchemy.select(
+            journal_entries.c.id,
+            journal_entries.c.family_id,
+            journal_entries.c.user_id,
+            journal_entries.c.title,
+            journal_entries.c.content,
+            journal_entries.c.entry_date,
+            journal_entries.c.created_at,
+            journal_entries.c.updated_at,
+            users.c.first_name,
+            users.c.last_name
+        ).select_from(
             journal_entries.join(users, journal_entries.c.user_id == users.c.id)
-            .select()
-            .where(journal_entries.c.family_id == current_user['family_id'])
-            .order_by(desc(journal_entries.c.entry_date), desc(journal_entries.c.created_at))
-            .limit(limit)
         )
         
-        # Add date filters if provided
+        # Add filters
         conditions = [journal_entries.c.family_id == current_user['family_id']]
         if start_date:
             conditions.append(journal_entries.c.entry_date >= start_date)
         if end_date:
             conditions.append(journal_entries.c.entry_date <= end_date)
         
-        if len(conditions) > 1:
-            query = query.where(and_(*conditions))
+        query = query.where(and_(*conditions))
+        
+        # Add ordering and limit
+        query = query.order_by(desc(journal_entries.c.entry_date), desc(journal_entries.c.created_at)).limit(limit)
         
         rows = await database.fetch_all(query)
         
@@ -78,11 +88,20 @@ async def create_journal_entry(
         entry_id = await database.execute(insert_query)
         
         # Fetch the created entry with user info
-        select_query = (
+        select_query = sqlalchemy.select(
+            journal_entries.c.id,
+            journal_entries.c.family_id,
+            journal_entries.c.user_id,
+            journal_entries.c.title,
+            journal_entries.c.content,
+            journal_entries.c.entry_date,
+            journal_entries.c.created_at,
+            journal_entries.c.updated_at,
+            users.c.first_name,
+            users.c.last_name
+        ).select_from(
             journal_entries.join(users, journal_entries.c.user_id == users.c.id)
-            .select()
-            .where(journal_entries.c.id == entry_id)
-        )
+        ).where(journal_entries.c.id == entry_id)
         
         row = await database.fetch_one(select_query)
         if not row:
@@ -144,11 +163,20 @@ async def update_journal_entry(
         await database.execute(update_query)
         
         # Fetch the updated entry with user info
-        select_query = (
+        select_query = sqlalchemy.select(
+            journal_entries.c.id,
+            journal_entries.c.family_id,
+            journal_entries.c.user_id,
+            journal_entries.c.title,
+            journal_entries.c.content,
+            journal_entries.c.entry_date,
+            journal_entries.c.created_at,
+            journal_entries.c.updated_at,
+            users.c.first_name,
+            users.c.last_name
+        ).select_from(
             journal_entries.join(users, journal_entries.c.user_id == users.c.id)
-            .select()
-            .where(journal_entries.c.id == entry_id)
-        )
+        ).where(journal_entries.c.id == entry_id)
         
         row = await database.fetch_one(select_query)
         entry_dict = dict(row)
@@ -208,14 +236,23 @@ async def get_journal_entry(
     """
     try:
         # Fetch the entry with user info
-        select_query = (
+        select_query = sqlalchemy.select(
+            journal_entries.c.id,
+            journal_entries.c.family_id,
+            journal_entries.c.user_id,
+            journal_entries.c.title,
+            journal_entries.c.content,
+            journal_entries.c.entry_date,
+            journal_entries.c.created_at,
+            journal_entries.c.updated_at,
+            users.c.first_name,
+            users.c.last_name
+        ).select_from(
             journal_entries.join(users, journal_entries.c.user_id == users.c.id)
-            .select()
-            .where(
-                and_(
-                    journal_entries.c.id == entry_id,
-                    journal_entries.c.family_id == current_user['family_id']
-                )
+        ).where(
+            and_(
+                journal_entries.c.id == entry_id,
+                journal_entries.c.family_id == current_user['family_id']
             )
         )
         
