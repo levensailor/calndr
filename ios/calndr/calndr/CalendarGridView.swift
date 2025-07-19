@@ -49,6 +49,7 @@ struct CalendarGridView: View {
                 }
                 .background(themeManager.currentTheme.accentColorSwiftUI)
                 .allowsHitTesting(!viewModel.showHandoffTimeline) // Disable all interactions when handoff timeline is active
+                .animateThemeChanges(themeManager)
                 
                 // Handoff Timeline Overlay
                 if viewModel.showHandoffTimeline {

@@ -365,6 +365,11 @@ class ThemeManager: ObservableObject {
         }
         
         print("🎨 ThemeManager: Theme changed to '\(theme.name)'")
+        
+        // Force a comprehensive UI refresh for calendar components
+        DispatchQueue.main.async {
+            self.objectWillChange.send()
+        }
     }
     
     // Force a UI refresh for all theme-dependent components

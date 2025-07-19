@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DayContentView: View {
     @ObservedObject var viewModel: CalendarViewModel
+    @EnvironmentObject var themeManager: ThemeManager
     let date: Date
     let events: [Event]
     let schoolEvent: String?
@@ -9,7 +10,6 @@ struct DayContentView: View {
     let custodyOwner: String
     let custodyID: String
     let isCurrentMonth: Bool
-    let themeManager: ThemeManager
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
@@ -69,6 +69,7 @@ struct DayContentView: View {
                     .background(Color.clear)
             }
         }
+        .animateThemeChanges(themeManager)
     }
     
     private func dayString(from date: Date) -> String {

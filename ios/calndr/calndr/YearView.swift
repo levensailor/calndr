@@ -88,6 +88,7 @@ struct YearView: View {
                 Spacer(minLength: 50)
             }
         .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
+        .animateThemeChanges(themeManager)
         .onAppear {
             viewModel.fetchCustodyRecordsForYear()
         }
