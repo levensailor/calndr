@@ -176,7 +176,7 @@ struct PreferencesView: View {
                         title: "Manage Themes",
                         icon: "paintbrush.fill",
                         description: "Create, edit, and select app themes",
-                        action: {}
+                        action: nil
                     ))
                 }
             }
