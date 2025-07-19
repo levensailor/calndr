@@ -29,7 +29,7 @@ async def get_schedule_templates(current_user = Depends(get_current_user)):
         templates = []
         for record in template_records:
             weekly_pattern = None
-            if record.get('weekly_pattern'):
+            if 'weekly_pattern' in record and record['weekly_pattern']:
                 try:
                     pattern_data = record['weekly_pattern']
                     if isinstance(pattern_data, str):
@@ -39,7 +39,7 @@ async def get_schedule_templates(current_user = Depends(get_current_user)):
                     logger.error(f"Error deserializing weekly pattern for template {record['id']}: {e}")
 
             alternating_weeks_pattern = None
-            if record.get('alternating_weeks_pattern'):
+            if 'alternating_weeks_pattern' in record and record['alternating_weeks_pattern']:
                 try:
                     pattern_data = record['alternating_weeks_pattern']
                     if isinstance(pattern_data, str):
@@ -63,8 +63,11 @@ async def get_schedule_templates(current_user = Depends(get_current_user)):
         
         return templates
     except Exception as e:
-        logger.error(f"Error fetching schedule templates: {e}")
-        raise HTTPException(status_code=500, detail="Failed to fetch schedule templates")
+        logger.error(f"Error fetching schedule templates: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch schedule templates: {str(e)}"
+        )
 
 @router.get("/{template_id}", response_model=ScheduleTemplate)
 async def get_schedule_template(template_id: int, current_user = Depends(get_current_user)):
@@ -84,7 +87,7 @@ async def get_schedule_template(template_id: int, current_user = Depends(get_cur
         
         # Deserialize pattern data from JSON
         weekly_pattern = None
-        if template_record.get('weekly_pattern'):
+        if 'weekly_pattern' in template_record and template_record['weekly_pattern']:
             try:
                 pattern_data = template_record['weekly_pattern']
                 if isinstance(pattern_data, str):
@@ -94,7 +97,7 @@ async def get_schedule_template(template_id: int, current_user = Depends(get_cur
                 logger.error(f"Error deserializing weekly pattern for template {template_id}: {e}")
 
         alternating_weeks_pattern = None
-        if template_record.get('alternating_weeks_pattern'):
+        if 'alternating_weeks_pattern' in template_record and template_record['alternating_weeks_pattern']:
             try:
                 pattern_data = template_record['alternating_weeks_pattern']
                 if isinstance(pattern_data, str):
@@ -118,8 +121,11 @@ async def get_schedule_template(template_id: int, current_user = Depends(get_cur
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error fetching schedule template {template_id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to fetch schedule template")
+        logger.error(f"Error fetching schedule template {template_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch schedule template {template_id}: {str(e)}"
+        )
 
 @router.post("/", response_model=ScheduleTemplate)
 async def create_schedule_template(template_data: ScheduleTemplateCreate, current_user = Depends(get_current_user)):
@@ -155,7 +161,7 @@ async def create_schedule_template(template_data: ScheduleTemplateCreate, curren
         
         # Deserialize pattern data from JSON for the response
         weekly_pattern = None
-        if template_record.get('weekly_pattern'):
+        if 'weekly_pattern' in template_record and template_record['weekly_pattern']:
             try:
                 pattern_data = template_record['weekly_pattern']
                 if isinstance(pattern_data, str):
@@ -165,7 +171,7 @@ async def create_schedule_template(template_data: ScheduleTemplateCreate, curren
                 logger.error(f"Error deserializing created weekly pattern for template {template_id}: {e}")
         
         alternating_weeks_pattern = None
-        if template_record.get('alternating_weeks_pattern'):
+        if 'alternating_weeks_pattern' in template_record and template_record['alternating_weeks_pattern']:
             try:
                 pattern_data = template_record['alternating_weeks_pattern']
                 if isinstance(pattern_data, str):
@@ -192,8 +198,11 @@ async def create_schedule_template(template_data: ScheduleTemplateCreate, curren
         
         return response
     except Exception as e:
-        logger.error(f"Error creating schedule template: {e}")
-        raise HTTPException(status_code=500, detail="Failed to create schedule template")
+        logger.error(f"Error creating schedule template: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create schedule template: {str(e)}"
+        )
 
 @router.put("/{template_id}", response_model=ScheduleTemplate)
 async def update_schedule_template(template_id: int, template_data: ScheduleTemplateCreate, current_user = Depends(get_current_user)):
@@ -234,7 +243,7 @@ async def update_schedule_template(template_id: int, template_data: ScheduleTemp
         
         # Deserialize pattern data from JSON
         weekly_pattern = None
-        if template_record.get('weekly_pattern'):
+        if 'weekly_pattern' in template_record and template_record['weekly_pattern']:
             try:
                 pattern_data = template_record['weekly_pattern']
                 if isinstance(pattern_data, str):
@@ -244,7 +253,7 @@ async def update_schedule_template(template_id: int, template_data: ScheduleTemp
                 logger.error(f"Error deserializing updated weekly pattern for template {template_id}: {e}")
 
         alternating_weeks_pattern = None
-        if template_record.get('alternating_weeks_pattern'):
+        if 'alternating_weeks_pattern' in template_record and template_record['alternating_weeks_pattern']:
             try:
                 pattern_data = template_record['alternating_weeks_pattern']
                 if isinstance(pattern_data, str):
@@ -266,8 +275,11 @@ async def update_schedule_template(template_id: int, template_data: ScheduleTemp
             updated_at=str(template_record['updated_at'])
         )
     except Exception as e:
-        logger.error(f"Error updating schedule template: {e}")
-        raise HTTPException(status_code=500, detail="Failed to update schedule template")
+        logger.error(f"Error updating schedule template: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update schedule template: {str(e)}"
+        )
 
 @router.delete("/{template_id}")
 async def delete_schedule_template(template_id: int, current_user = Depends(get_current_user)):
@@ -291,8 +303,11 @@ async def delete_schedule_template(template_id: int, current_user = Depends(get_
         
         return {"status": "success", "message": "Schedule template deleted successfully"}
     except Exception as e:
-        logger.error(f"Error deleting schedule template: {e}")
-        raise HTTPException(status_code=500, detail="Failed to delete schedule template")
+        logger.error(f"Error deleting schedule template: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete schedule template: {str(e)}"
+        )
 
 @router.post("/apply", response_model=ScheduleApplicationResponse)
 async def apply_schedule_template(application: ScheduleApplication, current_user = Depends(get_current_user)):
@@ -356,5 +371,8 @@ async def apply_schedule_template(application: ScheduleApplication, current_user
         )
         
     except Exception as e:
-        logger.error(f"Error applying schedule template: {e}")
-        raise HTTPException(status_code=500, detail="Failed to apply schedule template") 
+        logger.error(f"Error applying schedule template: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to apply schedule template: {str(e)}"
+        ) 

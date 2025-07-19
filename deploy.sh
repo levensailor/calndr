@@ -81,3 +81,23 @@ echo ""
 echo "--- Testing deployment ---"
 echo "Checking API health endpoint..."
 curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" https://calndr.club/health || echo "API might not be ready yet" 
+
+# Function to view logs
+view_logs() {
+    echo "--- Tailing backend logs ---"
+    ssh -i "$KEY_PAIR_PATH" "$EC2_USER@$EC2_HOST" "tail -f /var/www/cal-app/logs/backend.log"
+}
+
+# Function to restart services
+restart_services() {
+    ssh -i "$KEY_PAIR_PATH" "$EC2_USER@$EC2_HOST" "sudo systemctl restart cal-app nginx"
+}
+
+# Main script logic
+if [ "$1" == "view" ]; then
+    view_logs
+elif [ "$1" == "restart" ]; then
+    restart_services
+else
+    deploy
+fi 
