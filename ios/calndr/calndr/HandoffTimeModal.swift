@@ -175,6 +175,11 @@ struct HandoffTimeModal: View {
                         }
                     case .failure(let error):
                         print("Failed to update handoff: \(error.localizedDescription)")
+                        
+                        if (error as NSError).code == 401 {
+                            print("❌🔐 HandoffTimeModal: 401 UNAUTHORIZED ERROR - TRIGGERING LOGOUT!")
+                            self.viewModel.authManager.logout()
+                        }
                     }
                 }
             }

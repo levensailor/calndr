@@ -57,7 +57,7 @@ class CalendarViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var isDataLoaded: Bool = false
     private let networkMonitor: NetworkMonitor
-    private var authManager: AuthenticationManager
+    var authManager: AuthenticationManager
     private var themeManager: ThemeManager
     private var handoffTimer: Timer?
     
@@ -837,6 +837,13 @@ class CalendarViewModel: ObservableObject {
                     print("✅ Successfully toggled custodian for \(dateString) using new custody API")
                 case .failure(let error):
                     print("❌ Error toggling custodian for \(dateString) with new API: \(error.localizedDescription)")
+                    print("❌ Error code: \((error as NSError).code)")
+                    
+                    if (error as NSError).code == 401 {
+                        print("❌🔐 CalendarViewModel: 401 UNAUTHORIZED ERROR in toggleCustodian - TRIGGERING LOGOUT!")
+                        print("❌🔐 CalendarViewModel: This means the token is invalid/expired")
+                        self?.authManager.logout()
+                    }
                     // Could fall back to legacy API here if needed
                 }
             }
@@ -1222,6 +1229,11 @@ class CalendarViewModel: ObservableObject {
                     print("✅ Successfully updated handoff_day for \(dateString) to \(handoffDay)")
                 case .failure(let error):
                     print("❌ Error updating handoff_day for \(dateString): \(error.localizedDescription)")
+                    
+                    if (error as NSError).code == 401 {
+                        print("❌🔐 CalendarViewModel: 401 UNAUTHORIZED ERROR in updateHandoffDayOnly - TRIGGERING LOGOUT!")
+                        self.authManager.logout()
+                    }
                 }
                 completion()
             }
@@ -1262,6 +1274,11 @@ class CalendarViewModel: ObservableObject {
                     }
                 case .failure(let error):
                     print("Error updating custody record: \(error.localizedDescription)")
+                    
+                    if (error as NSError).code == 401 {
+                        print("❌🔐 CalendarViewModel: 401 UNAUTHORIZED ERROR in updateCustodyForSingleDay - TRIGGERING LOGOUT!")
+                        self.authManager.logout()
+                    }
                 }
                 completion()
             }

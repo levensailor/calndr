@@ -636,6 +636,14 @@ struct HandoffTimelineView: View {
                     
                 case .failure(let error):
                     print("❌ Failed to create handoff record for new day: \(error.localizedDescription)")
+                    
+                    if (error as NSError).code == 401 {
+                        print("❌🔐 HandoffTimelineView: 401 UNAUTHORIZED ERROR in createHandoffForNewDay - TRIGGERING LOGOUT!")
+                        DispatchQueue.main.async {
+                            self.viewModel.authManager.logout()
+                        }
+                    }
+                    
                     completion()
                 }
             }
@@ -727,9 +735,19 @@ struct HandoffTimelineView: View {
                         self.updateLocalCustodyRecord(custodyResponse)
                         updateNextDate() // Continue with next date
                         
-                    case .failure(let error):
-                        print("❌ Failed to update custody for \(dateString): \(error.localizedDescription)")
-                        updateNextDate() // Continue with next date even on failure
+                                    case .failure(let error):
+                    print("❌ Failed to update custody for \(dateString): \(error.localizedDescription)")
+                    
+                    if (error as NSError).code == 401 {
+                        print("❌🔐 HandoffTimelineView: 401 UNAUTHORIZED ERROR - TRIGGERING LOGOUT!")
+                        // Access authManager through viewModel
+                        DispatchQueue.main.async {
+                            self.viewModel.authManager.logout()
+                        }
+                        return // Stop processing
+                    }
+                    
+                    updateNextDate() // Continue with next date even on failure
                     }
                 }
             }
