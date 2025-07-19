@@ -4,6 +4,11 @@ struct ThemePreviewView: View {
     let theme: Theme
     @EnvironmentObject var themeManager: ThemeManager
     @State private var showingActionButtons = false
+    @State private var showingDeleteAlert = false
+    
+    // Callbacks for edit and delete actions
+    let onEdit: (Theme) -> Void
+    let onDelete: (Theme) -> Void
 
     var body: some View {
         Button(action: {
@@ -59,7 +64,7 @@ struct ThemePreviewView: View {
                                 // Edit button (if not a public theme)
                                 if theme.isPublic != true {
                                     Button(action: {
-                                        // Handle edit action here
+                                        onEdit(theme)
                                         showingActionButtons = false
                                     }) {
                                         Image(systemName: "pencil")
@@ -67,6 +72,19 @@ struct ThemePreviewView: View {
                                             .foregroundColor(.white)
                                             .padding(6)
                                             .background(Color.orange)
+                                            .clipShape(Circle())
+                                    }
+                                    
+                                    // Delete button
+                                    Button(action: {
+                                        showingDeleteAlert = true
+                                        showingActionButtons = false
+                                    }) {
+                                        Image(systemName: "trash")
+                                            .font(.caption)
+                                            .foregroundColor(.white)
+                                            .padding(6)
+                                            .background(Color.red)
                                             .clipShape(Circle())
                                     }
                                 }
@@ -110,9 +128,15 @@ struct ThemePreviewView: View {
             
             if theme.isPublic != true {
                 Button(action: {
-                    // Handle edit action
+                    onEdit(theme)
                 }) {
                     Label("Edit Theme", systemImage: "pencil")
+                }
+                
+                Button(action: {
+                    showingDeleteAlert = true
+                }) {
+                    Label("Delete Theme", systemImage: "trash")
                 }
             }
         }
@@ -129,6 +153,14 @@ struct ThemePreviewView: View {
             } else {
                 themeManager.setTheme(to: theme)
             }
+        }
+        .alert("Delete Theme", isPresented: $showingDeleteAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                onDelete(theme)
+            }
+        } message: {
+            Text("Are you sure you want to delete '\(theme.name)'? This action cannot be undone.")
         }
         .animateThemeChanges(themeManager)
     }
