@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import datetime
+import uuid
 
 from core.database import database
 from core.security import verify_password, create_access_token, get_password_hash, uuid_to_string
@@ -67,15 +68,17 @@ async def register_user(registration_data: UserRegistration):
                 family_id = existing_family['id']
                 logger.info(f"Adding user to existing family: {registration_data.family_name}")
             else:
-                # Create new family
-                family_insert = families.insert().values(name=registration_data.family_name).returning(families.c.id)
-                family_id = await database.execute(family_insert)
+                # Create new family with explicit UUID
+                family_id = uuid.uuid4()
+                family_insert = families.insert().values(id=family_id, name=registration_data.family_name)
+                await database.execute(family_insert)
                 logger.info(f"Created new family: {registration_data.family_name} with ID: {family_id}")
         else:
             # Create family with user's last name if no family name provided
             default_family_name = f"{registration_data.last_name} Family"
-            family_insert = families.insert().values(name=default_family_name).returning(families.c.id)
-            family_id = await database.execute(family_insert)
+            family_id = uuid.uuid4()
+            family_insert = families.insert().values(id=family_id, name=default_family_name)
+            await database.execute(family_insert)
             logger.info(f"Created default family: {default_family_name} with ID: {family_id}")
         
         # Create the user
