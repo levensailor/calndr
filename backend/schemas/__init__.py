@@ -12,6 +12,7 @@ __all__ = [
     "group_chat",
     "notification",
     "reminder",
+    "schedule",
     "theme",
     "user",
     "weather"

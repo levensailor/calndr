@@ -201,3 +201,20 @@ daycare_providers = sqlalchemy.Table(
     sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
     sqlalchemy.Column("updated_at", sqlalchemy.DateTime, nullable=True, default=datetime.now, onupdate=datetime.now),
 )
+
+# Schedule templates table
+schedule_templates = sqlalchemy.Table(
+    "schedule_templates",
+    metadata,
+    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
+    sqlalchemy.Column("family_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("families.id", ondelete="CASCADE"), nullable=False),
+    sqlalchemy.Column("name", sqlalchemy.String(255), nullable=False),
+    sqlalchemy.Column("description", sqlalchemy.Text, nullable=True),
+    sqlalchemy.Column("pattern_type", sqlalchemy.String(50), nullable=False),  # weekly, alternatingWeeks, alternatingDays, custom
+    sqlalchemy.Column("weekly_pattern", sqlalchemy.JSON, nullable=True),  # Store as JSON
+    sqlalchemy.Column("alternating_weeks_pattern", sqlalchemy.JSON, nullable=True),  # Store as JSON
+    sqlalchemy.Column("is_active", sqlalchemy.Boolean, default=True, nullable=False),
+    sqlalchemy.Column("created_by_user_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("users.id"), nullable=False),
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
+    sqlalchemy.Column("updated_at", sqlalchemy.DateTime, nullable=True, default=datetime.now, onupdate=datetime.now),
+)

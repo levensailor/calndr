@@ -3,7 +3,7 @@ from fastapi import APIRouter
 from .endpoints import (
     auth, users, family, events, custody, notifications, profile, reminders,
     babysitters, emergency_contacts, group_chat, children, daycare_providers,
-    weather, school_events, themes
+    weather, school_events, themes, schedule_templates
 )
 
 api_router = APIRouter()
@@ -25,3 +25,4 @@ api_router.include_router(daycare_providers.router, prefix="/daycare-providers",
 api_router.include_router(weather.router, prefix="/weather", tags=["weather"])
 api_router.include_router(school_events.router, prefix="/school-events", tags=["school_events"])
 api_router.include_router(themes.router, prefix="/themes", tags=["themes"])
+api_router.include_router(schedule_templates.router, prefix="/schedule-templates", tags=["schedule_templates"])

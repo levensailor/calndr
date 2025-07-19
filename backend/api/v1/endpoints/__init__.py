@@ -16,5 +16,6 @@ __all__ = [
     "daycare_providers",
     "weather",
     "school_events",
-    "themes"
+    "themes",
+    "schedule_templates"
 ]
