@@ -404,6 +404,14 @@ struct ScheduleBuilderView: View {
     
     private let daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
     
+    private var custodianOneName: String {
+        viewModel.custodianOneName
+    }
+    
+    private var custodianTwoName: String {
+        viewModel.custodianTwoName
+    }
+    
     var body: some View {
         NavigationView {
             ScrollView {
@@ -420,8 +428,8 @@ struct ScheduleBuilderView: View {
                         patternType: patternType,
                         weeklyPattern: weeklyPattern,
                         alternatingWeeksPattern: alternatingWeeksPattern,
-                        custodianOneName: viewModel.custodianOneName,
-                        custodianTwoName: viewModel.custodianTwoName
+                        custodianOneName: custodianOneName,
+                        custodianTwoName: custodianTwoName
                     )
                     .padding(.horizontal)
                     
@@ -647,11 +655,19 @@ struct WeeklyPatternConfigurationSection: View {
     @Binding var weeklyPattern: WeeklySchedulePattern
     @EnvironmentObject var viewModel: CalendarViewModel
     
+    private var custodianOneName: String {
+        viewModel.custodianOneName
+    }
+    
+    private var custodianTwoName: String {
+        viewModel.custodianTwoName
+    }
+    
     var body: some View {
         WeeklyPatternBuilder(
             pattern: $weeklyPattern,
-            custodianOneName: viewModel.custodianOneName,
-            custodianTwoName: viewModel.custodianTwoName
+            custodianOneName: custodianOneName,
+            custodianTwoName: custodianTwoName
         )
         .padding(.horizontal)
     }
