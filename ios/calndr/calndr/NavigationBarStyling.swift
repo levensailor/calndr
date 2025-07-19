@@ -8,9 +8,9 @@ struct NavigationBarThemer: ViewModifier {
             .onAppear {
                 let appearance = UINavigationBarAppearance()
                 appearance.configureWithOpaqueBackground()
-                appearance.backgroundColor = themeManager.currentTheme.mainBackgroundColor
+                appearance.backgroundColor = UIColor(themeManager.currentTheme.mainBackgroundColor.color)
                 
-                let titleColor = themeManager.currentTheme.textColor
+                let titleColor = UIColor(themeManager.currentTheme.textColor.color)
                 appearance.largeTitleTextAttributes = [.foregroundColor: titleColor]
                 appearance.titleTextAttributes = [.foregroundColor: titleColor]
                 
