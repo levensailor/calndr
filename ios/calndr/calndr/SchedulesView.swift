@@ -950,6 +950,14 @@ struct ScheduleEditWeeklyPatternSection: View {
     @EnvironmentObject var viewModel: CalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
     
+    private var custodianOneName: String {
+        viewModel.custodianOneName
+    }
+    
+    private var custodianTwoName: String {
+        viewModel.custodianTwoName
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Weekly Schedule")
@@ -961,8 +969,8 @@ struct ScheduleEditWeeklyPatternSection: View {
                 DayAssignmentRow(
                     dayName: day,
                     selectedParent: bindingForDay(index),
-                    custodianOneName: viewModel.custodians.count > 0 ? viewModel.custodians[0].first_name : "Parent 1",
-                    custodianTwoName: viewModel.custodians.count > 1 ? viewModel.custodians[1].first_name : "Parent 2",
+                    custodianOneName: custodianOneName,
+                    custodianTwoName: custodianTwoName,
                     themeManager: themeManager
                 )
                 .padding(.horizontal)
