@@ -63,7 +63,7 @@ struct DayContentView: View {
                     .foregroundColor(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneTextColor : themeManager.currentTheme.parentTwoTextColor)
                     .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24) // Fixed height
                     .background(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColorSwiftUI : themeManager.currentTheme.parentTwoColorSwiftUI)
-                    .opacity(isToday ? 1.0 : 0.9)
+                    .opacity(isToday ? 1.0 : 0.6)
             }
             // Custody row - always visible when custody owner exists
             if !custodyOwner.isEmpty && viewModel.showHandoffTimeline {
@@ -73,7 +73,7 @@ struct DayContentView: View {
                     .foregroundColor(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneTextColor : themeManager.currentTheme.parentTwoTextColor)
                     .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24) // Fixed height
                     .background(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColorSwiftUI : themeManager.currentTheme.parentTwoColorSwiftUI)
-                    .opacity(isToday ? 0.4 : 0.3)
+                    .opacity(0.3)
             }
         }
         .animateThemeChanges(themeManager)

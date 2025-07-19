@@ -6,7 +6,7 @@ struct NavigationBarThemer: ViewModifier {
     func body(content: Content) -> some View {
         content
             .onAppear(perform: applyTheme)
-            .onChange(of: themeManager.currentTheme) { _ in
+            .onChange(of: themeManager.currentTheme) {
                 applyTheme()
             }
     }
