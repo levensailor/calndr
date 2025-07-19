@@ -1616,15 +1616,36 @@ class APIService {
                 return
             }
             
+            // Log the raw response for debugging
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("🔍 Raw schedule template response (Status: \(httpResponse.statusCode)):")
+                print(jsonString)
+                print("----------")
+            }
+            
             guard (200...299).contains(httpResponse.statusCode) else {
                 completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error"])))
                 return
             }
             
             do {
-                let template = try JSONDecoder().decode(ScheduleTemplate.self, from: data)
-                completion(.success(template))
+                // Try to decode as ScheduleTemplateDetailed first (which has all fields)
+                let detailedTemplate = try JSONDecoder().decode(ScheduleTemplateDetailed.self, from: data)
+                
+                // Convert to basic ScheduleTemplate format for compatibility
+                let basicTemplate = ScheduleTemplate(
+                    id: detailedTemplate.id,
+                    name: detailedTemplate.name,
+                    description: detailedTemplate.description,
+                    isActive: detailedTemplate.isActive,
+                    familyId: detailedTemplate.familyId,
+                    createdAt: detailedTemplate.createdAt,
+                    updatedAt: detailedTemplate.updatedAt
+                )
+                
+                completion(.success(basicTemplate))
             } catch {
+                print("❌ Error decoding schedule template response: \(error)")
                 completion(.failure(error))
             }
         }.resume()
@@ -1660,9 +1681,23 @@ class APIService {
             }
             
             do {
-                let template = try JSONDecoder().decode(ScheduleTemplate.self, from: data)
-                completion(.success(template))
+                // Try to decode as ScheduleTemplateDetailed first (which has all fields)
+                let detailedTemplate = try JSONDecoder().decode(ScheduleTemplateDetailed.self, from: data)
+                
+                // Convert to basic ScheduleTemplate format for compatibility
+                let basicTemplate = ScheduleTemplate(
+                    id: detailedTemplate.id,
+                    name: detailedTemplate.name,
+                    description: detailedTemplate.description,
+                    isActive: detailedTemplate.isActive,
+                    familyId: detailedTemplate.familyId,
+                    createdAt: detailedTemplate.createdAt,
+                    updatedAt: detailedTemplate.updatedAt
+                )
+                
+                completion(.success(basicTemplate))
             } catch {
+                print("❌ Error decoding schedule template update response: \(error)")
                 completion(.failure(error))
             }
         }.resume()

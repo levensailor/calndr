@@ -75,7 +75,9 @@ async def create_schedule_template(template_data: ScheduleTemplateCreate, curren
             schedule_templates.select().where(schedule_templates.c.id == template_id)
         )
         
-        return ScheduleTemplate(
+        logger.info(f"Raw template record from database: {dict(template_record)}")
+        
+        response = ScheduleTemplate(
             id=template_record['id'],
             name=template_record['name'],
             description=template_record['description'],
@@ -87,6 +89,11 @@ async def create_schedule_template(template_data: ScheduleTemplateCreate, curren
             created_at=str(template_record['created_at']),
             updated_at=str(template_record['updated_at'])
         )
+        
+        logger.info(f"Pydantic response object: {response.model_dump()}")
+        logger.info(f"JSON response: {response.model_dump_json()}")
+        
+        return response
     except Exception as e:
         logger.error(f"Error creating schedule template: {e}")
         raise HTTPException(status_code=500, detail="Failed to create schedule template")
