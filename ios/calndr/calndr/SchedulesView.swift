@@ -794,21 +794,37 @@ struct ScheduleEditView: View {
     }
     
     private func loadTemplateDetails() {
-        // Since `template` now contains all necessary data, we can directly assign it.
-        self.scheduleName = template.name
-        self.scheduleDescription = template.description ?? ""
-        self.isActive = template.isActive
-        self.patternType = template.patternType
-        
-        if let weeklyPattern = template.weeklyPattern {
-            self.weeklyPattern = weeklyPattern
+        viewModel.fetchScheduleTemplate(template.id) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let template):
+                    print("✅ Decoded schedule template: \(template)")
+                    self.scheduleName = template.name
+                    self.scheduleDescription = template.description ?? ""
+                    self.isActive = template.isActive
+                    self.patternType = template.patternType
+                    
+                    if let weeklyPattern = template.weeklyPattern {
+                        print(" Wochenmuster geladen: \(weeklyPattern)")
+                        self.weeklyPattern = weeklyPattern
+                    } else {
+                        print("Kein Wochenmuster gefunden.")
+                    }
+                    
+                    if let alternatingPattern = template.alternatingWeeksPattern {
+                        self.alternatingWeeksPattern = alternatingPattern
+                    }
+                    
+                    self.isLoading = false
+                    
+                case .failure(let error):
+                    print("❌ Failed to load schedule template: \(error)")
+                    self.isLoading = false
+                    self.alertMessage = "Could not load schedule details. Please try again."
+                    self.showingAlert = true
+                }
+            }
         }
-        
-        if let alternatingPattern = template.alternatingWeeksPattern {
-            self.alternatingWeeksPattern = alternatingPattern
-        }
-        
-        self.isLoading = false
     }
     
     private func bindingForDay(_ dayIndex: Int) -> Binding<String?> {

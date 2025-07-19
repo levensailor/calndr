@@ -1613,28 +1613,14 @@ class APIService {
             }
             
             do {
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("📄 Raw JSON for schedule template: \(jsonString)")
+                }
                 let template = try JSONDecoder().decode(ScheduleTemplate.self, from: data)
                 completion(.success(template))
-            } catch let decodingError {
-                print("❌❌❌ DECODING ERROR DETAILS:")
-                print("Error: \(decodingError)")
-                
-                if let decodingError = decodingError as? DecodingError {
-                    switch decodingError {
-                    case .typeMismatch(let type, let context):
-                        print("Type mismatch: \(type) at \(context.codingPath)")
-                    case .valueNotFound(let type, let context):
-                        print("Value not found: \(type) at \(context.codingPath)")
-                    case .keyNotFound(let key, let context):
-                        print("Key not found: \(key) at \(context.codingPath)")
-                    case .dataCorrupted(let context):
-                        print("Data corrupted at \(context.codingPath)")
-                    @unknown default:
-                        print("Unknown decoding error")
-                    }
-                }
-                
-                completion(.failure(decodingError))
+            } catch {
+                print("❌ Error decoding template: \(error)")
+                completion(.failure(error))
             }
         }.resume()
     }
@@ -1669,28 +1655,14 @@ class APIService {
             }
             
             do {
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("📄 Raw JSON for schedule template: \(jsonString)")
+                }
                 let template = try JSONDecoder().decode(ScheduleTemplate.self, from: data)
                 completion(.success(template))
-            } catch let decodingError {
-                print("❌❌❌ DECODING ERROR DETAILS:")
-                print("Error: \(decodingError)")
-                
-                if let decodingError = decodingError as? DecodingError {
-                    switch decodingError {
-                    case .typeMismatch(let type, let context):
-                        print("Type mismatch: \(type) at \(context.codingPath)")
-                    case .valueNotFound(let type, let context):
-                        print("Value not found: \(type) at \(context.codingPath)")
-                    case .keyNotFound(let key, let context):
-                        print("Key not found: \(key) at \(context.codingPath)")
-                    case .dataCorrupted(let context):
-                        print("Data corrupted at \(context.codingPath)")
-                    @unknown default:
-                        print("Unknown decoding error")
-                    }
-                }
-                
-                completion(.failure(decodingError))
+            } catch {
+                print("❌ Error decoding template: \(error)")
+                completion(.failure(error))
             }
         }.resume()
     }
@@ -1725,6 +1697,9 @@ class APIService {
             }
             
             do {
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("📄 Raw JSON for updated schedule template: \(jsonSring)")
+                }
                 let template = try JSONDecoder().decode(ScheduleTemplate.self, from: data)
                 completion(.success(template))
             } catch {
