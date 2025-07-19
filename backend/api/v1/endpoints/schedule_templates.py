@@ -28,23 +28,26 @@ async def get_schedule_templates(current_user = Depends(get_current_user)):
         
         templates = []
         for record in template_records:
-            # Deserialize pattern data from JSON
             weekly_pattern = None
-            if record['weekly_pattern']:
+            if record.get('weekly_pattern'):
                 try:
-                    weekly_pattern = WeeklySchedulePattern(**record['weekly_pattern'])
-                except Exception as e:
-                    logger.error(f"Error deserializing weekly pattern: {e}")
-                    weekly_pattern = None
-            
+                    pattern_data = record['weekly_pattern']
+                    if isinstance(pattern_data, str):
+                        pattern_data = json.loads(pattern_data)
+                    weekly_pattern = WeeklySchedulePattern(**pattern_data)
+                except (json.JSONDecodeError, TypeError) as e:
+                    logger.error(f"Error deserializing weekly pattern for template {record['id']}: {e}")
+
             alternating_weeks_pattern = None
-            if record['alternating_weeks_pattern']:
+            if record.get('alternating_weeks_pattern'):
                 try:
-                    alternating_weeks_pattern = AlternatingWeeksPattern(**record['alternating_weeks_pattern'])
-                except Exception as e:
-                    logger.error(f"Error deserializing alternating weeks pattern: {e}")
-                    alternating_weeks_pattern = None
-            
+                    pattern_data = record['alternating_weeks_pattern']
+                    if isinstance(pattern_data, str):
+                        pattern_data = json.loads(pattern_data)
+                    alternating_weeks_pattern = AlternatingWeeksPattern(**pattern_data)
+                except (json.JSONDecodeError, TypeError) as e:
+                    logger.error(f"Error deserializing alternating weeks pattern for template {record['id']}: {e}")
+
             templates.append(ScheduleTemplate(
                 id=record['id'],
                 name=record['name'],
@@ -81,20 +84,24 @@ async def get_schedule_template(template_id: int, current_user = Depends(get_cur
         
         # Deserialize pattern data from JSON
         weekly_pattern = None
-        if template_record['weekly_pattern']:
+        if template_record.get('weekly_pattern'):
             try:
-                weekly_pattern = WeeklySchedulePattern(**template_record['weekly_pattern'])
-            except Exception as e:
-                logger.error(f"Error deserializing weekly pattern: {e}")
-                weekly_pattern = None
-        
+                pattern_data = template_record['weekly_pattern']
+                if isinstance(pattern_data, str):
+                    pattern_data = json.loads(pattern_data)
+                weekly_pattern = WeeklySchedulePattern(**pattern_data)
+            except (json.JSONDecodeError, TypeError) as e:
+                logger.error(f"Error deserializing weekly pattern for template {template_id}: {e}")
+
         alternating_weeks_pattern = None
-        if template_record['alternating_weeks_pattern']:
+        if template_record.get('alternating_weeks_pattern'):
             try:
-                alternating_weeks_pattern = AlternatingWeeksPattern(**template_record['alternating_weeks_pattern'])
-            except Exception as e:
-                logger.error(f"Error deserializing alternating weeks pattern: {e}")
-                alternating_weeks_pattern = None
+                pattern_data = template_record['alternating_weeks_pattern']
+                if isinstance(pattern_data, str):
+                    pattern_data = json.loads(pattern_data)
+                alternating_weeks_pattern = AlternatingWeeksPattern(**pattern_data)
+            except (json.JSONDecodeError, TypeError) as e:
+                logger.error(f"Error deserializing alternating weeks pattern for template {template_id}: {e}")
         
         return ScheduleTemplate(
             id=template_record['id'],
@@ -146,13 +153,34 @@ async def create_schedule_template(template_data: ScheduleTemplateCreate, curren
         
         logger.info(f"Raw template record from database: {dict(template_record)}")
         
+        # Deserialize pattern data from JSON for the response
+        weekly_pattern = None
+        if template_record.get('weekly_pattern'):
+            try:
+                pattern_data = template_record['weekly_pattern']
+                if isinstance(pattern_data, str):
+                    pattern_data = json.loads(pattern_data)
+                weekly_pattern = WeeklySchedulePattern(**pattern_data)
+            except (json.JSONDecodeError, TypeError) as e:
+                logger.error(f"Error deserializing created weekly pattern for template {template_id}: {e}")
+        
+        alternating_weeks_pattern = None
+        if template_record.get('alternating_weeks_pattern'):
+            try:
+                pattern_data = template_record['alternating_weeks_pattern']
+                if isinstance(pattern_data, str):
+                    pattern_data = json.loads(pattern_data)
+                alternating_weeks_pattern = AlternatingWeeksPattern(**pattern_data)
+            except (json.JSONDecodeError, TypeError) as e:
+                logger.error(f"Error deserializing created alternating weeks pattern for template {template_id}: {e}")
+        
         response = ScheduleTemplate(
             id=template_record['id'],
             name=template_record['name'],
             description=template_record['description'],
             pattern_type=template_record['pattern_type'],
-            weekly_pattern=template_record['weekly_pattern'],
-            alternating_weeks_pattern=template_record['alternating_weeks_pattern'],
+            weekly_pattern=weekly_pattern,
+            alternating_weeks_pattern=alternating_weeks_pattern,
             is_active=template_record['is_active'],
             family_id=uuid_to_string(template_record['family_id']),
             created_at=str(template_record['created_at']),
@@ -206,21 +234,25 @@ async def update_schedule_template(template_id: int, template_data: ScheduleTemp
         
         # Deserialize pattern data from JSON
         weekly_pattern = None
-        if template_record['weekly_pattern']:
+        if template_record.get('weekly_pattern'):
             try:
-                weekly_pattern = WeeklySchedulePattern(**template_record['weekly_pattern'])
-            except Exception as e:
-                logger.error(f"Error deserializing weekly pattern: {e}")
-                weekly_pattern = None
-        
+                pattern_data = template_record['weekly_pattern']
+                if isinstance(pattern_data, str):
+                    pattern_data = json.loads(pattern_data)
+                weekly_pattern = WeeklySchedulePattern(**pattern_data)
+            except (json.JSONDecodeError, TypeError) as e:
+                logger.error(f"Error deserializing updated weekly pattern for template {template_id}: {e}")
+
         alternating_weeks_pattern = None
-        if template_record['alternating_weeks_pattern']:
+        if template_record.get('alternating_weeks_pattern'):
             try:
-                alternating_weeks_pattern = AlternatingWeeksPattern(**template_record['alternating_weeks_pattern'])
-            except Exception as e:
-                logger.error(f"Error deserializing alternating weeks pattern: {e}")
-                alternating_weeks_pattern = None
-        
+                pattern_data = template_record['alternating_weeks_pattern']
+                if isinstance(pattern_data, str):
+                    pattern_data = json.loads(pattern_data)
+                alternating_weeks_pattern = AlternatingWeeksPattern(**pattern_data)
+            except (json.JSONDecodeError, TypeError) as e:
+                logger.error(f"Error deserializing updated alternating weeks pattern for template {template_id}: {e}")
+
         return ScheduleTemplate(
             id=template_record['id'],
             name=template_record['name'],
@@ -294,17 +326,25 @@ async def apply_schedule_template(application: ScheduleApplication, current_user
             # For now, implement basic weekly pattern application
             # You can enhance this based on your pattern types
             if template_record['pattern_type'] == 'weekly' and template_record['weekly_pattern']:
-                pattern = template_record['weekly_pattern']
-                day_of_week = current_date.strftime('%A').lower()
+                pattern_data = template_record['weekly_pattern']
+                if isinstance(pattern_data, str):
+                    try:
+                        pattern_data = json.loads(pattern_data)
+                    except json.JSONDecodeError:
+                        logger.error(f"Invalid JSON in weekly_pattern for template {template_record['id']}")
+                        pattern_data = None
                 
-                if day_of_week in pattern and pattern[day_of_week]:
-                    custodian_assignment = pattern[day_of_week]
+                if pattern_data:
+                    day_of_week = current_date.strftime('%A').lower()
                     
-                    # Convert assignment to actual custodian ID
-                    # This is simplified - you'll need to map "parent1"/"parent2" to actual user IDs
-                    # For now, just create a placeholder
-                    if custodian_assignment in ['parent1', 'parent2']:
-                        days_applied += 1
+                    if day_of_week in pattern_data and pattern_data[day_of_week]:
+                        custodian_assignment = pattern_data[day_of_week]
+                        
+                        # Convert assignment to actual custodian ID
+                        # This is simplified - you'll need to map "parent1"/"parent2" to actual user IDs
+                        # For now, just create a placeholder
+                        if custodian_assignment in ['parent1', 'parent2']:
+                            days_applied += 1
             
             current_date += timedelta(days=1)
         
