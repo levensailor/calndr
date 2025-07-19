@@ -22,8 +22,7 @@ struct SignUpView: View {
                         FloatingLabelTextField(
                             title: "First Name",
                             text: $viewModel.firstName,
-                            isSecure: false,
-                            themeManager: themeManager
+                            isSecure: false
                         )
                         .frame(height: 56)
                         .autocapitalization(.words)
@@ -31,8 +30,7 @@ struct SignUpView: View {
                         FloatingLabelTextField(
                             title: "Last Name",
                             text: $viewModel.lastName,
-                            isSecure: false,
-                            themeManager: themeManager
+                            isSecure: false
                         )
                         .frame(height: 56)
                         .autocapitalization(.words)
@@ -40,8 +38,7 @@ struct SignUpView: View {
                         FloatingLabelTextField(
                             title: "Email",
                             text: $viewModel.email,
-                            isSecure: false,
-                            themeManager: themeManager
+                            isSecure: false
                         )
                         .frame(height: 56)
                         .keyboardType(.emailAddress)
@@ -50,24 +47,21 @@ struct SignUpView: View {
                         FloatingLabelTextField(
                             title: "Password",
                             text: $viewModel.password,
-                            isSecure: true,
-                            themeManager: themeManager
+                            isSecure: true
                         )
                         .frame(height: 56)
 
                         FloatingLabelTextField(
                             title: "Confirm Password",
                             text: $viewModel.confirmPassword,
-                            isSecure: true,
-                            themeManager: themeManager
+                            isSecure: true
                         )
                         .frame(height: 56)
 
                         FloatingLabelTextField(
                             title: "Phone Number (Optional)",
                             text: $viewModel.phoneNumber,
-                            isSecure: false,
-                            themeManager: themeManager
+                            isSecure: false
                         )
                         .frame(height: 56)
                         .keyboardType(.phonePad)
@@ -75,8 +69,7 @@ struct SignUpView: View {
                         FloatingLabelTextField(
                             title: "Family Name (Optional)",
                             text: $viewModel.familyName,
-                            isSecure: false,
-                            themeManager: themeManager
+                            isSecure: false
                         )
                         .frame(height: 56)
                         .autocapitalization(.words)

@@ -19,8 +19,7 @@ struct LoginView: View {
                     FloatingLabelTextField(
                         title: "Email",
                         text: $viewModel.email,
-                        isSecure: false,
-                        themeManager: themeManager
+                        isSecure: false
                     )
                     .frame(height: 56)
                     .keyboardType(.emailAddress)
@@ -29,8 +28,7 @@ struct LoginView: View {
                     FloatingLabelTextField(
                         title: "Password",
                         text: $viewModel.password,
-                        isSecure: true,
-                        themeManager: themeManager
+                        isSecure: true
                     )
                     .frame(height: 56)
                 }

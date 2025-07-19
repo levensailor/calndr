@@ -702,15 +702,13 @@ struct AddChildView: View {
                     FloatingLabelTextField(
                         title: "First Name",
                         text: $firstName,
-                        isSecure: false,
-                        themeManager: themeManager
+                        isSecure: false
                     )
                     
                     FloatingLabelTextField(
                         title: "Last Name",
                         text: $lastName,
-                        isSecure: false,
-                        themeManager: themeManager
+                        isSecure: false
                     )
                     
                     DatePicker("Date of Birth", selection: $dateOfBirth, displayedComponents: .date)
@@ -776,15 +774,13 @@ struct EditChildView: View {
                     FloatingLabelTextField(
                         title: "First Name",
                         text: $firstName,
-                        isSecure: false,
-                        themeManager: themeManager
+                        isSecure: false
                     )
                     
                     FloatingLabelTextField(
                         title: "Last Name",
                         text: $lastName,
-                        isSecure: false,
-                        themeManager: themeManager
+                        isSecure: false
                     )
                     
                     DatePicker("Date of Birth", selection: $dateOfBirth, displayedComponents: .date)
@@ -866,22 +862,19 @@ struct AddEmergencyContactView: View {
                     FloatingLabelTextField(
                         title: "First Name",
                         text: $firstName,
-                        isSecure: false,
-                        themeManager: themeManager
+                        isSecure: false
                     )
                     
                     FloatingLabelTextField(
                         title: "Last Name",
                         text: $lastName,
-                        isSecure: false,
-                        themeManager: themeManager
+                        isSecure: false
                     )
                     
                     FloatingLabelTextField(
                         title: "Email (Optional)",
                         text: $email,
-                        isSecure: false,
-                        themeManager: themeManager
+                        isSecure: false
                     )
                     .keyboardType(.emailAddress)
                     .autocapitalization(.none)
@@ -889,16 +882,14 @@ struct AddEmergencyContactView: View {
                     FloatingLabelTextField(
                         title: "Phone Number",
                         text: $phoneNumber,
-                        isSecure: false,
-                        themeManager: themeManager
+                        isSecure: false
                     )
                     .keyboardType(.phonePad)
                     
                     FloatingLabelTextField(
                         title: "Relationship",
                         text: $relationship,
-                        isSecure: false,
-                        themeManager: themeManager
+                        isSecure: false
                     )
                 }
             }
@@ -973,22 +964,19 @@ struct EditEmergencyContactView: View {
                     FloatingLabelTextField(
                         title: "First Name",
                         text: $firstName,
-                        isSecure: false,
-                        themeManager: themeManager
+                        isSecure: false
                     )
                     
                     FloatingLabelTextField(
                         title: "Last Name",
                         text: $lastName,
-                        isSecure: false,
-                        themeManager: themeManager
+                        isSecure: false
                     )
                     
                     FloatingLabelTextField(
                         title: "Email (Optional)",
                         text: $email,
-                        isSecure: false,
-                        themeManager: themeManager
+                        isSecure: false
                     )
                     .keyboardType(.emailAddress)
                     .autocapitalization(.none)
@@ -996,16 +984,14 @@ struct EditEmergencyContactView: View {
                     FloatingLabelTextField(
                         title: "Phone Number",
                         text: $phoneNumber,
-                        isSecure: false,
-                        themeManager: themeManager
+                        isSecure: false
                     )
                     .keyboardType(.phonePad)
                     
                     FloatingLabelTextField(
                         title: "Relationship",
                         text: $relationship,
-                        isSecure: false,
-                        themeManager: themeManager
+                        isSecure: false
                     )
                 }
             }

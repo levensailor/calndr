@@ -204,30 +204,26 @@ struct AddDaycareView: View {
                     FloatingLabelTextField(
                         title: "Daycare Name",
                         text: $name,
-                        isSecure: false,
-                        themeManager: themeManager
+                        isSecure: false
                     )
                     
                     FloatingLabelTextField(
                         title: "Address (Optional)",
                         text: $address,
-                        isSecure: false,
-                        themeManager: themeManager
+                        isSecure: false
                     )
                     
                     FloatingLabelTextField(
                         title: "Phone Number (Optional)",
                         text: $phoneNumber,
-                        isSecure: false,
-                        themeManager: themeManager
+                        isSecure: false
                     )
                     .keyboardType(.phonePad)
                     
                     FloatingLabelTextField(
                         title: "Email (Optional)",
                         text: $email,
-                        isSecure: false,
-                        themeManager: themeManager
+                        isSecure: false
                     )
                     .keyboardType(.emailAddress)
                     .autocapitalization(.none)
@@ -235,15 +231,13 @@ struct AddDaycareView: View {
                     FloatingLabelTextField(
                         title: "Hours (Optional)",
                         text: $hours,
-                        isSecure: false,
-                        themeManager: themeManager
+                        isSecure: false
                     )
                     
                     FloatingLabelTextField(
                         title: "Website (Optional)",
                         text: $website,
-                        isSecure: false,
-                        themeManager: themeManager
+                        isSecure: false
                     )
                     .keyboardType(.URL)
                     .autocapitalization(.none)
@@ -267,8 +261,7 @@ struct AddDaycareView: View {
                     FloatingLabelTextField(
                         title: "Notes (Optional)",
                         text: $notes,
-                        isSecure: false,
-                        themeManager: themeManager
+                        isSecure: false
                     )
                 }
             }
@@ -383,8 +376,7 @@ struct DaycareSearchView: View {
                             FloatingLabelTextField(
                                 title: "ZIP Code",
                                 text: $zipCode,
-                                isSecure: false,
-                                themeManager: themeManager
+                                isSecure: false
                             )
                             .keyboardType(.numberPad)
                             .frame(height: 44)

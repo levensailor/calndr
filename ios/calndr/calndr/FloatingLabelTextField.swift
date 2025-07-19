@@ -4,7 +4,7 @@ struct FloatingLabelTextField: View {
     let title: String
     @Binding var text: String
     let isSecure: Bool
-    let themeManager: ThemeManager
+    @EnvironmentObject var themeManager: ThemeManager
     @FocusState private var isFocused: Bool
     
     var body: some View {

@@ -613,15 +613,13 @@ struct ScheduleInformationSection: View {
                 FloatingLabelTextField(
                     title: "Schedule Name",
                     text: $scheduleName,
-                    isSecure: false,
-                    themeManager: themeManager
+                    isSecure: false
                 )
                 
                 FloatingLabelTextField(
                     title: "Description (Optional)",
                     text: $scheduleDescription,
-                    isSecure: false,
-                    themeManager: themeManager
+                    isSecure: false
                 )
             }
         }
@@ -908,15 +906,13 @@ struct ScheduleEditInformationSection: View {
                 FloatingLabelTextField(
                     title: "Schedule Name",
                     text: $scheduleName,
-                    isSecure: false,
-                    themeManager: themeManager
+                    isSecure: false
                 )
                 
                 FloatingLabelTextField(
                     title: "Description (Optional)",
                     text: $scheduleDescription,
-                    isSecure: false,
-                    themeManager: themeManager
+                    isSecure: false
                 )
             }
         }
@@ -970,8 +966,7 @@ struct ScheduleEditWeeklyPatternSection: View {
                     dayName: day,
                     selectedParent: bindingForDay(index),
                     custodianOneName: custodianOneName,
-                    custodianTwoName: custodianTwoName,
-                    themeManager: themeManager
+                    custodianTwoName: custodianTwoName
                 )
                 .padding(.horizontal)
             }
