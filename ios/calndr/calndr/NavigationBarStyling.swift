@@ -1,0 +1,28 @@
+import SwiftUI
+
+struct NavigationBarThemer: ViewModifier {
+    @ObservedObject var themeManager: ThemeManager
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear {
+                let appearance = UINavigationBarAppearance()
+                appearance.configureWithOpaqueBackground()
+                appearance.backgroundColor = themeManager.currentTheme.mainBackgroundColor
+                
+                let titleColor = themeManager.currentTheme.textColor
+                appearance.largeTitleTextAttributes = [.foregroundColor: titleColor]
+                appearance.titleTextAttributes = [.foregroundColor: titleColor]
+                
+                UINavigationBar.appearance().standardAppearance = appearance
+                UINavigationBar.appearance().scrollEdgeAppearance = appearance
+                UINavigationBar.appearance().compactAppearance = appearance
+            }
+    }
+}
+
+extension View {
+    func themeNavigationBar(themeManager: ThemeManager) -> some View {
+        self.modifier(NavigationBarThemer(themeManager: themeManager))
+    }
+} 

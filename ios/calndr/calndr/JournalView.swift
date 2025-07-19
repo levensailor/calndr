@@ -65,6 +65,7 @@ struct JournalView: View {
                 }
             }
         }
+        .themeNavigationBar(themeManager: themeManager)
         .onAppear {
             viewModel.fetchJournalEntries()
         }
