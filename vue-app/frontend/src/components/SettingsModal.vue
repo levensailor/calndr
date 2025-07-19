@@ -322,7 +322,7 @@ export default {
     themes: Object,
     currentTheme: String,
     showIconLabels: Boolean,
-    customThemeNames: Array,
+    backendThemes: Array,
   },
   emits: ['close', 'set-theme', 'toggle-labels', 'save-custom-theme', 'delete-custom-theme'],
   data() {
@@ -368,7 +368,9 @@ export default {
   },
   methods: {
     isCustomTheme(themeName) {
-        return this.customThemeNames.includes(themeName);
+        // Check if it's a private theme that the user can edit/delete
+        const themeData = this.themes[themeName];
+        return themeData && themeData.isPublic === false;
     },
     handleThemeMouseEnter(themeName) {
         if (!this.isCustomTheme(themeName)) return;
@@ -386,10 +388,58 @@ export default {
             this.hoveredThemeName = null;
         }
     },
-    editTheme(themeName) {
+    async editTheme(themeName) {
         this.editingThemeName = themeName;
         this.showThemeCreator = true;
         this.hoveredThemeName = null;
+    },
+    
+    async updateTheme(themeData) {
+        try {
+            const authToken = localStorage.getItem('authToken') || localStorage.getItem('jwtToken') || localStorage.getItem('accessToken');
+            if (!authToken) {
+                alert('Please login to edit themes');
+                return;
+            }
+
+            const originalTheme = this.backendThemes.find(t => t.name === this.editingThemeName);
+            if (!originalTheme) {
+                console.error('Original theme not found');
+                return;
+            }
+
+            if (originalTheme.is_public) {
+                alert('Cannot edit public themes');
+                return;
+            }
+
+            const themePayload = {
+                name: themeData.name,
+                mainBackgroundColor: themeData.colors.mainBg,
+                secondaryBackgroundColor: themeData.colors.headerBg,
+                textColor: themeData.colors.textColor,
+                headerTextColor: themeData.colors.editableTextColor,
+                iconColor: themeData.colors.iconColor,
+                iconActiveColor: themeData.colors.iconActive,
+                accentColor: themeData.colors.todayBorder,
+                parentOneColor: themeData.colors.jeff,
+                parentTwoColor: themeData.colors.deanna,
+                is_public: false
+            };
+
+            await axios.put(`/themes/${originalTheme.id}`, themePayload, {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            
+            // Emit event to refresh themes in parent component
+            this.$emit('save-custom-theme', themeData);
+            
+            console.log('Theme updated successfully');
+            
+        } catch (error) {
+            console.error('Error updating theme:', error);
+            alert('Failed to update theme. Please try again.');
+        }
     },
     getThemePreviewStyles(theme) {
       return {
@@ -434,7 +484,13 @@ export default {
       }
     },
     saveNewTheme(themeData) {
-      this.$emit('save-custom-theme', themeData);
+      if (this.editingThemeName) {
+        // Editing existing theme
+        this.updateTheme(themeData);
+      } else {
+        // Creating new theme
+        this.$emit('save-custom-theme', themeData);
+      }
       this.showThemeCreator = false;
       this.editingThemeName = null;
     },

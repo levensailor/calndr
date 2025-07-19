@@ -13,27 +13,20 @@ struct ThemeSettingsView: View {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 20) {
                     ForEach(themeManager.themes) { theme in
-                        ThemePreviewView(theme: theme)
-                            .onTapGesture {
-                                themeManager.setTheme(to: theme)
+                        ThemePreviewView(
+                            theme: theme,
+                            onEdit: { theme in
+                                self.themeToEdit = theme
+                                self.isEditing = true
+                                self.showThemeCreator = true
+                            },
+                            onDelete: { theme in
+                                themeManager.deleteTheme(theme)
                             }
-                            .contextMenu {
-                                Button {
-                                    themeManager.setTheme(to: theme)
-                                } label: {
-                                    Label("Apply Theme", systemImage: "paintbrush.fill")
-                                }
-                                
-                                if theme.isPublic != true {
-                                    Button {
-                                        self.themeToEdit = theme
-                                        self.isEditing = true
-                                        self.showThemeCreator = true
-                                    } label: {
-                                        Label("Edit Theme", systemImage: "pencil")
-                                    }
-                                }
-                            }
+                        )
+                        .onTapGesture {
+                            themeManager.setTheme(to: theme)
+                        }
                     }
                 }
                 .padding()

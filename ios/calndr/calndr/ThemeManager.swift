@@ -319,11 +319,46 @@ class ThemeManager: ObservableObject {
     @Published var isThemeChanging: Bool = false
     
     private let apiService = APIService.shared
+    private var authManager: AuthenticationManager?
 
-    init() {
+    init(authManager: AuthenticationManager? = nil) {
+        self.authManager = authManager
         self.themes = []
         self.currentTheme = Theme.defaultTheme
         loadThemes()
+    }
+    
+    // Configure the auth manager after initialization
+    func configure(with authManager: AuthenticationManager) {
+        self.authManager = authManager
+    }
+    
+    // Get current user ID
+    var currentUserID: String? {
+        authManager?.userID
+    }
+    
+    // Filtered themes (public or created by current user)
+    var availableThemes: [Theme] {
+        guard let currentUserID = currentUserID else {
+            // If no user ID available, only show public themes
+            return themes.filter { $0.isPublic == true }
+        }
+        
+        return themes.filter { theme in
+            theme.isPublic == true || theme.createdByUserId?.uuidString == currentUserID
+        }
+    }
+    
+    // Check if user can edit a theme (only non-public themes)
+    func canEditTheme(_ theme: Theme) -> Bool {
+        return theme.isPublic != true
+    }
+    
+    // Check if user can delete a theme (only non-public themes created by user)
+    func canDeleteTheme(_ theme: Theme) -> Bool {
+        guard let currentUserID = currentUserID else { return false }
+        return theme.isPublic != true && theme.createdByUserId?.uuidString == currentUserID
     }
 
     func loadThemes(completion: @escaping () -> Void = {}) {

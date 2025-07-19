@@ -19,7 +19,7 @@ struct calndrApp: App {
     
     init() {
         let authManager = AuthenticationManager()
-        let themeManager = ThemeManager()
+        let themeManager = ThemeManager(authManager: authManager)
         _authManager = StateObject(wrappedValue: authManager)
         _themeManager = StateObject(wrappedValue: themeManager)
         _calendarViewModel = StateObject(wrappedValue: CalendarViewModel(authManager: authManager, themeManager: themeManager))

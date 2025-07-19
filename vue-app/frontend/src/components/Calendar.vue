@@ -118,7 +118,7 @@
       @close="toggleSettingsModal"
       :themes="allThemes"
       :currentTheme="currentTheme"
-      :customThemeNames="Object.keys(customThemes)"
+      :backendThemes="backendThemes"
       @set-theme="setTheme"
       :showIconLabels="showIconLabels"
       @toggle-labels="toggleIconLabels"
@@ -154,128 +154,69 @@ export default {
       showSchoolEvents: localStorage.getItem('showSchoolEvents') === 'true',
       showIconLabels: localStorage.getItem('showIconLabels') === 'true',
       showSettingsModal: false,
-      currentTheme: 'Stork',
-      themes: {
-        Stork: {
-          font: "'-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'",
-          colors: {
-            jeff: '#96CBFC',
-            deanna: '#FFC2D9',
-            todayBorder: '#2a64c4',
-            otherMonthBg: '#f7f7f7',
-            otherMonthColor: '#aaa',
-            mainBg: '#fff',
-            textColor: '#000',
-            editableTextColor: '#000',
-            gridLines: '#979797',
-            headerBg: '#e0e0e0',
-            footerBg: '#f0f0f0',
-            iconColor: '#555',
-            iconActive: '#007bff',
-          },
-        },
-        Dracula: {
-          font: "'Fira Code', monospace",
-          colors: {
-            jeff: '#44475a',
-            deanna: '#6272a4',
-            todayBorder: '#ff79c6',
-            otherMonthBg: '#21222c',
-            otherMonthColor: '#6272a4',
-            mainBg: '#282a36',
-            textColor: '#f8f8f2',
-            editableTextColor: '#ff79c6',
-            gridLines: '#44475a',
-            headerBg: '#191a21',
-            footerBg: '#191a21',
-            iconColor: '#bd93f9',
-            iconActive: '#ff79c6',
-          },
-        },
-        Vibe: {
-          font: "'Inter', sans-serif",
-          colors: {
-            jeff: '#3b2d60',
-            deanna: '#5d4a9c',
-            todayBorder: '#00fddc',
-            otherMonthBg: '#1a103c',
-            otherMonthColor: '#5d4a9c',
-            mainBg: '#251758',
-            textColor: '#e0d8ff',
-            editableTextColor: '#ffffff',
-            gridLines: '#3b2d60',
-            headerBg: '#12092a',
-            footerBg: '#12092a',
-            iconColor: '#b3a5ef',
-            iconActive: '#00fddc',
-          },
-        },
-        Sunshine: {
-          font: "'Poppins', sans-serif",
-          colors: {
-            jeff: '#89cff0',
-            deanna: '#ffb347',
-            todayBorder: '#ff6347',
-            otherMonthBg: '#fff8e1',
-            otherMonthColor: '#ccc',
-            mainBg: '#fffff0',
-            textColor: '#5d4037',
-            editableTextColor: '#ffffff',
-            gridLines: '#ffd54f',
-            headerBg: '#ffecb3',
-            footerBg: '#ffecb3',
-            iconColor: '#8d6e63',
-            iconActive: '#ff6347',
-          },
-        },
-        Crayola: {
-          font: "'Comic Sans MS', 'Chalkboard SE', sans-serif",
-          colors: {
-            jeff: '#4682b4',
-            deanna: '#ff69b4',
-            todayBorder: '#32cd32',
-            otherMonthBg: '#f0f8ff',
-            otherMonthColor: '#d3d3d3',
-            mainBg: '#fff',
-            textColor: '#000',
-            editableTextColor: '#ffffff',
-            gridLines: '#b0c4de',
-            headerBg: '#ffd700',
-            footerBg: '#ff7f50',
-            iconColor: '#000',
-            iconActive: '#1e90ff',
-          },
-        },
-        Princess: {
-          font: "'Dancing Script', cursive",
-          colors: {
-            jeff: '#e0bbee',
-            deanna: '#ffb6c1',
-            todayBorder: '#ffd700',
-            otherMonthBg: '#fdf4f5',
-            otherMonthColor: '#d8bfd8',
-            mainBg: '#fffafb',
-            textColor: '#5e3c58',
-            editableTextColor: '#ffffff',
-            gridLines: '#f1e4f2',
-            headerBg: '#fae3f5',
-            footerBg: '#fae3f5',
-            iconColor: '#c789a8',
-            iconActive: '#e6a4b4',
-          },
+      currentTheme: null,
+      backendThemes: [], // Themes from backend API
+      selectedThemeId: null, // Currently selected theme ID
+      defaultTheme: {
+        name: 'Default (Stork)',
+        font: "'-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'",
+        colors: {
+          jeff: '#96CBFC',
+          deanna: '#FFC2D9',
+          todayBorder: '#2a64c4',
+          otherMonthBg: '#f7f7f7',
+          otherMonthColor: '#aaa',
+          mainBg: '#fff',
+          textColor: '#000',
+          editableTextColor: '#000',
+          gridLines: '#979797',
+          headerBg: '#e0e0e0',
+          footerBg: '#f0f0f0',
+          iconColor: '#555',
+          iconActive: '#007bff',
         },
       },
-      customThemes: {}, // This will hold themes from localStorage
       custodianOne: null,
       custodianTwo: null,
     };
   },
   computed: {
     allThemes() {
-      return { ...this.themes, ...this.customThemes };
+      // Convert backend themes to the old format for compatibility
+      const converted = {};
+      this.backendThemes.forEach(theme => {
+        converted[theme.name] = {
+          id: theme.id,
+          isPublic: theme.is_public,
+          createdByUserId: theme.created_by_user_id,
+          font: theme.font || this.defaultTheme.font,
+          colors: {
+            jeff: theme.parentOneColor,
+            deanna: theme.parentTwoColor,
+            todayBorder: theme.accentColor,
+            otherMonthBg: this.lightenColor(theme.secondaryBackgroundColor, 0.5),
+            otherMonthColor: this.lightenColor(theme.textColor, 0.6),
+            mainBg: theme.mainBackgroundColor,
+            textColor: theme.textColor,
+            editableTextColor: theme.headerTextColor,
+            gridLines: this.lightenColor(theme.textColor, 0.8),
+            headerBg: theme.secondaryBackgroundColor,
+            footerBg: theme.secondaryBackgroundColor,
+            iconColor: theme.iconColor,
+            iconActive: theme.iconActiveColor,
+          },
+        };
+      });
+      
+      // Add default theme if no themes are loaded
+      if (this.backendThemes.length === 0) {
+        converted[this.defaultTheme.name] = this.defaultTheme;
+      }
+      
+      return converted;
     },
     themeStyles() {
-      const theme = this.allThemes[this.currentTheme];
+      const theme = this.currentTheme ? this.allThemes[this.currentTheme] : this.defaultTheme;
       if (!theme) return {};
       
       const t = theme.colors;
@@ -421,42 +362,179 @@ export default {
     },
   },
   methods: {
-    deleteCustomTheme(themeName) {
-      if (!this.customThemes[themeName]) return;
+    // Helper function to lighten colors for UI
+    lightenColor(color, amount) {
+      const num = parseInt(color.replace("#", ""), 16);
+      const amt = Math.round(2.55 * amount * 100);
+      const R = (num >> 16) + amt;
+      const G = (num >> 8 & 0x00FF) + amt;
+      const B = (num & 0x0000FF) + amt;
+      return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+        (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+        (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+    },
+    
+    // Fetch themes from backend
+    async fetchThemes() {
+      try {
+        const authToken = localStorage.getItem('authToken') || localStorage.getItem('jwtToken') || localStorage.getItem('accessToken');
+        if (!authToken) {
+          console.log('No auth token found, using default theme');
+          this.currentTheme = this.defaultTheme.name;
+          return;
+        }
 
-      if (this.currentTheme === themeName) {
-        this.setTheme('Stork');
+        const response = await axios.get('/themes/', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        
+        this.backendThemes = response.data;
+        console.log('Loaded themes from backend:', this.backendThemes);
+        
+        // Load user's selected theme preference
+        await this.fetchUserThemePreference();
+        
+      } catch (error) {
+        console.error('Error fetching themes:', error);
+        this.currentTheme = this.defaultTheme.name;
       }
-
-      const newCustomThemes = { ...this.customThemes };
-      delete newCustomThemes[themeName];
-      this.customThemes = newCustomThemes;
-
-      localStorage.setItem('customCalendarThemes', JSON.stringify(this.customThemes));
     },
-    loadCustomThemes() {
-      const savedThemes = localStorage.getItem('customCalendarThemes');
-      if (savedThemes) {
-        this.customThemes = JSON.parse(savedThemes);
+
+    // Fetch user's theme preference
+    async fetchUserThemePreference() {
+      try {
+        const authToken = localStorage.getItem('authToken') || localStorage.getItem('jwtToken') || localStorage.getItem('accessToken');
+        if (!authToken) return;
+
+        const response = await axios.get('/user/profile', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        
+        const selectedThemeId = response.data.selected_theme_id;
+        if (selectedThemeId) {
+          const selectedTheme = this.backendThemes.find(theme => theme.id === selectedThemeId);
+          if (selectedTheme) {
+            this.currentTheme = selectedTheme.name;
+            this.selectedThemeId = selectedThemeId;
+            console.log('Applied user theme preference:', selectedTheme.name);
+            return;
+          }
+        }
+        
+        // Fallback to default theme
+        this.currentTheme = this.defaultTheme.name;
+        
+      } catch (error) {
+        console.error('Error fetching user theme preference:', error);
+        this.currentTheme = this.defaultTheme.name;
       }
     },
-    saveCustomTheme(themeData) {
-      const newThemeName = themeData.name;
-      // Using Vue.set or this.$set is not needed in Vue 3. Direct assignment is reactive.
-      this.customThemes[newThemeName] = {
-        font: themeData.font,
-        colors: themeData.colors,
-      };
-      // Create a new object to ensure reactivity when merging
-      this.customThemes = { ...this.customThemes }; 
-      localStorage.setItem('customCalendarThemes', JSON.stringify(this.customThemes));
-      
-      // Automatically switch to the new theme
-      this.setTheme(newThemeName);
+
+    // Save custom theme to backend
+    async saveCustomTheme(themeData) {
+      try {
+        const authToken = localStorage.getItem('authToken') || localStorage.getItem('jwtToken') || localStorage.getItem('accessToken');
+        if (!authToken) {
+          alert('Please login to save custom themes');
+          return;
+        }
+
+        const themePayload = {
+          name: themeData.name,
+          mainBackgroundColor: themeData.colors.mainBg,
+          secondaryBackgroundColor: themeData.colors.headerBg,
+          textColor: themeData.colors.textColor,
+          headerTextColor: themeData.colors.editableTextColor,
+          iconColor: themeData.colors.iconColor,
+          iconActiveColor: themeData.colors.iconActive,
+          accentColor: themeData.colors.todayBorder,
+          parentOneColor: themeData.colors.jeff,
+          parentTwoColor: themeData.colors.deanna,
+          is_public: false
+        };
+
+        const response = await axios.post('/themes/', themePayload, {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        
+        // Refresh themes and switch to new theme
+        await this.fetchThemes();
+        this.setTheme(themeData.name);
+        
+        console.log('Theme saved successfully:', response.data);
+        
+      } catch (error) {
+        console.error('Error saving theme:', error);
+        alert('Failed to save theme. Please try again.');
+      }
     },
-    setTheme(themeName) {
+
+    // Delete custom theme
+    async deleteCustomTheme(themeName) {
+      try {
+        const authToken = localStorage.getItem('authToken') || localStorage.getItem('jwtToken') || localStorage.getItem('accessToken');
+        if (!authToken) {
+          alert('Please login to delete themes');
+          return;
+        }
+
+        const theme = this.backendThemes.find(t => t.name === themeName);
+        if (!theme) {
+          console.error('Theme not found:', themeName);
+          return;
+        }
+
+        if (theme.is_public) {
+          alert('Cannot delete public themes');
+          return;
+        }
+
+        const response = await axios.delete(`/themes/${theme.id}`, {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        
+        // Switch to default theme if we're deleting the current theme
+        if (this.currentTheme === themeName) {
+          this.setTheme(this.defaultTheme.name);
+        }
+        
+        // Refresh themes
+        await this.fetchThemes();
+        
+        console.log('Theme deleted successfully');
+        
+      } catch (error) {
+        console.error('Error deleting theme:', error);
+        alert('Failed to delete theme. Please try again.');
+      }
+    },
+
+    // Set theme and save preference
+    async setTheme(themeName) {
       this.currentTheme = themeName;
-      localStorage.setItem('calendarTheme', themeName);
+      
+      try {
+        const authToken = localStorage.getItem('authToken') || localStorage.getItem('jwtToken') || localStorage.getItem('accessToken');
+        if (!authToken) {
+          console.log('No auth token, theme will only be applied locally');
+          return;
+        }
+
+        const theme = this.backendThemes.find(t => t.name === themeName);
+        if (theme) {
+          this.selectedThemeId = theme.id;
+          
+          // Save preference to backend
+          await axios.put('/themes/set-preference/' + theme.id, {}, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+          });
+          
+          console.log('Theme preference saved:', themeName);
+        }
+        
+      } catch (error) {
+        console.error('Error saving theme preference:', error);
+      }
     },
     toggleIconLabels() {
       this.showIconLabels = !this.showIconLabels;
@@ -867,8 +945,7 @@ export default {
     console.log("Calendar.vue: mounted() called");
     window.addEventListener('resize', this.adjustFontSize);
     this.$nextTick(() => {
-      this.loadCustomThemes(); // Load custom themes first
-      this.currentTheme = localStorage.getItem('calendarTheme') || 'Stork';
+      this.fetchThemes(); // Load themes from backend
       this.fetchCustodianInfo(); // Fetch custodian info before other data
       this.fetchEvents();
       this.fetchWeather();

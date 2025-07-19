@@ -75,7 +75,7 @@ struct QuickThemeSwitcher: View {
     // Popular themes for quick access (limit to 5 most popular)
     private var popularThemes: [Theme] {
         let popularThemeNames = ["Default", "Dracula", "One Dark Pro", "GitHub Dark", "Monokai Pro"]
-        return themeManager.themes.filter { theme in
+        return themeManager.availableThemes.filter { theme in
             popularThemeNames.contains(theme.name)
         }.sorted { first, second in
             let firstIndex = popularThemeNames.firstIndex(of: first.name) ?? Int.max
