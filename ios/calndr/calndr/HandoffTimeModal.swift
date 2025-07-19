@@ -33,9 +33,9 @@ struct HandoffTimeModal: View {
 
     var body: some View {
         ZStack {
-            // Blurred background
+            // Very subtle blurred background
             Rectangle()
-                .fill(.ultraThinMaterial)
+                .fill(.ultraThinMaterial.opacity(0.3))
                 .edgesIgnoringSafeArea(.all)
                 .onTapGesture {
                     isPresented = false // Dismiss on tap

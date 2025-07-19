@@ -278,10 +278,10 @@ struct HandoffTimelineView: View {
                 let custodyInfo = viewModel.getCustodyInfo(for: day)
                 let custodyColor = getCustodyColor(for: custodyInfo.owner)
                 
-                // Draw a filled rectangle with some transparency
+                // Draw a filled rectangle with very light transparency
                 context.fill(
                     Path(CGRect(x: xPos, y: yPos, width: cellWidth, height: cellHeight)),
-                    with: .color(custodyColor.opacity(0.3))
+                    with: .color(custodyColor.opacity(0.05))
                 )
             }
         }

@@ -62,8 +62,8 @@ struct ThemePreviewView: View {
                                 Image(systemName: "pencil")
                                     .font(.caption2)
                                     .foregroundColor(.white)
-                                    .padding(4)
-                                    .background(Color.orange)
+                                    .padding(8)
+                                    .background(Color.blue.opacity(0.7))
                                     .clipShape(Circle())
                             }
                             
@@ -74,8 +74,8 @@ struct ThemePreviewView: View {
                                 Image(systemName: "trash")
                                     .font(.caption2)
                                     .foregroundColor(.white)
-                                    .padding(4)
-                                    .background(Color.red)
+                                    .padding(8)
+                                    .background(Color.red.opacity(0.7))
                                     .clipShape(Circle())
                             }
                         }
