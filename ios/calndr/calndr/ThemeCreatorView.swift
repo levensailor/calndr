@@ -78,6 +78,7 @@ struct ThemeCreatorView: View {
             }
             .scrollContentBackground(.hidden)
             .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
+            .preferredColorScheme(themeManager.currentTheme.preferredColorScheme)
             .navigationTitle(isNew ? "Create Theme" : "Edit Theme")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(

@@ -183,6 +183,7 @@ struct PreferencesView: View {
             .listRowBackground(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
         }
         .navigationTitle("Preferences")
+        .preferredColorScheme(themeManager.currentTheme.preferredColorScheme)
         .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
         .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
         .scrollContentBackground(.hidden)

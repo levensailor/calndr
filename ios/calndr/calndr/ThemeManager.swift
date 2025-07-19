@@ -60,6 +60,21 @@ struct Theme: Identifiable, Equatable, Hashable, Codable {
     var smartAccentColor: Color {
         mainBackgroundColor.color.isLight ? accentColor.color : accentColor.color
     }
+    
+    // Automatic color scheme detection for system UI elements
+    var preferredColorScheme: ColorScheme {
+        mainBackgroundColor.color.isLight ? .light : .dark
+    }
+    
+    // Check if this is a dark theme
+    var isDarkTheme: Bool {
+        !mainBackgroundColor.color.isLight
+    }
+    
+    // Check if this is a light theme  
+    var isLightTheme: Bool {
+        mainBackgroundColor.color.isLight
+    }
 
     // Custom CodingKeys to handle snake_case from backend
     enum CodingKeys: String, CodingKey {
@@ -481,5 +496,19 @@ extension View {
     // Animate theme changes
     func animateThemeChanges(_ themeManager: ThemeManager) -> some View {
         self.animation(.easeInOut(duration: 0.3), value: themeManager.currentTheme.id)
+    }
+    
+    // Automatically apply preferred color scheme based on theme
+    func themeColorScheme(_ themeManager: ThemeManager) -> some View {
+        self.preferredColorScheme(themeManager.currentTheme.preferredColorScheme)
+    }
+    
+    // Complete theme application - background, text, and color scheme
+    func themedView(_ themeManager: ThemeManager, secondary: Bool = false) -> some View {
+        self
+            .background(secondary ? themeManager.currentTheme.secondaryBackgroundColorSwiftUI : themeManager.currentTheme.mainBackgroundColorSwiftUI)
+            .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+            .preferredColorScheme(themeManager.currentTheme.preferredColorScheme)
+            .animateThemeChanges(themeManager)
     }
 } 

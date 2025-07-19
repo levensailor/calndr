@@ -36,6 +36,7 @@ struct ThemeSettingsView: View {
         }
         .navigationTitle("Themes")
         .navigationBarTitleDisplayMode(.large)
+        .preferredColorScheme(themeManager.currentTheme.preferredColorScheme)
         .navigationBarItems(trailing:
             Button(action: {
                 isEditing = false

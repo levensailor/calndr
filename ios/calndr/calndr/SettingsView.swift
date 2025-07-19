@@ -93,6 +93,7 @@ struct SettingsView: View {
                 }
             }
             .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
+            .preferredColorScheme(themeManager.currentTheme.preferredColorScheme)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
