@@ -6,6 +6,7 @@ enum APIError: Error, LocalizedError, Equatable {
     case invalidResponse
     case requestFailed(statusCode: Int)
     case themeNotFound
+    case invalidURL
 
     var errorDescription: String? {
         switch self {
@@ -17,6 +18,8 @@ enum APIError: Error, LocalizedError, Equatable {
             return "The request failed with a status code: \(statusCode)."
         case .themeNotFound:
             return "The selected theme is no longer available."
+        case .invalidURL:
+            return "The URL provided was invalid."
         }
     }
 }
@@ -166,9 +169,17 @@ class APIService {
 
     // Fetch current and future weather data (forecast)
     func fetchWeather(latitude: Double, longitude: Double, startDate: String, endDate: String, completion: @escaping (Result<[String: WeatherInfo], Error>) -> Void) {
+        // --- Adjust start date: always begin 2 days before "today" so we include yesterday & today in forecast ---
+        let dateFormatter = DateFormatter()
+        dateFormatter.calendar = Calendar(identifier: .gregorian)
+        dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let twoDaysAgo = Calendar.current.date(byAdding: .day, value: -2, to: Date())!
+        let adjustedStartDate = dateFormatter.string(from: twoDaysAgo)
+
         var components = URLComponents(url: baseURL.appendingPathComponent("/weather/\(latitude)/\(longitude)"), resolvingAgainstBaseURL: false)!
         components.queryItems = [
-            URLQueryItem(name: "start_date", value: startDate),
+            URLQueryItem(name: "start_date", value: adjustedStartDate),
             URLQueryItem(name: "end_date", value: endDate),
             URLQueryItem(name: "temperature_unit", value: "fahrenheit")
         ]
@@ -233,10 +244,21 @@ class APIService {
     
     // Fetch historic weather data (past 6 months)
     func fetchHistoricWeather(latitude: Double, longitude: Double, startDate: String, endDate: String, completion: @escaping (Result<[String: WeatherInfo], Error>) -> Void) {
+        // --- Adjust end date: stop 2 days before the supplied endDate so forecast handles the remainder ---
+        let dateFormatter = DateFormatter()
+        dateFormatter.calendar = Calendar(identifier: .gregorian)
+        dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        var adjustedEndDate = endDate
+        if let providedEnd = dateFormatter.date(from: endDate),
+           let twoDaysBefore = Calendar.current.date(byAdding: .day, value: -2, to: providedEnd) {
+            adjustedEndDate = dateFormatter.string(from: twoDaysBefore)
+        }
+
         var components = URLComponents(url: baseURL.appendingPathComponent("/weather/historic/\(latitude)/\(longitude)"), resolvingAgainstBaseURL: false)!
         components.queryItems = [
             URLQueryItem(name: "start_date", value: startDate),
-            URLQueryItem(name: "end_date", value: endDate),
+            URLQueryItem(name: "end_date", value: adjustedEndDate),
             URLQueryItem(name: "temperature_unit", value: "fahrenheit")
         ]
 
@@ -2431,6 +2453,184 @@ class APIService {
             }
             
             completion(.success(()))
+        }.resume()
+    }
+    
+    // MARK: - Journal Methods
+    
+    func fetchJournalEntries(startDate: String? = nil, endDate: String? = nil, limit: Int = 50, completion: @escaping (Result<[JournalEntry], Error>) -> Void) {
+        var urlComponents = URLComponents(url: baseURL.appendingPathComponent("/journal"), resolvingAgainstBaseURL: false)!
+        
+        var queryItems: [URLQueryItem] = []
+        if let startDate = startDate {
+            queryItems.append(URLQueryItem(name: "start_date", value: startDate))
+        }
+        if let endDate = endDate {
+            queryItems.append(URLQueryItem(name: "end_date", value: endDate))
+        }
+        queryItems.append(URLQueryItem(name: "limit", value: String(limit)))
+        
+        urlComponents.queryItems = queryItems
+        
+        guard let url = urlComponents.url else {
+            completion(.failure(APIError.invalidURL))
+            return
+        }
+        
+        let request = createAuthenticatedRequest(url: url)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                return
+            }
+            
+            do {
+                let entries = try JSONDecoder().decode([JournalEntry].self, from: data)
+                completion(.success(entries))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func createJournalEntry(_ entryData: JournalEntryCreate, completion: @escaping (Result<JournalEntry, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/journal")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(entryData)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                return
+            }
+            
+            do {
+                let newEntry = try JSONDecoder().decode(JournalEntry.self, from: data)
+                completion(.success(newEntry))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func updateJournalEntry(id: Int, entryData: JournalEntryUpdate, completion: @escaping (Result<JournalEntry, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/journal/\(id)")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "PUT"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(entryData)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                return
+            }
+            
+            do {
+                let updatedEntry = try JSONDecoder().decode(JournalEntry.self, from: data)
+                completion(.success(updatedEntry))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func deleteJournalEntry(id: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/journal/\(id)")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "DELETE"
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                return
+            }
+            
+            completion(.success(()))
+        }.resume()
+    }
+    
+    func getJournalEntry(id: Int, completion: @escaping (Result<JournalEntry, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/journal/\(id)")
+        let request = createAuthenticatedRequest(url: url)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                return
+            }
+            
+            do {
+                let entry = try JSONDecoder().decode(JournalEntry.self, from: data)
+                completion(.success(entry))
+            } catch {
+                completion(.failure(error))
+            }
         }.resume()
     }
 } 
