@@ -40,7 +40,7 @@ class ScheduleTemplate(BaseModel):
     weekly_pattern: Optional[WeeklySchedulePattern] = None
     alternating_weeks_pattern: Optional[AlternatingWeeksPattern] = None
     is_active: bool
-    family_id: int
+    family_id: str
     created_at: str
     updated_at: str
 

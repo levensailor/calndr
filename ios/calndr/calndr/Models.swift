@@ -558,7 +558,7 @@ struct ScheduleTemplateDetailed: Codable, Identifiable {
     let weeklyPattern: WeeklySchedulePattern?
     let alternatingWeeksPattern: AlternatingWeeksPattern?
     let isActive: Bool
-    let familyId: Int
+    let familyId: String
     let createdAt: String
     let updatedAt: String
     

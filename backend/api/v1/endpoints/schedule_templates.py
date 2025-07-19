@@ -4,7 +4,7 @@ from datetime import datetime, date, timedelta
 import json
 
 from core.database import database
-from core.security import get_current_user
+from core.security import get_current_user, uuid_to_string
 from core.logging import logger
 from db.models import schedule_templates, custody
 from schemas.schedule import (
@@ -35,7 +35,7 @@ async def get_schedule_templates(current_user = Depends(get_current_user)):
                 weekly_pattern=record['weekly_pattern'],
                 alternating_weeks_pattern=record['alternating_weeks_pattern'],
                 is_active=record['is_active'],
-                family_id=int(str(record['family_id'])),  # Convert UUID to int for compatibility
+                family_id=uuid_to_string(record['family_id']),
                 created_at=str(record['created_at']),
                 updated_at=str(record['updated_at'])
             )
@@ -83,7 +83,7 @@ async def create_schedule_template(template_data: ScheduleTemplateCreate, curren
             weekly_pattern=template_record['weekly_pattern'],
             alternating_weeks_pattern=template_record['alternating_weeks_pattern'],
             is_active=template_record['is_active'],
-            family_id=int(str(template_record['family_id'])),
+            family_id=uuid_to_string(template_record['family_id']),
             created_at=str(template_record['created_at']),
             updated_at=str(template_record['updated_at'])
         )
@@ -136,7 +136,7 @@ async def update_schedule_template(template_id: int, template_data: ScheduleTemp
             weekly_pattern=template_record['weekly_pattern'],
             alternating_weeks_pattern=template_record['alternating_weeks_pattern'],
             is_active=template_record['is_active'],
-            family_id=int(str(template_record['family_id'])),
+            family_id=uuid_to_string(template_record['family_id']),
             created_at=str(template_record['created_at']),
             updated_at=str(template_record['updated_at'])
         )
