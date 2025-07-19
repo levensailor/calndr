@@ -1577,6 +1577,12 @@ class CalendarViewModel: ObservableObject {
                         } else {
                             print("⚠️ Saved theme ID '\(savedThemeId)' not found in available themes")
                             print("📋 Available themes: \(self?.themeManager.themes.map { "\($0.name) (\($0.id))" } ?? [])")
+                            print("🔄 Falling back to default theme and clearing invalid preference")
+                            
+                            // Fall back to default theme
+                            self?.themeManager.currentTheme = Theme.defaultTheme
+                            
+                            // The user preference will be updated when they next select a valid theme
                         }
                     } else {
                         print("ℹ️ No saved theme ID found in database, using default")

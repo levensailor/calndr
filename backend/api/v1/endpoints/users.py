@@ -162,6 +162,20 @@ async def update_user_preferences(
     user_id = current_user['id']
     
     try:
+        # Validate that the theme exists and is accessible to the user
+        from db.models import themes
+        theme_query = themes.select().where(
+            (themes.c.id == preferences_data.selected_theme_id) & 
+            ((themes.c.is_public == True) | (themes.c.created_by_user_id == user_id))
+        )
+        theme_exists = await database.fetch_one(theme_query)
+        
+        if theme_exists is None:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"Theme with ID {preferences_data.selected_theme_id} not found or not accessible"
+            )
+        
         # Check if preferences already exist for this user
         existing_prefs_query = user_preferences.select().where(user_preferences.c.user_id == user_id)
         existing_prefs = await database.fetch_one(existing_prefs_query)
@@ -185,6 +199,9 @@ async def update_user_preferences(
             logger.info(f"Set initial theme for user {user_id} to {preferences_data.selected_theme_id}")
             
         return {"status": "success", "message": "Preferences updated successfully"}
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 404 for invalid theme)
+        raise
     except Exception as e:
         logger.error(f"Error updating user preferences: {e}")
         logger.error(f"Full traceback: {traceback.format_exc()}")

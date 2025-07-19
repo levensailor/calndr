@@ -1,10 +1,11 @@
 import Foundation
 import UIKit
 
-enum APIError: Error, LocalizedError {
+enum APIError: Error, LocalizedError, Equatable {
     case unauthorized
     case invalidResponse
     case requestFailed(statusCode: Int)
+    case themeNotFound
 
     var errorDescription: String? {
         switch self {
@@ -14,6 +15,8 @@ enum APIError: Error, LocalizedError {
             return "Invalid response from the server. Please try again later."
         case .requestFailed(let statusCode):
             return "The request failed with a status code: \(statusCode)."
+        case .themeNotFound:
+            return "The selected theme is no longer available."
         }
     }
 }
@@ -94,8 +97,17 @@ class APIService {
             if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
                let exp = json["exp"] as? TimeInterval {
                 let currentTime = Date().timeIntervalSince1970
-                let isValid = exp > currentTime
-                print("🔐 APIService: Token expiry: \(exp), current time: \(currentTime), valid: \(isValid)")
+                let timeUntilExpiry = exp - currentTime
+                // Add 60 second tolerance for clock skew between client and server
+                let clockSkewTolerance: TimeInterval = 60
+                let isValid = exp > (currentTime - clockSkewTolerance)
+                
+                print("🔐 APIService: Token expiry: \(exp) (\(Date(timeIntervalSince1970: exp)))")
+                print("🔐 APIService: Current time: \(currentTime) (\(Date()))")
+                print("🔐 APIService: Time until expiry: \(timeUntilExpiry) seconds (\(timeUntilExpiry/60) minutes)")
+                print("🔐 APIService: Clock skew tolerance: \(clockSkewTolerance) seconds")
+                print("🔐 APIService: Token valid (with tolerance): \(isValid)")
+                
                 return isValid
             }
         } catch {
@@ -2285,6 +2297,12 @@ class APIService {
             
             guard let httpResponse = response as? HTTPURLResponse else {
                 completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            // Handle specific error cases
+            if httpResponse.statusCode == 404 {
+                completion(.failure(APIError.themeNotFound))
                 return
             }
             

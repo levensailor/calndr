@@ -358,9 +358,27 @@ class ThemeManager: ObservableObject {
         }
         
         // Save preference to backend
-        apiService.setThemePreference(themeId: theme.id) { result in
-            if case .failure(let error) = result {
-                print("Failed to set theme preference: \(error)")
+        apiService.setThemePreference(themeId: theme.id) { [weak self] result in
+            switch result {
+            case .success:
+                print("✅ Theme preference saved successfully")
+            case .failure(let error):
+                print("❌ Failed to set theme preference: \(error)")
+                
+                // Handle specific error cases
+                if let apiError = error as? APIError, apiError == .themeNotFound {
+                    print("🔄 Theme not found on server, falling back to default and refreshing themes")
+                    
+                    DispatchQueue.main.async {
+                        // Fall back to default theme
+                        self?.currentTheme = Theme.defaultTheme
+                        
+                        // Reload themes from server to get the latest available themes
+                        self?.loadThemes {
+                            print("🎨 Themes reloaded after theme not found error")
+                        }
+                    }
+                }
             }
         }
         

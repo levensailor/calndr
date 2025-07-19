@@ -144,6 +144,19 @@ async def delete_theme(theme_id: uuid.UUID, current_user = Depends(get_current_u
 
 @router.put("/set-preference/{theme_id}", status_code=204)
 async def set_theme_preference(theme_id: uuid.UUID, current_user = Depends(get_current_user)):
+    # First, validate that the theme exists and is accessible to the user
+    theme_query = themes.select().where(
+        (themes.c.id == theme_id) & 
+        ((themes.c.is_public == True) | (themes.c.created_by_user_id == current_user['id']))
+    )
+    theme_exists = await database.fetch_one(theme_query)
+    
+    if theme_exists is None:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Theme with ID {theme_id} not found or not accessible"
+        )
+    
     # Check if user preferences record exists
     prefs_query = user_preferences.select().where(user_preferences.c.user_id == current_user['id'])
     user_prefs = await database.fetch_one(prefs_query)
