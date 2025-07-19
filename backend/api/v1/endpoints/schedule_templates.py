@@ -31,13 +31,13 @@ async def get_schedule_templates(current_user = Depends(get_current_user)):
                 id=record['id'],
                 name=record['name'],
                 description=record['description'],
-                patternType=record['pattern_type'],
-                weeklyPattern=record['weekly_pattern'],
-                alternatingWeeksPattern=record['alternating_weeks_pattern'],
-                isActive=record['is_active'],
-                familyId=int(str(record['family_id'])),  # Convert UUID to int for compatibility
-                createdAt=str(record['created_at']),
-                updatedAt=str(record['updated_at'])
+                pattern_type=record['pattern_type'],
+                weekly_pattern=record['weekly_pattern'],
+                alternating_weeks_pattern=record['alternating_weeks_pattern'],
+                is_active=record['is_active'],
+                family_id=int(str(record['family_id'])),  # Convert UUID to int for compatibility
+                created_at=str(record['created_at']),
+                updated_at=str(record['updated_at'])
             )
             for record in template_records
         ]
@@ -52,17 +52,17 @@ async def create_schedule_template(template_data: ScheduleTemplateCreate, curren
     """
     try:
         # Convert pattern data to JSON
-        weekly_pattern_json = template_data.weeklyPattern.dict() if template_data.weeklyPattern else None
-        alternating_pattern_json = template_data.alternatingWeeksPattern.dict() if template_data.alternatingWeeksPattern else None
+        weekly_pattern_json = template_data.weekly_pattern.dict() if template_data.weekly_pattern else None
+        alternating_pattern_json = template_data.alternating_weeks_pattern.dict() if template_data.alternating_weeks_pattern else None
         
         insert_query = schedule_templates.insert().values(
             family_id=current_user['family_id'],
             name=template_data.name,
             description=template_data.description,
-            pattern_type=template_data.patternType.value,
+            pattern_type=template_data.pattern_type.value,
             weekly_pattern=weekly_pattern_json,
             alternating_weeks_pattern=alternating_pattern_json,
-            is_active=template_data.isActive,
+            is_active=template_data.is_active,
             created_by_user_id=current_user['id'],
             created_at=datetime.now(),
             updated_at=datetime.now()
@@ -79,13 +79,13 @@ async def create_schedule_template(template_data: ScheduleTemplateCreate, curren
             id=template_record['id'],
             name=template_record['name'],
             description=template_record['description'],
-            patternType=template_record['pattern_type'],
-            weeklyPattern=template_record['weekly_pattern'],
-            alternatingWeeksPattern=template_record['alternating_weeks_pattern'],
-            isActive=template_record['is_active'],
-            familyId=int(str(template_record['family_id'])),
-            createdAt=str(template_record['created_at']),
-            updatedAt=str(template_record['updated_at'])
+            pattern_type=template_record['pattern_type'],
+            weekly_pattern=template_record['weekly_pattern'],
+            alternating_weeks_pattern=template_record['alternating_weeks_pattern'],
+            is_active=template_record['is_active'],
+            family_id=int(str(template_record['family_id'])),
+            created_at=str(template_record['created_at']),
+            updated_at=str(template_record['updated_at'])
         )
     except Exception as e:
         logger.error(f"Error creating schedule template: {e}")
@@ -108,17 +108,17 @@ async def update_schedule_template(template_id: int, template_data: ScheduleTemp
             raise HTTPException(status_code=404, detail="Schedule template not found")
         
         # Convert pattern data to JSON
-        weekly_pattern_json = template_data.weeklyPattern.dict() if template_data.weeklyPattern else None
-        alternating_pattern_json = template_data.alternatingWeeksPattern.dict() if template_data.alternatingWeeksPattern else None
+        weekly_pattern_json = template_data.weekly_pattern.dict() if template_data.weekly_pattern else None
+        alternating_pattern_json = template_data.alternating_weeks_pattern.dict() if template_data.alternating_weeks_pattern else None
         
         # Update the template
         update_query = schedule_templates.update().where(schedule_templates.c.id == template_id).values(
             name=template_data.name,
             description=template_data.description,
-            pattern_type=template_data.patternType.value,
+            pattern_type=template_data.pattern_type.value,
             weekly_pattern=weekly_pattern_json,
             alternating_weeks_pattern=alternating_pattern_json,
-            is_active=template_data.isActive,
+            is_active=template_data.is_active,
             updated_at=datetime.now()
         )
         await database.execute(update_query)
@@ -132,13 +132,13 @@ async def update_schedule_template(template_id: int, template_data: ScheduleTemp
             id=template_record['id'],
             name=template_record['name'],
             description=template_record['description'],
-            patternType=template_record['pattern_type'],
-            weeklyPattern=template_record['weekly_pattern'],
-            alternatingWeeksPattern=template_record['alternating_weeks_pattern'],
-            isActive=template_record['is_active'],
-            familyId=int(str(template_record['family_id'])),
-            createdAt=str(template_record['created_at']),
-            updatedAt=str(template_record['updated_at'])
+            pattern_type=template_record['pattern_type'],
+            weekly_pattern=template_record['weekly_pattern'],
+            alternating_weeks_pattern=template_record['alternating_weeks_pattern'],
+            is_active=template_record['is_active'],
+            family_id=int(str(template_record['family_id'])),
+            created_at=str(template_record['created_at']),
+            updated_at=str(template_record['updated_at'])
         )
     except Exception as e:
         logger.error(f"Error updating schedule template: {e}")
@@ -177,7 +177,7 @@ async def apply_schedule_template(application: ScheduleApplication, current_user
     try:
         # Get the template
         template_query = schedule_templates.select().where(
-            (schedule_templates.c.id == application.templateId) &
+            (schedule_templates.c.id == application.template_id) &
             (schedule_templates.c.family_id == current_user['family_id'])
         )
         template_record = await database.fetch_one(template_query)
@@ -186,8 +186,8 @@ async def apply_schedule_template(application: ScheduleApplication, current_user
             raise HTTPException(status_code=404, detail="Schedule template not found")
         
         # Parse dates
-        start_date = datetime.fromisoformat(application.startDate.replace('Z', '+00:00')).date()
-        end_date = datetime.fromisoformat(application.endDate.replace('Z', '+00:00')).date()
+        start_date = datetime.fromisoformat(application.start_date.replace('Z', '+00:00')).date()
+        end_date = datetime.fromisoformat(application.end_date.replace('Z', '+00:00')).date()
         
         # Get family custodian IDs (simplified - assumes 2 custodians)
         # This is a simplified implementation - you may need to enhance based on your family structure
@@ -216,8 +216,10 @@ async def apply_schedule_template(application: ScheduleApplication, current_user
             current_date += timedelta(days=1)
         
         return ScheduleApplicationResponse(
-            daysApplied=days_applied,
-            message=f"Applied schedule template '{template_record['name']}' to {days_applied} days"
+            success=True,
+            message=f"Applied schedule template '{template_record['name']}' to {days_applied} days",
+            days_applied=days_applied,
+            conflicts_overwritten=0  # Simplified for now
         )
         
     except Exception as e:

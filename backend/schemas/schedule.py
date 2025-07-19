@@ -24,10 +24,10 @@ class AlternatingWeeksPattern(BaseModel):
 class ScheduleTemplateCreate(BaseModel):
     name: str
     description: Optional[str] = None
-    patternType: SchedulePatternType
-    weeklyPattern: Optional[WeeklySchedulePattern] = None
-    alternatingWeeksPattern: Optional[AlternatingWeeksPattern] = None
-    isActive: bool = True
+    pattern_type: SchedulePatternType
+    weekly_pattern: Optional[WeeklySchedulePattern] = None
+    alternating_weeks_pattern: Optional[AlternatingWeeksPattern] = None
+    is_active: bool = True
 
     class Config:
         use_enum_values = True
@@ -36,23 +36,25 @@ class ScheduleTemplate(BaseModel):
     id: int
     name: str
     description: Optional[str] = None
-    patternType: SchedulePatternType
-    weeklyPattern: Optional[WeeklySchedulePattern] = None
-    alternatingWeeksPattern: Optional[AlternatingWeeksPattern] = None
-    isActive: bool
-    familyId: int
-    createdAt: str
-    updatedAt: str
+    pattern_type: SchedulePatternType
+    weekly_pattern: Optional[WeeklySchedulePattern] = None
+    alternating_weeks_pattern: Optional[AlternatingWeeksPattern] = None
+    is_active: bool
+    family_id: int
+    created_at: str
+    updated_at: str
 
     class Config:
         use_enum_values = True
 
 class ScheduleApplication(BaseModel):
-    templateId: int
-    startDate: str  # ISO date string
-    endDate: str    # ISO date string
-    overwriteExisting: bool = False
+    template_id: int
+    start_date: str  # ISO date string
+    end_date: str    # ISO date string
+    overwrite_existing: bool = False
 
 class ScheduleApplicationResponse(BaseModel):
-    daysApplied: int
-    message: Optional[str] = None 
+    success: bool
+    message: str
+    days_applied: int
+    conflicts_overwritten: Optional[int] = None 
