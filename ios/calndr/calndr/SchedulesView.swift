@@ -722,7 +722,6 @@ struct ScheduleEditView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var isLoading = true
-    @State private var detailedTemplate: ScheduleTemplate?
     @State private var scheduleName = ""
     @State private var scheduleDescription = ""
     @State private var patternType: SchedulePatternType = .weekly
@@ -795,40 +794,21 @@ struct ScheduleEditView: View {
     }
     
     private func loadTemplateDetails() {
-        viewModel.fetchScheduleTemplate(template.id) { result in
-            switch result {
-            case .success(let detailedTemplate):
-                self.detailedTemplate = detailedTemplate
-                self.scheduleName = detailedTemplate.name
-                self.scheduleDescription = detailedTemplate.description ?? ""
-                self.isActive = detailedTemplate.isActive
-                self.patternType = detailedTemplate.patternType
-                
-                // Load the weekly pattern if available
-                if let weeklyPattern = detailedTemplate.weeklyPattern {
-                    self.weeklyPattern = weeklyPattern
-                }
-                
-                // Load alternating weeks pattern if available
-                if let alternatingPattern = detailedTemplate.alternatingWeeksPattern {
-                    self.alternatingWeeksPattern = alternatingPattern
-                }
-                
-                self.isLoading = false
-                
-            case .failure(let error):
-                print("❌ Failed to load template details: \(error)")
-                // Fallback to basic template data
-                self.scheduleName = template.name
-                self.scheduleDescription = template.description ?? ""
-                self.isActive = template.isActive
-                self.patternType = .weekly
-                self.isLoading = false
-                
-                self.alertMessage = "Could not load full template details. Some features may be limited."
-                self.showingAlert = true
-            }
+        // Since `template` now contains all necessary data, we can directly assign it.
+        self.scheduleName = template.name
+        self.scheduleDescription = template.description ?? ""
+        self.isActive = template.isActive
+        self.patternType = template.patternType
+        
+        if let weeklyPattern = template.weeklyPattern {
+            self.weeklyPattern = weeklyPattern
         }
+        
+        if let alternatingPattern = template.alternatingWeeksPattern {
+            self.alternatingWeeksPattern = alternatingPattern
+        }
+        
+        self.isLoading = false
     }
     
     private func bindingForDay(_ dayIndex: Int) -> Binding<String?> {
