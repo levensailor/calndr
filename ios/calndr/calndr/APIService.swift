@@ -215,6 +215,12 @@ class APIService {
 
             do {
                 let apiResponse = try JSONDecoder().decode(WeatherAPIResponse.self, from: data)
+                print("Raw weather API response - days: \(apiResponse.daily.time.count)")
+                for (index, date) in apiResponse.daily.time.enumerated() {
+                    let temp = apiResponse.daily.temperature_2m_max[index]
+                    print("  \(date): temp=\(temp ?? -999)°F")
+                }
+                
                 let weatherInfos = self.transformWeatherData(from: apiResponse)
                 print("Successfully decoded weather data for \(weatherInfos.count) days")
                 completion(.success(weatherInfos))
@@ -276,6 +282,12 @@ class APIService {
 
             do {
                 let apiResponse = try JSONDecoder().decode(WeatherAPIResponse.self, from: data)
+                print("Raw historic weather API response - days: \(apiResponse.daily.time.count)")
+                for (index, date) in apiResponse.daily.time.enumerated() {
+                    let temp = apiResponse.daily.temperature_2m_max[index]
+                    print("  \(date): temp=\(temp ?? -999)°F")
+                }
+                
                 let weatherInfos = self.transformWeatherData(from: apiResponse)
                 print("Successfully decoded historic weather data for \(weatherInfos.count) days")
                 completion(.success(weatherInfos))
@@ -293,10 +305,15 @@ class APIService {
         for i in 0..<daily.time.count {
             let dateString = daily.time[i]
             
-            // Safely unwrap optional values, providing a default of 0.0 if nil
-            let temp = daily.temperature_2m_max[i] ?? 0.0
+            // Check if we have valid temperature data - skip this day if temperature is nil
+            guard let temp = daily.temperature_2m_max[i], temp > -200 else {
+                print("⚠️ Skipping weather data for \(dateString) - invalid or missing temperature: \(daily.temperature_2m_max[i] ?? -999)")
+                continue
+            }
+            
+            // Use reasonable defaults for precipitation and cloud cover if nil
             let precip = daily.precipitation_probability_mean[i] ?? 0.0
-            let cover = daily.cloudcover_mean[i] ?? 0.0
+            let cover = daily.cloudcover_mean[i] ?? 50.0 // Default to partly cloudy
             
             let info = WeatherInfo(
                 temperature: temp,
@@ -304,8 +321,10 @@ class APIService {
                 cloudCover: cover
             )
             weatherInfos[dateString] = info
+            print("✅ Added weather data for \(dateString): \(temp)°F")
         }
         
+        print("📊 Total weather days processed: \(weatherInfos.count)")
         return weatherInfos
     }
 

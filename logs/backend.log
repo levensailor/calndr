@@ -1,10 +1,10 @@
-2025-07-10 11:01:18,029 EST - ERROR - [app.py:124] - Failed to initialize APNs client: APNs.__init__() got an unexpected keyword argument 'key_path'
-2025-07-10 11:01:37,864 EST - INFO - [app.py:122] - APNs client initialized successfully.
-2025-07-10 11:01:47,608 EST - INFO - [app.py:122] - APNs client initialized successfully.
-2025-07-10 12:06:11,416 EST - INFO - [app.py:122] - APNs client initialized successfully.
-2025-07-10 12:06:31,363 EST - INFO - [app.py:122] - APNs client initialized successfully.
-2025-07-10 12:06:52,745 EST - INFO - [app.py:122] - APNs client initialized successfully.
-2025-07-10 15:46:29,191 EST - INFO - [app.py:122] - APNs client initialized successfully.
-2025-07-10 15:47:05,379 EST - INFO - [app.py:122] - APNs client initialized successfully.
-2025-07-17 10:00:30 PM EST - INFO - [<string>:35] - Direct file write test with AM/PM format
-2025-07-17 10:00:30 PM EST - WARNING - [<string>:36] - Testing file handler directly
+2025-07-19 09:45:46 AM EST - INFO - [credentials.py:1147] - Found credentials in environment variables.
+2025-07-19 09:45:46 AM EST - INFO - [notification_service.py:17] - AWS SNS client initialized successfully.
+INFO:     Started server process [84053]
+INFO:     Waiting for application startup.
+2025-07-19 09:45:47 AM EST - INFO - [core.py:113] - Connected to database postgresql+asyncpg://postgres:********@cal-db-instance.cjy8vmu6rtrc.us-east-1.rds.amazonaws.com:5432/postgres
+INFO:     Application startup complete.
+ERROR:    [Errno 48] error while attempting to bind on address ('0.0.0.0', 8000): address already in use
+INFO:     Waiting for application shutdown.
+2025-07-19 09:45:47 AM EST - INFO - [core.py:149] - Disconnected from database postgresql+asyncpg://postgres:********@cal-db-instance.cjy8vmu6rtrc.us-east-1.rds.amazonaws.com:5432/postgres
+INFO:     Application shutdown complete.
