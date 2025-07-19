@@ -745,6 +745,23 @@ struct ScheduleEditView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Cancel") {
+                            dismiss()
+                        }
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
+                    }
+                    
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Save") {
+                            saveChanges()
+                        }
+                        .disabled(scheduleName.isEmpty || isLoading)
+                        .foregroundColor(scheduleName.isEmpty || isLoading ? .gray : .blue)
+                    }
+                }
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
@@ -764,23 +781,23 @@ struct ScheduleEditView: View {
                     }
                 }
                 .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
-            }
-        }
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button("Cancel") {
-                    dismiss()
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Cancel") {
+                            dismiss()
+                        }
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
+                    }
+                    
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Save") {
+                            saveChanges()
+                        }
+                        .disabled(scheduleName.isEmpty || isLoading)
+                        .foregroundColor(scheduleName.isEmpty || isLoading ? .gray : .blue)
+                    }
                 }
-                .foregroundColor(themeManager.currentTheme.textColor.color)
-            }
-            
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Save") {
-                    saveChanges()
-                }
-                .disabled(scheduleName.isEmpty || isLoading)
-                .foregroundColor(scheduleName.isEmpty || isLoading ? .gray : .blue)
             }
         }
         .alert("Edit Template", isPresented: $showingAlert) {
