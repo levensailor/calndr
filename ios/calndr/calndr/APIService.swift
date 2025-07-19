@@ -433,6 +433,63 @@ class APIService {
     }
     
     func updateCustodyRecord(for date: String, custodianId: String, handoffDay: Bool? = nil, handoffTime: String? = nil, handoffLocation: String? = nil, completion: @escaping (Result<CustodyResponse, Error>) -> Void) {
+        // First try to update existing record using PUT
+        let updateUrl = baseURL.appendingPathComponent("/custody/date/\(date)")
+        var updateRequest = createAuthenticatedRequest(url: updateUrl)
+        updateRequest.httpMethod = "PUT"
+        updateRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let custodyRequest = CustodyRequest(date: date, custodian_id: custodianId, handoff_day: handoffDay, handoff_time: handoffTime, handoff_location: handoffLocation)
+        
+        do {
+            updateRequest.httpBody = try JSONEncoder().encode(custodyRequest)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+
+        URLSession.shared.dataTask(with: updateRequest) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server - not HTTP"])))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received on custody update"])))
+                return
+            }
+
+            // Log the raw data as a string for debugging
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("--- Raw JSON for updateCustodyRecord PUT (Status: \(httpResponse.statusCode)) ---")
+                print(jsonString)
+                print("--------------------------------------------------------------------")
+            }
+
+            if (200...299).contains(httpResponse.statusCode) {
+                // Update successful
+                do {
+                    let updatedCustody = try JSONDecoder().decode(CustodyResponse.self, from: data)
+                    completion(.success(updatedCustody))
+                } catch {
+                    completion(.failure(error))
+                }
+            } else if httpResponse.statusCode == 404 {
+                // Record doesn't exist, try to create it with POST
+                print("Custody record doesn't exist for \(date), creating new one...")
+                self.createCustodyRecord(for: date, custodianId: custodianId, handoffDay: handoffDay, handoffTime: handoffTime, handoffLocation: handoffLocation, completion: completion)
+            } else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Failed to update custody record"])))
+            }
+        }.resume()
+    }
+    
+    private func createCustodyRecord(for date: String, custodianId: String, handoffDay: Bool? = nil, handoffTime: String? = nil, handoffLocation: String? = nil, completion: @escaping (Result<CustodyResponse, Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/custody/")
         var request = createAuthenticatedRequest(url: url)
         request.httpMethod = "POST"
@@ -459,25 +516,25 @@ class APIService {
             }
             
             guard let data = data else {
-                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received on custody update"])))
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received on custody creation"])))
                 return
             }
 
             // Log the raw data as a string for debugging
             if let jsonString = String(data: data, encoding: .utf8) {
-                print("--- Raw JSON for updateCustodyRecord (Status: \(httpResponse.statusCode)) ---")
+                print("--- Raw JSON for createCustodyRecord POST (Status: \(httpResponse.statusCode)) ---")
                 print(jsonString)
                 print("--------------------------------------------------------------------")
             }
 
             guard (200...299).contains(httpResponse.statusCode) else {
-                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Failed to create custody record"])))
                 return
             }
             
             do {
-                let updatedCustody = try JSONDecoder().decode(CustodyResponse.self, from: data)
-                completion(.success(updatedCustody))
+                let createdCustody = try JSONDecoder().decode(CustodyResponse.self, from: data)
+                completion(.success(createdCustody))
             } catch {
                 completion(.failure(error))
             }
