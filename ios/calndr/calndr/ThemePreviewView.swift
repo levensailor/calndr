@@ -37,7 +37,7 @@ struct ThemePreviewView: View {
                                         .font(.caption)
                                         .foregroundColor(.white)
                                         .padding(6)
-                                        .background(Color.orange)
+                                        .background(Color.gray)
                                         .clipShape(Circle())
                                 }
                                 
