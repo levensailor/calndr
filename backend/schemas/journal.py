@@ -1,6 +1,7 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Union
 from datetime import date, datetime
+from uuid import UUID
 
 class JournalEntryBase(BaseModel):
     title: Optional[str] = None
@@ -17,11 +18,11 @@ class JournalEntryUpdate(BaseModel):
 
 class JournalEntry(JournalEntryBase):
     id: int
-    family_id: str
-    user_id: str
+    family_id: Union[str, UUID]
+    user_id: Union[str, UUID]
     author_name: str  # Will be populated from user data
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True 
