@@ -6,19 +6,22 @@ struct GoogleSignInButton: View {
     var body: some View {
         Button(action: action) {
             HStack {
-                Text("G")
-                    .font(.title)
-                    .fontWeight(.bold)
-                    .foregroundColor(Color(red: 219/255, green: 68/255, blue: 55/255))
+                Image("GoogleIcon")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
                     .frame(width: 20, height: 20)
                 Text("Sign in with Google")
                     .font(.headline)
+                    .foregroundColor(Color.gray)
             }
             .padding()
             .frame(maxWidth: .infinity)
-            .background(Color.black)
-            .foregroundColor(.white)
-            .cornerRadius(10)
+            .background(Color.white)
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.gray.opacity(0.5), lineWidth: 1)
+            )
         }
     }
 }
