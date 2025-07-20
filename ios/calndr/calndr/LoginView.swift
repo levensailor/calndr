@@ -9,7 +9,12 @@ struct LoginView: View {
 
     var body: some View {
         ZStack {
-            themeManager.currentTheme.mainBackgroundColorSwiftUI.ignoresSafeArea()
+            themeManager.currentTheme.mainBackgroundColorSwiftUI
+                .ignoresSafeArea()
+                .onTapGesture {
+                    // Dismiss keyboard when tapping outside
+                    hideKeyboard()
+                }
             
             VStack(spacing: 20) {
                 Text("calndr")
@@ -78,6 +83,7 @@ struct LoginView: View {
                 } onCompletion: { result in
                     switch result {
                     case .success(let authResults):
+                        print("Apple sign-in success: \(authResults)")
                         if let credential = authResults.credential as? ASAuthorizationAppleIDCredential,
                            let codeData = credential.authorizationCode,
                            let code = String(data: codeData, encoding: .utf8) {
@@ -86,7 +92,7 @@ struct LoginView: View {
                             }
                         }
                     case .failure(let error):
-                        print("Apple login failed", error)
+                        print("Apple login failed: \(error.localizedDescription)")
                     }
                 }
                 .signInWithAppleButtonStyle(.black)
@@ -98,10 +104,6 @@ struct LoginView: View {
             SignUpView()
                 .environmentObject(authManager)
                 .environmentObject(themeManager)
-        }
-        .onTapGesture {
-            // Dismiss keyboard when tapping outside
-            hideKeyboard()
         }
     }
     
