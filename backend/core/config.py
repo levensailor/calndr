@@ -76,8 +76,8 @@ class Settings(BaseSettings):
     GOOGLE_REDIRECT_URI: Optional[str] = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/auth/google/callback")
     
     # Facebook settings
-    FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID", "your_facebook_app_id")
-    FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET", "your_facebook_app_secret")
+    # FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID", "your_facebook_app_id")
+    # FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET", "your_facebook_app_secret")
     
     class Config:
         case_sensitive = True

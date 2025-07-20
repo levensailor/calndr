@@ -16,7 +16,7 @@ from fastapi import Request
 from jose import jwt
 from services.apple_auth_service import exchange_code as apple_exchange_code
 from services.google_auth_service import exchange_code as google_exchange_code, get_user_info as google_get_user_info
-from services.facebook_auth_service import get_user_info as facebook_get_user_info
+# from services.facebook_auth_service import get_user_info as facebook_get_user_info
 from urllib.parse import urlencode
 from core.config import settings
 from google.oauth2 import id_token
