@@ -75,8 +75,8 @@ class AuthenticationManager: ObservableObject {
         }
     }
     
-    func signUp(firstName: String, lastName: String, email: String, password: String, phoneNumber: String?, coparentEmail: String?, completion: @escaping (Bool) -> Void) {
-        APIService.shared.signUp(firstName: firstName, lastName: lastName, email: email, password: password, phoneNumber: phoneNumber, coparentEmail: coparentEmail) { [weak self] result in
+    func signUp(firstName: String, lastName: String, email: String, password: String, phoneNumber: String?, coparentEmail: String?, coparentPhone: String?, completion: @escaping (Bool) -> Void) {
+        APIService.shared.signUp(firstName: firstName, lastName: lastName, email: email, password: password, phoneNumber: phoneNumber, coparentEmail: coparentEmail, coparentPhone: coparentPhone) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let token):

@@ -10,6 +10,7 @@ from db.models import users, families
 from schemas.auth import Token
 from schemas.user import UserRegistration, UserRegistrationResponse
 from services.email_service import email_service
+from services.sms_service import sms_service
 import traceback
 
 router = APIRouter()
@@ -62,10 +63,15 @@ async def register_user(registration_data: UserRegistration):
         family_id = None
         family_name = f"{registration_data.last_name} Family"  # Default family name
         
-        if registration_data.coparent_email:
+        if registration_data.coparent_email or registration_data.coparent_phone:
             # Check if coparent already exists
-            coparent_query = users.select().where(users.c.email == registration_data.coparent_email)
-            existing_coparent = await database.fetch_one(coparent_query)
+            coparent_query = None
+            if registration_data.coparent_email:
+                coparent_query = users.select().where(users.c.email == registration_data.coparent_email)
+            elif registration_data.coparent_phone:
+                coparent_query = users.select().where(users.c.phone_number == registration_data.coparent_phone)
+
+            existing_coparent = await database.fetch_one(coparent_query) if coparent_query is not None else None
             
             if existing_coparent:
                 # Use existing coparent's family
@@ -78,19 +84,22 @@ async def register_user(registration_data: UserRegistration):
                 await database.execute(family_insert)
                 logger.info(f"Created new family: {family_name} with ID: {family_id}")
                 
-                # Send invitation email to coparent
+                # Send invitation via email or SMS
                 try:
-                    email_sent = await email_service.send_coparent_invitation(
-                        coparent_email=registration_data.coparent_email,
-                        inviter_name=registration_data.first_name,
-                        family_id=family_id
-                    )
-                    if email_sent:
-                        logger.info(f"Invitation email sent to {registration_data.coparent_email}")
-                    else:
-                        logger.warning(f"Failed to send invitation email to {registration_data.coparent_email}")
+                    if registration_data.coparent_email:
+                        await email_service.send_coparent_invitation(
+                            coparent_email=registration_data.coparent_email,
+                            inviter_name=registration_data.first_name,
+                            family_id=family_id
+                        )
+                    elif registration_data.coparent_phone:
+                        await sms_service.send_coparent_invitation(
+                            coparent_phone=registration_data.coparent_phone,
+                            inviter_name=registration_data.first_name,
+                            family_id=family_id
+                        )
                 except Exception as e:
-                    logger.error(f"Error sending invitation email: {e}")
+                    logger.error(f"Error sending coparent invitation: {e}")
         else:
             # Create family without coparent
             family_id = uuid.uuid4()

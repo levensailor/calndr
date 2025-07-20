@@ -297,6 +297,17 @@
             <small class="help-text">If your coparent already has an account, you'll be linked automatically. If not, they'll receive an invitation to join.</small>
           </div>
           
+          <div class="form-group">
+            <label for="signup-coparent-phone">Coparent Phone (Optional)</label>
+            <input 
+              type="tel" 
+              id="signup-coparent-phone" 
+              v-model="signupCoparentPhone" 
+              placeholder="Enter your coparent's phone number"
+              :disabled="signupLoading"
+            >
+          </div>
+          
           <div class="signup-actions">
             <button @click="signUp" :disabled="signupLoading" class="signup-submit-button">
               {{ signupLoading ? 'Creating Account...' : 'Create Account' }}
@@ -354,6 +365,7 @@ export default {
       signupConfirmPassword: '',
       signupPhoneNumber: '',
       signupCoparentEmail: '',
+      signupCoparentPhone: '',
       signupLoading: false,
       signupError: null,
     };
@@ -652,7 +664,8 @@ export default {
           email: this.signupEmail.trim(),
           password: this.signupPassword,
           phone_number: this.signupPhoneNumber.trim() || null,
-          coparent_email: this.signupCoparentEmail.trim() || null
+          coparent_email: this.signupCoparentEmail.trim() || null,
+          coparent_phone: this.signupCoparentPhone.trim() || null
         };
         
         const response = await axios.post('/auth/register', registrationData);
@@ -694,6 +707,7 @@ export default {
       this.signupConfirmPassword = '';
       this.signupPhoneNumber = '';
       this.signupCoparentEmail = '';
+      this.signupCoparentPhone = '';
       this.signupError = null;
     },
     formatDate(dateString) {

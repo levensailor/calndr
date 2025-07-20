@@ -37,6 +37,7 @@ struct UserRegistrationRequest: Codable {
     let password: String
     let phone_number: String?
     let coparent_email: String?
+    let coparent_phone: String?
 }
 
 struct UserRegistrationResponse: Codable {
@@ -794,7 +795,7 @@ class APIService {
         }.resume()
     }
     
-    func signUp(firstName: String, lastName: String, email: String, password: String, phoneNumber: String?, coparentEmail: String?, completion: @escaping (Result<String, Error>) -> Void) {
+    func signUp(firstName: String, lastName: String, email: String, password: String, phoneNumber: String?, coparentEmail: String?, coparentPhone: String? = nil, completion: @escaping (Result<String, Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/auth/register")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -806,7 +807,8 @@ class APIService {
             email: email,
             password: password,
             phone_number: phoneNumber,
-            coparent_email: coparentEmail
+            coparent_email: coparentEmail,
+            coparent_phone: coparentPhone
         )
         
         do {

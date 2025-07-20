@@ -41,6 +41,7 @@ class UserRegistration(BaseSchema):
     password: str
     phone_number: Optional[str] = None
     coparent_email: Optional[EmailStr] = None
+    coparent_phone: Optional[str] = None
 
 class UserRegistrationResponse(BaseSchema):
     """Schema for user registration response."""

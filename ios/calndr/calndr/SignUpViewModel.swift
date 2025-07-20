@@ -9,6 +9,7 @@ class SignUpViewModel: ObservableObject {
     @Published var confirmPassword = ""
     @Published var phoneNumber = ""
     @Published var coparentEmail = ""
+    @Published var coparentPhone = ""
     @Published var isLoading = false
     @Published var errorMessage: String?
     
@@ -60,7 +61,8 @@ class SignUpViewModel: ObservableObject {
             email: email.trimmingCharacters(in: .whitespacesAndNewlines),
             password: password,
             phoneNumber: phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines),
-            coparentEmail: coparentEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : coparentEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+            coparentEmail: coparentEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : coparentEmail.trimmingCharacters(in: .whitespacesAndNewlines),
+            coparentPhone: coparentPhone.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : coparentPhone.trimmingCharacters(in: .whitespacesAndNewlines)
         ) { [weak self] result in
             DispatchQueue.main.async {
                 self?.isLoading = false

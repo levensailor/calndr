@@ -74,6 +74,14 @@ struct SignUpView: View {
                         .frame(height: 56)
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
+
+                        FloatingLabelTextField(
+                            title: "Coparent Phone (Optional)",
+                            text: $viewModel.coparentPhone,
+                            isSecure: false
+                        )
+                        .frame(height: 56)
+                        .keyboardType(.phonePad)
                     }
                     .padding(.horizontal)
                     
