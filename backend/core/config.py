@@ -62,6 +62,13 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: Optional[str] = os.getenv("SMTP_PASSWORD")
     SMTP_HOST: Optional[str] = os.getenv("SMTP_HOST")
     SMTP_PORT: Optional[int] = os.getenv("SMTP_PORT")
+
+    # Apple Sign-In
+    APPLE_CLIENT_ID: Optional[str] = os.getenv("APPLE_CLIENT_ID")
+    APPLE_TEAM_ID: Optional[str] = os.getenv("APPLE_TEAM_ID")
+    APPLE_KEY_ID: Optional[str] = os.getenv("APPLE_KEY_ID")
+    APPLE_PRIVATE_KEY: Optional[str] = os.getenv("APPLE_PRIVATE_KEY")
+    APPLE_REDIRECT_URI: Optional[str] = os.getenv("APPLE_REDIRECT_URI")
     
     class Config:
         case_sensitive = True

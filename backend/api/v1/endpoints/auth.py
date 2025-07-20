@@ -12,6 +12,11 @@ from schemas.user import UserRegistration, UserRegistrationResponse
 from services.email_service import email_service
 from services.sms_service import sms_service
 import traceback
+from fastapi import Request
+from jose import jwt
+from services.apple_auth_service import exchange_code
+from urllib.parse import urlencode
+from core.config import settings
 
 router = APIRouter()
 
@@ -143,3 +148,75 @@ async def register_user(registration_data: UserRegistration):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Registration failed. Please try again."
         )
+
+@router.post("/apple/server-notify", status_code=204)
+async def apple_server_notification(request: Request):
+    """Endpoint that Apple calls for server-to-server notifications (e.g., subscription events)."""
+    # For now, we'll just log the request and return a 204
+    body = await request.body()
+    logger.info(f"Received Apple server-to-server notification: {body.decode()}")
+    return
+
+@router.get("/apple/login")
+async def apple_login():
+    """Return the Apple auth URL for the frontend."""
+    params = {
+        "client_id": settings.APPLE_CLIENT_ID,
+        "redirect_uri": settings.APPLE_REDIRECT_URI,
+        "response_type": "code",
+        "scope": "name email",
+        "response_mode": "form_post",
+    }
+    url = "https://appleid.apple.com/auth/authorize?" + urlencode(params)
+    return {"auth_url": url}
+
+@router.post("/apple/callback", response_model=Token)
+async def apple_callback(request: Request):
+    form = await request.form()
+    code = form.get("code")
+    
+    logger.info(f"Received Apple auth code: {code}")
+    
+    try:
+        tokens = await exchange_code(code)
+        logger.info(f"Received tokens from Apple: {tokens}")
+    except Exception as e:
+        logger.error(f"Error exchanging Apple auth code: {e}")
+        raise HTTPException(status_code=500, detail="Error exchanging Apple auth code")
+
+    id_token = tokens.get("id_token")
+    if not id_token:
+        logger.error("No id_token in Apple response")
+        raise HTTPException(status_code=500, detail="No id_token in Apple response")
+        
+    claims = jwt.get_unverified_claims(id_token)
+
+    email      = claims.get("email")
+    first_name = claims.get("given_name", "Apple")
+    last_name  = claims.get("family_name", "User")
+
+    # 1) Lookup existing user by email
+    query = users.select().where(users.c.email == email)
+    existing = await database.fetch_one(query)
+
+    if existing:
+        user_id   = existing["id"]
+        family_id = existing["family_id"]
+    else:
+        # 2) Create new user & family
+        family_id = uuid.uuid4()
+        await database.execute(families.insert().values(id=family_id, name=f"{last_name} Family"))
+        user_id = uuid.uuid4()
+        await database.execute(users.insert().values(
+            id=user_id,
+            family_id=family_id,
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            password_hash="",          # unused
+            subscription_type="Free"
+        ))
+
+    access_token = create_access_token(data={"sub": uuid_to_string(user_id),
+                                             "family_id": uuid_to_string(family_id)})
+    return {"access_token": access_token, "token_type": "bearer"}
