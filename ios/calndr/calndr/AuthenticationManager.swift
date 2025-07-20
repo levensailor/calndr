@@ -104,15 +104,19 @@ class AuthenticationManager: ObservableObject {
             coparentPhone: nil
         ) { [weak self] result in
             switch result {
-            case .success(let accessToken):
-                // Save the token but don't set isAuthenticated yet
-                // This allows the onboarding flow to complete first
-                self?.authToken = accessToken
-                KeychainManager.shared.save(token: accessToken, for: "currentUser")
+            case .success(let response):
+                // Save the token
+                self?.authToken = response.token
+                KeychainManager.shared.save(token: response.token, for: "currentUser")
                 
-                // Mark that onboarding is needed for new users
-                self?.hasCompletedOnboarding = false
-                UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+                // Set onboarding state based on backend response
+                self?.hasCompletedOnboarding = response.shouldSkipOnboarding
+                UserDefaults.standard.set(response.shouldSkipOnboarding, forKey: "hasCompletedOnboarding")
+                
+                // If they should skip onboarding, mark as authenticated immediately
+                if response.shouldSkipOnboarding {
+                    self?.isAuthenticated = true
+                }
                 
                 completion(true)
             case .failure(let error):

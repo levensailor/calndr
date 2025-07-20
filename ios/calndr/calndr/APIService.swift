@@ -46,6 +46,12 @@ struct UserRegistrationResponse: Codable {
     let access_token: String
     let token_type: String
     let message: String
+    let should_skip_onboarding: Bool?
+    
+    // Computed property to provide default value
+    var shouldSkipOnboarding: Bool {
+        return should_skip_onboarding ?? false
+    }
 }
 
 struct CoParentCreateRequest: Codable {
@@ -920,7 +926,7 @@ class APIService {
         }.resume()
     }
     
-    func signUp(firstName: String, lastName: String, email: String, password: String, phoneNumber: String?, coparentEmail: String?, coparentPhone: String? = nil, completion: @escaping (Result<String, Error>) -> Void) {
+    func signUp(firstName: String, lastName: String, email: String, password: String, phoneNumber: String?, coparentEmail: String?, coparentPhone: String? = nil, completion: @escaping (Result<(token: String, shouldSkipOnboarding: Bool), Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/auth/register")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -964,7 +970,7 @@ class APIService {
             
             do {
                 let registrationResponse = try JSONDecoder().decode(UserRegistrationResponse.self, from: data)
-                completion(.success(registrationResponse.access_token))
+                completion(.success((token: registrationResponse.access_token, shouldSkipOnboarding: registrationResponse.shouldSkipOnboarding)))
             } catch {
                 completion(.failure(error))
             }

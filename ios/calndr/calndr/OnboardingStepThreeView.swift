@@ -11,12 +11,28 @@ struct OnboardingStepThreeView: View {
         "Sunday": 0
     ]
     
-    @State private var parentNames = ["Parent 1", "Parent 2"]
+    @State private var parentNames: [String]
     @State private var showingCustomNames = false
     @State private var customParent1Name = ""
     @State private var customParent2Name = ""
     
+    let primaryParentName: String
+    let coparentName: String?
     var onComplete: () -> Void
+    
+    init(primaryParentName: String, coparentName: String?, onComplete: @escaping () -> Void) {
+        self.primaryParentName = primaryParentName
+        self.coparentName = coparentName
+        self.onComplete = onComplete
+        
+        // Initialize parent names based on the provided data
+        self._parentNames = State(initialValue: [
+            primaryParentName,
+            coparentName ?? "Co-Parent"
+        ])
+        self._customParent1Name = State(initialValue: primaryParentName)
+        self._customParent2Name = State(initialValue: coparentName ?? "Co-Parent")
+    }
     
     private let daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     

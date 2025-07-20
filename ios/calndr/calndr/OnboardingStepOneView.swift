@@ -9,7 +9,7 @@ struct OnboardingStepOneView: View {
     @State private var errorMessage: String?
     @State private var showingAlert = false
 
-    var onNext: () -> Void
+    var onNext: (String) -> Void  // Pass coparent first name
     var onSkip: () -> Void
 
     var body: some View {
@@ -18,11 +18,20 @@ struct OnboardingStepOneView: View {
             
             VStack(spacing: 15) {
                 FloatingLabelTextField(title: "First Name", text: $coparentFirstName, isSecure: false)
+                    .frame(height: 56)
+                    .autocapitalization(.words)
+                
                 FloatingLabelTextField(title: "Last Name", text: $coparentLastName, isSecure: false)
+                    .frame(height: 56)
+                    .autocapitalization(.words)
+                
                 FloatingLabelTextField(title: "Email", text: $coparentEmail, isSecure: false)
+                    .frame(height: 56)
                     .keyboardType(.emailAddress)
                     .autocapitalization(.none)
+                
                 FloatingLabelTextField(title: "Phone Number", text: $coparentPhone, isSecure: false)
+                    .frame(height: 56)
                     .keyboardType(.phonePad)
             }
             .padding(.horizontal)
@@ -47,7 +56,7 @@ struct OnboardingStepOneView: View {
                     if allFieldsFilled() {
                         inviteCoParent()
                     } else {
-                        onNext()
+                        onNext("")
                     }
                 }) {
                     HStack {
@@ -72,7 +81,7 @@ struct OnboardingStepOneView: View {
         .padding()
         .alert("Invitation Result", isPresented: $showingAlert) {
             Button("OK") {
-                onNext()
+                onNext(coparentFirstName.trimmingCharacters(in: .whitespacesAndNewlines))
             }
         } message: {
             Text(errorMessage ?? "Co-parent invitation sent successfully!")

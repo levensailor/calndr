@@ -59,7 +59,8 @@ async def register_user(registration_data: UserRegistration):
         existing_user_query = users.select().where(users.c.email == registration_data.email)
         existing_user = await database.fetch_one(existing_user_query)
         
-        if existing_user:
+        # If user exists and is not invited, return conflict
+        if existing_user and existing_user.get('status') != 'invited':
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="User with this email already exists"
@@ -68,31 +69,49 @@ async def register_user(registration_data: UserRegistration):
         # Hash the password
         password_hash = get_password_hash(registration_data.password)
         
-        # Create a new family for the user
-        family_id = uuid.uuid4()
-        family_name = f"{registration_data.last_name} Family"
-        family_insert = families.insert().values(id=family_id, name=family_name)
-        await database.execute(family_insert)
-        logger.info(f"Created new family: {family_name} with ID: {family_id}")
+        should_skip_onboarding = False
         
-        # Generate UUID for the user
-        user_id = uuid.uuid4()
-        
-        # Create the user
-        user_insert = users.insert().values(
-            id=user_id,
-            family_id=family_id,
-            first_name=registration_data.first_name,
-            last_name=registration_data.last_name,
-            email=registration_data.email,
-            password_hash=password_hash,
-            phone_number=registration_data.phone_number,
-            subscription_type="Free",
-            subscription_status="Active"
-        )
-        
-        await database.execute(user_insert)
-        logger.info(f"Created user with ID: {user_id}")
+        if existing_user and existing_user.get('status') == 'invited':
+            # User was invited - update their record with password and mark as active
+            user_id = existing_user['id']
+            family_id = existing_user['family_id']
+            should_skip_onboarding = True
+            
+            user_update = users.update().where(users.c.id == user_id).values(
+                password_hash=password_hash,
+                phone_number=registration_data.phone_number,
+                status="active",
+                subscription_type="Free",
+                subscription_status="Active"
+            )
+            await database.execute(user_update)
+            logger.info(f"Updated invited user with ID: {user_id}")
+        else:
+            # New user - create new family and user
+            family_id = uuid.uuid4()
+            family_name = f"{registration_data.last_name} Family"
+            family_insert = families.insert().values(id=family_id, name=family_name)
+            await database.execute(family_insert)
+            logger.info(f"Created new family: {family_name} with ID: {family_id}")
+            
+            # Generate UUID for the user
+            user_id = uuid.uuid4()
+            
+            # Create the user
+            user_insert = users.insert().values(
+                id=user_id,
+                family_id=family_id,
+                first_name=registration_data.first_name,
+                last_name=registration_data.last_name,
+                email=registration_data.email,
+                password_hash=password_hash,
+                phone_number=registration_data.phone_number,
+                subscription_type="Free",
+                subscription_status="Active"
+            )
+            
+            await database.execute(user_insert)
+            logger.info(f"Created user with ID: {user_id}")
         
         # Create access token for the new user
         access_token = create_access_token(
@@ -100,10 +119,12 @@ async def register_user(registration_data: UserRegistration):
         )
         
         return UserRegistrationResponse(
+            token_type="bearer",
             user_id=uuid_to_string(user_id),
             family_id=uuid_to_string(family_id),
             access_token=access_token,
-            message="User registered successfully"
+            message="User registered successfully",
+            should_skip_onboarding=should_skip_onboarding
         )
         
     except HTTPException:

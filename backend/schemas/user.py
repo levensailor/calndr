@@ -52,6 +52,7 @@ class UserRegistrationResponse(BaseSchema):
     access_token: str
     token_type: str
     message: str
+    should_skip_onboarding: bool = False
 
 class UserProfile(BaseSchema):
     """Schema for user profile information."""
