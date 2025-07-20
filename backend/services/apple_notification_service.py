@@ -2,6 +2,7 @@ import httpx, time, json
 from jose import jwk, jwt
 from jose.utils import base64url_decode
 from core.logging import logger
+from typing import Optional
 
 APPLE_KEYS_URL = "https://appleid.apple.com/auth/keys"
 
@@ -21,7 +22,7 @@ class AppleNotificationService:
             self.cached_at = time.time()
             return self.cached_keys
 
-    async def verify_jws(self, jws_token: str) -> dict | None:
+    async def verify_jws(self, jws_token: str) -> Optional[dict]:
         try:
             headers = jwt.get_unverified_header(jws_token)
             kid = headers["kid"]
