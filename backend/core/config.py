@@ -60,6 +60,8 @@ class Settings(BaseSettings):
     # Email Configuration
     SMTP_USER: Optional[str] = os.getenv("SMTP_USER")
     SMTP_PASSWORD: Optional[str] = os.getenv("SMTP_PASSWORD")
+    SMTP_HOST: Optional[str] = os.getenv("SMTP_HOST")
+    SMTP_PORT: Optional[int] = os.getenv("SMTP_PORT")
     
     class Config:
         case_sensitive = True

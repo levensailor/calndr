@@ -10,8 +10,8 @@ class EmailService:
     """Service for sending emails."""
     
     def __init__(self):
-        self.smtp_host = "smtp.gmail.com"  # Could be made configurable
-        self.smtp_port = 587
+        self.smtp_host = settings.SMTP_HOST if hasattr(settings, 'SMTP_HOST') else None
+        self.smtp_port = settings.SMTP_PORT if hasattr(settings, 'SMTP_PORT') else None
         self.smtp_user = settings.SMTP_USER if hasattr(settings, 'SMTP_USER') else None
         self.smtp_password = settings.SMTP_PASSWORD if hasattr(settings, 'SMTP_PASSWORD') else None
     
