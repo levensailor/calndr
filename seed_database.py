@@ -44,8 +44,9 @@ async def main():
         
         # 1. Create the Family
         print("Creating the Levensailor family...")
-        family_query = families.insert().values(name="Levensailor").returning(families.c.id)
-        family_id = await db.execute(family_query)
+        family_id = uuid.uuid4()
+        family_query = families.insert().values(id=family_id, name="Levensailor")
+        await db.execute(family_query)
         print(f"  - Family created with ID: {family_id}")
 
         # 2. Hash passwords and create users
@@ -53,26 +54,30 @@ async def main():
         jeff_password_hash = get_password_hash("rowen")
         deanna_password_hash = get_password_hash("rowen")
 
+        jeff_id = uuid.uuid4()
         jeff_query = users.insert().values(
+            id=jeff_id,
             family_id=family_id,
             first_name="Jeff",
             last_name="Levensailor",
             email="jeff@levensailor.com",
             password_hash=jeff_password_hash,
             phone_number="9194289853"
-        ).returning(users.c.id)
-        jeff_id = await db.execute(jeff_query)
+        )
+        await db.execute(jeff_query)
         print(f"  - User 'Jeff' created with ID: {jeff_id}")
 
+        deanna_id = uuid.uuid4()
         deanna_query = users.insert().values(
+            id=deanna_id,
             family_id=family_id,
             first_name="Deanna",
             last_name="Levensailor",
             email="deanna@levensailor.com",
             password_hash=deanna_password_hash,
             phone_number="9102741355"
-        ).returning(users.c.id)
-        deanna_id = await db.execute(deanna_query)
+        )
+        await db.execute(deanna_query)
         print(f"  - User 'Deanna' created with ID: {deanna_id}")
 
         # 3. Create the Child
