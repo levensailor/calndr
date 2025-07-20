@@ -1,6 +1,6 @@
 import httpx
 import time
-import jwt
+from jose import jwt
 from core.config import settings
 from core.logging import logger
 
