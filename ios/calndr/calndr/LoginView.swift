@@ -1,4 +1,5 @@
 import SwiftUI
+import AuthenticationServices
 
 struct LoginView: View {
     @StateObject private var viewModel = LoginViewModel()
@@ -71,6 +72,26 @@ struct LoginView: View {
                         .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                         .padding()
                 }
+                
+                SignInWithAppleButton(.signIn) { request in
+                    request.requestedScopes = [.fullName, .email]
+                } onCompletion: { result in
+                    switch result {
+                    case .success(let authResults):
+                        if let credential = authResults.credential as? ASAuthorizationAppleIDCredential,
+                           let codeData = credential.authorizationCode,
+                           let code = String(data: codeData, encoding: .utf8) {
+                            authManager.loginWithApple(authorizationCode: code) { success in
+                                // handle UI if needed
+                            }
+                        }
+                    case .failure(let error):
+                        print("Apple login failed", error)
+                    }
+                }
+                .signInWithAppleButtonStyle(.black)
+                .frame(height: 45)
+                .padding(.horizontal)
             }
         }
         .sheet(isPresented: $showingSignUp) {

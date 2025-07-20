@@ -48,6 +48,10 @@ struct UserRegistrationResponse: Codable {
     let message: String
 }
 
+struct TokenResponse: Codable {
+    let access_token: String
+}
+
 class APIService {
     static let shared = APIService()
     private let baseURL = URL(string: "https://calndr.club/api/v1")!
@@ -2630,6 +2634,30 @@ class APIService {
             do {
                 let entry = try JSONDecoder().decode(JournalEntry.self, from: data)
                 completion(.success(entry))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+
+    func loginWithApple(code: String, completion: @escaping (Result<String, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/auth/apple/callback")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.httpBody = "code=\(code)".data(using: .utf8)
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            guard let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data"])))
+                return
+            }
+            do {
+                let tokenResp = try JSONDecoder().decode(TokenResponse.self, from: data)
+                completion(.success(tokenResp.access_token))
             } catch {
                 completion(.failure(error))
             }
