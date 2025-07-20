@@ -40,7 +40,7 @@ async def invite_co_parent(co_parent_data: CoParentCreate, current_user = Depend
         last_name=co_parent_data.last_name,
         email=co_parent_data.email,
         phone_number=co_parent_data.phone_number,
-        hashed_password=hashed_password,
+        password_hash=hashed_password,
         family_id=family_id,
         status="invited"
     )
