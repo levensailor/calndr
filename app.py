@@ -675,18 +675,24 @@ async def register_user(registration_data: UserRegistration):
                 logger.info(f"Adding user to existing family: {registration_data.family_name}")
             else:
                 # Create new family
-                family_insert = families.insert().values(name=registration_data.family_name).returning(families.c.id)
-                family_id = await database.execute(family_insert)
+                family_id = uuid.uuid4()
+                family_insert = families.insert().values(id=family_id, name=registration_data.family_name)
+                await database.execute(family_insert)
                 logger.info(f"Created new family: {registration_data.family_name} with ID: {family_id}")
         else:
             # Create family with user's last name if no family name provided
             default_family_name = f"{registration_data.last_name} Family"
-            family_insert = families.insert().values(name=default_family_name).returning(families.c.id)
-            family_id = await database.execute(family_insert)
+            family_id = uuid.uuid4()
+            family_insert = families.insert().values(id=family_id, name=default_family_name)
+            await database.execute(family_insert)
             logger.info(f"Created default family: {default_family_name} with ID: {family_id}")
+        
+        # Generate UUID for the user
+        user_id = uuid.uuid4()
         
         # Create the user
         user_insert = users.insert().values(
+            id=user_id,
             family_id=family_id,
             first_name=registration_data.first_name,
             last_name=registration_data.last_name,
@@ -695,9 +701,9 @@ async def register_user(registration_data: UserRegistration):
             phone_number=registration_data.phone_number,
             subscription_type="Free",
             subscription_status="Active"
-        ).returning(users.c.id)
+        )
         
-        user_id = await database.execute(user_insert)
+        await database.execute(user_insert)
         logger.info(f"Created user with ID: {user_id}")
         
         # Create access token for the new user
