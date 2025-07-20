@@ -110,3 +110,10 @@ body {
     height: -webkit-fill-available !important;
   }
 } 
+
+/* Placeholder styling for better contrast */
+input::placeholder,
+textarea::placeholder {
+  color: #888;
+  opacity: 1; /* ensure full opacity */
+} 

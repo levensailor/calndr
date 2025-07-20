@@ -23,7 +23,7 @@ struct FloatingLabelTextField: View {
                     HStack {
                         Text(title)
                             .font(.caption)
-                            .foregroundColor(isFocused ? Color.blue : Color.primary)
+                            .foregroundColor(isFocused ? Color.blue : themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
                         Spacer()
                     }
                     .padding(.top, 8)
