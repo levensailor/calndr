@@ -2,6 +2,7 @@ import SwiftUI
 import AuthenticationServices
 import GoogleSignIn
 // import GoogleSignInSwift
+import FacebookLogin
 
 struct LoginView: View {
     @StateObject private var viewModel = LoginViewModel()
@@ -106,6 +107,13 @@ struct LoginView: View {
                 }
                 .frame(height: 45)
                 .padding(.horizontal)
+
+                FacebookSignInButton()
+                    .frame(height: 45)
+                    .padding(.horizontal)
+                    .onTapGesture {
+                        handleFacebookLogin()
+                    }
             }
         }
         .sheet(isPresented: $showingSignUp) {
@@ -141,6 +149,31 @@ struct LoginView: View {
                 authManager.loginWithGoogle(idToken: idToken) { success in
                     if !success {
                         viewModel.errorMessage = "Failed to log in with Google."
+                    }
+                }
+            }
+        }
+    }
+
+    private func handleFacebookLogin() {
+        let loginManager = LoginManager()
+        loginManager.logIn(permissions: ["public_profile", "email"], from: nil) { result, error in
+            if let error = error {
+                print("Facebook login error: \(error.localizedDescription)")
+                viewModel.errorMessage = "Facebook login failed."
+                return
+            }
+
+            guard let result = result, !result.isCancelled else {
+                print("Facebook login cancelled.")
+                return
+            }
+
+            if let token = result.token {
+                let accessToken = token.tokenString
+                authManager.loginWithFacebook(accessToken: accessToken) { success in
+                    if !success {
+                        viewModel.errorMessage = "Failed to log in with Facebook."
                     }
                 }
             }

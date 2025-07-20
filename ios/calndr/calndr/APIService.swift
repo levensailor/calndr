@@ -2687,4 +2687,35 @@ class APIService {
             }
         }.resume()
     }
+
+    func loginWithFacebook(accessToken: String, completion: @escaping (Result<String, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/auth/facebook/ios-login")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body = ["token": accessToken]
+        request.httpBody = try? JSONEncoder().encode(body)
+
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            guard let data = data else {
+                completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data"])))
+                return
+            }
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+                   let token = json["access_token"] as? String {
+                    completion(.success(token))
+                } else {
+                    completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])))
+                }
+            } catch {
+                completion(.failure(error))
+            }
+        }
+        task.resume()
+    }
 } 
