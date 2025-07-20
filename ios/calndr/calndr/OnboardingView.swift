@@ -3,6 +3,7 @@ import SwiftUI
 struct OnboardingView: View {
     @State private var currentStep = 1
     @Binding var isOnboardingComplete: Bool
+    @EnvironmentObject var authManager: AuthenticationManager
 
     var body: some View {
         VStack {
@@ -20,9 +21,12 @@ struct OnboardingView: View {
                 })
             } else if currentStep == 3 {
                 OnboardingStepThreeView(onComplete: {
+                    // Complete onboarding and transition to main app
+                    authManager.completeOnboarding()
                     isOnboardingComplete = true
                 })
             }
         }
+        .environmentObject(authManager)
     }
 } 

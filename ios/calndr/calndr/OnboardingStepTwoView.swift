@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct OnboardingStepTwoView: View {
-    @State private var children: [Child] = [Child(name: "", dob: Date())]
+    @State private var children: [OnboardingChild] = [OnboardingChild(name: "", dob: Date())]
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var showingAlert = false
@@ -36,7 +36,7 @@ struct OnboardingStepTwoView: View {
                     }
                     
                     Button(action: {
-                        children.append(Child(name: "", dob: Date()))
+                        children.append(OnboardingChild(name: "", dob: Date()))
                     }) {
                         HStack {
                             Image(systemName: "plus.circle")
@@ -158,7 +158,7 @@ struct OnboardingStepTwoView: View {
     }
 }
 
-struct Child: Identifiable {
+struct OnboardingChild: Identifiable {
     let id = UUID()
     var name: String
     var dob: Date

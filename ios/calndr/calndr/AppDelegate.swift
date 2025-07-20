@@ -2,7 +2,6 @@ import UIKit
 import UserNotifications
 import FacebookCore
 
-@main
 class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
 
     var window: UIWindow?

@@ -6,6 +6,8 @@ class AuthenticationManager: ObservableObject {
     @Published var isLoading: Bool = true
     @Published var username: String?
     @Published var userID: String?
+    @Published var hasCompletedOnboarding: Bool = true // Default to true for existing users
+    @Published var authToken: String?
     
     private var cancellables = Set<AnyCancellable>()
 
@@ -26,12 +28,21 @@ class AuthenticationManager: ObservableObject {
                 self.username = decodedToken["name"] as? String
                 self.userID = decodedToken["sub"] as? String
                 
+                // Check if user has completed onboarding
+                // If the key doesn't exist, assume true for existing users
+                if UserDefaults.standard.object(forKey: "hasCompletedOnboarding") != nil {
+                    self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
+                } else {
+                    self.hasCompletedOnboarding = true // Default to true for existing users
+                }
+                
                 print("🔐 AuthenticationManager: Set isAuthenticated = true, username = \(self.username ?? "nil"), userID = \(self.userID ?? "nil")")
             } else {
                 print("🔐 AuthenticationManager: No token found in keychain")
                 self.isAuthenticated = false
                 self.username = nil
                 self.userID = nil
+                self.hasCompletedOnboarding = true // Reset for new users
                 print("🔐 AuthenticationManager: Set isAuthenticated = false")
             }
             self.isLoading = false
@@ -93,14 +104,31 @@ class AuthenticationManager: ObservableObject {
             coparentPhone: nil
         ) { [weak self] result in
             switch result {
-            case .success(let response):
-                self?.authToken = response.accessToken
-                self?.isAuthenticated = true
+            case .success(let accessToken):
+                // Save the token but don't set isAuthenticated yet
+                // This allows the onboarding flow to complete first
+                self?.authToken = accessToken
+                KeychainManager.shared.save(token: accessToken, for: "currentUser")
+                
+                // Mark that onboarding is needed for new users
+                self?.hasCompletedOnboarding = false
+                UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+                
                 completion(true)
             case .failure(let error):
                 print("Sign up failure:", error)
                 completion(false)
             }
+        }
+    }
+    
+    func completeOnboarding() {
+        hasCompletedOnboarding = true
+        UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+        
+        // Now set isAuthenticated to true to transition to the main app
+        if authToken != nil {
+            isAuthenticated = true
         }
     }
     
@@ -116,6 +144,8 @@ class AuthenticationManager: ObservableObject {
             self.isLoading = false
             self.username = nil
             self.userID = nil
+            self.hasCompletedOnboarding = true // Reset for next user
+            UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
             print("🔐❌ AuthenticationManager: Logout complete - isAuthenticated = false")
         }
     }

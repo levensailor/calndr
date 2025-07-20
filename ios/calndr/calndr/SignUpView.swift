@@ -121,7 +121,8 @@ struct SignUpView: View {
             hideKeyboard()
         }
         .fullScreenCover(isPresented: $isOnboardingPresented) {
-            OnboardingView(isOnboardingComplete: .constant(false))
+            OnboardingView(isOnboardingComplete: $isOnboardingPresented)
+                .environmentObject(authManager)
         }
     }
     
