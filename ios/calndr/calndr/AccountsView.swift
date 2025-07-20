@@ -261,22 +261,22 @@ struct AccountsView: View {
     }
     
     private func updatePhoneNumber(_ newPhone: String) {
-        // TODO: Implement phone number update API call
         print("Updating phone number to: \(newPhone)")
-        // For now, just update the local profile
-        if let profile = userProfile {
-            userProfile = UserProfile(
-                id: profile.id,
-                first_name: profile.first_name,
-                last_name: profile.last_name,
-                email: profile.email,
-                phone_number: newPhone.isEmpty ? nil : newPhone,
-                subscription_type: profile.subscription_type,
-                subscription_status: profile.subscription_status,
-                created_at: profile.created_at,
-                profile_photo_url: profile.profile_photo_url,
-                selected_theme_id: profile.selected_theme_id
-            )
+        
+        let phoneNumber = newPhone.trimmingCharacters(in: .whitespacesAndNewlines)
+        let profileUpdate = UserProfileUpdate(phoneNumber: phoneNumber.isEmpty ? nil : phoneNumber)
+        
+        APIService.shared.updateUserProfile(userUpdate: profileUpdate) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let updatedProfile):
+                    self.userProfile = updatedProfile
+                    print("✅ Phone number updated successfully")
+                case .failure(let error):
+                    print("❌ Failed to update phone number: \(error.localizedDescription)")
+                    // Optionally show an error message to the user
+                }
+            }
         }
     }
     

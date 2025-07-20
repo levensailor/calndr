@@ -12,7 +12,7 @@ from core.logging import logger
 from core.config import settings
 from db.models import users, user_preferences
 from schemas.user import (
-    UserProfile, PasswordUpdate, UserPreferenceUpdate, 
+    UserProfile, UserUpdate, PasswordUpdate, UserPreferenceUpdate, 
     LocationUpdateRequest, FamilyMember, FamilyMemberEmail
 )
 
@@ -59,6 +59,37 @@ async def get_user_profile_legacy(current_user = Depends(get_current_user)):
     Legacy endpoint for backward compatibility.
     """
     return await get_user_profile(current_user)
+
+@router.put("/profile", response_model=UserProfile)
+async def update_user_profile(user_update: UserUpdate, current_user = Depends(get_current_user)):
+    """
+    Update the current user's profile information.
+    """
+    try:
+        # Build update values dictionary with only provided fields
+        update_values = {}
+        if user_update.first_name is not None:
+            update_values['first_name'] = user_update.first_name
+        if user_update.last_name is not None:
+            update_values['last_name'] = user_update.last_name
+        if user_update.email is not None:
+            update_values['email'] = user_update.email
+        if user_update.phone_number is not None:
+            update_values['phone_number'] = user_update.phone_number
+        
+        # Only perform update if there are fields to update
+        if update_values:
+            await database.execute(
+                users.update().where(users.c.id == current_user['id']).values(**update_values)
+            )
+            logger.info(f"Updated user profile for user {current_user['id']}: {list(update_values.keys())}")
+        
+        # Return updated profile
+        return await get_user_profile(current_user)
+    except Exception as e:
+        logger.error(f"Error updating user profile: {e}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Failed to update user profile")
 
 @router.put("/me/password")
 async def update_user_password(password_update: PasswordUpdate, current_user = Depends(get_current_user)):

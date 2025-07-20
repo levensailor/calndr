@@ -160,6 +160,20 @@ struct PasswordValidation: Codable {
     let password: String
 }
 
+struct UserProfileUpdate: Codable {
+    let first_name: String?
+    let last_name: String?
+    let email: String?
+    let phone_number: String?
+    
+    init(firstName: String? = nil, lastName: String? = nil, email: String? = nil, phoneNumber: String? = nil) {
+        self.first_name = firstName
+        self.last_name = lastName
+        self.email = email
+        self.phone_number = phoneNumber
+    }
+}
+
 // User Profile Model
 struct UserProfile: Codable {
     let id: String

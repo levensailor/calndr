@@ -1003,6 +1003,44 @@ class APIService {
         }.resume()
     }
 
+    func updateUserProfile(userUpdate: UserProfileUpdate, completion: @escaping (Result<UserProfile, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/users/profile")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "PUT"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            request.httpBody = try JSONEncoder().encode(userUpdate)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Failed to update profile"])))
+                return
+            }
+            
+            do {
+                let updatedProfile = try JSONDecoder().decode(UserProfile.self, from: data)
+                completion(.success(updatedProfile))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+
     func updateDeviceToken(token: String, completion: @escaping (Result<Void, Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/users/me/device-token")
 
