@@ -75,8 +75,12 @@ async def register_user(registration_data: UserRegistration):
         await database.execute(family_insert)
         logger.info(f"Created new family: {family_name} with ID: {family_id}")
         
+        # Generate UUID for the user
+        user_id = uuid.uuid4()
+        
         # Create the user
         user_insert = users.insert().values(
+            id=user_id,
             family_id=family_id,
             first_name=registration_data.first_name,
             last_name=registration_data.last_name,
@@ -85,9 +89,9 @@ async def register_user(registration_data: UserRegistration):
             phone_number=registration_data.phone_number,
             subscription_type="Free",
             subscription_status="Active"
-        ).returning(users.c.id)
+        )
         
-        user_id = await database.execute(user_insert)
+        await database.execute(user_insert)
         logger.info(f"Created user with ID: {user_id}")
         
         # Create access token for the new user
