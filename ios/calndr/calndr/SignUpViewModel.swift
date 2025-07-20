@@ -8,12 +8,10 @@ class SignUpViewModel: ObservableObject {
     @Published var password = ""
     @Published var confirmPassword = ""
     @Published var phoneNumber = ""
-    @Published var coparentEmail = ""
-    @Published var coparentPhone = ""
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    func signUp(authManager: AuthenticationManager) {
+    func signUp(authManager: AuthenticationManager, completion: @escaping (Bool) -> Void) {
         // Clear previous error
         errorMessage = nil
         
@@ -60,15 +58,14 @@ class SignUpViewModel: ObservableObject {
             lastName: lastName.trimmingCharacters(in: .whitespacesAndNewlines),
             email: email.trimmingCharacters(in: .whitespacesAndNewlines),
             password: password,
-            phoneNumber: phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines),
-            coparentEmail: coparentEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : coparentEmail.trimmingCharacters(in: .whitespacesAndNewlines),
-            coparentPhone: coparentPhone.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : coparentPhone.trimmingCharacters(in: .whitespacesAndNewlines)
+            phoneNumber: phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines)
         ) { [weak self] result in
             DispatchQueue.main.async {
                 self?.isLoading = false
                 if !result {
                     self?.errorMessage = "Registration failed. Please check your information and try again."
                 }
+                completion(result)
             }
         }
     }

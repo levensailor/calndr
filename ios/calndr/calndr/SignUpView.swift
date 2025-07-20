@@ -5,6 +5,7 @@ struct SignUpView: View {
     @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.presentationMode) var presentationMode
+    @State private var isOnboardingPresented = false
 
     var body: some View {
         ZStack {
@@ -65,31 +66,8 @@ struct SignUpView: View {
                         )
                         .frame(height: 56)
                         .keyboardType(.phonePad)
-
-                        FloatingLabelTextField(
-                            title: "Coparent Email (Optional)",
-                            text: $viewModel.coparentEmail,
-                            isSecure: false
-                        )
-                        .frame(height: 56)
-                        .keyboardType(.emailAddress)
-                        .autocapitalization(.none)
-
-                        FloatingLabelTextField(
-                            title: "Coparent Phone (Optional)",
-                            text: $viewModel.coparentPhone,
-                            isSecure: false
-                        )
-                        .frame(height: 56)
-                        .keyboardType(.phonePad)
                     }
                     .padding(.horizontal)
-                    
-                    Text("If your coparent already has an account, you'll be linked automatically. If not, they'll receive an invitation to join.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
                     
                     if let errorMessage = viewModel.errorMessage {
                         Text(errorMessage)
@@ -100,7 +78,11 @@ struct SignUpView: View {
                     }
                     
                     Button(action: {
-                        viewModel.signUp(authManager: authManager)
+                        viewModel.signUp(authManager: authManager) { success in
+                            if success {
+                                isOnboardingPresented = true
+                            }
+                        }
                     }) {
                         HStack {
                             if viewModel.isLoading {
@@ -137,6 +119,9 @@ struct SignUpView: View {
         .onTapGesture {
             // Dismiss keyboard when tapping outside
             hideKeyboard()
+        }
+        .fullScreenCover(isPresented: $isOnboardingPresented) {
+            OnboardingView(isOnboardingComplete: .constant(false))
         }
     }
     

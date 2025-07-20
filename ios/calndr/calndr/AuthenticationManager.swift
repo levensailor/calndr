@@ -75,31 +75,31 @@ class AuthenticationManager: ObservableObject {
         }
     }
     
-    func signUp(firstName: String, lastName: String, email: String, password: String, phoneNumber: String?, coparentEmail: String?, coparentPhone: String?, completion: @escaping (Bool) -> Void) {
-        APIService.shared.signUp(firstName: firstName, lastName: lastName, email: email, password: password, phoneNumber: phoneNumber, coparentEmail: coparentEmail, coparentPhone: coparentPhone) { [weak self] result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let token):
-                    let saved = KeychainManager.shared.save(token: token, for: "currentUser")
-                    if saved {
-                        self?.isAuthenticated = true
-                        self?.isLoading = false
-                        let decodedToken = self?.decode(jwtToken: token) ?? [:]
-                        self?.username = decodedToken["name"] as? String
-                        self?.userID = decodedToken["sub"] as? String
-                        completion(true)
-                    } else {
-                        print("Error: Could not save token to keychain.")
-                        self?.isAuthenticated = false
-                        self?.isLoading = false
-                        completion(false)
-                    }
-                case .failure(let error):
-                    print("Sign up failed: \(error.localizedDescription)")
-                    self?.isAuthenticated = false
-                    self?.isLoading = false
-                    completion(false)
-                }
+    func signUp(
+        firstName: String,
+        lastName: String,
+        email: String,
+        password: String,
+        phoneNumber: String?,
+        completion: @escaping (Bool) -> Void
+    ) {
+        APIService.shared.signUp(
+            firstName: firstName,
+            lastName: lastName,
+            email: email,
+            password: password,
+            phoneNumber: phoneNumber,
+            coparentEmail: nil,
+            coparentPhone: nil
+        ) { [weak self] result in
+            switch result {
+            case .success(let response):
+                self?.authToken = response.accessToken
+                self?.isAuthenticated = true
+                completion(true)
+            case .failure(let error):
+                print("Sign up failure:", error)
+                completion(false)
             }
         }
     }

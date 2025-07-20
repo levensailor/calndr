@@ -14,6 +14,10 @@ class UserCreate(UserBase):
     """Schema for creating a new user."""
     password: str
 
+class CoParentCreate(UserBase):
+    """Schema for creating a new co-parent."""
+    pass
+
 class UserUpdate(BaseSchema):
     """Schema for updating user data."""
     first_name: Optional[str] = None
@@ -40,8 +44,6 @@ class UserRegistration(BaseSchema):
     email: EmailStr
     password: str
     phone_number: Optional[str] = None
-    coparent_email: Optional[EmailStr] = None
-    coparent_phone: Optional[str] = None
 
 class UserRegistrationResponse(BaseSchema):
     """Schema for user registration response."""

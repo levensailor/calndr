@@ -48,6 +48,37 @@ struct UserRegistrationResponse: Codable {
     let message: String
 }
 
+struct CoParentCreateRequest: Codable {
+    let first_name: String
+    let last_name: String
+    let email: String
+    let phone_number: String?
+}
+
+struct UserResponse: Codable {
+    let id: String
+    let first_name: String
+    let last_name: String
+    let email: String
+    let phone_number: String?
+    let family_id: String
+    let status: String?
+}
+
+struct ChildCreateRequest: Codable {
+    let first_name: String
+    let last_name: String
+    let dob: String
+}
+
+struct ChildResponse: Codable {
+    let id: String
+    let first_name: String
+    let last_name: String
+    let dob: String
+    let family_id: String
+}
+
 struct TokenResponse: Codable {
     let access_token: String
 }
@@ -123,6 +154,96 @@ class APIService {
         }
         
         return false
+    }
+
+    func inviteCoParent(firstName: String, lastName: String, email: String, phoneNumber: String?, completion: @escaping (Result<UserResponse, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/family/invite")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let requestBody = CoParentCreateRequest(first_name: firstName, last_name: lastName, email: email, phone_number: phoneNumber)
+
+        do {
+            request.httpBody = try JSONEncoder().encode(requestBody)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+
+            if httpResponse.statusCode == 401 {
+                completion(.failure(APIError.unauthorized))
+                return
+            }
+
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                return
+            }
+
+            do {
+                let userResponse = try JSONDecoder().decode(UserResponse.self, from: data)
+                completion(.success(userResponse))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+
+    func createChild(firstName: String, lastName: String, dob: String, completion: @escaping (Result<ChildResponse, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/children/")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let requestBody = ChildCreateRequest(first_name: firstName, last_name: lastName, dob: dob)
+
+        do {
+            request.httpBody = try JSONEncoder().encode(requestBody)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+
+            if httpResponse.statusCode == 401 {
+                completion(.failure(APIError.unauthorized))
+                return
+            }
+
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                return
+            }
+
+            do {
+                let childResponse = try JSONDecoder().decode(ChildResponse.self, from: data)
+                completion(.success(childResponse))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
     }
 
     func fetchEvents(from startDate: String, to endDate: String, completion: @escaping (Result<[Event], Error>) -> Void) {
@@ -805,18 +926,16 @@ class APIService {
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        let registrationRequest = UserRegistrationRequest(
-            first_name: firstName,
-            last_name: lastName,
-            email: email,
-            password: password,
-            phone_number: phoneNumber,
-            coparent_email: coparentEmail,
-            coparent_phone: coparentPhone
-        )
-        
+        let body: [String: Any?] = [
+            "first_name": firstName,
+            "last_name": lastName,
+            "email": email,
+            "password": password,
+            "phone_number": phoneNumber
+        ]
+
         do {
-            request.httpBody = try JSONEncoder().encode(registrationRequest)
+            request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
         } catch {
             completion(.failure(error))
             return

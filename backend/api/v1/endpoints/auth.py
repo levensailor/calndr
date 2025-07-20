@@ -68,53 +68,12 @@ async def register_user(registration_data: UserRegistration):
         # Hash the password
         password_hash = get_password_hash(registration_data.password)
         
-        # Handle coparent linking or family creation
-        family_id = None
-        family_name = f"{registration_data.last_name} Family"  # Default family name
-        
-        if registration_data.coparent_email or registration_data.coparent_phone:
-            # Check if coparent already exists
-            coparent_query = None
-            if registration_data.coparent_email:
-                coparent_query = users.select().where(users.c.email == registration_data.coparent_email)
-            elif registration_data.coparent_phone:
-                coparent_query = users.select().where(users.c.phone_number == registration_data.coparent_phone)
-
-            existing_coparent = await database.fetch_one(coparent_query) if coparent_query is not None else None
-            
-            if existing_coparent:
-                # Use existing coparent's family
-                family_id = existing_coparent['family_id']
-                logger.info(f"Linking user to existing coparent's family: {family_id}")
-            else:
-                # Create new family and send invitation email
-                family_id = uuid.uuid4()
-                family_insert = families.insert().values(id=family_id, name=family_name)
-                await database.execute(family_insert)
-                logger.info(f"Created new family: {family_name} with ID: {family_id}")
-                
-                # Send invitation via email or SMS
-                try:
-                    if registration_data.coparent_email:
-                        await email_service.send_coparent_invitation(
-                            coparent_email=registration_data.coparent_email,
-                            inviter_name=registration_data.first_name,
-                            family_id=family_id
-                        )
-                    elif registration_data.coparent_phone:
-                        await sms_service.send_coparent_invitation(
-                            coparent_phone=registration_data.coparent_phone,
-                            inviter_name=registration_data.first_name,
-                            family_id=family_id
-                        )
-                except Exception as e:
-                    logger.error(f"Error sending coparent invitation: {e}")
-        else:
-            # Create family without coparent
-            family_id = uuid.uuid4()
-            family_insert = families.insert().values(id=family_id, name=family_name)
-            await database.execute(family_insert)
-            logger.info(f"Created family without coparent: {family_name} with ID: {family_id}")
+        # Create a new family for the user
+        family_id = uuid.uuid4()
+        family_name = f"{registration_data.last_name} Family"
+        family_insert = families.insert().values(id=family_id, name=family_name)
+        await database.execute(family_insert)
+        logger.info(f"Created new family: {family_name} with ID: {family_id}")
         
         # Create the user
         user_insert = users.insert().values(

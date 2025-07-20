@@ -5,10 +5,65 @@ from core.database import database
 from core.security import get_current_user, uuid_to_string
 from core.logging import logger
 from db.models import users
-from schemas.user import FamilyMember, FamilyMemberEmail
+from schemas.user import FamilyMember, FamilyMemberEmail, CoParentCreate, UserResponse
 from schemas.custody import Custodian
+import secrets
+import uuid
 
 router = APIRouter()
+
+@router.post("/invite", response_model=UserResponse)
+async def invite_co_parent(co_parent_data: CoParentCreate, current_user = Depends(get_current_user)):
+    """
+    Invites a co-parent to the current user's family.
+    """
+    from core.security import get_password_hash
+
+    family_id = current_user['family_id']
+    
+    # Check if email already exists in the family
+    query = users.select().where((users.c.email == co_parent_data.email) & (users.c.family_id == family_id))
+    existing_user = await database.fetch_one(query)
+    if existing_user:
+        raise HTTPException(status_code=400, detail="A user with this email already exists in your family.")
+
+    # Generate a temporary, secure password. 
+    # The user will be required to change this upon first login.
+    temporary_password = secrets.token_urlsafe(16)
+    hashed_password = get_password_hash(temporary_password)
+    
+    user_id = uuid.uuid4()
+    
+    insert_query = users.insert().values(
+        id=user_id,
+        first_name=co_parent_data.first_name,
+        last_name=co_parent_data.last_name,
+        email=co_parent_data.email,
+        phone_number=co_parent_data.phone_number,
+        hashed_password=hashed_password,
+        family_id=family_id,
+        status="invited"
+    )
+    
+    await database.execute(insert_query)
+    
+    # Fetch the created user to return in the response
+    created_user = await database.fetch_one(users.select().where(users.c.id == user_id))
+
+    # Here you would typically trigger an email to the invited user.
+    # For now, we'll just log it.
+    logger.info(f"Co-parent invited: {co_parent_data.email}. Temporary password: {temporary_password}")
+    
+    return UserResponse(
+        id=uuid_to_string(created_user['id']),
+        first_name=created_user['first_name'],
+        last_name=created_user['last_name'],
+        email=created_user['email'],
+        phone_number=created_user['phone_number'],
+        family_id=uuid_to_string(created_user['family_id']),
+        status=created_user['status']
+    )
+
 
 @router.get("/custodians", response_model=List[Custodian])
 async def get_family_custodians(current_user = Depends(get_current_user)):
