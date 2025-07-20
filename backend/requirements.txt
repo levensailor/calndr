@@ -24,3 +24,5 @@ python-multipart
 boto3
 pytz
 python-jose[cryptography]
+google-auth
+requests

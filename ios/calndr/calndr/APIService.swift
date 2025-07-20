@@ -2663,4 +2663,28 @@ class APIService {
             }
         }.resume()
     }
+
+    func loginWithGoogle(idToken: String, completion: @escaping (Result<String, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/auth/google/ios-login")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.httpBody = "id_token=\(idToken)".data(using: .utf8)
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            guard let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data"])))
+                return
+            }
+            do {
+                let tokenResp = try JSONDecoder().decode(TokenResponse.self, from: data)
+                completion(.success(tokenResp.access_token))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
 } 

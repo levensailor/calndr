@@ -722,6 +722,14 @@ export default {
       } catch (error) {
         return dateString;
       }
+    },
+    async loginWithApple () {
+      const { data } = await axios.get('/auth/apple/login');
+      window.location.href = data.auth_url;          // Redirect user to Apple
+    },
+    async loginWithGoogle () {
+      const { data } = await axios.get('/auth/google/login');
+      window.location.href = data.auth_url;          // Redirect user to Google
     }
   },
   created() {
@@ -1423,5 +1431,35 @@ export default {
     min-height: 44px;
     touch-action: manipulation;
   }
+}
+
+.apple-button, .google-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.apple-button {
+  background-color: #000;
+  color: #fff;
+  border: 1px solid #000;
+}
+
+.google-button {
+  background-color: #fff;
+  color: #757575;
+  border: 1px solid #ddd;
+}
+
+.apple-button img, .google-button img {
+  width: 20px;
+  height: 20px;
+  margin-right: 10px;
 }
 </style> 

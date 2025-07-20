@@ -98,6 +98,12 @@ struct LoginView: View {
                 .signInWithAppleButtonStyle(.black)
                 .frame(height: 45)
                 .padding(.horizontal)
+
+                GoogleSignInButton {
+                    handleGoogleSignIn()
+                }
+                .frame(height: 45)
+                .padding(.horizontal)
             }
         }
         .sheet(isPresented: $showingSignUp) {
@@ -107,6 +113,38 @@ struct LoginView: View {
         }
     }
     
+    private func handleGoogleSignIn() {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootViewController = windowScene.windows.first?.rootViewController else {
+            print("Could not find root view controller.")
+            return
+        }
+
+        GIDSignIn.sharedInstance.signIn(withPresenting: rootViewController) { gidSignInResult, error in
+            guard error == nil else {
+                viewModel.errorMessage = error?.localizedDescription
+                return
+            }
+
+            guard let gidSignInResult = gidSignInResult else {
+                viewModel.errorMessage = "Google Sign-In failed."
+                return
+            }
+            
+            let user = gidSignInResult.user
+            let idToken = user.idToken?.tokenString
+
+            // Send idToken to your backend
+            if let idToken = idToken {
+                authManager.loginWithGoogle(idToken: idToken) { success in
+                    if !success {
+                        viewModel.errorMessage = "Failed to log in with Google."
+                    }
+                }
+            }
+        }
+    }
+
     private func hideKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }

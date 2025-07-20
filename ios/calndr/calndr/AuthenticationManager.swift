@@ -138,6 +138,24 @@ class AuthenticationManager: ObservableObject {
         }
     }
 
+    func loginWithGoogle(idToken: String, completion: @escaping (Bool) -> Void) {
+        APIService.shared.loginWithGoogle(idToken: idToken) { result in
+            switch result {
+            case .success(let token):
+                let saved = KeychainManager.shared.save(token: token, for: "currentUser")
+                DispatchQueue.main.async {
+                    self.isAuthenticated = saved
+                    completion(saved)
+                }
+            case .failure(let err):
+                print("Google login failure", err)
+                DispatchQueue.main.async {
+                    completion(false)
+                }
+            }
+        }
+    }
+    
     private func decode(jwtToken jwt: String) -> [String: Any] {
         let segments = jwt.components(separatedBy: ".")
         guard segments.count > 1 else { return [:] }

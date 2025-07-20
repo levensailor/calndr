@@ -14,9 +14,12 @@ from services.sms_service import sms_service
 import traceback
 from fastapi import Request
 from jose import jwt
-from services.apple_auth_service import exchange_code
+from services.apple_auth_service import exchange_code as apple_exchange_code
+from services.google_auth_service import exchange_code as google_exchange_code, get_user_info as google_get_user_info
 from urllib.parse import urlencode
 from core.config import settings
+from google.oauth2 import id_token
+from google.auth.transport import requests
 
 router = APIRouter()
 
@@ -178,7 +181,7 @@ async def apple_callback(request: Request):
     logger.info(f"Received Apple auth code: {code}")
     
     try:
-        tokens = await exchange_code(code)
+        tokens = await apple_exchange_code(code)
         logger.info(f"Received tokens from Apple: {tokens}")
     except Exception as e:
         logger.error(f"Error exchanging Apple auth code: {e}")
@@ -220,3 +223,109 @@ async def apple_callback(request: Request):
     access_token = create_access_token(data={"sub": uuid_to_string(user_id),
                                              "family_id": uuid_to_string(family_id)})
     return {"access_token": access_token, "token_type": "bearer"}
+
+@router.get("/google/login")
+async def google_login():
+    """Return the Google auth URL for the frontend."""
+    params = {
+        "client_id": settings.GOOGLE_CLIENT_ID,
+        "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "access_type": "offline",
+    }
+    url = "https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(params)
+    return {"auth_url": url}
+
+@router.post("/google/callback", response_model=Token)
+async def google_callback(request: Request):
+    form = await request.form()
+    id_token = form.get("id_token")
+    
+    logger.info(f"Received Google ID token")
+    
+    try:
+        user_info = await google_get_user_info(id_token)
+        logger.info(f"Received user info from Google: {user_info}")
+    except Exception as e:
+        logger.error(f"Error getting Google user info: {e}")
+        raise HTTPException(status_code=500, detail="Error getting Google user info")
+
+    email      = user_info.get("email")
+    first_name = user_info.get("given_name", "Google")
+    last_name  = user_info.get("family_name", "User")
+
+    # 1) Lookup existing user by email
+    query = users.select().where(users.c.email == email)
+    existing = await database.fetch_one(query)
+
+    if existing:
+        user_id   = existing["id"]
+        family_id = existing["family_id"]
+    else:
+        # 2) Create new user & family
+        family_id = uuid.uuid4()
+        await database.execute(families.insert().values(id=family_id, name=f"{last_name} Family"))
+        user_id = uuid.uuid4()
+        await database.execute(users.insert().values(
+            id=user_id,
+            family_id=family_id,
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            password_hash="",          # unused
+            subscription_type="Free"
+        ))
+
+    access_token = create_access_token(data={"sub": uuid_to_string(user_id),
+                                             "family_id": uuid_to_string(family_id)})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/google/ios-login", response_model=Token)
+async def google_ios_login(request: Request):
+    form = await request.form()
+    token = form.get("id_token")
+    
+    if not token:
+        raise HTTPException(status_code=400, detail="id_token is missing")
+
+    try:
+        # The library will fetch Google's public keys to verify the signature
+        idinfo = id_token.verify_oauth2_token(token, requests.Request(), settings.GOOGLE_CLIENT_ID)
+        
+        email = idinfo.get("email")
+        if not email:
+            raise HTTPException(status_code=400, detail="Email not found in Google token")
+
+        first_name = idinfo.get("given_name", "Google")
+        last_name = idinfo.get("family_name", "User")
+
+        # 1) Lookup existing user by email
+        query = users.select().where(users.c.email == email)
+        existing = await database.fetch_one(query)
+
+        if existing:
+            user_id   = existing["id"]
+            family_id = existing["family_id"]
+        else:
+            # 2) Create new user & family
+            family_id = uuid.uuid4()
+            await database.execute(families.insert().values(id=family_id, name=f"{last_name} Family"))
+            user_id = uuid.uuid4()
+            await database.execute(users.insert().values(
+                id=user_id,
+                family_id=family_id,
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
+                password_hash="",          # unused
+                subscription_type="Free"
+            ))
+
+        access_token = create_access_token(data={"sub": uuid_to_string(user_id),
+                                                 "family_id": uuid_to_string(family_id)})
+        return {"access_token": access_token, "token_type": "bearer"}
+
+    except Exception as e:
+        logger.error(f"Google iOS login failed during token verification: {e}")
+        raise HTTPException(status_code=401, detail=f"Invalid Google token: {e}")

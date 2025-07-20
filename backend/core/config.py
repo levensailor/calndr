@@ -69,6 +69,11 @@ class Settings(BaseSettings):
     APPLE_KEY_ID: Optional[str] = os.getenv("APPLE_KEY_ID")
     APPLE_PRIVATE_KEY: Optional[str] = os.getenv("APPLE_PRIVATE_KEY")
     APPLE_REDIRECT_URI: Optional[str] = os.getenv("APPLE_REDIRECT_URI")
+
+    # Google Sign-In
+    GOOGLE_CLIENT_ID: Optional[str] = os.getenv("GOOGLE_CLIENT_ID")
+    GOOGLE_CLIENT_SECRET: Optional[str] = os.getenv("GOOGLE_CLIENT_SECRET")
+    GOOGLE_REDIRECT_URI: Optional[str] = os.getenv("GOOGLE_REDIRECT_URI")
     
     class Config:
         case_sensitive = True
