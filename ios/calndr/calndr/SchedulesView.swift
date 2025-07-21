@@ -362,13 +362,10 @@ struct ScheduleBuilderView: View {
     
     let selectedPreset: SchedulePreset?
     
-    @State private var scheduleName = ""
-    @State private var scheduleDescription = ""
-    @State private var patternType: SchedulePatternType = .weekly
-    @State private var weeklyPattern = WeeklySchedulePattern(
-        sunday: nil, monday: nil, tuesday: nil, wednesday: nil,
-        thursday: nil, friday: nil, saturday: nil
-    )
+    @State private var scheduleName: String
+    @State private var scheduleDescription: String
+    @State private var patternType: SchedulePatternType
+    @State private var weeklyPattern: WeeklySchedulePattern
     @State private var alternatingWeeksPattern: AlternatingWeeksPattern?
     @State private var startDate = Date()
     @State private var endDate = Calendar.current.date(byAdding: .year, value: 1, to: Date()) ?? Date()
@@ -383,6 +380,32 @@ struct ScheduleBuilderView: View {
     
     private var custodianTwoName: String {
         viewModel.custodianTwoName
+    }
+    
+    init(selectedPreset: SchedulePreset?) {
+        self.selectedPreset = selectedPreset
+        
+        // Initialize state with preset data immediately to avoid race condition
+        if let preset = selectedPreset {
+            self._scheduleName = State(initialValue: preset.name)
+            self._scheduleDescription = State(initialValue: preset.description)
+            self._patternType = State(initialValue: preset.patternType)
+            self._weeklyPattern = State(initialValue: preset.weeklyPattern ?? WeeklySchedulePattern(
+                sunday: nil, monday: nil, tuesday: nil, wednesday: nil,
+                thursday: nil, friday: nil, saturday: nil
+            ))
+            self._alternatingWeeksPattern = State(initialValue: preset.alternatingWeeksPattern)
+        } else {
+            // Default values for custom schedule
+            self._scheduleName = State(initialValue: "")
+            self._scheduleDescription = State(initialValue: "")
+            self._patternType = State(initialValue: .weekly)
+            self._weeklyPattern = State(initialValue: WeeklySchedulePattern(
+                sunday: nil, monday: nil, tuesday: nil, wednesday: nil,
+                thursday: nil, friday: nil, saturday: nil
+            ))
+            self._alternatingWeeksPattern = State(initialValue: nil)
+        }
     }
     
     var body: some View {
@@ -439,26 +462,8 @@ struct ScheduleBuilderView: View {
         .sheet(isPresented: $showingDatePicker) {
             DateRangePickerView(startDate: $startDate, endDate: $endDate)
         }
-        .onAppear {
-            loadPresetData()
-        }
     }
-    
-    private func loadPresetData() {
-        guard let preset = selectedPreset else { return }
-        
-        scheduleName = preset.name
-        scheduleDescription = preset.description
-        patternType = preset.patternType
-        
-        if let weeklyPattern = preset.weeklyPattern {
-            self.weeklyPattern = weeklyPattern
-        }
-        
-        if let alternatingPattern = preset.alternatingWeeksPattern {
-            self.alternatingWeeksPattern = alternatingPattern
-        }
-    }
+
     
     private func isValidSchedule() -> Bool {
         switch patternType {
