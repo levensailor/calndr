@@ -62,6 +62,7 @@ struct DaycareView: View {
                         ForEach(viewModel.daycareProviders) { provider in
                             DaycareProviderCard(provider: provider)
                                 .padding(.horizontal)
+                                .environmentObject(viewModel)
                         }
                     }
                     
@@ -81,7 +82,9 @@ struct DaycareView: View {
 struct DaycareProviderCard: View {
     let provider: DaycareProvider
     @EnvironmentObject var themeManager: ThemeManager
+    @EnvironmentObject var viewModel: CalendarViewModel
     @State private var showingEventsModal = false
+    @State private var showingDeleteAlert = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -105,19 +108,37 @@ struct DaycareProviderCard: View {
                 
                 Spacer()
                 
-                // Events button in top right
-                Button(action: {
-                    showingEventsModal = true
-                }) {
-                    Image(systemName: "calendar.badge.plus")
-                        .font(.title3)
-                        .foregroundColor(.blue)
-                        .padding(8)
-                        .background(
-                            Circle()
-                                .fill(themeManager.currentTheme.secondaryBackgroundColor.color)
-                                .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
-                        )
+                // Action buttons in top right
+                HStack(spacing: 8) {
+                    // Events button
+                    Button(action: {
+                        showingEventsModal = true
+                    }) {
+                        Image(systemName: "calendar.badge.plus")
+                            .font(.title3)
+                            .foregroundColor(.blue)
+                            .padding(8)
+                            .background(
+                                Circle()
+                                    .fill(themeManager.currentTheme.secondaryBackgroundColor.color)
+                                    .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+                            )
+                    }
+                    
+                    // Delete button
+                    Button(action: {
+                        showingDeleteAlert = true
+                    }) {
+                        Image(systemName: "trash")
+                            .font(.title3)
+                            .foregroundColor(.red)
+                            .padding(8)
+                            .background(
+                                Circle()
+                                    .fill(themeManager.currentTheme.secondaryBackgroundColor.color)
+                                    .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+                            )
+                    }
                 }
             }
             
@@ -183,12 +204,30 @@ struct DaycareProviderCard: View {
             DaycareEventsModal(provider: provider)
                 .environmentObject(themeManager)
         }
+        .alert("Delete Daycare Provider", isPresented: $showingDeleteAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                deleteDaycareProvider()
+            }
+        } message: {
+            Text("Are you sure you want to delete \(provider.name)? This will also remove any calendar sync configurations and cannot be undone.")
+        }
     }
     
     private func makePhoneCall(_ phoneNumber: String) {
         let cleanedNumber = phoneNumber.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
         if let url = URL(string: "tel:\(cleanedNumber)") {
             UIApplication.shared.open(url)
+        }
+    }
+    
+    private func deleteDaycareProvider() {
+        viewModel.deleteDaycareProvider(provider.id) { success in
+            if success {
+                print("✅ Successfully deleted daycare provider: \(provider.name)")
+            } else {
+                print("❌ Failed to delete daycare provider: \(provider.name)")
+            }
         }
     }
 }
