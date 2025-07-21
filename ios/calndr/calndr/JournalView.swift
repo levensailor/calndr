@@ -18,7 +18,6 @@ struct JournalView: View {
         } else {
             return viewModel.journalEntries.filter { entry in
                 entry.content.localizedCaseInsensitiveContains(searchText) ||
-                entry.title?.localizedCaseInsensitiveContains(searchText) == true ||
                 entry.author_name.localizedCaseInsensitiveContains(searchText)
             }
         }
@@ -180,16 +179,30 @@ struct JournalEntryCard: View {
         return timeFormatter.string(from: date)
     }
     
+    private var contentTitle: String {
+        let lines = entry.content.components(separatedBy: .newlines)
+        let firstThreeLines = Array(lines.prefix(3))
+        return firstThreeLines.joined(separator: "\n")
+    }
+    
+    private var remainingContent: String {
+        let lines = entry.content.components(separatedBy: .newlines)
+        if lines.count > 3 {
+            let remainingLines = Array(lines.dropFirst(3))
+            return remainingLines.joined(separator: "\n")
+        }
+        return ""
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Header with title/date and author
+            // Header with first 3 lines as title and author/date
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    if let title = entry.title, !title.isEmpty {
-                        Text(title)
-                            .font(.headline.bold())
-                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
-                    }
+                    Text(contentTitle)
+                        .font(.headline.bold())
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+                        .lineLimit(3)
                     
                     Text(displayDate)
                         .font(.subheadline)
@@ -209,12 +222,14 @@ struct JournalEntryCard: View {
                 }
             }
             
-            // Content preview
-            Text(entry.content)
-                .font(.body)
-                .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
-                .lineLimit(4)
-                .multilineTextAlignment(.leading)
+            // Remaining content preview (if any)
+            if !remainingContent.isEmpty {
+                Text(remainingContent)
+                    .font(.body)
+                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.8))
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
+            }
         }
         .padding()
         .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
@@ -233,9 +248,7 @@ struct AddEditJournalEntryView: View {
     let isEditing: Bool
     let existingEntry: JournalEntry?
     
-    @State private var title: String = ""
     @State private var content: String = ""
-    @State private var entryDate: Date = Date()
     @State private var isLoading = false
     @State private var showingDeleteAlert = false
     
@@ -245,14 +258,7 @@ struct AddEditJournalEntryView: View {
         self.existingEntry = existingEntry
         
         if let entry = existingEntry {
-            _title = State(initialValue: entry.title ?? "")
             _content = State(initialValue: entry.content)
-            
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "yyyy-MM-dd"
-            if let date = dateFormatter.date(from: entry.entry_date) {
-                _entryDate = State(initialValue: date)
-            }
         }
     }
     
@@ -262,58 +268,12 @@ struct AddEditJournalEntryView: View {
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Date picker
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Entry Date")
-                            .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
-                        
-                        DatePicker("Entry Date", selection: $entryDate, displayedComponents: .date)
-                            .datePickerStyle(.compact)
-                            .accentColor(themeManager.currentTheme.iconColorSwiftUI)
-                    }
-                    
-                    // Title field
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Title (Optional)")
-                            .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
-                        
-                        TextField("Enter a title for this entry...", text: $title)
-                            .padding(12)
-                            .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
-                            .cornerRadius(8)
-                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(themeManager.currentTheme.iconColorSwiftUI.opacity(0.3), lineWidth: 1)
-                            )
-                    }
-                    
-                    // Content field
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Content")
-                            .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
-                        
-                        TextEditor(text: $content)
-                            .frame(minHeight: 200)
-                            .padding(8)
-                            .scrollContentBackground(.hidden)
-                            .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
-                            .cornerRadius(8)
-                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(themeManager.currentTheme.iconColorSwiftUI.opacity(0.3), lineWidth: 1)
-                            )
-                    }
-                    
-                    Spacer(minLength: 100)
-                }
-                .padding()
+            VStack {
+                TextEditor(text: $content)
+                    .padding(16)
+                    .scrollContentBackground(.hidden)
+                    .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
+                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
             }
             .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
             .navigationTitle(isEditing ? "Edit Entry" : "New Entry")
@@ -358,14 +318,12 @@ struct AddEditJournalEntryView: View {
     private func saveEntry() {
         isLoading = true
         
-        let titleToSave = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : title
-        
         if isEditing, let entry = existingEntry {
             viewModel.updateJournalEntry(
                 id: entry.id,
-                title: titleToSave,
+                title: nil,
                 content: content,
-                entryDate: entryDate
+                entryDate: Date()
             ) { success in
                 isLoading = false
                 if success {
@@ -374,9 +332,9 @@ struct AddEditJournalEntryView: View {
             }
         } else {
             viewModel.createJournalEntry(
-                title: titleToSave,
+                title: nil,
                 content: content,
-                entryDate: entryDate
+                entryDate: Date()
             ) { success in
                 isLoading = false
                 if success {
