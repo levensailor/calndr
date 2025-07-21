@@ -311,7 +311,9 @@ struct WeekHandoffTimelineView: View {
     private func drawVerticalHandoffTimeline(context: GraphicsContext, size: CGSize, dayHeight: CGFloat) {
         // Draw colored custody line segments for each day vertically
         for (dayIndex, day) in weekDays.enumerated() {
-            let x = size.width * 0.8 // Position line towards the right side
+            // Position line to align with the right edge of the custodian button
+            // Account for: date width (200) + reminder icon (32) + trailing padding (8) + some margin
+            let x = size.width - 16 // Right justified with custodian button area
             let yStart = CGFloat(dayIndex) * dayHeight
             let yEnd = yStart + dayHeight
             
@@ -425,7 +427,7 @@ struct WeekHandoffTimelineView: View {
         let handoffTime = viewModel.getHandoffTimeForDate(date)
         let timeProgress = calculateTimeProgress(hour: handoffTime.hour, minute: handoffTime.minute)
         
-        let x = size.width * 0.8 // Position at the custody line
+        let x = size.width - 16 // Position aligned with custodian button right edge
         let y = CGFloat(index) * dayHeight + (dayHeight * timeProgress)
         
         return CGPoint(x: x, y: y)
