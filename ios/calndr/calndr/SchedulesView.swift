@@ -694,6 +694,7 @@ struct ScheduleEditView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var isLoading = true
+    @State private var dataLoaded = false
     @State private var scheduleName = ""
     @State private var scheduleDescription = ""
     @State private var patternType: SchedulePatternType = .weekly
@@ -707,7 +708,7 @@ struct ScheduleEditView: View {
     
     var body: some View {
         NavigationView {
-            if isLoading {
+            if isLoading || !dataLoaded {
                 VStack {
                     ProgressView()
                     Text("Loading template...")
@@ -805,10 +806,12 @@ struct ScheduleEditView: View {
                     }
                     
                     self.isLoading = false
+                    self.dataLoaded = true
                     
                 case .failure(let error):
                     print("❌ Failed to load schedule template: \(error)")
                     self.isLoading = false
+                    self.dataLoaded = false  // Don't show content on error
                     self.alertMessage = "Could not load schedule details. Please try again."
                     self.showingAlert = true
                 }

@@ -1674,8 +1674,14 @@ class CalendarViewModel: ObservableObject {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let updatedTemplate):
-                    if let index = self?.scheduleTemplates.firstIndex(where: { $0.id == templateId }) {
-                        self?.scheduleTemplates[index] = updatedTemplate
+                    // If the template was set to active, refresh all templates to get updated active states
+                    if updatedTemplate.isActive {
+                        self?.fetchScheduleTemplates()
+                    } else {
+                        // For non-active updates, just update the specific template
+                        if let index = self?.scheduleTemplates.firstIndex(where: { $0.id == templateId }) {
+                            self?.scheduleTemplates[index] = updatedTemplate
+                        }
                     }
                     print("✅ Successfully updated schedule template: \(updatedTemplate.name)")
                     completion(true)
@@ -1710,6 +1716,8 @@ class CalendarViewModel: ObservableObject {
                 case .success(let response):
                     // Refresh custody data after applying schedule
                     self?.fetchHandoffsAndCustody()
+                    // Refresh schedule templates to update active status
+                    self?.fetchScheduleTemplates()
                     let message = "Applied schedule to \(response.daysApplied) days"
                     print("✅ Successfully applied schedule template: \(message)")
                     completion(true, message)
