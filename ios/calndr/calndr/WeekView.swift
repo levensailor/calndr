@@ -183,7 +183,6 @@ struct WeekView: View {
         
         return Array(handoffDays).sorted()
     }
-}
 
 struct WeekView_Previews: PreviewProvider {
     static var previews: some View {
