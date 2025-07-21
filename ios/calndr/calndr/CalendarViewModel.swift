@@ -529,7 +529,19 @@ class CalendarViewModel: ObservableObject {
         }
         
         // No custody record found
-        return ("", "No custody assigned")
+        // For past dates, return empty to avoid showing "No custody assigned" 
+        // For future dates, show "No custody assigned" to prompt user action
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let dateToCheck = calendar.startOfDay(for: date)
+        
+        if dateToCheck < today {
+            // Past date - return empty to hide custody display
+            return ("", "")
+        } else {
+            // Future date - show assignment prompt
+            return ("", "No custody assigned")
+        }
     }
     
     func getHandoffTimeForDate(_ date: Date) -> (hour: Int, minute: Int, location: String?) {

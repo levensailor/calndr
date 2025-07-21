@@ -55,8 +55,9 @@ struct DayContentView: View {
             }
             
             Spacer()
-            // Custody row - always visible when custody owner exists
+            // Custody row logic
             if !custodyOwner.isEmpty && !viewModel.showHandoffTimeline {
+                // Normal custody display
                 Text(custodyOwner.capitalized)
                     .font(.system(size: 9))
                     .bold()
@@ -64,9 +65,8 @@ struct DayContentView: View {
                     .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24) // Fixed height
                     .background(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColorSwiftUI : themeManager.currentTheme.parentTwoColorSwiftUI)
                     .opacity(isToday ? 1.0 : 0.6)
-            }
-            // Custody row - always visible when custody owner exists
-            if !custodyOwner.isEmpty && viewModel.showHandoffTimeline {
+            } else if !custodyOwner.isEmpty && viewModel.showHandoffTimeline {
+                // Handoff timeline display
                 Text(custodyOwner.capitalized)
                     .font(.system(size: 9))
                     .bold()
@@ -74,6 +74,11 @@ struct DayContentView: View {
                     .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24) // Fixed height
                     .background(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColorSwiftUI : themeManager.currentTheme.parentTwoColorSwiftUI)
                     .opacity(0.3)
+            } else if custodyOwner.isEmpty && isPastDate() {
+                // Past date with no custody - show subtle transparent gray
+                Rectangle()
+                    .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24)
+                    .foregroundColor(Color.gray.opacity(0.1))
             }
         }
         .animateThemeChanges(themeManager)
@@ -83,5 +88,12 @@ struct DayContentView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "d"
         return formatter.string(from: date)
+    }
+    
+    private func isPastDate() -> Bool {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let dateToCheck = calendar.startOfDay(for: date)
+        return dateToCheck < today
     }
 } 

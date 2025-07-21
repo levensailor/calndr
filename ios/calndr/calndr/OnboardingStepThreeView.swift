@@ -308,8 +308,12 @@ struct OnboardingStepThreeView: View {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         
-        var currentDate = startDate
+        // Start from today (not historical dates) to avoid "No Custody Assigned" on past dates
+        let today = calendar.startOfDay(for: Date())
+        var currentDate = max(startDate, today)
         var recordsToCreate: [(date: String, custodianId: String)] = []
+        
+        print("🗓️ Generating custody records from \(currentDate) to \(endDate) (excluding historical dates)")
         
         // Generate custody records based on the selected schedule
         while currentDate <= endDate {
@@ -324,6 +328,8 @@ struct OnboardingStepThreeView: View {
             
             currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? currentDate
         }
+        
+        print("🗓️ Created \(recordsToCreate.count) custody records starting from today")
         
         // Save records to backend
         saveCustodyRecords(recordsToCreate)
