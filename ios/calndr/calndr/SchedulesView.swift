@@ -472,8 +472,6 @@ struct ScheduleBuilderView: View {
                    weeklyPattern.saturday != nil
         case .alternatingWeeks, .alternatingDays:
             return alternatingWeeksPattern != nil
-        case .custom:
-            return true
         }
     }
     
@@ -1098,28 +1096,28 @@ struct DayAssignmentRow: View {
                 }
                 
                 // Parent 1
-                Button(action: { selectedParent = viewModel.custodianOneId }) {
+                Button(action: { selectedParent = "parent1" }) {
                     Text(custodianOneName)
                         .font(.caption)
-                        .foregroundColor(selectedParent == viewModel.custodianOneId ? .white : themeManager.currentTheme.textColor.color)
+                        .foregroundColor(selectedParent == "parent1" ? .white : themeManager.currentTheme.textColor.color)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(
                             RoundedRectangle(cornerRadius: 4)
-                                .fill(selectedParent == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColor.color : Color.clear)
+                                .fill(selectedParent == "parent1" ? themeManager.currentTheme.parentOneColor.color : Color.clear)
                         )
                 }
                 
                 // Parent 2
-                Button(action: { selectedParent = viewModel.custodianTwoId }) {
+                Button(action: { selectedParent = "parent2" }) {
                     Text(custodianTwoName)
                         .font(.caption)
-                        .foregroundColor(selectedParent == viewModel.custodianTwoId ? .white : themeManager.currentTheme.textColor.color)
+                        .foregroundColor(selectedParent == "parent2" ? .white : themeManager.currentTheme.textColor.color)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(
                             RoundedRectangle(cornerRadius: 4)
-                                .fill(selectedParent == viewModel.custodianTwoId ? themeManager.currentTheme.parentTwoColor.color : Color.clear)
+                                .fill(selectedParent == "parent2" ? themeManager.currentTheme.parentTwoColor.color : Color.clear)
                         )
                 }
             }

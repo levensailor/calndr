@@ -516,7 +516,6 @@ enum SchedulePatternType: String, Codable, CaseIterable {
     case weekly = "weekly"
     case alternatingWeeks = "alternating_weeks"
     case alternatingDays = "alternating_days"
-    case custom = "custom"
     
     var displayName: String {
         switch self {
@@ -526,8 +525,6 @@ enum SchedulePatternType: String, Codable, CaseIterable {
             return "Alternating Weeks"
         case .alternatingDays:
             return "Alternating Days"
-        case .custom:
-            return "Custom Pattern"
         }
     }
     
@@ -539,8 +536,6 @@ enum SchedulePatternType: String, Codable, CaseIterable {
             return "Alternate between parents each week"
         case .alternatingDays:
             return "Alternate between parents each day"
-        case .custom:
-            return "Custom arrangement"
         }
     }
 }
