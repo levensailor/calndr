@@ -4,6 +4,7 @@ struct ThreeDayView: View {
     @ObservedObject var viewModel: CalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
     @State private var showingReminderModal = false
+    @State private var showingHandoffModal = false
     @State private var selectedDate: Date = Date()
     
     var body: some View {
@@ -134,6 +135,32 @@ struct ThreeDayView: View {
                                 }
                             }
                             
+                            // Handoff section
+                            if hasHandoffForDate(day) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "arrow.triangle.2.circlepath")
+                                        .font(.title3)
+                                        .foregroundColor(.purple)
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Handoff")
+                                            .font(.caption)
+                                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+                                        Text(getHandoffTextForDate(day))
+                                            .font(.subheadline)
+                                            .foregroundColor(themeManager.currentTheme.textColor.color)
+                                            .lineLimit(2)
+                                    }
+                                    
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 16)
+                                .onTapGesture {
+                                    selectedDate = day
+                                    showingHandoffModal = true
+                                }
+                            }
+                            
                             Spacer()
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -154,6 +181,10 @@ struct ThreeDayView: View {
         .sheet(isPresented: $showingReminderModal) {
             ReminderModal(date: selectedDate)
                 .environmentObject(viewModel)
+                .environmentObject(themeManager)
+        }
+        .sheet(isPresented: $showingHandoffModal) {
+            HandoffTimeModal(date: selectedDate, viewModel: viewModel, isPresented: $showingHandoffModal)
                 .environmentObject(themeManager)
         }
     }
@@ -293,6 +324,37 @@ struct ThreeDayView: View {
             // Clear/sunny
             return "sun.max.fill"
         }
+    }
+    
+    private func hasHandoffForDate(_ date: Date) -> Bool {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: date)
+        
+        // Check if there's a handoff record for this date
+        let hasHandoffRecord = viewModel.custodyRecords.contains { record in
+            record.event_date == dateString && record.handoff_day == true
+        }
+        
+        if hasHandoffRecord {
+            return true
+        }
+        
+        // Check if there's a custody change from previous day
+        if let previousDate = Calendar.current.date(byAdding: .day, value: -1, to: date) {
+            let previousOwner = viewModel.getCustodyInfo(for: previousDate).owner
+            let currentOwner = viewModel.getCustodyInfo(for: date).owner
+            return previousOwner != currentOwner
+        }
+        
+        return false
+    }
+    
+    private func getHandoffTextForDate(_ date: Date) -> String {
+        let handoffTime = viewModel.getHandoffTimeForDate(date)
+        let timeString = String(format: "%02d:%02d", handoffTime.hour, handoffTime.minute)
+        let location = handoffTime.location ?? "daycare"
+        return "\(timeString) at \(location)"
     }
 }
 

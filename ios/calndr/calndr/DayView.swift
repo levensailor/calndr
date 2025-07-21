@@ -4,6 +4,7 @@ struct DayView: View {
     @ObservedObject var viewModel: CalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
     @State private var showingReminderModal = false
+    @State private var showingHandoffModal = false
     
     var body: some View {
         ZStack {
@@ -106,6 +107,49 @@ struct DayView: View {
                 }
             }
             
+            // Handoff Section
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Handoff")
+                        .font(.headline)
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        showingHandoffModal = true
+                    }) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.title2)
+                            .foregroundColor(hasHandoffForDate(viewModel.currentDate) ? .purple : .gray)
+                    }
+                }
+                
+                if hasHandoffForDate(viewModel.currentDate) {
+                    Text(getHandoffTextForDate(viewModel.currentDate))
+                        .font(.body)
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.purple.opacity(0.2))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.purple, lineWidth: 1)
+                                )
+                        )
+                        .onTapGesture {
+                            showingHandoffModal = true
+                        }
+                } else {
+                    Text("No handoff scheduled")
+                        .font(.body)
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.6))
+                        .italic()
+                }
+            }
+            
             // Events List
             VStack(alignment: .leading, spacing: 12) {
                 Text("Events")
@@ -164,10 +208,45 @@ struct DayView: View {
                 .environmentObject(viewModel)
                 .environmentObject(themeManager)
         }
+        .sheet(isPresented: $showingHandoffModal) {
+            HandoffTimeModal(date: viewModel.currentDate, viewModel: viewModel, isPresented: $showingHandoffModal)
+                .environmentObject(themeManager)
+        }
     }
     
     private func isDateInPast(_ date: Date) -> Bool {
         return date < Calendar.current.startOfDay(for: Date())
+    }
+    
+    private func hasHandoffForDate(_ date: Date) -> Bool {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: date)
+        
+        // Check if there's a handoff record for this date
+        let hasHandoffRecord = viewModel.custodyRecords.contains { record in
+            record.event_date == dateString && record.handoff_day == true
+        }
+        
+        if hasHandoffRecord {
+            return true
+        }
+        
+        // Check if there's a custody change from previous day
+        if let previousDate = Calendar.current.date(byAdding: .day, value: -1, to: date) {
+            let previousOwner = viewModel.getCustodyInfo(for: previousDate).owner
+            let currentOwner = viewModel.getCustodyInfo(for: date).owner
+            return previousOwner != currentOwner
+        }
+        
+        return false
+    }
+    
+    private func getHandoffTextForDate(_ date: Date) -> String {
+        let handoffTime = viewModel.getHandoffTimeForDate(date)
+        let timeString = String(format: "%02d:%02d", handoffTime.hour, handoffTime.minute)
+        let location = handoffTime.location ?? "daycare"
+        return "\(timeString) at \(location)"
     }
 }
 
