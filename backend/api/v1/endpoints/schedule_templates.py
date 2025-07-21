@@ -364,37 +364,98 @@ async def apply_schedule_template(application: ScheduleApplication, current_user
         start_date = datetime.fromisoformat(application.start_date.replace('Z', '+00:00')).date()
         end_date = datetime.fromisoformat(application.end_date.replace('Z', '+00:00')).date()
         
-        # Get family custodian IDs (simplified - assumes 2 custodians)
-        # This is a simplified implementation - you may need to enhance based on your family structure
         family_id = current_user['family_id']
         
-        # Apply the template pattern
+        # Get family custodians to map parent1/parent2 to actual IDs
+        from db.models import users
+        custodians_query = users.select().where(users.c.family_id == family_id).order_by(
+            users.c.created_at.asc().nulls_last()
+        )
+        family_members = await database.fetch_all(custodians_query)
+        
+        if len(family_members) < 2:
+            raise HTTPException(status_code=400, detail="Family must have at least two members to apply custody schedule")
+        
+        parent1_id = family_members[0]['id']
+        parent2_id = family_members[1]['id']
+        
+        logger.info(f"Mapping: parent1 -> {parent1_id}, parent2 -> {parent2_id}")
+        
+        # Parse the weekly pattern
+        if template_record['pattern_type'] != 'weekly':
+            raise HTTPException(status_code=400, detail="Only weekly patterns are currently supported for schedule application")
+        
+        pattern_data = template_record['weekly_pattern']
+        if isinstance(pattern_data, str):
+            try:
+                pattern_data = json.loads(pattern_data)
+            except json.JSONDecodeError:
+                logger.error(f"Invalid JSON in weekly_pattern for template {template_record['id']}")
+                raise HTTPException(status_code=400, detail="Invalid weekly pattern data")
+        
+        if not pattern_data:
+            raise HTTPException(status_code=400, detail="No weekly pattern found in template")
+        
+        # Prepare custody records for bulk creation
+        custody_records_to_create = []
+        custody_records_to_update = []
+        conflicts_overwritten = 0
         days_applied = 0
         current_date = start_date
         
+        # Get existing custody records in the date range for conflict detection
+        from db.models import custody
+        existing_custody_query = custody.select().where(
+            (custody.c.family_id == family_id) &
+            (custody.c.date.between(start_date, end_date))
+        )
+        existing_records = await database.fetch_all(existing_custody_query)
+        existing_by_date = {record['date']: record for record in existing_records}
+        
         while current_date <= end_date:
-            # For now, implement basic weekly pattern application
-            # You can enhance this based on your pattern types
-            if template_record['pattern_type'] == 'weekly' and template_record['weekly_pattern']:
-                pattern_data = template_record['weekly_pattern']
-                if isinstance(pattern_data, str):
-                    try:
-                        pattern_data = json.loads(pattern_data)
-                    except json.JSONDecodeError:
-                        logger.error(f"Invalid JSON in weekly_pattern for template {template_record['id']}")
-                        pattern_data = None
+            day_of_week = current_date.strftime('%A').lower()
+            
+            if day_of_week in pattern_data and pattern_data[day_of_week]:
+                custodian_assignment = pattern_data[day_of_week]
                 
-                if pattern_data:
-                    day_of_week = current_date.strftime('%A').lower()
-                    
-                    if day_of_week in pattern_data and pattern_data[day_of_week]:
-                        custodian_assignment = pattern_data[day_of_week]
-                        
-                        # Convert assignment to actual custodian ID
-                        # This is simplified - you'll need to map "parent1"/"parent2" to actual user IDs
-                        # For now, just create a placeholder
-                        if custodian_assignment in ['parent1', 'parent2']:
+                # Map logical assignment to actual custodian ID
+                actual_custodian_id = None
+                if custodian_assignment == 'parent1':
+                    actual_custodian_id = parent1_id
+                elif custodian_assignment == 'parent2':
+                    actual_custodian_id = parent2_id
+                
+                if actual_custodian_id:
+                    # Check if record already exists
+                    if current_date in existing_by_date:
+                        if application.overwrite_existing:
+                            # Update existing record
+                            existing_record = existing_by_date[current_date]
+                            update_query = custody.update().where(custody.c.id == existing_record['id']).values(
+                                custodian_id=actual_custodian_id,
+                                actor_id=current_user['id'],
+                                handoff_day=False,  # Default for template application
+                                handoff_time=None,
+                                handoff_location=None
+                            )
+                            await database.execute(update_query)
+                            conflicts_overwritten += 1
                             days_applied += 1
+                        # If not overwriting, skip this date
+                    else:
+                        # Create new record
+                        insert_query = custody.insert().values(
+                            family_id=family_id,
+                            date=current_date,
+                            custodian_id=actual_custodian_id,
+                            actor_id=current_user['id'],
+                            handoff_day=False,  # Default for template application
+                            handoff_time=None,
+                            handoff_location=None,
+                            created_at=datetime.now()
+                        )
+                        await database.execute(insert_query)
+                        days_applied += 1
             
             current_date += timedelta(days=1)
         
@@ -402,7 +463,7 @@ async def apply_schedule_template(application: ScheduleApplication, current_user
             success=True,
             message=f"Applied schedule template '{template_record['name']}' to {days_applied} days",
             days_applied=days_applied,
-            conflicts_overwritten=0  # Simplified for now
+            conflicts_overwritten=conflicts_overwritten
         )
         
     except Exception as e:
