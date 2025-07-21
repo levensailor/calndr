@@ -132,8 +132,17 @@ async def get_schedule_template(template_id: int, current_user = Depends(get_cur
 async def create_schedule_template(template_data: ScheduleTemplateCreate, current_user = Depends(get_current_user)):
     """
     Create a new schedule template for the current user's family.
+    If this template is marked as active, all other templates will be marked as inactive.
     """
     try:
+        # If this template is being set as active, deactivate all other templates for this family
+        if template_data.is_active:
+            deactivate_query = schedule_templates.update().where(
+                schedule_templates.c.family_id == current_user['family_id']
+            ).values(is_active=False, updated_at=datetime.now())
+            await database.execute(deactivate_query)
+            logger.info(f"Deactivated all existing schedule templates for family {current_user['family_id']}")
+        
         # Convert pattern data to JSON
         weekly_pattern_json = template_data.weekly_pattern.dict() if template_data.weekly_pattern else None
         alternating_pattern_json = template_data.alternating_weeks_pattern.dict() if template_data.alternating_weeks_pattern else None
@@ -209,6 +218,7 @@ async def create_schedule_template(template_data: ScheduleTemplateCreate, curren
 async def update_schedule_template(template_id: int, template_data: ScheduleTemplateCreate, current_user = Depends(get_current_user)):
     """
     Update a schedule template that belongs to the current user's family.
+    If this template is being set as active, all other templates will be marked as inactive.
     """
     try:
         # Check if template exists and belongs to user's family
@@ -220,6 +230,15 @@ async def update_schedule_template(template_id: int, template_data: ScheduleTemp
         
         if not existing:
             raise HTTPException(status_code=404, detail="Schedule template not found")
+        
+        # If this template is being set as active, deactivate all other templates for this family
+        if template_data.is_active:
+            deactivate_query = schedule_templates.update().where(
+                (schedule_templates.c.family_id == current_user['family_id']) &
+                (schedule_templates.c.id != template_id)
+            ).values(is_active=False, updated_at=datetime.now())
+            await database.execute(deactivate_query)
+            logger.info(f"Deactivated other schedule templates for family {current_user['family_id']} when setting template {template_id} as active")
         
         # Convert pattern data to JSON
         weekly_pattern_json = template_data.weekly_pattern.dict() if template_data.weekly_pattern else None
@@ -314,6 +333,7 @@ async def delete_schedule_template(template_id: int, current_user = Depends(get_
 async def apply_schedule_template(application: ScheduleApplication, current_user = Depends(get_current_user)):
     """
     Apply a schedule template to a date range, creating custody records.
+    The applied template will be marked as the current active template.
     """
     try:
         # Get the template
@@ -325,6 +345,20 @@ async def apply_schedule_template(application: ScheduleApplication, current_user
         
         if not template_record:
             raise HTTPException(status_code=404, detail="Schedule template not found")
+        
+        # Mark this template as active and deactivate all others
+        deactivate_query = schedule_templates.update().where(
+            (schedule_templates.c.family_id == current_user['family_id']) &
+            (schedule_templates.c.id != application.template_id)
+        ).values(is_active=False, updated_at=datetime.now())
+        await database.execute(deactivate_query)
+        
+        activate_query = schedule_templates.update().where(
+            schedule_templates.c.id == application.template_id
+        ).values(is_active=True, updated_at=datetime.now())
+        await database.execute(activate_query)
+        
+        logger.info(f"Set template {application.template_id} as active when applying schedule")
         
         # Parse dates
         start_date = datetime.fromisoformat(application.start_date.replace('Z', '+00:00')).date()

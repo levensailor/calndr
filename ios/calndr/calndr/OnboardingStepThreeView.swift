@@ -350,6 +350,60 @@ struct OnboardingStepThreeView: View {
     }
     
     private func saveCustodyRecords(_ records: [(date: String, custodianId: String)]) {
+        // First, create the schedule template
+        createScheduleTemplate { templateCreated in
+            if templateCreated {
+                // Then create the custody records
+                self.createCustodyRecords(records)
+            } else {
+                // If template creation fails, still create custody records but show warning
+                print("⚠️ Template creation failed, proceeding with custody records only")
+                self.createCustodyRecords(records)
+            }
+        }
+    }
+    
+    private func createScheduleTemplate(completion: @escaping (Bool) -> Void) {
+        // Convert the onboarding selection to a weekly pattern
+        let weeklyPattern = WeeklySchedulePattern(
+            sunday: selectedDays["Sunday"] == 0 ? "parent1" : "parent2",
+            monday: selectedDays["Monday"] == 0 ? "parent1" : "parent2",
+            tuesday: selectedDays["Tuesday"] == 0 ? "parent1" : "parent2",
+            wednesday: selectedDays["Wednesday"] == 0 ? "parent1" : "parent2",
+            thursday: selectedDays["Thursday"] == 0 ? "parent1" : "parent2",
+            friday: selectedDays["Friday"] == 0 ? "parent1" : "parent2",
+            saturday: selectedDays["Saturday"] == 0 ? "parent1" : "parent2"
+        )
+        
+        let templateName = "My Custody Schedule"
+        let templateDescription = "Schedule created during onboarding on \(Date().formatted(date: .abbreviated, time: .omitted))"
+        
+        let templateData = ScheduleTemplateCreate(
+            name: templateName,
+            description: templateDescription,
+            patternType: .weekly,
+            weeklyPattern: weeklyPattern,
+            alternatingWeeksPattern: nil,
+            isActive: true
+        )
+        
+        print("📋 Creating schedule template: \(templateName)")
+        
+        APIService.shared.createScheduleTemplate(templateData) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let template):
+                    print("✅ Schedule template created successfully: \(template.name)")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Failed to create schedule template: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    private func createCustodyRecords(_ records: [(date: String, custodianId: String)]) {
         // Convert to CustodyRequest format for bulk API
         let custodyRequests = records.map { record in
             CustodyRequest(
