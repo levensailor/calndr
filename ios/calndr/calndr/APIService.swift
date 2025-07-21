@@ -71,6 +71,13 @@ struct UserResponse: Codable {
     let status: String?
 }
 
+struct PhoneVerificationResponse: Codable {
+    let success: Bool
+    let message: String
+    let expires_in: Int?
+    let retry_after: Int?
+}
+
 struct ChildCreateRequest: Codable {
     let first_name: String
     let last_name: String
@@ -2574,6 +2581,94 @@ class APIService {
             
             do {
                 let response = try JSONDecoder().decode(DaycareEventsParseResponse.self, from: data)
+                completion(.success(response))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    // MARK: - Phone Verification
+    
+    func sendPhoneVerificationPin(phoneNumber: String, completion: @escaping (Result<PhoneVerificationResponse, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/phone-verification/send-pin")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body = ["phone_number": phoneNumber]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                // Try to parse error message
+                if let errorData = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let detail = errorData["detail"] as? String {
+                    completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: detail])))
+                } else {
+                    completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                }
+                return
+            }
+            
+            do {
+                let response = try JSONDecoder().decode(PhoneVerificationResponse.self, from: data)
+                completion(.success(response))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func verifyPhonePin(phoneNumber: String, pin: String, completion: @escaping (Result<PhoneVerificationResponse, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/phone-verification/verify-pin")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body = ["phone_number": phoneNumber, "pin": pin]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                return
+            }
+            
+            do {
+                let response = try JSONDecoder().decode(PhoneVerificationResponse.self, from: data)
                 completion(.success(response))
             } catch {
                 completion(.failure(error))

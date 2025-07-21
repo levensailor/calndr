@@ -11,7 +11,7 @@ class SignUpViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    func signUp(authManager: AuthenticationManager, completion: @escaping (Bool) -> Void) {
+    func validateAndSendPin(completion: @escaping (Bool, String) -> Void) {
         // Clear previous error
         errorMessage = nil
         
@@ -51,6 +51,43 @@ class SignUpViewModel: ObservableObject {
             return
         }
         
+        guard !phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            errorMessage = "Phone number is required"
+            return
+        }
+        
+        let cleanPhone = phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Validate phone number format
+        guard isValidPhoneNumber(cleanPhone) else {
+            errorMessage = "Please enter a valid phone number"
+            return
+        }
+        
+        isLoading = true
+        
+        // Send verification PIN
+        APIService.shared.sendPhoneVerificationPin(phoneNumber: cleanPhone) { [weak self] result in
+            DispatchQueue.main.async {
+                self?.isLoading = false
+                
+                switch result {
+                case .success(let response):
+                    if response.success {
+                        completion(true, cleanPhone)
+                    } else {
+                        self?.errorMessage = response.message
+                        completion(false, "")
+                    }
+                case .failure(let error):
+                    self?.errorMessage = error.localizedDescription
+                    completion(false, "")
+                }
+            }
+        }
+    }
+    
+    func completeSignUp(authManager: AuthenticationManager, completion: @escaping (Bool) -> Void) {
         isLoading = true
         
         authManager.signUp(
@@ -58,7 +95,7 @@ class SignUpViewModel: ObservableObject {
             lastName: lastName.trimmingCharacters(in: .whitespacesAndNewlines),
             email: email.trimmingCharacters(in: .whitespacesAndNewlines),
             password: password,
-            phoneNumber: phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+            phoneNumber: phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines)
         ) { [weak self] result in
             DispatchQueue.main.async {
                 self?.isLoading = false
@@ -73,5 +110,13 @@ class SignUpViewModel: ObservableObject {
     private func isValidEmail(_ email: String) -> Bool {
         let emailRegex = #"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"#
         return NSPredicate(format: "SELF MATCHES %@", emailRegex).evaluate(with: email)
+    }
+    
+    private func isValidPhoneNumber(_ phone: String) -> Bool {
+        // Remove all non-digit characters for validation
+        let digits = phone.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+        
+        // Should be 10 digits (US format) or 11 digits with country code
+        return digits.count == 10 || (digits.count == 11 && digits.hasPrefix("1"))
     }
 } 

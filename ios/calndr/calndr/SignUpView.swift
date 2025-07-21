@@ -6,6 +6,8 @@ struct SignUpView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.presentationMode) var presentationMode
     @State private var isOnboardingPresented = false
+    @State private var showingPhoneVerification = false
+    @State private var phoneToVerify = ""
 
     var body: some View {
         ZStack {
@@ -60,7 +62,7 @@ struct SignUpView: View {
                         .frame(height: 56)
 
                         FloatingLabelTextField(
-                            title: "Phone Number (Optional)",
+                            title: "Phone Number",
                             text: $viewModel.phoneNumber,
                             isSecure: false
                         )
@@ -78,9 +80,11 @@ struct SignUpView: View {
                     }
                     
                     Button(action: {
-                        viewModel.signUp(authManager: authManager) { success in
+                        // First validate phone number and send PIN
+                        viewModel.validateAndSendPin { success, phoneNumber in
                             if success {
-                                isOnboardingPresented = true
+                                phoneToVerify = phoneNumber
+                                showingPhoneVerification = true
                             }
                         }
                     }) {
@@ -119,6 +123,18 @@ struct SignUpView: View {
         .onTapGesture {
             // Dismiss keyboard when tapping outside
             hideKeyboard()
+        }
+        .fullScreenCover(isPresented: $showingPhoneVerification) {
+            PhoneVerificationView(phoneNumber: phoneToVerify) {
+                // Phone verified, now complete signup
+                viewModel.completeSignUp(authManager: authManager) { success in
+                    if success {
+                        showingPhoneVerification = false
+                        isOnboardingPresented = true
+                    }
+                }
+            }
+            .environmentObject(themeManager)
         }
         .fullScreenCover(isPresented: $isOnboardingPresented) {
             OnboardingView(isOnboardingComplete: $isOnboardingPresented)
