@@ -338,38 +338,34 @@ struct OnboardingStepThreeView: View {
     }
     
     private func saveCustodyRecords(_ records: [(date: String, custodianId: String)]) {
-        let dispatchGroup = DispatchGroup()
-        var errors: [String] = []
-        var successCount = 0
-        
-        for record in records {
-            dispatchGroup.enter()
-            
-            APIService.shared.updateCustodyRecord(
-                for: record.date,
-                custodianId: record.custodianId
-            ) { result in
-                switch result {
-                case .success(_):
-                    successCount += 1
-                case .failure(let error):
-                    errors.append("Failed to save \(record.date): \(error.localizedDescription)")
-                }
-                dispatchGroup.leave()
-            }
+        // Convert to CustodyRequest format for bulk API
+        let custodyRequests = records.map { record in
+            CustodyRequest(
+                date: record.date,
+                custodian_id: record.custodianId,
+                handoff_day: nil,
+                handoff_time: nil,
+                handoff_location: nil
+            )
         }
         
-        dispatchGroup.notify(queue: .main) {
-            isLoading = false
-            
-            if errors.isEmpty {
-                print("✅ Successfully created \(successCount) custody records")
-                onComplete()
-            } else {
-                errorMessage = "Some custody records failed to save. Please try again or set up your schedule manually later."
-                print("❌ Errors saving custody records: \(errors)")
-                // Still complete onboarding even if some records failed
-                onComplete()
+        print("🚀 Starting bulk creation of \(custodyRequests.count) custody records...")
+        
+        APIService.shared.bulkCreateCustodyRecords(custodyRequests) { result in
+            DispatchQueue.main.async {
+                isLoading = false
+                
+                switch result {
+                case .success(let response):
+                    print("✅ Bulk custody creation successful: \(response.message)")
+                    print("✅ Created \(response.records_created) custody records")
+                    onComplete()
+                case .failure(let error):
+                    print("❌ Bulk custody creation failed: \(error.localizedDescription)")
+                    errorMessage = "Failed to save custody schedule. Please try again or set up your schedule manually later."
+                    // Still complete onboarding even if bulk save failed
+                    onComplete()
+                }
             }
         }
     }

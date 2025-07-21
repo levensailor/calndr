@@ -277,3 +277,59 @@ async def update_custody_by_id(custody_id: int, custody_data: CustodyRecord, cur
         logger.error(f"Error updating custody: {e}")
         logger.error(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Internal server error while updating custody: {e}")
+
+@router.post("/bulk", response_model=dict)
+async def bulk_create_custody(custody_records: List[CustodyRecord], current_user = Depends(get_current_user)):
+    """
+    Creates multiple custody records in a single transaction for improved performance.
+    Useful for onboarding or schedule template applications.
+    """
+    logger.info(f"Received bulk custody creation request for {len(custody_records)} records")
+    
+    family_id = current_user['family_id']
+    actor_id = current_user['id']
+    
+    try:
+        # Prepare bulk insert data
+        insert_values = []
+        for custody_data in custody_records:
+            # Determine handoff_day value
+            handoff_day_value = custody_data.handoff_day
+            if handoff_day_value is None:
+                handoff_day_value = False
+            
+            insert_values.append({
+                'family_id': family_id,
+                'date': custody_data.date,
+                'custodian_id': custody_data.custodian_id,
+                'actor_id': actor_id,
+                'handoff_day': handoff_day_value,
+                'handoff_time': datetime.strptime(custody_data.handoff_time, '%H:%M').time() if custody_data.handoff_time else None,
+                'handoff_location': custody_data.handoff_location,
+                'created_at': datetime.now()
+            })
+        
+        # Perform bulk insert
+        if insert_values:
+            # Use PostgreSQL's bulk insert for efficiency
+            insert_query = custody.insert()
+            await database.execute_many(insert_query, insert_values)
+            
+            logger.info(f"Successfully created {len(insert_values)} custody records via bulk insert")
+            
+            return {
+                "status": "success",
+                "records_created": len(insert_values),
+                "message": f"Successfully created {len(insert_values)} custody records"
+            }
+        else:
+            return {
+                "status": "success", 
+                "records_created": 0,
+                "message": "No records to create"
+            }
+            
+    except Exception as e:
+        logger.error(f"Error in bulk custody creation: {e}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal server error during bulk custody creation: {e}")

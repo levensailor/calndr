@@ -714,6 +714,56 @@ class APIService {
         }.resume()
     }
     
+    func bulkCreateCustodyRecords(_ records: [CustodyRequest], completion: @escaping (Result<BulkCustodyResponse, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/custody/bulk")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(records)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server - not HTTP"])))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received on bulk custody creation"])))
+                return
+            }
+
+            // Log the raw data as a string for debugging
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("--- Raw JSON for bulkCreateCustodyRecords (Status: \(httpResponse.statusCode)) ---")
+                print(jsonString)
+                print("--------------------------------------------------------------------")
+            }
+
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Failed to bulk create custody records"])))
+                return
+            }
+            
+            do {
+                let response = try JSONDecoder().decode(BulkCustodyResponse.self, from: data)
+                completion(.success(response))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
     // MARK: - Legacy Custody (REMOVED - use new custody API above)
     // The old updateCustody function has been removed to prevent accidental use.
     // Use updateCustodyRecord() instead.

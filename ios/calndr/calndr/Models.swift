@@ -68,6 +68,12 @@ struct CustodyRequest: Codable {
     }
 }
 
+struct BulkCustodyResponse: Codable {
+    let status: String
+    let records_created: Int
+    let message: String
+}
+
 // Response model from custody API (compatible with frontend format)
 struct CustodyResponse: Codable, Identifiable, Equatable {
     var id: Int
