@@ -412,6 +412,9 @@ async def apply_schedule_template(application: ScheduleApplication, current_user
         existing_records = await database.fetch_all(existing_custody_query)
         existing_by_date = {record['date']: record for record in existing_records}
         
+        # Track previous day's custodian for handoff detection
+        previous_custodian_id = None
+        
         while current_date <= end_date:
             day_of_week = current_date.strftime('%A').lower()
             
@@ -426,6 +429,26 @@ async def apply_schedule_template(application: ScheduleApplication, current_user
                     actual_custodian_id = parent2_id
                 
                 if actual_custodian_id:
+                    # Determine if this is a handoff day
+                    is_handoff_day = (previous_custodian_id is not None and 
+                                    previous_custodian_id != actual_custodian_id)
+                    
+                    # Set handoff time and location for handoff days
+                    handoff_time = None
+                    handoff_location = None
+                    
+                    if is_handoff_day:
+                        # Determine handoff time based on day of week
+                        weekday = current_date.weekday()  # Monday = 0, Sunday = 6
+                        is_weekend = weekday >= 5  # Saturday = 5, Sunday = 6
+                        
+                        if is_weekend:
+                            handoff_time = datetime.strptime("12:00", '%H:%M').time()  # Noon for weekends
+                            handoff_location = "other"
+                        else:
+                            handoff_time = datetime.strptime("17:00", '%H:%M').time()  # 5pm for weekdays
+                            handoff_location = "daycare"
+                    
                     # Check if record already exists
                     if current_date in existing_by_date:
                         if application.overwrite_existing:
@@ -434,9 +457,9 @@ async def apply_schedule_template(application: ScheduleApplication, current_user
                             update_query = custody.update().where(custody.c.id == existing_record['id']).values(
                                 custodian_id=actual_custodian_id,
                                 actor_id=current_user['id'],
-                                handoff_day=False,  # Default for template application
-                                handoff_time=None,
-                                handoff_location=None
+                                handoff_day=is_handoff_day,
+                                handoff_time=handoff_time,
+                                handoff_location=handoff_location
                             )
                             await database.execute(update_query)
                             conflicts_overwritten += 1
@@ -449,13 +472,16 @@ async def apply_schedule_template(application: ScheduleApplication, current_user
                             date=current_date,
                             custodian_id=actual_custodian_id,
                             actor_id=current_user['id'],
-                            handoff_day=False,  # Default for template application
-                            handoff_time=None,
-                            handoff_location=None,
+                            handoff_day=is_handoff_day,
+                            handoff_time=handoff_time,
+                            handoff_location=handoff_location,
                             created_at=datetime.now()
                         )
                         await database.execute(insert_query)
                         days_applied += 1
+                    
+                    # Update previous custodian for next iteration
+                    previous_custodian_id = actual_custodian_id
             
             current_date += timedelta(days=1)
         

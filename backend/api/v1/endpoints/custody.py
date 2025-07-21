@@ -290,13 +290,38 @@ async def bulk_create_custody(custody_records: List[CustodyRecord], current_user
     actor_id = current_user['id']
     
     try:
+        # Sort records by date to properly detect handoffs
+        sorted_records = sorted(custody_records, key=lambda x: x.date)
+        
         # Prepare bulk insert data
         insert_values = []
-        for custody_data in custody_records:
+        previous_custodian_id = None
+        
+        for custody_data in sorted_records:
             # Determine handoff_day value
             handoff_day_value = custody_data.handoff_day
+            handoff_time_value = custody_data.handoff_time
+            handoff_location_value = custody_data.handoff_location
+            
+            # Auto-detect handoff if not explicitly set
             if handoff_day_value is None:
-                handoff_day_value = False
+                is_handoff_day = (previous_custodian_id is not None and 
+                                previous_custodian_id != custody_data.custodian_id)
+                handoff_day_value = is_handoff_day
+                
+                # Set default handoff time and location for detected handoffs
+                if is_handoff_day and not handoff_time_value:
+                    weekday = custody_data.date.weekday()  # Monday = 0, Sunday = 6
+                    is_weekend = weekday >= 5  # Saturday = 5, Sunday = 6
+                    
+                    if is_weekend:
+                        handoff_time_value = "12:00"  # Noon for weekends
+                        if not handoff_location_value:
+                            handoff_location_value = "other"
+                    else:
+                        handoff_time_value = "17:00"  # 5pm for weekdays
+                        if not handoff_location_value:
+                            handoff_location_value = "daycare"
             
             insert_values.append({
                 'family_id': family_id,
@@ -304,10 +329,12 @@ async def bulk_create_custody(custody_records: List[CustodyRecord], current_user
                 'custodian_id': custody_data.custodian_id,
                 'actor_id': actor_id,
                 'handoff_day': handoff_day_value,
-                'handoff_time': datetime.strptime(custody_data.handoff_time, '%H:%M').time() if custody_data.handoff_time else None,
-                'handoff_location': custody_data.handoff_location,
+                'handoff_time': datetime.strptime(handoff_time_value, '%H:%M').time() if handoff_time_value else None,
+                'handoff_location': handoff_location_value,
                 'created_at': datetime.now()
             })
+            
+            previous_custodian_id = custody_data.custodian_id
         
         # Perform bulk insert
         if insert_values:
