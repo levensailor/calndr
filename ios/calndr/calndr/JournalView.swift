@@ -9,6 +9,8 @@ struct JournalView: View {
     @State private var showingEditEntry = false
     @State private var selectedEntry: JournalEntry?
     @State private var searchText = ""
+    @State private var hasCheckedForAutoOpen = false
+    @State private var showPlusButtonHighlight = false
     
     var filteredEntries: [JournalEntry] {
         if searchText.isEmpty {
@@ -26,7 +28,9 @@ struct JournalView: View {
         NavigationView {
             VStack {
                 if viewModel.journalEntries.isEmpty {
-                    EmptyJournalView()
+                    EmptyJournalView(onAddEntry: {
+                        showingAddEntry = true
+                    })
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 12) {
@@ -61,6 +65,8 @@ struct JournalView: View {
                     }) {
                         Image(systemName: "plus")
                             .foregroundColor(themeManager.currentTheme.iconColorSwiftUI)
+                            .scaleEffect(showPlusButtonHighlight ? 1.2 : 1.0)
+                            .animation(.easeInOut(duration: 0.2), value: showPlusButtonHighlight)
                     }
                 }
             }
@@ -68,6 +74,27 @@ struct JournalView: View {
         .themeNavigationBar(themeManager: themeManager)
         .onAppear {
             viewModel.fetchJournalEntries()
+        }
+        .onChange(of: viewModel.journalEntries) { entries in
+            // Auto-open add entry modal if journal is empty and we haven't checked yet
+            if !hasCheckedForAutoOpen && entries.isEmpty {
+                hasCheckedForAutoOpen = true
+                // Create animation sequence that looks like it's coming from the + button
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    // First, highlight the + button
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        showPlusButtonHighlight = true
+                    }
+                    
+                    // Then show the modal after a brief pause
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showPlusButtonHighlight = false
+                        }
+                        showingAddEntry = true
+                    }
+                }
+            }
         }
         .sheet(isPresented: $showingAddEntry) {
             AddEditJournalEntryView(viewModel: viewModel, isEditing: false)
@@ -83,23 +110,42 @@ struct JournalView: View {
 }
 
 struct EmptyJournalView: View {
+    let onAddEntry: () -> Void
     @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 24) {
             Image(systemName: "book.closed")
                 .font(.system(size: 60))
                 .foregroundColor(themeManager.currentTheme.iconColorSwiftUI.opacity(0.5))
             
-            Text("No Journal Entries Yet")
-                .font(.title2.bold())
-                .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+            VStack(spacing: 12) {
+                Text("No Journal Entries Yet")
+                    .font(.title2.bold())
+                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+                
+                Text("Start capturing your family memories and daily moments by adding your first journal entry.")
+                    .font(.body)
+                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+            }
             
-            Text("Start capturing your family memories and daily moments by adding your first journal entry.")
-                .font(.body)
-                .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
+            Button(action: onAddEntry) {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title3)
+                    Text("Create First Entry")
+                        .font(.headline)
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                .background(themeManager.currentTheme.accentColor.color)
+                .cornerRadius(8)
+            }
+            .scaleEffect(1.0)
+            .animation(.easeInOut(duration: 0.1), value: true)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
