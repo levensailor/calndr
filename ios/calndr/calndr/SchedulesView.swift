@@ -12,7 +12,6 @@ struct SchedulesView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     SchedulesHeaderView()
-                    QuickStartSection(onPresetSelected: selectPreset)
                     AllPresetsSection(onPresetSelected: selectPreset)
                     CustomScheduleSection(onCreateCustom: createCustomSchedule)
                     SavedTemplatesSection()
@@ -63,33 +62,7 @@ struct SchedulesHeaderView: View {
     }
 }
 
-// MARK: - Quick Start Section
 
-struct QuickStartSection: View {
-    let onPresetSelected: (SchedulePreset) -> Void
-    @EnvironmentObject var themeManager: ThemeManager
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Quick Start")
-                .font(.headline)
-                .foregroundColor(themeManager.currentTheme.textColor.color)
-                .padding(.horizontal)
-            
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: 12) {
-                ForEach(SchedulePreset.commonPresets.filter { $0.isPopular }, id: \.id) { preset in
-                    SchedulePresetCard(preset: preset) {
-                        onPresetSelected(preset)
-                    }
-                }
-            }
-            .padding(.horizontal)
-        }
-    }
-}
 
 // MARK: - All Presets Section
 

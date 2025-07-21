@@ -114,37 +114,7 @@ struct OnboardingStepThreeView: View {
                 }
                 .padding(.horizontal)
                 
-                // Quick Setup Templates
-                VStack(spacing: 15) {
-                    Text("Quick Setup Templates")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    
-                    HStack(spacing: 10) {
-                        Button("Alternating Weeks") {
-                            setAlternatingWeeks()
-                        }
-                        .buttonStyle(TemplateButtonStyle())
-                        
-                        Button("Weekdays/Weekends") {
-                            setWeekdaysWeekends()
-                        }
-                        .buttonStyle(TemplateButtonStyle())
-                    }
-                    
-                    HStack(spacing: 10) {
-                        Button("Equal Split") {
-                            setEqualSplit()
-                        }
-                        .buttonStyle(TemplateButtonStyle())
-                        
-                        Button("Clear All") {
-                            clearSchedule()
-                        }
-                        .buttonStyle(TemplateButtonStyle(backgroundColor: .red))
-                    }
-                }
-                .padding(.horizontal)
+
                 
                 Spacer(minLength: 30)
                 
@@ -222,40 +192,7 @@ struct OnboardingStepThreeView: View {
         }
     }
     
-    private func setAlternatingWeeks() {
-        // Simple alternating pattern - this would be enhanced for actual alternating weeks
-        for (index, day) in daysOfWeek.enumerated() {
-            selectedDays[day] = index % 2
-        }
-    }
-    
-    private func setWeekdaysWeekends() {
-        let weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-        let weekends = ["Saturday", "Sunday"]
-        
-        for day in weekdays {
-            selectedDays[day] = 0 // Parent 1 gets weekdays
-        }
-        for day in weekends {
-            selectedDays[day] = 1 // Parent 2 gets weekends
-        }
-    }
-    
-    private func setEqualSplit() {
-        selectedDays["Monday"] = 0
-        selectedDays["Tuesday"] = 0
-        selectedDays["Wednesday"] = 0
-        selectedDays["Thursday"] = 1
-        selectedDays["Friday"] = 1
-        selectedDays["Saturday"] = 1
-        selectedDays["Sunday"] = 0
-    }
-    
-    private func clearSchedule() {
-        for day in daysOfWeek {
-            selectedDays[day] = 0
-        }
-    }
+
     
     private func saveScheduleAndComplete() {
         // First, fetch custodian IDs if we don't have them
@@ -443,16 +380,4 @@ struct OnboardingStepThreeView: View {
     }
 }
 
-struct TemplateButtonStyle: ButtonStyle {
-    var backgroundColor: Color = .blue
-    
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.footnote)
-            .foregroundColor(.white)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(backgroundColor.opacity(configuration.isPressed ? 0.7 : 1.0))
-            .cornerRadius(6)
-    }
-}
+
