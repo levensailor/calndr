@@ -548,7 +548,31 @@ class CalendarViewModel: ObservableObject {
         let dateString = isoDateString(from: date)
         let dayOfWeek = Calendar.current.component(.weekday, from: date) // 1=Sun, 2=Mon, 7=Sat
         
-        // Check custody record for handoff time
+        // First check for any custody record with handoff data (regardless of handoff_day flag)
+        if let custodyRecord = custodyRecords.first(where: { $0.event_date == dateString && ($0.handoff_time != nil || $0.handoff_location != nil) }) {
+            var hour: Int?
+            var minute: Int?
+            
+            // Parse the handoff time if available
+            if let handoffTime = custodyRecord.handoff_time {
+                let components = handoffTime.split(separator: ":")
+                if components.count == 2,
+                   let parsedHour = Int(components[0]),
+                   let parsedMinute = Int(components[1]) {
+                    hour = parsedHour
+                    minute = parsedMinute
+                } else {
+                    print("⚠️ Invalid time format in custody handoff record for \(dateString): '\(handoffTime)'")
+                }
+            }
+            
+            // If we have a valid time, return it with the location
+            if let validHour = hour, let validMinute = minute {
+                return (validHour, validMinute, custodyRecord.handoff_location)
+            }
+        }
+        
+        // Fallback: Check custody record for handoff time with handoff_day flag
         if let custodyRecord = custodyRecords.first(where: { $0.event_date == dateString && $0.handoff_day == true }) {
             var hour: Int?
             var minute: Int?
@@ -577,7 +601,7 @@ class CalendarViewModel: ObservableObject {
         let defaultHour = isWeekend ? 12 : 17
         let defaultLocation = isWeekend ? "neutral ground" : "daycare" // Example default locations
         
-//        print("🔄 Using default handoff time for \(dateString): \(defaultHour):00 at \(defaultLocation)")
+        print("🔄 Using default handoff time for \(dateString): \(defaultHour):00 at \(defaultLocation)")
         return (defaultHour, 0, defaultLocation)
     }
 
