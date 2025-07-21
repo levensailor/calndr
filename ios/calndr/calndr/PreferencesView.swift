@@ -222,14 +222,6 @@ struct PreferencesView: View {
                 activeColor: .blue
             ),
             PreferenceItem(
-                title: "School Events",
-                icon: "graduationcap.fill",
-                description: "Display school calendar",
-                isToggle: true,
-                toggleBinding: $viewModel.showSchoolEvents,
-                activeColor: .green
-            ),
-            PreferenceItem(
                 title: "Edit Past Custody",
                 icon: "calendar.badge.clock",
                 description: "Allow editing of past custody",

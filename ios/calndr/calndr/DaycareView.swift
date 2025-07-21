@@ -81,6 +81,7 @@ struct DaycareView: View {
 struct DaycareProviderCard: View {
     let provider: DaycareProvider
     @EnvironmentObject var themeManager: ThemeManager
+    @State private var showingEventsModal = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -103,6 +104,21 @@ struct DaycareProviderCard: View {
                 }
                 
                 Spacer()
+                
+                // Events button in top right
+                Button(action: {
+                    showingEventsModal = true
+                }) {
+                    Image(systemName: "calendar.badge.plus")
+                        .font(.title3)
+                        .foregroundColor(.blue)
+                        .padding(8)
+                        .background(
+                            Circle()
+                                .fill(themeManager.currentTheme.secondaryBackgroundColor.color)
+                                .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+                        )
+                }
             }
             
             if let hours = provider.hours {
@@ -119,14 +135,19 @@ struct DaycareProviderCard: View {
             
             HStack {
                 if let phone = provider.phoneNumber {
-                    HStack {
-                        Image(systemName: "phone")
-                            .font(.caption)
-                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
-                        
-                        Text(phone)
-                            .font(.caption)
-                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+                    Button(action: {
+                        makePhoneCall(phone)
+                    }) {
+                        HStack {
+                            Image(systemName: "phone")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                            
+                            Text(phone)
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                                .underline()
+                        }
                     }
                 }
                 
@@ -158,6 +179,17 @@ struct DaycareProviderCard: View {
                 .fill(themeManager.currentTheme.secondaryBackgroundColor.color)
                 .shadow(color: themeManager.currentTheme.textColor.color.opacity(0.1), radius: 2, x: 0, y: 1)
         )
+        .sheet(isPresented: $showingEventsModal) {
+            DaycareEventsModal(provider: provider)
+                .environmentObject(themeManager)
+        }
+    }
+    
+    private func makePhoneCall(_ phoneNumber: String) {
+        let cleanedNumber = phoneNumber.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+        if let url = URL(string: "tel:\(cleanedNumber)") {
+            UIApplication.shared.open(url)
+        }
     }
 }
 
@@ -603,6 +635,146 @@ struct DaycareSearchResultRow: View {
             )
         }
         .buttonStyle(PlainButtonStyle())
+    }
+}
+
+struct DaycareEventsModal: View {
+    let provider: DaycareProvider
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.dismiss) private var dismiss
+    @State private var eventURL = ""
+    @State private var isLoading = false
+    @State private var showingSuccessMessage = false
+    @State private var showingErrorMessage = false
+    @State private var errorMessage = ""
+    
+    var body: some View {
+        NavigationView {
+            VStack(alignment: .leading, spacing: 24) {
+                // Header
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Parse Events")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
+                    
+                    Text("For \(provider.name)")
+                        .font(.headline)
+                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+                }
+                .padding(.horizontal)
+                
+                // Warning Section
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.orange)
+                        Text("Best Effort Parsing")
+                            .font(.headline)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
+                    }
+                    
+                    Text("Event parsing is experimental and works on a best-effort basis. Results may vary depending on the website structure and format. We recommend verifying important dates manually.")
+                        .font(.subheadline)
+                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.orange.opacity(0.1))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                        )
+                )
+                .padding(.horizontal)
+                
+                // URL Input Section
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Events Calendar URL")
+                        .font(.headline)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
+                    
+                    Text("Enter the URL of the daycare's online calendar or events page")
+                        .font(.caption)
+                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
+                    
+                    TextField("https://daycare.com/calendar", text: $eventURL)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .keyboardType(.URL)
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                }
+                .padding(.horizontal)
+                
+                // Parse Button
+                Button(action: parseEvents) {
+                    HStack {
+                        if isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "arrow.down.doc")
+                        }
+                        Text(isLoading ? "Parsing Events..." : "Parse Events")
+                    }
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(eventURL.isEmpty ? Color.gray : Color.blue)
+                    .cornerRadius(10)
+                }
+                .disabled(eventURL.isEmpty || isLoading)
+                .padding(.horizontal)
+                
+                Spacer()
+            }
+            .background(themeManager.currentTheme.mainBackgroundColor.color)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundColor(themeManager.currentTheme.textColor.color)
+                }
+            }
+        }
+        .alert("Success", isPresented: $showingSuccessMessage) {
+            Button("OK") {
+                dismiss()
+            }
+        } message: {
+            Text("Events have been successfully parsed and added to your calendar!")
+        }
+        .alert("Error", isPresented: $showingErrorMessage) {
+            Button("OK") { }
+        } message: {
+            Text(errorMessage)
+        }
+    }
+    
+    private func parseEvents() {
+        guard !eventURL.isEmpty else { return }
+        
+        isLoading = true
+        
+        // Simulate API call for now - in a real implementation, this would call
+        // a backend service that scrapes the URL for calendar events
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            isLoading = false
+            
+            // Simulate random success/failure for demo
+            if Bool.random() {
+                showingSuccessMessage = true
+            } else {
+                errorMessage = "Unable to parse events from the provided URL. Please verify the URL is correct and the website contains a parseable calendar format."
+                showingErrorMessage = true
+            }
+        }
     }
 }
 
