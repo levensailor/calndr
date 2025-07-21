@@ -2512,6 +2512,75 @@ class APIService {
         }.resume()
     }
     
+    func discoverDaycareCalendarURL(providerId: Int, completion: @escaping (Result<DaycareCalendarDiscoveryResponse, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/daycare-providers/\(providerId)/discover-calendar")
+        let request = createAuthenticatedRequest(url: url)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                return
+            }
+            
+            do {
+                let response = try JSONDecoder().decode(DaycareCalendarDiscoveryResponse.self, from: data)
+                completion(.success(response))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func parseDaycareEvents(providerId: Int, calendarURL: String, completion: @escaping (Result<DaycareEventsParseResponse, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/daycare-providers/\(providerId)/parse-events")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let requestBody = ["calendar_url": calendarURL]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                return
+            }
+            
+            do {
+                let response = try JSONDecoder().decode(DaycareEventsParseResponse.self, from: data)
+                completion(.success(response))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
     // MARK: - Themes
     
     func fetchThemes(completion: @escaping (Result<[Theme], Error>) -> Void) {

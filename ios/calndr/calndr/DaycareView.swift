@@ -643,6 +643,8 @@ struct DaycareEventsModal: View {
     @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.dismiss) private var dismiss
     @State private var eventURL = ""
+    @State private var discoveredURL: String? = nil
+    @State private var isDiscovering = false
     @State private var isLoading = false
     @State private var showingSuccessMessage = false
     @State private var showingErrorMessage = false
@@ -690,13 +692,47 @@ struct DaycareEventsModal: View {
                 )
                 .padding(.horizontal)
                 
+                // URL Discovery Section
+                if let website = provider.website, !website.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Auto-Discovery")
+                            .font(.headline)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
+                        
+                        Text("We'll try to find the calendar page automatically from \(provider.name)'s website")
+                            .font(.caption)
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
+                        
+                        Button(action: discoverCalendarURL) {
+                            HStack {
+                                if isDiscovering {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .scaleEffect(0.8)
+                                } else {
+                                    Image(systemName: "magnifyingglass")
+                                }
+                                Text(isDiscovering ? "Discovering..." : "Discover Calendar URL")
+                            }
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .cornerRadius(8)
+                        }
+                        .disabled(isDiscovering)
+                    }
+                    .padding(.horizontal)
+                }
+                
                 // URL Input Section
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Events Calendar URL")
                         .font(.headline)
                         .foregroundColor(themeManager.currentTheme.textColor.color)
                     
-                    Text("Enter the URL of the daycare's online calendar or events page")
+                    Text(discoveredURL != nil ? "Discovered URL (you can edit if needed):" : "Enter the URL manually:")
                         .font(.caption)
                         .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
                     
@@ -757,22 +793,53 @@ struct DaycareEventsModal: View {
         }
     }
     
+    private func discoverCalendarURL() {
+        isDiscovering = true
+        
+        // Call the backend to discover the calendar URL
+        APIService.shared.discoverDaycareCalendarURL(providerId: provider.id) { result in
+            DispatchQueue.main.async {
+                isDiscovering = false
+                
+                switch result {
+                case .success(let response):
+                    if let calendarURL = response.discoveredCalendarURL {
+                        discoveredURL = calendarURL
+                        eventURL = calendarURL
+                    } else {
+                        errorMessage = "Could not automatically discover a calendar URL for \(provider.name). Please enter the URL manually."
+                        showingErrorMessage = true
+                    }
+                case .failure(let error):
+                    errorMessage = "Failed to discover calendar URL: \(error.localizedDescription)"
+                    showingErrorMessage = true
+                }
+            }
+        }
+    }
+    
     private func parseEvents() {
         guard !eventURL.isEmpty else { return }
         
         isLoading = true
         
-        // Simulate API call for now - in a real implementation, this would call
-        // a backend service that scrapes the URL for calendar events
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            isLoading = false
-            
-            // Simulate random success/failure for demo
-            if Bool.random() {
-                showingSuccessMessage = true
-            } else {
-                errorMessage = "Unable to parse events from the provided URL. Please verify the URL is correct and the website contains a parseable calendar format."
-                showingErrorMessage = true
+        // Call the backend to parse events from the URL
+        APIService.shared.parseDaycareEvents(providerId: provider.id, calendarURL: eventURL) { result in
+            DispatchQueue.main.async {
+                isLoading = false
+                
+                switch result {
+                case .success(let response):
+                    if response.eventsCount > 0 {
+                        showingSuccessMessage = true
+                    } else {
+                        errorMessage = "No events found at the provided URL. The calendar might be empty or in an unsupported format."
+                        showingErrorMessage = true
+                    }
+                case .failure(let error):
+                    errorMessage = "Unable to parse events: \(error.localizedDescription)"
+                    showingErrorMessage = true
+                }
             }
         }
     }

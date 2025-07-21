@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from typing import List
+from typing import List, Dict, Optional
 from datetime import datetime
 import os
 import httpx
@@ -9,6 +9,7 @@ from core.security import get_current_user
 from core.logging import logger
 from db.models import daycare_providers
 from schemas.daycare import DaycareProviderCreate, DaycareProviderResponse, DaycareSearchRequest, DaycareSearchResult
+from services.daycare_events_service import discover_calendar_url, parse_events_from_url, get_daycare_events
 
 router = APIRouter()
 
@@ -166,6 +167,85 @@ async def delete_daycare_provider(provider_id: int, current_user = Depends(get_c
     except Exception as e:
         logger.error(f"Error deleting daycare provider: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete daycare provider")
+
+@router.get("/{provider_id}/discover-calendar")
+async def discover_daycare_calendar_url(provider_id: int, current_user = Depends(get_current_user)):
+    """
+    Discover the calendar/events URL for a specific daycare provider.
+    """
+    try:
+        # Get the daycare provider
+        query = daycare_providers.select().where(
+            (daycare_providers.c.id == provider_id) &
+            (daycare_providers.c.created_by_user_id == current_user['id'])
+        )
+        provider = await database.fetch_one(query)
+        
+        if not provider:
+            raise HTTPException(status_code=404, detail="Daycare provider not found")
+        
+        if not provider['website']:
+            raise HTTPException(status_code=400, detail="Daycare provider has no website URL")
+        
+        # Discover calendar URL
+        calendar_url = await discover_calendar_url(provider['website'])
+        
+        return {
+            "provider_id": provider_id,
+            "provider_name": provider['name'],
+            "base_website": provider['website'],
+            "discovered_calendar_url": calendar_url,
+            "success": calendar_url is not None
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error discovering calendar URL for provider {provider_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to discover calendar URL")
+
+@router.post("/{provider_id}/parse-events")
+async def parse_daycare_events(
+    provider_id: int, 
+    request_data: Dict[str, str],
+    current_user = Depends(get_current_user)
+):
+    """
+    Parse events from a daycare provider's calendar URL.
+    Expects {"calendar_url": "https://..."} in the request body.
+    """
+    try:
+        calendar_url = request_data.get("calendar_url")
+        if not calendar_url:
+            raise HTTPException(status_code=400, detail="calendar_url is required")
+        
+        # Get the daycare provider for context
+        query = daycare_providers.select().where(
+            (daycare_providers.c.id == provider_id) &
+            (daycare_providers.c.created_by_user_id == current_user['id'])
+        )
+        provider = await database.fetch_one(query)
+        
+        if not provider:
+            raise HTTPException(status_code=404, detail="Daycare provider not found")
+        
+        # Parse events from the calendar URL
+        events = await parse_events_from_url(calendar_url)
+        
+        return {
+            "provider_id": provider_id,
+            "provider_name": provider['name'],
+            "calendar_url": calendar_url,
+            "events_count": len(events),
+            "events": events,
+            "success": True
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error parsing events for provider {provider_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to parse events: {str(e)}")
 
 @router.post("/search", response_model=List[DaycareSearchResult])
 async def search_daycare_providers(search_data: DaycareSearchRequest, current_user = Depends(get_current_user)):

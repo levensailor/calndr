@@ -484,6 +484,45 @@ struct DaycareSearchResult: Codable, Identifiable {
     }
 }
 
+struct DaycareCalendarDiscoveryResponse: Codable {
+    let providerId: Int
+    let providerName: String
+    let baseWebsite: String
+    let discoveredCalendarURL: String?
+    let success: Bool
+    
+    enum CodingKeys: String, CodingKey {
+        case providerId = "provider_id"
+        case providerName = "provider_name"
+        case baseWebsite = "base_website"
+        case discoveredCalendarURL = "discovered_calendar_url"
+        case success
+    }
+}
+
+struct DaycareEvent: Codable {
+    let date: String
+    let title: String
+}
+
+struct DaycareEventsParseResponse: Codable {
+    let providerId: Int
+    let providerName: String
+    let calendarURL: String
+    let eventsCount: Int
+    let events: [DaycareEvent]
+    let success: Bool
+    
+    enum CodingKeys: String, CodingKey {
+        case providerId = "provider_id"
+        case providerName = "provider_name"
+        case calendarURL = "calendar_url"
+        case eventsCount = "events_count"
+        case events
+        case success
+    }
+}
+
 struct ScheduleTemplate: Codable, Identifiable {
     let id: Int
     let name: String
