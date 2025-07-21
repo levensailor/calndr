@@ -619,7 +619,7 @@ struct ScheduleApplicationResponse: Codable {
     }
 }
 
-struct SchedulePreset {
+struct SchedulePreset: Identifiable {
     let id: String
     let name: String
     let description: String

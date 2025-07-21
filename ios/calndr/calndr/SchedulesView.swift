@@ -6,6 +6,7 @@ struct SchedulesView: View {
     @State private var showingAddSchedule = false
     @State private var selectedPreset: SchedulePreset?
     @State private var showingScheduleBuilder = false
+    @State private var presetToShow: SchedulePreset?
     
     var body: some View {
         NavigationView {
@@ -21,8 +22,13 @@ struct SchedulesView: View {
             .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
             .navigationBarHidden(true)
         }
+        .sheet(item: $presetToShow) { preset in
+            ScheduleBuilderView(selectedPreset: preset)
+                .environmentObject(viewModel)
+                .environmentObject(themeManager)
+        }
         .sheet(isPresented: $showingScheduleBuilder) {
-            ScheduleBuilderView(selectedPreset: selectedPreset)
+            ScheduleBuilderView(selectedPreset: nil)
                 .environmentObject(viewModel)
                 .environmentObject(themeManager)
         }
@@ -33,12 +39,13 @@ struct SchedulesView: View {
     
     private func selectPreset(_ preset: SchedulePreset) {
         selectedPreset = preset
-        showingScheduleBuilder = true
+        presetToShow = preset  // This will trigger the preset sheet
     }
     
     private func createCustomSchedule() {
         selectedPreset = nil
-        showingScheduleBuilder = true
+        presetToShow = nil
+        showingScheduleBuilder = true  // This will trigger the custom schedule sheet
     }
 }
 
