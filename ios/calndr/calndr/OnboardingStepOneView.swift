@@ -8,13 +8,20 @@ struct OnboardingStepOneView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var showingAlert = false
+    @EnvironmentObject var themeManager: ThemeManager
 
     var onNext: (String) -> Void  // Pass coparent first name
     var onSkip: () -> Void
 
     var body: some View {
-        VStack {
-            Text("Add Your Co-Parent").font(.largeTitle).padding()
+        ZStack {
+            themeManager.currentTheme.mainBackgroundColorSwiftUI.ignoresSafeArea()
+            
+            VStack {
+                Text("Add Your Co-Parent")
+                    .font(.largeTitle)
+                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+                    .padding()
             
             VStack(spacing: 15) {
                 FloatingLabelTextField(title: "First Name", text: $coparentFirstName, isSecure: false)
@@ -68,7 +75,7 @@ struct OnboardingStepOneView: View {
                         }
                     }
                     .padding()
-                    .background(Color.blue)
+                    .background(themeManager.currentTheme.accentColorSwiftUI)
                     .foregroundColor(.white)
                     .cornerRadius(8)
                 }
@@ -77,8 +84,9 @@ struct OnboardingStepOneView: View {
             .padding()
             
             Spacer()
+            }
+            .padding()
         }
-        .padding()
         .alert("Invitation Result", isPresented: $showingAlert) {
             Button("OK") {
                 onNext(coparentFirstName.trimmingCharacters(in: .whitespacesAndNewlines))

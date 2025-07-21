@@ -5,6 +5,7 @@ struct OnboardingView: View {
     @State private var coparentName: String = ""
     @Binding var isOnboardingComplete: Bool
     @EnvironmentObject var authManager: AuthenticationManager
+    @EnvironmentObject var themeManager: ThemeManager
 
     var body: some View {
         VStack {
@@ -19,12 +20,14 @@ struct OnboardingView: View {
                         currentStep = 2
                     }
                 )
+                .environmentObject(themeManager)
             } else if currentStep == 2 {
                 OnboardingStepTwoView(onNext: {
                     currentStep = 3
                 }, onSkip: {
                     currentStep = 3
                 })
+                .environmentObject(themeManager)
             } else if currentStep == 3 {
                 OnboardingStepThreeView(
                     primaryParentName: authManager.username ?? "You",
@@ -35,6 +38,7 @@ struct OnboardingView: View {
                         isOnboardingComplete = true
                     }
                 )
+                .environmentObject(themeManager)
             }
         }
         .environmentObject(authManager)

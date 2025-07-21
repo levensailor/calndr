@@ -18,6 +18,7 @@ struct OnboardingStepThreeView: View {
     @State private var custodians: [Custodian] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @EnvironmentObject var themeManager: ThemeManager
     
     let primaryParentName: String
     let coparentName: String?
@@ -40,18 +41,22 @@ struct OnboardingStepThreeView: View {
     private let daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                Text("Set Your Custody Schedule")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .padding(.top)
-                
-                Text("Choose which parent has custody on each day of the week")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+        ZStack {
+            themeManager.currentTheme.mainBackgroundColorSwiftUI.ignoresSafeArea()
+            
+            ScrollView {
+                VStack(spacing: 20) {
+                    Text("Set Your Custody Schedule")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+                        .padding(.top)
+                    
+                    Text("Choose which parent has custody on each day of the week")
+                        .font(.subheadline)
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
                 
                 // Parent Names Section
                 VStack(spacing: 15) {
@@ -168,12 +173,13 @@ struct OnboardingStepThreeView: View {
                     }
                     .padding()
                     .frame(maxWidth: .infinity)
-                    .background(isLoading ? Color.gray : Color.blue)
+                    .background(isLoading ? Color.gray : themeManager.currentTheme.accentColorSwiftUI)
                     .cornerRadius(10)
                 }
                 .disabled(isLoading)
                 .padding(.horizontal)
                 .padding(.bottom)
+                }
             }
         }
         .sheet(isPresented: $showingCustomNames) {

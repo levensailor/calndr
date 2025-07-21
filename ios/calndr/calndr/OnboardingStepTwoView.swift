@@ -6,13 +6,20 @@ struct OnboardingStepTwoView: View {
     @State private var errorMessage: String?
     @State private var showingAlert = false
     @State private var createdChildrenCount = 0
+    @EnvironmentObject var themeManager: ThemeManager
 
     var onNext: () -> Void
     var onSkip: () -> Void
 
     var body: some View {
-        VStack {
-            Text("Add Your Children").font(.largeTitle).padding()
+        ZStack {
+            themeManager.currentTheme.mainBackgroundColorSwiftUI.ignoresSafeArea()
+            
+            VStack {
+                Text("Add Your Children")
+                    .font(.largeTitle)
+                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+                    .padding()
             
             ScrollView {
                 VStack(spacing: 15) {
@@ -81,15 +88,15 @@ struct OnboardingStepTwoView: View {
                         }
                     }
                     .padding()
-                    .background(Color.blue)
+                    .background(themeManager.currentTheme.accentColorSwiftUI)
                     .foregroundColor(.white)
                     .cornerRadius(8)
                 }
                 .disabled(isLoading)
             }
             .padding()
+            }
         }
-        .padding()
         .alert("Children Added", isPresented: $showingAlert) {
             Button("OK") {
                 onNext()
