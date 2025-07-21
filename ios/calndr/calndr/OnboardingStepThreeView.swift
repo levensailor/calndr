@@ -363,16 +363,22 @@ struct OnboardingStepThreeView: View {
         }
     }
     
+    private func convertDayAssignment(_ parentIndex: Int?) -> String? {
+        guard let parentIndex = parentIndex else { return nil }
+        return parentIndex == 0 ? "parent1" : "parent2"
+    }
+    
     private func createScheduleTemplate(completion: @escaping (Bool) -> Void) {
         // Convert the onboarding selection to a weekly pattern
+        // Only assign days that have been explicitly set, otherwise leave as nil
         let weeklyPattern = WeeklySchedulePattern(
-            sunday: selectedDays["Sunday"] == 0 ? "parent1" : "parent2",
-            monday: selectedDays["Monday"] == 0 ? "parent1" : "parent2",
-            tuesday: selectedDays["Tuesday"] == 0 ? "parent1" : "parent2",
-            wednesday: selectedDays["Wednesday"] == 0 ? "parent1" : "parent2",
-            thursday: selectedDays["Thursday"] == 0 ? "parent1" : "parent2",
-            friday: selectedDays["Friday"] == 0 ? "parent1" : "parent2",
-            saturday: selectedDays["Saturday"] == 0 ? "parent1" : "parent2"
+            sunday: convertDayAssignment(selectedDays["Sunday"]),
+            monday: convertDayAssignment(selectedDays["Monday"]),
+            tuesday: convertDayAssignment(selectedDays["Tuesday"]),
+            wednesday: convertDayAssignment(selectedDays["Wednesday"]),
+            thursday: convertDayAssignment(selectedDays["Thursday"]),
+            friday: convertDayAssignment(selectedDays["Friday"]),
+            saturday: convertDayAssignment(selectedDays["Saturday"])
         )
         
         let templateName = "My Custody Schedule"

@@ -515,8 +515,9 @@ struct ScheduleBuilderView: View {
             }
         }
         
-        // Convert pattern to API format
-        let apiPattern = viewModel.convertPatternToAPIFormat(weeklyPattern)
+        // For schedule templates, we store the logical pattern (parent1/parent2)
+        // The conversion to actual IDs happens when applying the template
+        let apiPattern = weeklyPattern
         
         // Create schedule template
         let templateData = ScheduleTemplateCreate(
@@ -858,7 +859,8 @@ struct ScheduleEditView: View {
     }
     
     private func saveChanges() {
-        let apiPattern = viewModel.convertPatternToAPIFormat(weeklyPattern)
+        // Store the logical pattern (parent1/parent2) in templates
+        let apiPattern = weeklyPattern
         
         let templateData = ScheduleTemplateCreate(
             name: scheduleName,

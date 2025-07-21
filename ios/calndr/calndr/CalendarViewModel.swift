@@ -1729,16 +1729,32 @@ class CalendarViewModel: ObservableObject {
             pattern.thursday, pattern.friday, pattern.saturday
         ].compactMap { $0 }
         
+        print("🔍 Validating schedule pattern:")
+        print("  - Sunday: \(pattern.sunday ?? "nil")")
+        print("  - Monday: \(pattern.monday ?? "nil")")
+        print("  - Tuesday: \(pattern.tuesday ?? "nil")")
+        print("  - Wednesday: \(pattern.wednesday ?? "nil")")
+        print("  - Thursday: \(pattern.thursday ?? "nil")")
+        print("  - Friday: \(pattern.friday ?? "nil")")
+        print("  - Saturday: \(pattern.saturday ?? "nil")")
+        print("  - Assigned days: \(assignedDays)")
+        
         if assignedDays.isEmpty {
             return (false, "At least one day must be assigned")
         }
         
-        // Check for valid custodian assignments
-        let validAssignments = ["parent1", "parent2"]
-        let invalidAssignments = assignedDays.filter { !validAssignments.contains($0) }
+        // Check for valid custodian assignments - accept parent1/parent2 OR actual custodian IDs
+        let validLogicalAssignments = ["parent1", "parent2"]
+        let validActualIds = [custodianOneId, custodianTwoId].compactMap { $0 }
+        let allValidAssignments = validLogicalAssignments + validActualIds
+        
+        let invalidAssignments = assignedDays.filter { !allValidAssignments.contains($0) }
+        
+        print("  - Valid assignments: \(allValidAssignments)")
+        print("  - Invalid assignments: \(invalidAssignments)")
         
         if !invalidAssignments.isEmpty {
-            return (false, "Invalid custodian assignments found")
+            return (false, "Invalid custodian assignments found: \(invalidAssignments)")
         }
         
         return (true, nil)
