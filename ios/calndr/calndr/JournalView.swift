@@ -75,7 +75,7 @@ struct JournalView: View {
         .onAppear {
             viewModel.fetchJournalEntries()
         }
-        .onChange(of: viewModel.journalEntries) { entries in
+        .onChange(of: viewModel.journalEntries) { _, entries in
             // Auto-open add entry modal if journal is empty and we haven't checked yet
             if !hasCheckedForAutoOpen && entries.isEmpty {
                 hasCheckedForAutoOpen = true
