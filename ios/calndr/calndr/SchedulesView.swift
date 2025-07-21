@@ -418,6 +418,11 @@ struct ScheduleBuilderView: View {
                     
                     if patternType == .weekly {
                         WeeklyPatternConfigurationSection(weeklyPattern: $weeklyPattern)
+                    } else if patternType == .alternatingWeeks || patternType == .alternatingDays {
+                        AlternatingPatternConfigurationSection(
+                            alternatingWeeksPattern: $alternatingWeeksPattern,
+                            patternType: patternType
+                        )
                     }
                     
                     SchedulePreviewSection(
@@ -645,6 +650,195 @@ struct WeeklyPatternConfigurationSection: View {
             custodianTwoName: custodianTwoName
         )
         .padding(.horizontal)
+    }
+}
+
+struct AlternatingPatternConfigurationSection: View {
+    @Binding var alternatingWeeksPattern: AlternatingWeeksPattern?
+    let patternType: SchedulePatternType
+    @EnvironmentObject var viewModel: CalendarViewModel
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    private var custodianOneName: String {
+        viewModel.custodianOneName
+    }
+    
+    private var custodianTwoName: String {
+        viewModel.custodianTwoName
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(patternType == .alternatingWeeks ? "Alternating Weekly Pattern" : "Alternating Daily Pattern")
+                .font(.headline)
+                .foregroundColor(themeManager.currentTheme.textColor.color)
+                .padding(.horizontal)
+            
+            if alternatingWeeksPattern == nil {
+                Button("Set Up Pattern") {
+                    initializeAlternatingPattern()
+                }
+                .buttonStyle(.borderedProminent)
+                .padding(.horizontal)
+            } else {
+                VStack(spacing: 20) {
+                    AlternatingWeekPatternEditor(
+                        title: "Week A Pattern",
+                        pattern: Binding(
+                            get: { alternatingWeeksPattern?.weekAPattern ?? WeeklySchedulePattern() },
+                            set: { 
+                                if alternatingWeeksPattern != nil {
+                                    alternatingWeeksPattern?.weekAPattern = $0
+                                }
+                            }
+                        ),
+                        custodianOneName: custodianOneName,
+                        custodianTwoName: custodianTwoName
+                    )
+                    
+                    AlternatingWeekPatternEditor(
+                        title: "Week B Pattern", 
+                        pattern: Binding(
+                            get: { alternatingWeeksPattern?.weekBPattern ?? WeeklySchedulePattern() },
+                            set: {
+                                if alternatingWeeksPattern != nil {
+                                    alternatingWeeksPattern?.weekBPattern = $0
+                                }
+                            }
+                        ),
+                        custodianOneName: custodianOneName,
+                        custodianTwoName: custodianTwoName
+                    )
+                }
+                .padding(.horizontal)
+            }
+        }
+    }
+    
+    private func initializeAlternatingPattern() {
+        let defaultWeekA = WeeklySchedulePattern(
+            sunday: "parent1", monday: "parent1", tuesday: "parent1", wednesday: "parent1",
+            thursday: "parent1", friday: "parent1", saturday: "parent1"
+        )
+        let defaultWeekB = WeeklySchedulePattern(
+            sunday: "parent2", monday: "parent2", tuesday: "parent2", wednesday: "parent2",
+            thursday: "parent2", friday: "parent2", saturday: "parent2"
+        )
+        
+        alternatingWeeksPattern = AlternatingWeeksPattern(
+            weekAPattern: defaultWeekA,
+            weekBPattern: defaultWeekB,
+            startingWeek: "A",
+            referenceDate: "2024-01-01"
+        )
+    }
+}
+
+struct AlternatingWeekPatternEditor: View {
+    let title: String
+    @Binding var pattern: WeeklySchedulePattern
+    let custodianOneName: String
+    let custodianTwoName: String
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    private let daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(themeManager.currentTheme.textColor.color)
+            
+            VStack(spacing: 8) {
+                ForEach(Array(daysOfWeek.enumerated()), id: \.offset) { index, day in
+                    AlternatingDayAssignmentRow(
+                        dayName: day,
+                        selectedParent: bindingForDay(index),
+                        custodianOneName: custodianOneName,
+                        custodianTwoName: custodianTwoName
+                    )
+                }
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
+        )
+    }
+    
+    private func bindingForDay(_ dayIndex: Int) -> Binding<String?> {
+        switch dayIndex {
+        case 0: return $pattern.sunday
+        case 1: return $pattern.monday
+        case 2: return $pattern.tuesday
+        case 3: return $pattern.wednesday
+        case 4: return $pattern.thursday
+        case 5: return $pattern.friday
+        case 6: return $pattern.saturday
+        default: return .constant(nil)
+        }
+    }
+}
+
+struct AlternatingDayAssignmentRow: View {
+    let dayName: String
+    @Binding var selectedParent: String?
+    let custodianOneName: String
+    let custodianTwoName: String
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    var body: some View {
+        HStack {
+            Text(dayName)
+                .font(.subheadline)
+                .foregroundColor(themeManager.currentTheme.textColor.color)
+                .frame(width: 80, alignment: .leading)
+            
+            Spacer()
+            
+            HStack(spacing: 8) {
+                // Unassigned
+                Button(action: { selectedParent = nil }) {
+                    Text("None")
+                        .font(.caption)
+                        .foregroundColor(selectedParent == nil ? .white : themeManager.currentTheme.textColor.color)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(selectedParent == nil ? Color.gray : Color.clear)
+                        )
+                }
+                
+                // Parent 1
+                Button(action: { selectedParent = "parent1" }) {
+                    Text(custodianOneName)
+                        .font(.caption)
+                        .foregroundColor(selectedParent == "parent1" ? .white : themeManager.currentTheme.textColor.color)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(selectedParent == "parent1" ? themeManager.currentTheme.parentOneColor.color : Color.clear)
+                        )
+                }
+                
+                // Parent 2
+                Button(action: { selectedParent = "parent2" }) {
+                    Text(custodianTwoName)
+                        .font(.caption)
+                        .foregroundColor(selectedParent == "parent2" ? .white : themeManager.currentTheme.textColor.color)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(selectedParent == "parent2" ? themeManager.currentTheme.parentTwoColor.color : Color.clear)
+                        )
+                }
+            }
+        }
     }
 }
 
@@ -1150,30 +1344,18 @@ struct SchedulePreviewSection: View {
                 .foregroundColor(themeManager.currentTheme.textColor.color)
             
             if patternType == .weekly {
-                VStack(spacing: 8) {
-                    HStack {
-                        ForEach(daysOfWeek, id: \.self) { day in
-                            Text(day)
-                                .font(.caption)
-                                .foregroundColor(themeManager.currentTheme.textColor.color)
-                                .frame(maxWidth: .infinity)
-                        }
-                    }
-                    
-                    HStack {
-                        ForEach(daysOfWeek, id: \.self) { day in
-                            Rectangle()
-                                .fill(getParentColor(for: day))
-                                .frame(height: 20)
-                                .cornerRadius(2)
-                        }
-                    }
-                }
+                WeeklyPreviewContent(weeklyPattern: weeklyPattern, daysOfWeek: daysOfWeek)
+            } else if (patternType == .alternatingWeeks || patternType == .alternatingDays) && alternatingWeeksPattern != nil {
+                AlternatingPreviewContent(
+                    alternatingPattern: alternatingWeeksPattern!,
+                    patternType: patternType,
+                    daysOfWeek: daysOfWeek
+                )
             } else {
                 HStack {
                     Image(systemName: "info.circle")
                         .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
-                    Text("Preview for \(patternType.displayName) coming soon")
+                    Text("Configure the pattern above to see preview")
                         .font(.subheadline)
                         .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
                         .italic()
@@ -1229,6 +1411,157 @@ struct SchedulePreviewSection: View {
         case "Thu": parent = weeklyPattern.thursday
         case "Fri": parent = weeklyPattern.friday
         case "Sat": parent = weeklyPattern.saturday
+        default: parent = nil
+        }
+        
+        if parent == "parent1" {
+            return themeManager.currentTheme.parentOneColor.color
+        } else if parent == "parent2" {
+            return themeManager.currentTheme.parentTwoColor.color
+        } else {
+            return Color.gray.opacity(0.3)
+        }
+    }
+}
+
+struct WeeklyPreviewContent: View {
+    let weeklyPattern: WeeklySchedulePattern
+    let daysOfWeek: [String]
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack {
+                ForEach(daysOfWeek, id: \.self) { day in
+                    Text(day)
+                        .font(.caption)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            
+            HStack {
+                ForEach(daysOfWeek, id: \.self) { day in
+                    Rectangle()
+                        .fill(getParentColor(for: day))
+                        .frame(height: 20)
+                        .cornerRadius(2)
+                }
+            }
+        }
+    }
+    
+    private func getParentColor(for day: String) -> Color {
+        let parent: String?
+        switch day {
+        case "Sun": parent = weeklyPattern.sunday
+        case "Mon": parent = weeklyPattern.monday
+        case "Tue": parent = weeklyPattern.tuesday
+        case "Wed": parent = weeklyPattern.wednesday
+        case "Thu": parent = weeklyPattern.thursday
+        case "Fri": parent = weeklyPattern.friday
+        case "Sat": parent = weeklyPattern.saturday
+        default: parent = nil
+        }
+        
+        if parent == "parent1" {
+            return themeManager.currentTheme.parentOneColor.color
+        } else if parent == "parent2" {
+            return themeManager.currentTheme.parentTwoColor.color
+        } else {
+            return Color.gray.opacity(0.3)
+        }
+    }
+}
+
+struct AlternatingPreviewContent: View {
+    let alternatingPattern: AlternatingWeeksPattern
+    let patternType: SchedulePatternType
+    let daysOfWeek: [String]
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            Text(patternType == .alternatingWeeks ? "2-Week Cycle" : "2-Week Daily Cycle")
+                .font(.caption)
+                .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+            
+            VStack(spacing: 8) {
+                // Week A
+                VStack(spacing: 4) {
+                    HStack {
+                        Text("Week A")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
+                            .frame(width: 50, alignment: .leading)
+                        
+                        ForEach(daysOfWeek, id: \.self) { day in
+                            Text(day)
+                                .font(.caption2)
+                                .foregroundColor(themeManager.currentTheme.textColor.color)
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                    
+                    HStack {
+                        Spacer()
+                            .frame(width: 50)
+                        
+                        ForEach(daysOfWeek, id: \.self) { day in
+                            Rectangle()
+                                .fill(getParentColor(for: day, week: "A"))
+                                .frame(height: 16)
+                                .cornerRadius(2)
+                        }
+                    }
+                }
+                
+                // Week B
+                VStack(spacing: 4) {
+                    HStack {
+                        Text("Week B")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
+                            .frame(width: 50, alignment: .leading)
+                        
+                        ForEach(daysOfWeek, id: \.self) { day in
+                            Text(day)
+                                .font(.caption2)
+                                .foregroundColor(themeManager.currentTheme.textColor.color)
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                    
+                    HStack {
+                        Spacer()
+                            .frame(width: 50)
+                        
+                        ForEach(daysOfWeek, id: \.self) { day in
+                            Rectangle()
+                                .fill(getParentColor(for: day, week: "B"))
+                                .frame(height: 16)
+                                .cornerRadius(2)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    private func getParentColor(for day: String, week: String) -> Color {
+        let pattern = week == "A" ? alternatingPattern.weekAPattern : alternatingPattern.weekBPattern
+        let parent: String?
+        
+        switch day {
+        case "Sun": parent = pattern.sunday
+        case "Mon": parent = pattern.monday
+        case "Tue": parent = pattern.tuesday
+        case "Wed": parent = pattern.wednesday
+        case "Thu": parent = pattern.thursday
+        case "Fri": parent = pattern.friday
+        case "Sat": parent = pattern.saturday
         default: parent = nil
         }
         
