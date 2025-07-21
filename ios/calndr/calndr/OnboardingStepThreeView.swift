@@ -15,6 +15,9 @@ struct OnboardingStepThreeView: View {
     @State private var showingCustomNames = false
     @State private var customParent1Name = ""
     @State private var customParent2Name = ""
+    @State private var custodians: [Custodian] = []
+    @State private var isLoading = false
+    @State private var errorMessage: String?
     
     let primaryParentName: String
     let coparentName: String?
@@ -140,18 +143,35 @@ struct OnboardingStepThreeView: View {
                 
                 Spacer(minLength: 30)
                 
+                // Error message
+                if let errorMessage = errorMessage {
+                    Text(errorMessage)
+                        .foregroundColor(.red)
+                        .font(.footnote)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+                
                 // Complete Button
                 Button(action: {
                     saveScheduleAndComplete()
                 }) {
-                    Text("Complete Setup")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.blue)
-                        .cornerRadius(10)
+                    HStack {
+                        if isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(0.8)
+                        }
+                        Text(isLoading ? "Saving Schedule..." : "Complete Setup")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(isLoading ? Color.gray : Color.blue)
+                    .cornerRadius(10)
                 }
+                .disabled(isLoading)
                 .padding(.horizontal)
                 .padding(.bottom)
             }
@@ -232,16 +252,126 @@ struct OnboardingStepThreeView: View {
     }
     
     private func saveScheduleAndComplete() {
-        // Here you would typically save the schedule to the backend
-        // For now, we'll just log it and complete the onboarding
-        print("Custody Schedule:")
-        for day in daysOfWeek {
-            let parentIndex = selectedDays[day] ?? 0
-            let parentName = parentIndex == 2 ? "Shared" : parentNames[parentIndex]
-            print("\(day): \(parentName)")
+        // First, fetch custodian IDs if we don't have them
+        if custodians.isEmpty {
+            fetchCustodiansAndSave()
+        } else {
+            saveScheduleToBackend()
+        }
+    }
+    
+    private func fetchCustodiansAndSave() {
+        isLoading = true
+        errorMessage = nil
+        
+        APIService.shared.fetchCustodianNames { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let fetchedCustodians):
+                    self?.custodians = fetchedCustodians
+                    self?.saveScheduleToBackend()
+                case .failure(let error):
+                    self?.isLoading = false
+                    self?.errorMessage = "Failed to fetch family information: \(error.localizedDescription)"
+                    print("❌ Error fetching custodians during onboarding: \(error)")
+                }
+            }
+        }
+    }
+    
+    private func saveScheduleToBackend() {
+        guard custodians.count >= 2 else {
+            isLoading = false
+            errorMessage = "Family must have at least 2 members to create a custody schedule"
+            return
         }
         
-        onComplete()
+        // Map parent names to custodian IDs
+        let custodianOne = custodians[0] // Primary parent (the one signing up)
+        let custodianTwo = custodians[1] // Co-parent
+        
+        // Generate custody records for the next 3 months
+        let startDate = Date()
+        let endDate = Calendar.current.date(byAdding: .month, value: 3, to: startDate) ?? startDate
+        
+        generateCustodyRecords(from: startDate, to: endDate, custodianOne: custodianOne, custodianTwo: custodianTwo)
+    }
+    
+    private func generateCustodyRecords(from startDate: Date, to endDate: Date, custodianOne: Custodian, custodianTwo: Custodian) {
+        let calendar = Calendar.current
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        
+        var currentDate = startDate
+        var recordsToCreate: [(date: String, custodianId: String)] = []
+        
+        // Generate custody records based on the selected schedule
+        while currentDate <= endDate {
+            let weekday = calendar.component(.weekday, from: currentDate)
+            let dayName = getDayName(for: weekday)
+            
+            if let parentIndex = selectedDays[dayName] {
+                let custodianId = (parentIndex == 0) ? custodianOne.id : custodianTwo.id
+                let dateString = dateFormatter.string(from: currentDate)
+                recordsToCreate.append((date: dateString, custodianId: custodianId))
+            }
+            
+            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? currentDate
+        }
+        
+        // Save records to backend
+        saveCustodyRecords(recordsToCreate)
+    }
+    
+    private func getDayName(for weekday: Int) -> String {
+        // weekday: 1=Sunday, 2=Monday, ..., 7=Saturday
+        switch weekday {
+        case 1: return "Sunday"
+        case 2: return "Monday"
+        case 3: return "Tuesday"
+        case 4: return "Wednesday"
+        case 5: return "Thursday"
+        case 6: return "Friday"
+        case 7: return "Saturday"
+        default: return "Monday"
+        }
+    }
+    
+    private func saveCustodyRecords(_ records: [(date: String, custodianId: String)]) {
+        let dispatchGroup = DispatchGroup()
+        var errors: [String] = []
+        var successCount = 0
+        
+        for record in records {
+            dispatchGroup.enter()
+            
+            APIService.shared.updateCustodyRecord(
+                for: record.date,
+                custodianId: record.custodianId
+            ) { result in
+                switch result {
+                case .success(_):
+                    successCount += 1
+                case .failure(let error):
+                    errors.append("Failed to save \(record.date): \(error.localizedDescription)")
+                }
+                dispatchGroup.leave()
+            }
+        }
+        
+        dispatchGroup.notify(queue: .main) { [weak self] in
+            self?.isLoading = false
+            
+            if errors.isEmpty {
+                print("✅ Successfully created \(successCount) custody records")
+                self?.onComplete()
+            } else {
+                self?.errorMessage = "Some custody records failed to save. Please try again or set up your schedule manually later."
+                print("❌ Errors saving custody records: \(errors)")
+                // Still complete onboarding even if some records failed
+                self?.onComplete()
+            }
+        }
     }
 }
 
