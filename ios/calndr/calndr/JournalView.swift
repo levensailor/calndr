@@ -301,6 +301,7 @@ struct AddEditJournalEntryView: View {
                         TextEditor(text: $content)
                             .frame(minHeight: 200)
                             .padding(8)
+                            .scrollContentBackground(.hidden)
                             .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
                             .cornerRadius(8)
                             .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
