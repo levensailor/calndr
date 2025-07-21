@@ -282,8 +282,14 @@ struct AddEditJournalEntryView: View {
                             .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                         
                         TextField("Enter a title for this entry...", text: $title)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .padding(12)
+                            .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
+                            .cornerRadius(8)
                             .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(themeManager.currentTheme.iconColorSwiftUI.opacity(0.3), lineWidth: 1)
+                            )
                     }
                     
                     // Content field
@@ -298,6 +304,10 @@ struct AddEditJournalEntryView: View {
                             .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
                             .cornerRadius(8)
                             .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(themeManager.currentTheme.iconColorSwiftUI.opacity(0.3), lineWidth: 1)
+                            )
                     }
                     
                     Spacer(minLength: 100)
@@ -333,6 +343,7 @@ struct AddEditJournalEntryView: View {
                 }
             }
         }
+        .themeNavigationBar(themeManager: themeManager)
         .alert("Delete Entry", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
