@@ -1369,6 +1369,11 @@ class CalendarViewModel: ObservableObject {
             dispatchGroup.leave()
         }
         
+        dispatchGroup.enter()
+        fetchScheduleTemplates {
+            dispatchGroup.leave()
+        }
+        
         dispatchGroup.notify(queue: .main) {
             self.isDataLoading = false
             print("✅ All family data loaded")
