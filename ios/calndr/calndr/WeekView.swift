@@ -383,7 +383,6 @@ struct WeekHandoffTimelineView: View {
         dateFormatter.dateFormat = "yyyy-MM-dd"
         
         var handoffDays: Set<Date> = []
-        let calendar = Calendar.current
         let weekDaysSet = Set(weekDays)
         
         for custodyRecord in viewModel.custodyRecords {
