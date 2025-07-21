@@ -347,8 +347,8 @@ struct WeekHandoffTimelineView: View {
                 )
                 
                 // Get next custody owner after handoff
-                let nextCustodyColor = custodyColor == getCustodyColor(for: viewModel.custodianOneId) ? 
-                    getCustodyColor(for: viewModel.custodianTwoId) : getCustodyColor(for: viewModel.custodianOneId)
+                let nextCustodyColor = custodyColor == getCustodyColor(for: viewModel.custodianOneId ?? "") ? 
+                    getCustodyColor(for: viewModel.custodianTwoId ?? "") : getCustodyColor(for: viewModel.custodianOneId ?? "")
                 
                 // Draw line from handoff point to end of day
                 context.stroke(
@@ -511,18 +511,83 @@ struct WeekHandoffTimelineView: View {
             originalPosition: originalPosition
         )
         
-        // Update handoff time via view model
-        viewModel.updateHandoffTime(
-            date: newDateAndTime.date,
-            hour: newDateAndTime.time.hour,
-            minute: newDateAndTime.time.minute
-        )
+        let newDate = newDateAndTime.date
+        let newTime = newDateAndTime.time
+        let timeString = String(format: "%02d:%02d", newTime.hour, newTime.minute)
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let newDateString = dateFormatter.string(from: newDate)
+        
+        // Update custody record with handoff information using CalendarViewModel method
+        updateCustodyWithHandoffInfo(originalDate, newDate, newDateString, timeString, newTime)
+    }
+    
+    private func updateCustodyWithHandoffInfo(
+        _ originalDate: Date,
+        _ newDate: Date,
+        _ newDateString: String,
+        _ timeString: String,
+        _ newTime: (hour: Int, minute: Int, display: String)
+    ) {
+        let currentCustodian = viewModel.getCustodyInfo(for: newDate).owner
+        
+        // Determine the receiving parent (opposite of current)
+        let receivingParentId: String
+        if currentCustodian == viewModel.custodianOneId {
+            receivingParentId = viewModel.custodianTwoId ?? ""
+        } else {
+            receivingParentId = viewModel.custodianOneId ?? ""
+        }
+        
+        // Get handoff location from original handoff
+        let handoffLocation = viewModel.getHandoffTimeForDate(originalDate).location ?? "daycare"
+        
+        // Update custody record with handoff information
+        APIService.shared.updateCustodyRecord(
+            for: newDateString,
+            custodianId: receivingParentId,
+            handoffDay: true,
+            handoffTime: timeString,
+            handoffLocation: handoffLocation
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    print("✅ Handoff updated successfully for \(newDateString)")
+                    self.viewModel.fetchHandoffsAndCustody()
+                case .failure(let error):
+                    print("❌ Failed to update handoff: \(error)")
+                }
+            }
+        }
     }
     
     private func deletePassedOverHandoffs() {
-        for dateToDelete in passedOverHandoffs {
-            viewModel.deleteHandoffTime(date: dateToDelete)
+        if passedOverHandoffs.isEmpty { return }
+        
+        let datesToDelete = passedOverHandoffs
+        print("🗑️ Deleting \(datesToDelete.count) handoffs that were passed over: \(datesToDelete.map { formatDate($0) }.joined(separator: ", "))")
+        
+        for date in datesToDelete {
+            // Get original handoff to determine which parent had custody
+            guard let handoffInfo = viewModel.custodyRecords.first(where: { viewModel.isoDateFormatter.date(from: $0.event_date) == date && $0.handoff_day == true }) else {
+                continue
+            }
+            let parentReceivingCustody = handoffInfo.custodian_id
+            
+            // The day of the deleted handoff should now belong to the other parent
+            let newCustodianId = parentReceivingCustody == viewModel.custodianOneId ? viewModel.custodianTwoId : viewModel.custodianOneId
+            
+            // Update custody for the day of the deleted handoff
+            if let newCustodianId = newCustodianId {
+                viewModel.updateCustodyForSingleDay(date: date, newCustodianId: newCustodianId) {
+                    print("✅ Custody updated for deleted handoff at \(self.formatDate(date))")
+                }
+            }
         }
+        
+        // Clear the set after processing
         passedOverHandoffs.removeAll()
     }
 }
