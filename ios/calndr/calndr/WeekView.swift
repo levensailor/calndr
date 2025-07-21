@@ -24,6 +24,19 @@ struct WeekView: View {
                                     Text(day.formatted(.dateTime.weekday(.wide)))
                                         .font(.headline)
                                         .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+                                    
+                                    // Handoff icon moved to right of day name
+                                    if getHandoffDays().contains(day) {
+                                        Button(action: {
+                                            selectedDate = day
+                                            showingHandoffModal = true
+                                        }) {
+                                            Image(systemName: "arrow.triangle.2.circlepath")
+                                                .font(.caption)
+                                                .foregroundColor(.purple)
+                                        }
+                                    }
+                                    
                                     Spacer()
                                     // Temperature display
                                     if viewModel.showWeather, let weatherInfo = viewModel.weatherInfoForDate(day) {
@@ -64,25 +77,7 @@ struct WeekView: View {
                             }
                             .padding(.trailing, 8)
                             
-                            // Handoff icon
-                            Button(action: {
-                                selectedDate = day
-                                showingHandoffModal = true
-                            }) {
-                                Image(systemName: "arrow.triangle.2.circlepath")
-                                    .font(.title2)
-                                    .foregroundColor(getHandoffDays().contains(day) ? .purple : .gray)
-                                    .frame(width: 32, height: 32)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 6)
-                                            .fill(getHandoffDays().contains(day) ? Color.purple.opacity(0.3) : Color.gray.opacity(0.1))
-                                    )
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 6)
-                                            .stroke(getHandoffDays().contains(day) ? Color.purple : Color.gray.opacity(0.5), lineWidth: 1)
-                                    )
-                            }
-                            .padding(.trailing, 8)
+
                             
                             // Custody information and toggle button
                             let custodyInfo = viewModel.getCustodyInfo(for: day)
@@ -143,8 +138,7 @@ struct WeekView: View {
     private func isDateInPast(_ date: Date) -> Bool {
         return date < Calendar.current.startOfDay(for: Date())
     }
-}
-
+    
     private func getHandoffDays() -> [Date] {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
@@ -183,6 +177,7 @@ struct WeekView: View {
         
         return Array(handoffDays).sorted()
     }
+}
 
 struct WeekView_Previews: PreviewProvider {
     static var previews: some View {
