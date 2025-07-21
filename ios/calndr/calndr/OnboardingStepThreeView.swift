@@ -264,15 +264,15 @@ struct OnboardingStepThreeView: View {
         isLoading = true
         errorMessage = nil
         
-        APIService.shared.fetchCustodianNames { [weak self] result in
+        APIService.shared.fetchCustodianNames { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let fetchedCustodians):
-                    self?.custodians = fetchedCustodians
-                    self?.saveScheduleToBackend()
+                    custodians = fetchedCustodians
+                    saveScheduleToBackend()
                 case .failure(let error):
-                    self?.isLoading = false
-                    self?.errorMessage = "Failed to fetch family information: \(error.localizedDescription)"
+                    isLoading = false
+                    errorMessage = "Failed to fetch family information: \(error.localizedDescription)"
                     print("❌ Error fetching custodians during onboarding: \(error)")
                 }
             }
@@ -290,9 +290,9 @@ struct OnboardingStepThreeView: View {
         let custodianOne = custodians[0] // Primary parent (the one signing up)
         let custodianTwo = custodians[1] // Co-parent
         
-        // Generate custody records for the next 3 months
+        // Generate custody records for the next 24 months
         let startDate = Date()
-        let endDate = Calendar.current.date(byAdding: .month, value: 3, to: startDate) ?? startDate
+        let endDate = Calendar.current.date(byAdding: .month, value: 24, to: startDate) ?? startDate
         
         generateCustodyRecords(from: startDate, to: endDate, custodianOne: custodianOne, custodianTwo: custodianTwo)
     }
@@ -359,17 +359,17 @@ struct OnboardingStepThreeView: View {
             }
         }
         
-        dispatchGroup.notify(queue: .main) { [weak self] in
-            self?.isLoading = false
+        dispatchGroup.notify(queue: .main) {
+            isLoading = false
             
             if errors.isEmpty {
                 print("✅ Successfully created \(successCount) custody records")
-                self?.onComplete()
+                onComplete()
             } else {
-                self?.errorMessage = "Some custody records failed to save. Please try again or set up your schedule manually later."
+                errorMessage = "Some custody records failed to save. Please try again or set up your schedule manually later."
                 print("❌ Errors saving custody records: \(errors)")
                 // Still complete onboarding even if some records failed
-                self?.onComplete()
+                onComplete()
             }
         }
     }
