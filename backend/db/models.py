@@ -202,6 +202,22 @@ daycare_providers = sqlalchemy.Table(
     sqlalchemy.Column("updated_at", sqlalchemy.DateTime, nullable=True, default=datetime.now, onupdate=datetime.now),
 )
 
+# Daycare calendar syncs table
+daycare_calendar_syncs = sqlalchemy.Table(
+    "daycare_calendar_syncs",
+    metadata,
+    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
+    sqlalchemy.Column("daycare_provider_id", sqlalchemy.Integer, sqlalchemy.ForeignKey("daycare_providers.id", ondelete="CASCADE"), nullable=False),
+    sqlalchemy.Column("calendar_url", sqlalchemy.Text, nullable=False),
+    sqlalchemy.Column("last_sync_at", sqlalchemy.DateTime(timezone=True), nullable=True),
+    sqlalchemy.Column("last_sync_success", sqlalchemy.Boolean, nullable=True),
+    sqlalchemy.Column("last_sync_error", sqlalchemy.Text, nullable=True),
+    sqlalchemy.Column("events_count", sqlalchemy.Integer, default=0),
+    sqlalchemy.Column("sync_enabled", sqlalchemy.Boolean, default=True),
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime(timezone=True), nullable=True, default=datetime.now),
+    sqlalchemy.Column("updated_at", sqlalchemy.DateTime(timezone=True), nullable=True, default=datetime.now, onupdate=datetime.now),
+)
+
 # Schedule templates table
 schedule_templates = sqlalchemy.Table(
     "schedule_templates",

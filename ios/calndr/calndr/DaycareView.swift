@@ -655,7 +655,7 @@ struct DaycareEventsModal: View {
             VStack(alignment: .leading, spacing: 24) {
                 // Header
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Parse Events")
+                    Text("Sync Events Calendar")
                         .font(.largeTitle)
                         .fontWeight(.bold)
                         .foregroundColor(themeManager.currentTheme.textColor.color)
@@ -745,7 +745,7 @@ struct DaycareEventsModal: View {
                 .padding(.horizontal)
                 
                 // Parse Button
-                Button(action: parseEvents) {
+                Button(action: syncEventsCalendar) {
                     HStack {
                         if isLoading {
                             ProgressView()
@@ -754,7 +754,7 @@ struct DaycareEventsModal: View {
                         } else {
                             Image(systemName: "arrow.down.doc")
                         }
-                        Text(isLoading ? "Parsing Events..." : "Parse Events")
+                                                    Text(isLoading ? "Syncing..." : "Sync Events Calendar")
                     }
                     .font(.headline)
                     .foregroundColor(.white)
@@ -818,12 +818,12 @@ struct DaycareEventsModal: View {
         }
     }
     
-    private func parseEvents() {
+    private func syncEventsCalendar() {
         guard !eventURL.isEmpty else { return }
         
         isLoading = true
         
-        // Call the backend to parse events from the URL
+        // Call the backend to sync events from the calendar URL
         APIService.shared.parseDaycareEvents(providerId: provider.id, calendarURL: eventURL) { result in
             DispatchQueue.main.async {
                 isLoading = false
@@ -837,7 +837,7 @@ struct DaycareEventsModal: View {
                         showingErrorMessage = true
                     }
                 case .failure(let error):
-                    errorMessage = "Unable to parse events: \(error.localizedDescription)"
+                    errorMessage = "Unable to sync events: \(error.localizedDescription)"
                     showingErrorMessage = true
                 }
             }

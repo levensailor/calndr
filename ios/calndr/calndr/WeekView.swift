@@ -32,7 +32,7 @@ struct WeekView: View {
                                             showingHandoffModal = true
                                         }) {
                                             Image(systemName: "arrow.triangle.2.circlepath")
-                                                .font(.caption)
+                                                .font(.headline)
                                                 .foregroundColor(.purple)
                                         }
                                     }

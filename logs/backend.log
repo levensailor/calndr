@@ -8,3 +8,12 @@ ERROR:    [Errno 48] error while attempting to bind on address ('0.0.0.0', 8000)
 INFO:     Waiting for application shutdown.
 2025-07-19 09:45:47 AM EST - INFO - [core.py:149] - Disconnected from database postgresql+asyncpg://postgres:********@cal-db-instance.cjy8vmu6rtrc.us-east-1.rds.amazonaws.com:5432/postgres
 INFO:     Application shutdown complete.
+2025-07-21 01:04:01 PM EST - INFO - [sync_daycare_calendars.py:145] - 🚀 Starting daycare calendar sync job...
+2025-07-21 01:04:02 PM EST - INFO - [sync_daycare_calendars.py:148] - 🔍 DRY RUN MODE - No changes will be made
+2025-07-21 01:04:02 PM EST - ERROR - [sync_daycare_calendars.py:189] - ❌ Critical error in sync job: DatabaseBackend is not running
+2025-07-21 01:04:02 PM EST - ERROR - [sync_daycare_calendars.py:203] - Sync job failed: DatabaseBackend is not running
+2025-07-21 01:04:19 PM EST - INFO - [core.py:113] - Connected to database postgresql+asyncpg://postgres:********@cal-db-instance.cjy8vmu6rtrc.us-east-1.rds.amazonaws.com:5432/postgres
+2025-07-21 01:04:19 PM EST - INFO - [sync_daycare_calendars.py:145] - 🚀 Starting daycare calendar sync job...
+2025-07-21 01:04:19 PM EST - INFO - [sync_daycare_calendars.py:148] - 🔍 DRY RUN MODE - No changes will be made
+2025-07-21 01:04:19 PM EST - INFO - [sync_daycare_calendars.py:158] - 📭 No daycare calendar sync configurations found
+2025-07-21 01:04:19 PM EST - INFO - [core.py:149] - Disconnected from database postgresql+asyncpg://postgres:********@cal-db-instance.cjy8vmu6rtrc.us-east-1.rds.amazonaws.com:5432/postgres

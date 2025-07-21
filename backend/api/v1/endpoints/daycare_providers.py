@@ -7,7 +7,7 @@ import httpx
 from core.database import database
 from core.security import get_current_user
 from core.logging import logger
-from db.models import daycare_providers
+from db.models import daycare_providers, daycare_calendar_syncs
 from schemas.daycare import DaycareProviderCreate, DaycareProviderResponse, DaycareSearchRequest, DaycareSearchResult
 from services.daycare_events_service import discover_calendar_url, parse_events_from_url, get_daycare_events
 
@@ -231,6 +231,49 @@ async def parse_daycare_events(
         
         # Parse events from the calendar URL
         events = await parse_events_from_url(calendar_url)
+        
+        # Record or update the calendar sync configuration
+        if events:  # Only track successful syncs
+            try:
+                # Check if sync config already exists
+                existing_sync = await database.fetch_one(
+                    daycare_calendar_syncs.select().where(
+                        (daycare_calendar_syncs.c.daycare_provider_id == provider_id) &
+                        (daycare_calendar_syncs.c.calendar_url == calendar_url)
+                    )
+                )
+                
+                from datetime import datetime, timezone
+                sync_data = {
+                    "last_sync_at": datetime.now(timezone.utc),
+                    "last_sync_success": True,
+                    "last_sync_error": None,
+                    "events_count": len(events),
+                    "sync_enabled": True
+                }
+                
+                if existing_sync:
+                    # Update existing sync config
+                    await database.execute(
+                        daycare_calendar_syncs.update()
+                        .where(daycare_calendar_syncs.c.id == existing_sync['id'])
+                        .values(**sync_data)
+                    )
+                else:
+                    # Create new sync config
+                    sync_data.update({
+                        "daycare_provider_id": provider_id,
+                        "calendar_url": calendar_url
+                    })
+                    await database.execute(
+                        daycare_calendar_syncs.insert().values(**sync_data)
+                    )
+                
+                logger.info(f"Recorded calendar sync for provider {provider_id}: {len(events)} events")
+                
+            except Exception as e:
+                logger.error(f"Failed to record calendar sync config: {e}")
+                # Don't fail the whole request if sync tracking fails
         
         return {
             "provider_id": provider_id,
