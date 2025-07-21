@@ -107,7 +107,10 @@ class AuthenticationManager: ObservableObject {
             case .success(let response):
                 // Save the token
                 self?.authToken = response.token
-                KeychainManager.shared.save(token: response.token, for: "currentUser")
+                let saved = KeychainManager.shared.save(token: response.token, for: "currentUser")
+                if !saved {
+                    print("⚠️ AuthenticationManager: Failed to save token to keychain during signup")
+                }
                 
                 // Set onboarding state based on backend response
                 self?.hasCompletedOnboarding = response.shouldSkipOnboarding
