@@ -827,7 +827,7 @@ enum SettingsDestination: Hashable {
 // MARK: - Journal Models
 
 // Represents a journal entry
-struct JournalEntry: Codable, Identifiable {
+struct JournalEntry: Codable, Identifiable, Equatable {
     let id: Int
     let family_id: String
     let user_id: String
