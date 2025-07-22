@@ -239,9 +239,11 @@ struct AddSchoolView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var viewModel: CalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
+    @StateObject private var enhancedSearchManager = EnhancedSchoolSearchManager.shared
     
     @State private var searchType: SearchType = .search
     @State private var showingSearchResults = false
+    @State private var isEnhancing = false
     
     enum SearchType: CaseIterable {
         case search
@@ -271,20 +273,8 @@ struct AddSchoolView: View {
                 // Content based on selected type
                 if searchType == .search {
                     SchoolSearchView(onSchoolSelected: { selectedSchool in
-                        // Create provider from search result
-                        let provider = SchoolProviderCreate(
-                            name: selectedSchool.name,
-                            address: selectedSchool.address,
-                            phoneNumber: selectedSchool.phoneNumber,
-                            email: nil,
-                            hours: selectedSchool.hours,
-                            notes: nil,
-                            googlePlaceId: selectedSchool.placeId,
-                            rating: selectedSchool.rating,
-                            website: selectedSchool.website
-                        )
-                        
-                        saveSchool(provider)
+                        // Create provider from search result and enhance with Google data
+                        enhanceAndSaveSchool(selectedSchool)
                     })
                 } else {
                     ManualSchoolEntryView(onSave: { provider in
@@ -293,17 +283,100 @@ struct AddSchoolView: View {
                 }
             }
             .background(themeManager.currentTheme.mainBackgroundColor.color)
-            .navigationTitle("Add School")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .foregroundColor(themeManager.currentTheme.textColor.color)
+                    .navigationTitle("Add School")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Cancel") {
+                    dismiss()
                 }
+                .foregroundColor(themeManager.currentTheme.textColor.color)
+                .disabled(isEnhancing)
             }
         }
+        .overlay(
+            // Enhancement loading overlay
+            Group {
+                if isEnhancing {
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.2)
+                        Text("Enhancing school details...")
+                            .font(.headline)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
+                        Text("Fetching website, hours, and rating from Google")
+                            .font(.caption)
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(24)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(themeManager.currentTheme.secondaryBackgroundColor.color)
+                            .shadow(radius: 10)
+                    )
+                    .padding()
+                }
+            }
+        )
+        }
+    }
+    
+    private func enhanceAndSaveSchool(_ selectedSchool: SchoolSearchResult) {
+        isEnhancing = true
+        
+        Task {
+            // Convert to enhanced result for Google lookup
+            let coordinate = CLLocationCoordinate2D(
+                latitude: extractLatitude(from: selectedSchool.placeId),
+                longitude: extractLongitude(from: selectedSchool.placeId)
+            )
+            
+            let enhancedSchool = EnhancedSchoolResult(
+                name: selectedSchool.name,
+                address: selectedSchool.address,
+                phoneNumber: selectedSchool.phoneNumber,
+                category: nil,
+                coordinate: coordinate,
+                distance: selectedSchool.distance,
+                placemark: MKPlacemark(coordinate: coordinate),
+                website: selectedSchool.website,
+                rating: selectedSchool.rating,
+                hours: selectedSchool.hours,
+                isEnhanced: false
+            )
+            
+            // Enhance with Google data
+            let fullyEnhancedSchool = await enhancedSearchManager.enhanceSchoolWithGoogleData(enhancedSchool)
+            
+            // Create provider with enhanced data
+            let provider = SchoolProviderCreate(
+                name: fullyEnhancedSchool.name,
+                address: fullyEnhancedSchool.address,
+                phoneNumber: fullyEnhancedSchool.phoneNumber,
+                email: nil,
+                hours: fullyEnhancedSchool.hours,
+                notes: nil,
+                googlePlaceId: fullyEnhancedSchool.googlePlaceId ?? selectedSchool.placeId,
+                rating: fullyEnhancedSchool.rating,
+                website: fullyEnhancedSchool.website
+            )
+            
+            DispatchQueue.main.async {
+                self.isEnhancing = false
+                self.saveSchool(provider)
+            }
+        }
+    }
+    
+    private func extractLatitude(from placeId: String) -> Double {
+        let components = placeId.replacingOccurrences(of: "mapkit_", with: "").components(separatedBy: "_")
+        return Double(components.first ?? "0") ?? 0
+    }
+    
+    private func extractLongitude(from placeId: String) -> Double {
+        let components = placeId.replacingOccurrences(of: "mapkit_", with: "").components(separatedBy: "_")
+        return Double(components.last ?? "0") ?? 0
     }
     
     private func saveSchool(_ provider: SchoolProviderCreate) {
@@ -322,7 +395,7 @@ struct SchoolSearchView: View {
     @EnvironmentObject var viewModel: CalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
     @StateObject private var locationManager = LocationManager.shared
-    @StateObject private var searchManager = SchoolSearchManager.shared
+    @StateObject private var enhancedSearchManager = EnhancedSchoolSearchManager.shared
     @Environment(\.dismiss) private var dismiss
     
     @State private var searchType: SchoolSearchType = .currentLocation
@@ -483,7 +556,7 @@ struct SchoolSearchView: View {
             }
             
             // Perform MapKit search
-            let results = await searchManager.searchForSchools(
+            let results = await enhancedSearchManager.searchForSchools(
                 type: searchType,
                 zipCode: zipCode,
                 userLocation: userLocation
@@ -493,7 +566,7 @@ struct SchoolSearchView: View {
                 self.isSearching = false
                 self.searchResults = results
                 
-                if let searchError = self.searchManager.errorMessage {
+                if let searchError = self.enhancedSearchManager.errorMessage {
                     self.errorMessage = searchError
                 } else if results.isEmpty {
                     self.errorMessage = "No schools found in this area"
@@ -792,8 +865,10 @@ struct SchoolEventsModal: View {
                         dismiss()
                     }
                     .foregroundColor(themeManager.currentTheme.textColor.color)
+                    .disabled(isEnhancing)
                 }
             }
+
             .alert("Events Parsed Successfully!", isPresented: $showingSuccessMessage) {
                 Button("OK") {
                     dismiss()
