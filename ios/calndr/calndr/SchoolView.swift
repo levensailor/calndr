@@ -321,9 +321,10 @@ struct SchoolSearchView: View {
     @EnvironmentObject var viewModel: CalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
     @StateObject private var locationManager = LocationManager.shared
+    @StateObject private var searchManager = SchoolSearchManager.shared
     @Environment(\.dismiss) private var dismiss
     
-    @State private var searchType: LocationSearchType = .currentLocation
+    @State private var searchType: SchoolSearchType = .currentLocation
     @State private var zipCode = ""
     @State private var searchResults: [SchoolSearchResult] = []
     @State private var isSearching = false
@@ -332,23 +333,11 @@ struct SchoolSearchView: View {
     
     let onSchoolSelected: (SchoolSearchResult) -> Void
     
-    enum LocationSearchType: CaseIterable {
-        case currentLocation
-        case zipCode
-        
-        var title: String {
-            switch self {
-            case .currentLocation: return "Current Location"
-            case .zipCode: return "ZIP Code"
-            }
-        }
-    }
-    
     var body: some View {
         VStack(spacing: 16) {
             // Search Type Picker
             Picker("Search Type", selection: $searchType) {
-                ForEach(LocationSearchType.allCases, id: \.self) { type in
+                ForEach(SchoolSearchType.allCases, id: \.self) { type in
                     Text(type.title).tag(type)
                 }
             }
@@ -463,62 +452,52 @@ struct SchoolSearchView: View {
         errorMessage = nil
         isSearching = true
         
-        if searchType == .currentLocation {
-            // Check location permission
-            if locationManager.authorizationStatus == .denied || locationManager.authorizationStatus == .restricted {
-                showingLocationPermissionAlert = true
-                isSearching = false
-                return
-            }
+        Task {
+            var userLocation: CLLocation?
             
-            // Request current location
-            locationManager.requestCurrentLocation { [self] location in
-                guard let location = location else {
+            if searchType == .currentLocation {
+                // Check location permission
+                if locationManager.authorizationStatus == .denied || locationManager.authorizationStatus == .restricted {
+                    DispatchQueue.main.async {
+                        self.showingLocationPermissionAlert = true
+                        self.isSearching = false
+                    }
+                    return
+                }
+                
+                // Request current location
+                userLocation = await withCheckedContinuation { continuation in
+                    locationManager.requestCurrentLocation { location in
+                        continuation.resume(returning: location)
+                    }
+                }
+                
+                guard userLocation != nil else {
                     DispatchQueue.main.async {
                         self.errorMessage = "Unable to get current location"
                         self.isSearching = false
                     }
                     return
                 }
-                
-                let searchRequest = SchoolSearchRequest(
-                    locationType: "current",
-                    zipcode: nil,
-                    latitude: location.coordinate.latitude,
-                    longitude: location.coordinate.longitude,
-                    radius: 5000 // 5km radius
-                )
-                
-                performSearch(searchRequest)
             }
-        } else {
-            // ZIP code search
-            let searchRequest = SchoolSearchRequest(
-                locationType: "zipcode",
-                zipcode: zipCode,
-                latitude: nil,
-                longitude: nil,
-                radius: 5000
+            
+            // Perform MapKit search
+            let results = await searchManager.searchForSchools(
+                type: searchType,
+                zipCode: zipCode,
+                userLocation: userLocation
             )
             
-            performSearch(searchRequest)
-        }
-    }
-    
-    private func performSearch(_ searchRequest: SchoolSearchRequest) {
-        viewModel.searchSchoolProviders(searchRequest) { result in
             DispatchQueue.main.async {
                 self.isSearching = false
+                self.searchResults = results
                 
-                switch result {
-                case .success(let results):
-                    self.searchResults = results
-                    if results.isEmpty {
-                        self.errorMessage = "No schools found in this area"
-                    }
-                case .failure(let error):
-                    self.errorMessage = "Search failed: \(error.localizedDescription)"
-                    self.searchResults = []
+                if let searchError = self.searchManager.errorMessage {
+                    self.errorMessage = searchError
+                } else if results.isEmpty {
+                    self.errorMessage = "No schools found in this area"
+                } else {
+                    self.errorMessage = nil
                 }
             }
         }

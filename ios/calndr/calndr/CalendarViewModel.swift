@@ -2175,13 +2175,7 @@ class CalendarViewModel: ObservableObject {
         }
     }
     
-    func searchSchoolProviders(_ searchRequest: SchoolSearchRequest, completion: @escaping (Result<[SchoolSearchResult], Error>) -> Void) {
-        APIService.shared.searchSchoolProviders(searchRequest) { result in
-            DispatchQueue.main.async {
-                completion(result)
-            }
-        }
-    }
+
     
     // MARK: - Journal Management
     
