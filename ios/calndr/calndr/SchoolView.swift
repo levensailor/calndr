@@ -101,81 +101,123 @@ struct SchoolProviderCard: View {
                     
                     if let address = provider.address, !address.isEmpty {
                         Text(address)
-                            .font(.caption)
+                            .font(.subheadline)
                             .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                     }
                 }
                 
                 Spacer()
                 
-                Menu {
-                    Button(action: { showingEventsModal = true }) {
-                        Label("Calendar Sync", systemImage: "calendar.badge.plus")
+                // Action buttons in top right (matching daycare style)
+                HStack(spacing: 8) {
+                    // Events/Calendar sync button
+                    Button(action: {
+                        showingEventsModal = true
+                    }) {
+                        Image(systemName: "calendar.badge.plus")
+                            .font(.title3)
+                            .foregroundColor(.blue)
+                            .padding(8)
+                            .background(
+                                Circle()
+                                    .fill(themeManager.currentTheme.secondaryBackgroundColor.color)
+                                    .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+                            )
                     }
                     
-                    Divider()
-                    
-                    Button(action: { showingDeleteAlert = true }) {
-                        Label("Delete", systemImage: "trash")
+                    // Delete button
+                    Button(action: {
+                        showingDeleteAlert = true
+                    }) {
+                        Image(systemName: "trash")
+                            .font(.title3)
+                            .foregroundColor(.red)
+                            .padding(8)
+                            .background(
+                                Circle()
+                                    .fill(themeManager.currentTheme.secondaryBackgroundColor.color)
+                                    .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+                            )
                     }
-                    .foregroundColor(.red)
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .font(.title3)
-                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
                 }
             }
             
-            // Contact Information
-            VStack(alignment: .leading, spacing: 8) {
-                if let phone = provider.phoneNumber, !phone.isEmpty {
-                    ContactInfoRow(icon: "phone.fill", text: phone, color: .green)
+            if let hours = provider.hours, !hours.isEmpty {
+                HStack {
+                    Image(systemName: "clock")
+                        .font(.caption)
+                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
+                    
+                    Text(hours)
+                        .font(.caption)
+                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                 }
+            }
+            
+            HStack {
+                if let phone = provider.phoneNumber, !phone.isEmpty {
+                    Button(action: {
+                        makePhoneCall(phone)
+                    }) {
+                        HStack {
+                            Image(systemName: "phone")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                            
+                            Text(phone)
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                                .underline()
+                        }
+                    }
+                }
+                
+                Spacer()
                 
                 if let email = provider.email, !email.isEmpty {
-                    ContactInfoRow(icon: "envelope.fill", text: email, color: .blue)
-                }
-                
-                if let hours = provider.hours, !hours.isEmpty {
-                    ContactInfoRow(icon: "clock.fill", text: hours, color: .orange)
-                }
-                
-                if let website = provider.website, !website.isEmpty {
-                    ContactInfoRow(icon: "globe", text: website, color: .purple)
-                }
-                
-                if let notes = provider.notes, !notes.isEmpty {
-                    HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "note.text")
+                    HStack {
+                        Image(systemName: "envelope")
                             .font(.caption)
-                            .foregroundColor(.gray)
-                            .frame(width: 16)
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
                         
-                        Text(notes)
+                        Text(email)
                             .font(.caption)
                             .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
-                            .multilineTextAlignment(.leading)
                     }
-                    .padding(.top, 4)
                 }
+            }
+            
+            if let notes = provider.notes, !notes.isEmpty {
+                Text(notes)
+                    .font(.caption)
+                    .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
+                    .padding(.top, 4)
             }
         }
         .padding()
-        .background(themeManager.currentTheme.secondaryBackgroundColor.color)
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(themeManager.currentTheme.secondaryBackgroundColor.color)
+                .shadow(color: themeManager.currentTheme.textColor.color.opacity(0.1), radius: 2, x: 0, y: 1)
+        )
+        .sheet(isPresented: $showingEventsModal) {
+            SchoolEventsModal(provider: provider)
+                .environmentObject(themeManager)
+        }
         .alert("Delete School", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
                 deleteSchool()
             }
         } message: {
-            Text("Are you sure you want to delete \(provider.name)? This action cannot be undone.")
+            Text("Are you sure you want to delete \(provider.name)? This will also remove any calendar sync configurations and cannot be undone.")
         }
-        .sheet(isPresented: $showingEventsModal) {
-            SchoolCalendarSyncView(provider: provider)
-                .environmentObject(viewModel)
-                .environmentObject(themeManager)
+    }
+    
+    private func makePhoneCall(_ phoneNumber: String) {
+        let cleanedNumber = phoneNumber.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+        if let url = URL(string: "tel:\(cleanedNumber)") {
+            UIApplication.shared.open(url)
         }
     }
     
@@ -190,24 +232,7 @@ struct SchoolProviderCard: View {
     }
 }
 
-struct ContactInfoRow: View {
-    let icon: String
-    let text: String
-    let color: Color
-    
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.caption)
-                .foregroundColor(color)
-                .frame(width: 16)
-            
-            Text(text)
-                .font(.caption)
-                .foregroundColor(.primary)
-        }
-    }
-}
+
 
 struct AddSchoolView: View {
     @Environment(\.dismiss) private var dismiss
@@ -632,13 +657,13 @@ struct ManualSchoolEntryView: View {
     }
 }
 
-struct SchoolCalendarSyncView: View {
+struct SchoolEventsModal: View {
     let provider: SchoolProvider
-    @EnvironmentObject var viewModel: CalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.dismiss) private var dismiss
-    
     @State private var eventURL = ""
+    @State private var discoveredURL: String? = nil
+    @State private var isDiscovering = false
     @State private var isLoading = false
     @State private var showingSuccessMessage = false
     @State private var showingErrorMessage = false
@@ -646,27 +671,97 @@ struct SchoolCalendarSyncView: View {
     
     var body: some View {
         NavigationView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 24) {
                 // Header
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Calendar Sync")
+                    Text("Sync Events Calendar")
                         .font(.largeTitle)
                         .fontWeight(.bold)
                         .foregroundColor(themeManager.currentTheme.textColor.color)
                     
-                    Text("Sync \(provider.name)'s calendar to automatically import school events and closures")
-                        .font(.subheadline)
+                    Text("For \(provider.name)")
+                        .font(.headline)
                         .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                 }
                 .padding(.horizontal)
                 
-                // URL Input Section
+                // Warning Section
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Calendar URL")
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.orange)
+                        Text("Best Effort Parsing")
+                            .font(.headline)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
+                    }
+                    
+                    Text("Event parsing is experimental and works on a best-effort basis. Results may vary depending on the website structure and format. We recommend verifying important dates manually.")
+                        .font(.subheadline)
+                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.orange.opacity(0.1))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                        )
+                )
+                .padding(.horizontal)
+                
+                // URL Discovery Section
+                if let website = provider.website, !website.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Auto-Discovery")
+                            .font(.headline)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
+                        
+                        Text("We'll try to find the calendar page automatically from \(provider.name)'s website")
+                            .font(.caption)
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
+                        
+                        Button(action: discoverCalendarURL) {
+                            HStack {
+                                if isDiscovering {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .scaleEffect(0.8)
+                                } else {
+                                    Image(systemName: "magnifyingglass")
+                                }
+                                Text(isDiscovering ? "Discovering..." : "Discover Calendar URL")
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                        }
+                        .disabled(isDiscovering || isLoading)
+                        
+                        if let discovered = discoveredURL {
+                            HStack {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                                Text("Found: \(discovered)")
+                                    .font(.caption)
+                                    .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+                            }
+                            .padding(.top, 4)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                
+                // Manual URL Entry Section
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Manual Entry")
                         .font(.headline)
                         .foregroundColor(themeManager.currentTheme.textColor.color)
                     
-                    Text("Enter the school's calendar URL (usually ends with .ics)")
+                    Text("Enter the calendar URL directly (usually ends with .ics or contains 'calendar')")
                         .font(.caption)
                         .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
                     
@@ -675,39 +770,34 @@ struct SchoolCalendarSyncView: View {
                         .keyboardType(.URL)
                         .autocapitalization(.none)
                         .autocorrectionDisabled()
-                    
-                    if let website = provider.website, !website.isEmpty {
-                        Text("Tip: Check \(website) for calendar links")
-                            .font(.caption)
-                            .foregroundColor(.blue)
-                    }
                 }
                 .padding(.horizontal)
                 
-                // Sync Button
+                // Parse Events Button
                 Button(action: syncEventsCalendar) {
                     HStack {
                         if isLoading {
                             ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 .scaleEffect(0.8)
                         } else {
                             Image(systemName: "arrow.clockwise")
                         }
-                        Text(isLoading ? "Syncing..." : "Sync Calendar")
+                        Text(isLoading ? "Parsing Events..." : "Parse Events")
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(eventURL.isEmpty ? Color.gray : Color.blue)
+                    .background(eventURL.isEmpty ? Color.gray : Color.green)
                     .foregroundColor(.white)
                     .cornerRadius(10)
                 }
-                .disabled(eventURL.isEmpty || isLoading)
+                .disabled(eventURL.isEmpty || isLoading || isDiscovering)
                 .padding(.horizontal)
                 
                 Spacer()
             }
             .background(themeManager.currentTheme.mainBackgroundColor.color)
-            .navigationTitle("Calendar Sync")
+            .navigationTitle("School Events")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -724,22 +814,47 @@ struct SchoolCalendarSyncView: View {
                     .foregroundColor(themeManager.currentTheme.textColor.color)
                 }
             }
-            .alert("Success!", isPresented: $showingSuccessMessage) {
+            .alert("Events Parsed Successfully!", isPresented: $showingSuccessMessage) {
                 Button("OK") {
                     dismiss()
                 }
             } message: {
-                Text("School calendar has been synced successfully!")
+                Text("School calendar events have been synced successfully!")
             }
-            .alert("Sync Failed", isPresented: $showingErrorMessage) {
+            .alert("Parsing Failed", isPresented: $showingErrorMessage) {
                 Button("OK") { }
             } message: {
                 Text(errorMessage)
             }
         }
         .onAppear {
-            if let website = provider.website {
+            if let website = provider.website, !website.isEmpty {
                 eventURL = website
+            }
+        }
+    }
+    
+    private func discoverCalendarURL() {
+        isDiscovering = true
+        errorMessage = ""
+        
+        APIService.shared.discoverSchoolCalendarURL(providerId: provider.id) { result in
+            DispatchQueue.main.async {
+                isDiscovering = false
+                
+                switch result {
+                case .success(let response):
+                    if let calendarURL = response.discoveredCalendarURL {
+                        discoveredURL = calendarURL
+                        eventURL = calendarURL
+                    } else {
+                        errorMessage = "No calendar URL found on the school's website. Try entering one manually."
+                        showingErrorMessage = true
+                    }
+                case .failure(let error):
+                    errorMessage = "Failed to discover calendar URL: \(error.localizedDescription)"
+                    showingErrorMessage = true
+                }
             }
         }
     }
@@ -748,8 +863,8 @@ struct SchoolCalendarSyncView: View {
         guard !eventURL.isEmpty else { return }
         
         isLoading = true
+        errorMessage = ""
         
-        // Call the backend to sync events from the calendar URL
         APIService.shared.parseSchoolEvents(providerId: provider.id, calendarURL: eventURL) { result in
             DispatchQueue.main.async {
                 isLoading = false
@@ -763,7 +878,7 @@ struct SchoolCalendarSyncView: View {
                         showingErrorMessage = true
                     }
                 case .failure(let error):
-                    errorMessage = "Unable to sync events: \(error.localizedDescription)"
+                    errorMessage = "Unable to parse events: \(error.localizedDescription)"
                     showingErrorMessage = true
                 }
             }
