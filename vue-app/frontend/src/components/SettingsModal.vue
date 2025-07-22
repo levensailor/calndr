@@ -120,6 +120,140 @@
           </div>
         </div>
 
+        <div v-if="activeTab === 'Schools'" class="tab-content">
+          <h3>School Providers</h3>
+          <p>Manage schools and educational institutions. Add them to sync calendars and view school events.</p>
+          
+          <div class="provider-list">
+            <div v-for="school in schoolProviders" :key="school.id" class="provider-item">
+              <div class="provider-info">
+                <h4>{{ school.name }}</h4>
+                <p v-if="school.address">{{ school.address }}</p>
+                <p v-if="school.phone_number">📞 {{ school.phone_number }}</p>
+                <p v-if="school.email">✉️ {{ school.email }}</p>
+                <p v-if="school.hours">🕒 {{ school.hours }}</p>
+                <p v-if="school.notes" class="notes">{{ school.notes }}</p>
+              </div>
+              <div class="provider-actions">
+                <button @click="editSchoolProvider(school)" class="edit-button">Edit</button>
+                <button @click="deleteSchoolProvider(school.id)" class="delete-button">Delete</button>
+                <button @click="syncSchoolCalendar(school)" class="sync-button">Sync Calendar</button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="add-provider-section">
+            <button @click="showAddSchoolForm = true" class="add-button">Add School</button>
+            <button @click="searchSchools()" class="search-button">Search Schools</button>
+          </div>
+          
+          <!-- Add School Form -->
+          <div v-if="showAddSchoolForm" class="provider-form">
+            <h4>{{ editingSchool ? 'Edit School' : 'Add New School' }}</h4>
+            <div class="form-group">
+              <label>School Name *</label>
+              <input type="text" v-model="schoolForm.name" placeholder="Enter school name" required>
+            </div>
+            <div class="form-group">
+              <label>Address</label>
+              <textarea v-model="schoolForm.address" placeholder="Enter school address"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Phone Number</label>
+              <input type="tel" v-model="schoolForm.phone_number" placeholder="Enter phone number">
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" v-model="schoolForm.email" placeholder="Enter email address">
+            </div>
+            <div class="form-group">
+              <label>Hours</label>
+              <input type="text" v-model="schoolForm.hours" placeholder="e.g., 8:00 AM - 3:00 PM">
+            </div>
+            <div class="form-group">
+              <label>Website</label>
+              <input type="url" v-model="schoolForm.website" placeholder="Enter website URL">
+            </div>
+            <div class="form-group">
+              <label>Notes</label>
+              <textarea v-model="schoolForm.notes" placeholder="Additional notes"></textarea>
+            </div>
+            <div class="form-actions">
+              <button @click="saveSchoolProvider()" class="save-button">
+                {{ editingSchool ? 'Update' : 'Save' }}
+              </button>
+              <button @click="cancelSchoolForm()" class="cancel-button">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="activeTab === 'Daycare'" class="tab-content">
+          <h3>Daycare Providers</h3>
+          <p>Manage daycare centers and childcare providers. Add them to sync calendars and view daycare events.</p>
+          
+          <div class="provider-list">
+            <div v-for="daycare in daycareProviders" :key="daycare.id" class="provider-item">
+              <div class="provider-info">
+                <h4>{{ daycare.name }}</h4>
+                <p v-if="daycare.address">{{ daycare.address }}</p>
+                <p v-if="daycare.phone_number">📞 {{ daycare.phone_number }}</p>
+                <p v-if="daycare.email">✉️ {{ daycare.email }}</p>
+                <p v-if="daycare.hours">🕒 {{ daycare.hours }}</p>
+                <p v-if="daycare.notes" class="notes">{{ daycare.notes }}</p>
+              </div>
+              <div class="provider-actions">
+                <button @click="editDaycareProvider(daycare)" class="edit-button">Edit</button>
+                <button @click="deleteDaycareProvider(daycare.id)" class="delete-button">Delete</button>
+                <button @click="syncDaycareCalendar(daycare)" class="sync-button">Sync Calendar</button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="add-provider-section">
+            <button @click="showAddDaycareForm = true" class="add-button">Add Daycare</button>
+            <button @click="searchDaycares()" class="search-button">Search Daycares</button>
+          </div>
+          
+          <!-- Add Daycare Form -->
+          <div v-if="showAddDaycareForm" class="provider-form">
+            <h4>{{ editingDaycare ? 'Edit Daycare' : 'Add New Daycare' }}</h4>
+            <div class="form-group">
+              <label>Daycare Name *</label>
+              <input type="text" v-model="daycareForm.name" placeholder="Enter daycare name" required>
+            </div>
+            <div class="form-group">
+              <label>Address</label>
+              <textarea v-model="daycareForm.address" placeholder="Enter daycare address"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Phone Number</label>
+              <input type="tel" v-model="daycareForm.phone_number" placeholder="Enter phone number">
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" v-model="daycareForm.email" placeholder="Enter email address">
+            </div>
+            <div class="form-group">
+              <label>Hours</label>
+              <input type="text" v-model="daycareForm.hours" placeholder="e.g., 7:00 AM - 6:00 PM">
+            </div>
+            <div class="form-group">
+              <label>Website</label>
+              <input type="url" v-model="daycareForm.website" placeholder="Enter website URL">
+            </div>
+            <div class="form-group">
+              <label>Notes</label>
+              <textarea v-model="daycareForm.notes" placeholder="Additional notes"></textarea>
+            </div>
+            <div class="form-actions">
+              <button @click="saveDaycareProvider()" class="save-button">
+                {{ editingDaycare ? 'Update' : 'Save' }}
+              </button>
+              <button @click="cancelDaycareForm()" class="cancel-button">Cancel</button>
+            </div>
+          </div>
+        </div>
+
         <div v-if="activeTab === 'Notifications'" class="tab-content">
           <p>Manage email addresses for the weekly summary notification.</p>
           <ul class="email-list">
@@ -340,7 +474,7 @@ export default {
   data() {
     return {
       activeTab: 'Account',
-      tabs: ['Account', 'Appearance', 'Notifications', 'Security'],
+      tabs: ['Account', 'Appearance', 'Schools', 'Daycare', 'Notifications', 'Security'],
       emails: [],
       newEmail: '',
       newPassword: '',
@@ -368,6 +502,34 @@ export default {
       signupCoparentPhone: '',
       signupLoading: false,
       signupError: null,
+      
+      // School providers
+      schoolProviders: [],
+      showAddSchoolForm: false,
+      editingSchool: null,
+      schoolForm: {
+        name: '',
+        address: '',
+        phone_number: '',
+        email: '',
+        hours: '',
+        website: '',
+        notes: ''
+      },
+      
+      // Daycare providers
+      daycareProviders: [],
+      showAddDaycareForm: false,
+      editingDaycare: null,
+      daycareForm: {
+        name: '',
+        address: '',
+        phone_number: '',
+        email: '',
+        hours: '',
+        website: '',
+        notes: ''
+      },
     };
   },
   computed: {
@@ -730,11 +892,233 @@ export default {
     async loginWithGoogle () {
       const { data } = await axios.get('/auth/google/login');
       window.location.href = data.auth_url;          // Redirect user to Google
+    },
+    
+    // School provider methods
+    async fetchSchoolProviders() {
+      try {
+        const response = await axios.get('/school-providers');
+        this.schoolProviders = response.data;
+      } catch (error) {
+        console.error('Error fetching school providers:', error);
+      }
+    },
+    
+    async saveSchoolProvider() {
+      try {
+        if (this.editingSchool) {
+          await axios.put(`/school-providers/${this.editingSchool.id}`, this.schoolForm);
+        } else {
+          await axios.post('/school-providers', this.schoolForm);
+        }
+        await this.fetchSchoolProviders();
+        this.cancelSchoolForm();
+      } catch (error) {
+        console.error('Error saving school provider:', error);
+        alert('Failed to save school provider. Please try again.');
+      }
+    },
+    
+    editSchoolProvider(school) {
+      this.editingSchool = school;
+      this.schoolForm = { ...school };
+      this.showAddSchoolForm = true;
+    },
+    
+    async deleteSchoolProvider(schoolId) {
+      if (confirm('Are you sure you want to delete this school provider?')) {
+        try {
+          await axios.delete(`/school-providers/${schoolId}`);
+          await this.fetchSchoolProviders();
+        } catch (error) {
+          console.error('Error deleting school provider:', error);
+          alert('Failed to delete school provider.');
+        }
+      }
+    },
+    
+    async syncSchoolCalendar(school) {
+      try {
+        if (!school.website) {
+          alert('Please add a website URL to sync the calendar.');
+          return;
+        }
+        
+        const response = await axios.post(`/school-providers/${school.id}/parse-events`, {
+          calendar_url: school.website
+        });
+        
+        alert(`Successfully synced ${response.data.events_count} events from ${school.name}!`);
+      } catch (error) {
+        console.error('Error syncing school calendar:', error);
+        alert('Failed to sync school calendar. Please check the website URL.');
+      }
+    },
+    
+    async searchSchools() {
+      try {
+        const zipcode = prompt('Enter your ZIP code to search for nearby schools:');
+        if (!zipcode) return;
+        
+        const response = await axios.post('/school-providers/search', {
+          location_type: 'zipcode',
+          zipcode: zipcode
+        });
+        
+        if (response.data.length === 0) {
+          alert('No schools found in your area.');
+          return;
+        }
+        
+        // Show search results (simplified - could be a proper modal)
+        const selected = confirm(`Found ${response.data.length} schools. Add the first one: "${response.data[0].name}"?`);
+        if (selected && response.data[0]) {
+          this.schoolForm = {
+            name: response.data[0].name,
+            address: response.data[0].address,
+            phone_number: response.data[0].phone_number || '',
+            email: '',
+            hours: response.data[0].hours || '',
+            website: response.data[0].website || '',
+            notes: ''
+          };
+          this.showAddSchoolForm = true;
+        }
+      } catch (error) {
+        console.error('Error searching schools:', error);
+        alert('Failed to search for schools.');
+      }
+    },
+    
+    cancelSchoolForm() {
+      this.showAddSchoolForm = false;
+      this.editingSchool = null;
+      this.schoolForm = {
+        name: '',
+        address: '',
+        phone_number: '',
+        email: '',
+        hours: '',
+        website: '',
+        notes: ''
+      };
+    },
+    
+    // Daycare provider methods
+    async fetchDaycareProviders() {
+      try {
+        const response = await axios.get('/daycare-providers');
+        this.daycareProviders = response.data;
+      } catch (error) {
+        console.error('Error fetching daycare providers:', error);
+      }
+    },
+    
+    async saveDaycareProvider() {
+      try {
+        if (this.editingDaycare) {
+          await axios.put(`/daycare-providers/${this.editingDaycare.id}`, this.daycareForm);
+        } else {
+          await axios.post('/daycare-providers', this.daycareForm);
+        }
+        await this.fetchDaycareProviders();
+        this.cancelDaycareForm();
+      } catch (error) {
+        console.error('Error saving daycare provider:', error);
+        alert('Failed to save daycare provider. Please try again.');
+      }
+    },
+    
+    editDaycareProvider(daycare) {
+      this.editingDaycare = daycare;
+      this.daycareForm = { ...daycare };
+      this.showAddDaycareForm = true;
+    },
+    
+    async deleteDaycareProvider(daycareId) {
+      if (confirm('Are you sure you want to delete this daycare provider?')) {
+        try {
+          await axios.delete(`/daycare-providers/${daycareId}`);
+          await this.fetchDaycareProviders();
+        } catch (error) {
+          console.error('Error deleting daycare provider:', error);
+          alert('Failed to delete daycare provider.');
+        }
+      }
+    },
+    
+    async syncDaycareCalendar(daycare) {
+      try {
+        if (!daycare.website) {
+          alert('Please add a website URL to sync the calendar.');
+          return;
+        }
+        
+        const response = await axios.post(`/daycare-providers/${daycare.id}/parse-events`, {
+          calendar_url: daycare.website
+        });
+        
+        alert(`Successfully synced ${response.data.events_count} events from ${daycare.name}!`);
+      } catch (error) {
+        console.error('Error syncing daycare calendar:', error);
+        alert('Failed to sync daycare calendar. Please check the website URL.');
+      }
+    },
+    
+    async searchDaycares() {
+      try {
+        const zipcode = prompt('Enter your ZIP code to search for nearby daycares:');
+        if (!zipcode) return;
+        
+        const response = await axios.post('/daycare-providers/search', {
+          location_type: 'zipcode',
+          zipcode: zipcode
+        });
+        
+        if (response.data.length === 0) {
+          alert('No daycares found in your area.');
+          return;
+        }
+        
+        // Show search results (simplified - could be a proper modal)
+        const selected = confirm(`Found ${response.data.length} daycares. Add the first one: "${response.data[0].name}"?`);
+        if (selected && response.data[0]) {
+          this.daycareForm = {
+            name: response.data[0].name,
+            address: response.data[0].address,
+            phone_number: response.data[0].phone_number || '',
+            email: '',
+            hours: response.data[0].hours || '',
+            website: response.data[0].website || '',
+            notes: ''
+          };
+          this.showAddDaycareForm = true;
+        }
+      } catch (error) {
+        console.error('Error searching daycares:', error);
+        alert('Failed to search for daycares.');
+      }
+    },
+    
+    cancelDaycareForm() {
+      this.showAddDaycareForm = false;
+      this.editingDaycare = null;
+      this.daycareForm = {
+        name: '',
+        address: '',
+        phone_number: '',
+        email: '',
+        hours: '',
+        website: '',
+        notes: ''
+      };
     }
   },
   created() {
     this.fetchEmails();
     this.fetchUserProfile();
+    this.fetchSchoolProviders();
+    this.fetchDaycareProviders();
   },
 };
 </script>
@@ -1461,5 +1845,185 @@ export default {
   width: 20px;
   height: 20px;
   margin-right: 10px;
+}
+
+/* Provider management styles */
+.provider-list {
+  margin-bottom: 20px;
+}
+
+.provider-item {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  background-color: #f9f9f9;
+}
+
+.provider-info h4 {
+  margin: 0 0 10px 0;
+  color: #333;
+  font-size: 16px;
+}
+
+.provider-info p {
+  margin: 5px 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.provider-info .notes {
+  font-style: italic;
+  background-color: #fff;
+  padding: 8px;
+  border-radius: 4px;
+  border-left: 3px solid #007bff;
+}
+
+.provider-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.provider-actions button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.2s;
+}
+
+.edit-button {
+  background-color: #007bff;
+  color: white;
+}
+
+.edit-button:hover {
+  background-color: #0056b3;
+}
+
+.delete-button {
+  background-color: #dc3545;
+  color: white;
+}
+
+.delete-button:hover {
+  background-color: #c82333;
+}
+
+.sync-button {
+  background-color: #28a745;
+  color: white;
+}
+
+.sync-button:hover {
+  background-color: #218838;
+}
+
+.add-provider-section {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.add-button, .search-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.add-button {
+  background-color: #007bff;
+  color: white;
+}
+
+.add-button:hover {
+  background-color: #0056b3;
+}
+
+.search-button {
+  background-color: #6c757d;
+  color: white;
+}
+
+.search-button:hover {
+  background-color: #545b62;
+}
+
+.provider-form {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  background-color: #f8f9fa;
+  margin-top: 20px;
+}
+
+.provider-form h4 {
+  margin: 0 0 15px 0;
+  color: #333;
+}
+
+.provider-form .form-group {
+  margin-bottom: 15px;
+}
+
+.provider-form label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #333;
+}
+
+.provider-form input,
+.provider-form textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.provider-form textarea {
+  min-height: 60px;
+  resize: vertical;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.save-button {
+  background-color: #28a745;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.save-button:hover {
+  background-color: #218838;
+}
+
+.cancel-button {
+  background-color: #6c757d;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.cancel-button:hover {
+  background-color: #545b62;
 }
 </style> 

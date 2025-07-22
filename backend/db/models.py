@@ -218,6 +218,42 @@ daycare_calendar_syncs = sqlalchemy.Table(
     sqlalchemy.Column("updated_at", sqlalchemy.DateTime(timezone=True), nullable=True, default=datetime.now, onupdate=datetime.now),
 )
 
+# School providers table
+school_providers = sqlalchemy.Table(
+    "school_providers",
+    metadata,
+    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
+    sqlalchemy.Column("family_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("families.id", ondelete="CASCADE"), nullable=False),
+    sqlalchemy.Column("name", sqlalchemy.String(255), nullable=False),
+    sqlalchemy.Column("address", sqlalchemy.Text, nullable=True),
+    sqlalchemy.Column("phone_number", sqlalchemy.String(20), nullable=True),
+    sqlalchemy.Column("email", sqlalchemy.String(255), nullable=True),
+    sqlalchemy.Column("hours", sqlalchemy.String(255), nullable=True),
+    sqlalchemy.Column("notes", sqlalchemy.Text, nullable=True),
+    sqlalchemy.Column("google_place_id", sqlalchemy.String(255), nullable=True),
+    sqlalchemy.Column("rating", sqlalchemy.Numeric(3, 2), nullable=True),
+    sqlalchemy.Column("website", sqlalchemy.String(500), nullable=True),
+    sqlalchemy.Column("created_by_user_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("users.id"), nullable=False),
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=True, default=datetime.now),
+    sqlalchemy.Column("updated_at", sqlalchemy.DateTime, nullable=True, default=datetime.now, onupdate=datetime.now),
+)
+
+# School calendar syncs table
+school_calendar_syncs = sqlalchemy.Table(
+    "school_calendar_syncs",
+    metadata,
+    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
+    sqlalchemy.Column("school_provider_id", sqlalchemy.Integer, sqlalchemy.ForeignKey("school_providers.id", ondelete="CASCADE"), nullable=False),
+    sqlalchemy.Column("calendar_url", sqlalchemy.Text, nullable=False),
+    sqlalchemy.Column("last_sync_at", sqlalchemy.DateTime(timezone=True), nullable=True),
+    sqlalchemy.Column("last_sync_success", sqlalchemy.Boolean, nullable=True),
+    sqlalchemy.Column("last_sync_error", sqlalchemy.Text, nullable=True),
+    sqlalchemy.Column("events_count", sqlalchemy.Integer, default=0),
+    sqlalchemy.Column("sync_enabled", sqlalchemy.Boolean, default=True),
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime(timezone=True), nullable=True, default=datetime.now),
+    sqlalchemy.Column("updated_at", sqlalchemy.DateTime(timezone=True), nullable=True, default=datetime.now, onupdate=datetime.now),
+)
+
 # Schedule templates table
 schedule_templates = sqlalchemy.Table(
     "schedule_templates",

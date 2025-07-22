@@ -2,7 +2,7 @@ from fastapi import APIRouter
 
 from .endpoints import (
     auth, users, family, events, custody, notifications, profile, reminders,
-    babysitters, emergency_contacts, group_chat, children, daycare_providers,
+    babysitters, emergency_contacts, group_chat, children, daycare_providers, school_providers,
     weather, school_events, themes, schedule_templates, journal, phone_verification
 )
 
@@ -22,6 +22,7 @@ api_router.include_router(emergency_contacts.router, prefix="/emergency-contacts
 api_router.include_router(group_chat.router, prefix="/group-chat", tags=["group_chat"])
 api_router.include_router(children.router, prefix="/children", tags=["children"])
 api_router.include_router(daycare_providers.router, prefix="/daycare-providers", tags=["daycare_providers"])
+api_router.include_router(school_providers.router, prefix="/school-providers", tags=["school_providers"])
 api_router.include_router(weather.router, prefix="/weather", tags=["weather"])
 api_router.include_router(school_events.router, prefix="/school-events", tags=["school_events"])
 api_router.include_router(themes.router, prefix="/themes", tags=["themes"])

@@ -75,11 +75,11 @@
             </svg>
             <span v-if="showIconLabels" class="icon-label">Waves</span>
           </button>
-          <button @click="toggleSchoolEvents" class="icon-button" title="Toggle Daycare Events">
+          <button @click="toggleSchoolEvents" class="icon-button" title="Toggle School Events">
             <svg :class="{ 'active': showSchoolEvents }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
               <path d="M12,3L1,9L12,15L23,9L12,3M5,13.18V17.18L12,21L19,17.18V13.18L12,17L5,13.18Z" />
             </svg>
-            <span v-if="showIconLabels" class="icon-label">Daycare</span>
+            <span v-if="showIconLabels" class="icon-label">School</span>
           </button>
         </div>
         <div class="month-nav">

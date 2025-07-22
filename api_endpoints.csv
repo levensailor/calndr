@@ -80,3 +80,10 @@ Phone Verification,/api/phone-verification,POST,/verify-pin,Verify PIN,Authentic
 Phone Verification,/api/phone-verification,POST,/cleanup-expired,Cleanup expired PINs,Authentication & Users
 School Events,/api/school-events,GET,/,Get school events,Calendar & Scheduling
 Group Chat,/api/group-chat,POST,/,Send group message,Communication
+School Providers,/api/school-providers,GET,/,Get school providers,Family Management
+School Providers,/api/school-providers,POST,/,Add school provider,Family Management
+School Providers,/api/school-providers,PUT,/{provider_id},Update school provider,Family Management
+School Providers,/api/school-providers,DELETE,/{provider_id},Remove school provider,Family Management
+School Providers,/api/school-providers,GET,/{provider_id}/discover-calendar,Discover calendar URL,Family Management
+School Providers,/api/school-providers,POST,/{provider_id}/parse-events,Parse calendar events,Family Management
+School Providers,/api/school-providers,POST,/search,Search school providers,Family Management
