@@ -506,24 +506,39 @@ class CalendarViewModel: ObservableObject {
         
         // If custodian data isn't loaded yet, return empty info to avoid race conditions
         guard isHandoffDataReady else {
+            print("🔍 getCustodyInfo(\(dateString)): Data not ready, returning empty")
             return ("", "")
         }
         
         // NEW: Check custody records first (from dedicated custody API)
         if let custodyRecord = custodyRecords.first(where: { $0.event_date == dateString }) {
+            print("🔍 getCustodyInfo(\(dateString)): Found custody record - custodian_id: \(custodyRecord.custodian_id)")
+            
             // CORRECTED: Compare the custodian_id directly
             if custodyRecord.custodian_id == self.custodianOneId {
+                print("🔍 getCustodyInfo(\(dateString)): Returning custodian one - \(self.custodianOneName)")
                 return (self.custodianOneId ?? "", self.custodianOneName)
             } else if custodyRecord.custodian_id == self.custodianTwoId {
+                print("🔍 getCustodyInfo(\(dateString)): Returning custodian two - \(self.custodianTwoName)")
                 return (self.custodianTwoId ?? "", self.custodianTwoName)
+            } else {
+                print("🔍 getCustodyInfo(\(dateString)): ⚠️ Custody record found but custodian_id doesn't match known IDs")
+                print("🔍   Record custodian_id: '\(custodyRecord.custodian_id)'")
+                print("🔍   Custodian one ID: '\(self.custodianOneId ?? "nil")'")
+                print("🔍   Custodian two ID: '\(self.custodianTwoId ?? "nil")'")
             }
+        } else {
+            print("🔍 getCustodyInfo(\(dateString)): No custody record found")
         }
         
         // LEGACY: Check for old custody events in events array (position 4) for backward compatibility
         if let custodyEvent = events.first(where: { $0.event_date == dateString && $0.position == 4 }) {
+            print("🔍 getCustodyInfo(\(dateString)): Found legacy custody event - content: \(custodyEvent.content)")
             if custodyEvent.content.lowercased() == self.custodianOneName.lowercased() {
+                print("🔍 getCustodyInfo(\(dateString)): Legacy event matches custodian one")
                 return (self.custodianOneId ?? "", self.custodianOneName)
             } else if custodyEvent.content.lowercased() == self.custodianTwoName.lowercased() {
+                print("🔍 getCustodyInfo(\(dateString)): Legacy event matches custodian two")
                 return (self.custodianTwoId ?? "", self.custodianTwoName)
             }
         }
@@ -537,9 +552,11 @@ class CalendarViewModel: ObservableObject {
         
         if dateToCheck < today {
             // Past date - return empty to hide custody display
+            print("🔍 getCustodyInfo(\(dateString)): Past date, returning empty")
             return ("", "")
         } else {
             // Future date - show assignment prompt
+            print("🔍 getCustodyInfo(\(dateString)): Future date, returning 'No custody assigned'")
             return ("", "No custody assigned")
         }
     }
@@ -797,6 +814,15 @@ class CalendarViewModel: ObservableObject {
         let selectedDate = calendar.startOfDay(for: date)
         let dateString = isoDateString(from: date)
         
+        print("🔄 toggleCustodian called for \(dateString)")
+        print("🔍 Current state: isHandoffDataReady=\(isHandoffDataReady), custodyRecords.count=\(custodyRecords.count)")
+        
+        // Check if data is ready before proceeding
+        guard isHandoffDataReady else {
+            print("⚠️ Cannot toggle custodian for \(dateString) - handoff data not ready yet")
+            return
+        }
+        
         // Check if there's already an in-flight request for this date
         guard !inFlightCustodyUpdates.contains(dateString) else {
             print("⚠️ Custody update already in progress for \(dateString), ignoring duplicate request")
@@ -875,13 +901,29 @@ class CalendarViewModel: ObservableObject {
                     // Update the local custody records array
                     if let index = self?.custodyRecords.firstIndex(where: { $0.event_date == custodyResponse.event_date }) {
                         self?.custodyRecords[index] = custodyResponse
+                        print("🔄 Updated existing custody record at index \(index) for \(dateString)")
                     } else {
                         self?.custodyRecords.append(custodyResponse)
+                        print("🔄 Added new custody record for \(dateString)")
                     }
+                    
+                    // Force a UI refresh to ensure all views update immediately
+                    self?.objectWillChange.send()
                     
                     self?.updateCustodyStreak()
                     self?.updateCustodyPercentages()
+                    
+                    // Debug: print current custody state
                     print("✅ Successfully toggled custodian for \(dateString) using new custody API")
+                    print("🔍 Updated custody record: \(custodyResponse.event_date) -> \(custodyResponse.content) (ID: \(custodyResponse.custodian_id))")
+                    print("🔍 Total custody records in memory: \(self?.custodyRecords.count ?? 0)")
+                    print("🔍 isHandoffDataReady: \(self?.isHandoffDataReady ?? false)")
+                    
+                    // Verify the update by checking what getCustodyInfo returns now
+                    if let strongSelf = self {
+                        let verifyInfo = strongSelf.getCustodyInfo(for: date)
+                        print("🔍 Verification: getCustodyInfo now returns: owner='\(verifyInfo.owner)', text='\(verifyInfo.text)'")
+                    }
                 case .failure(let error):
                     print("❌ Error toggling custodian for \(dateString) with new API: \(error.localizedDescription)")
                     print("❌ Error code: \((error as NSError).code)")
