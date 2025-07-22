@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Dict, Optional
 from datetime import datetime
 import os
+import json
 import httpx
 
 from core.database import database
@@ -315,25 +316,39 @@ async def search_school_providers(search_data: SchoolSearchRequest, current_user
             use_new_api = False
         
         async with httpx.AsyncClient() as client:
+            logger.info(f"🔍 School Search Request - Type: {search_data.location_type}")
             if use_new_api:
+                logger.info(f"📡 Using NEW Google Places API - URL: {places_url}")
+                logger.info(f"📋 Request Headers: {headers}")
+                logger.info(f"📋 Request Body: {body}")
                 response = await client.post(places_url, headers=headers, json=body)
             else:
+                logger.info(f"📡 Using LEGACY Google Places API - URL: {places_url}")
+                logger.info(f"📋 Request Params: {params}")
                 response = await client.get(places_url, params=params)
+            
+            logger.info(f"📊 API Response Status: {response.status_code}")
             
             if response.status_code != 200:
                 logger.error(f"Google Places API error: {response.status_code} - {response.text}")
                 raise HTTPException(status_code=500, detail="Failed to search for schools")
             
             data = response.json()
+            logger.info(f"📄 Raw API Response Data: {json.dumps(data, indent=2)}")
             
             if use_new_api:
                 places_list = data.get("places", [])
+                logger.info(f"🏫 Found {len(places_list)} schools using NEW API")
             else:
                 places_list = data.get("results", [])
+                logger.info(f"🏫 Found {len(places_list)} schools using LEGACY API")
         
         results = []
         
-        for place in places_list:
+        for i, place in enumerate(places_list):
+            logger.info(f"🏫 Processing School #{i+1}")
+            logger.info(f"📋 Raw Place Data: {json.dumps(place, indent=2)}")
+            
             if use_new_api:
                 # New API format - data is already included in the response
                 place_id = place.get("id", "")
@@ -343,13 +358,28 @@ async def search_school_providers(search_data: SchoolSearchRequest, current_user
                 rating = place.get("rating")
                 website = place.get("websiteUri")
                 
+                logger.info(f"🆔 Extracted place_id: '{place_id}'")
+                logger.info(f"🏷️ Extracted name: '{name}'")
+                logger.info(f"📍 Extracted address: '{address}'")
+                logger.info(f"📞 Extracted phone_number: '{phone_number}'")
+                logger.info(f"⭐ Extracted rating: '{rating}'")
+                logger.info(f"🌐 Extracted website: '{website}'")
+                
                 # Format opening hours from new API
                 hours = None
-                if place.get("regularOpeningHours") and place["regularOpeningHours"].get("weekdayDescriptions"):
-                    hours = "; ".join(place["regularOpeningHours"]["weekdayDescriptions"])
+                opening_hours_data = place.get("regularOpeningHours")
+                if opening_hours_data:
+                    logger.info(f"🕒 Raw opening hours data: {json.dumps(opening_hours_data, indent=2)}")
+                    if opening_hours_data.get("weekdayDescriptions"):
+                        hours = "; ".join(opening_hours_data["weekdayDescriptions"])
+                        logger.info(f"🕒 Formatted hours: '{hours}'")
+                else:
+                    logger.info("🕒 No opening hours data found")
                 
                 # No distance calculation for ZIP code searches
                 distance = None
+                
+                logger.info(f"✅ Final SchoolSearchResult: place_id='{place_id}', name='{name}', address='{address}', phone='{phone_number}', rating='{rating}', website='{website}', hours='{hours}', distance='{distance}'")
                 
                 results.append(SchoolSearchResult(
                     place_id=place_id,
@@ -368,6 +398,11 @@ async def search_school_providers(search_data: SchoolSearchRequest, current_user
                 address = place.get("vicinity", "")
                 rating = place.get("rating")
                 
+                logger.info(f"🆔 Legacy API - Extracted place_id: '{place_id}'")
+                logger.info(f"🏷️ Legacy API - Extracted name: '{name}'")
+                logger.info(f"📍 Legacy API - Extracted address: '{address}'")
+                logger.info(f"⭐ Legacy API - Extracted rating: '{rating}'")
+                
                 # Calculate distance if location provided
                 distance = None
                 if use_distance_calculation and search_data.latitude and search_data.longitude:
@@ -381,6 +416,7 @@ async def search_school_providers(search_data: SchoolSearchRequest, current_user
                         a = math.sin(lat_diff/2)**2 + math.cos(math.radians(search_data.latitude)) * math.cos(math.radians(place_lat)) * math.sin(lng_diff/2)**2
                         c = 2 * math.asin(math.sqrt(a))
                         distance = 6371000 * c  # Earth radius in meters
+                        logger.info(f"📏 Legacy API - Calculated distance: {distance} meters")
                 
                 # Get additional details
                 details_url = "https://maps.googleapis.com/maps/api/place/details/json"
@@ -390,23 +426,38 @@ async def search_school_providers(search_data: SchoolSearchRequest, current_user
                     "key": google_api_key
                 }
                 
+                logger.info(f"📡 Legacy API - Fetching details for place_id: {place_id}")
+                logger.info(f"📋 Legacy API - Details request params: {details_params}")
+                
                 try:
                     details_response = await client.get(details_url, params=details_params)
+                    logger.info(f"📊 Legacy API - Details response status: {details_response.status_code}")
+                    
                     if details_response.status_code == 200:
                         details_data = details_response.json()
+                        logger.info(f"📄 Legacy API - Raw details data: {json.dumps(details_data, indent=2)}")
+                        
                         result = details_data.get("result", {})
                         phone_number = result.get("formatted_phone_number")
                         website = result.get("website")
                         opening_hours = result.get("opening_hours", {}).get("weekday_text")
                         hours = "; ".join(opening_hours) if opening_hours else None
+                        
+                        logger.info(f"📞 Legacy API - Extracted phone from details: '{phone_number}'")
+                        logger.info(f"🌐 Legacy API - Extracted website from details: '{website}'")
+                        logger.info(f"🕒 Legacy API - Extracted hours from details: '{hours}'")
                     else:
+                        logger.warning(f"❌ Legacy API - Details request failed: {details_response.text}")
                         phone_number = None
                         website = None
                         hours = None
-                except:
+                except Exception as e:
+                    logger.error(f"❌ Legacy API - Exception during details request: {e}")
                     phone_number = None
                     website = None
                     hours = None
+                
+                logger.info(f"✅ Legacy API - Final SchoolSearchResult: place_id='{place_id}', name='{name}', address='{address}', phone='{phone_number}', rating='{rating}', website='{website}', hours='{hours}', distance='{distance}'")
                 
                 results.append(SchoolSearchResult(
                     place_id=place_id,
@@ -418,6 +469,10 @@ async def search_school_providers(search_data: SchoolSearchRequest, current_user
                     hours=hours,
                     distance=distance
                 ))
+        
+        logger.info(f"🎯 School Search Complete - Returning {len(results)} results")
+        for i, result in enumerate(results):
+            logger.info(f"📋 Result #{i+1}: {result.dict()}")
         
         return results
     except Exception as e:
