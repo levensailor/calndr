@@ -40,17 +40,7 @@ struct CalendarGridView: View {
                             weatherInfo: viewModel.weatherInfoForDate(date),
                             isCurrentMonth: isDateInCurrentMonth(date),
                             isToday: isToday(date),
-                            custodyOwner: {
-                                let custodyInfo = viewModel.getCustodyInfo(for: date)
-                                // Debug for Monday 21st
-                                let formatter = DateFormatter()
-                                formatter.dateFormat = "yyyy-MM-dd"
-                                let dateString = formatter.string(from: date)
-                                if dateString.contains("-21") {
-                                    print("🔍 CalendarGridView (Month): getCustodyInfo for Monday 21st (\(dateString)) = '\(custodyInfo.text)' (owner: '\(custodyInfo.owner)')")
-                                }
-                                return custodyInfo.text
-                            }(),
+                            custodyOwner: getCustodyOwnerWithDebug(for: date),
                             custodyID: viewModel.getCustodyInfo(for: date).owner
                         )
                         .frame(height: rowHeight) // Adaptive height based on number of weeks
@@ -173,6 +163,20 @@ struct CalendarGridView: View {
     
     private func cellForegroundColor(for date: Date) -> Color {
         return isDateInCurrentMonth(date) ? .primary : .secondary
+    }
+    
+    private func getCustodyOwnerWithDebug(for date: Date) -> String {
+        let custodyInfo = viewModel.getCustodyInfo(for: date)
+        
+        // Debug for Monday 21st
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let dateString = formatter.string(from: date)
+        if dateString.contains("-21") {
+            print("🔍 CalendarGridView (Month): getCustodyInfo for Monday 21st (\(dateString)) = '\(custodyInfo.text)' (owner: '\(custodyInfo.owner)')")
+        }
+        
+        return custodyInfo.text
     }
 }
 

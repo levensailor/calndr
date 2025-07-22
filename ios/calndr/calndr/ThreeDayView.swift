@@ -227,7 +227,7 @@ struct ThreeDayView: View {
     }
     
     private func getCustodyBackgroundColor(for day: Date) -> Color {
-        let custodyInfo = viewModel.getCustodyInfo(for: day)
+        let custodyInfo = getCustodyInfoWithDebug(for: day)
         if custodyInfo.owner == viewModel.custodianOneId {
             return themeManager.currentTheme.parentOneColor.color
         } else {
@@ -237,21 +237,12 @@ struct ThreeDayView: View {
     
     // Helper methods to simplify complex expressions
     private func shouldShowCustodyInfo(for day: Date) -> Bool {
-        let custodyInfo = viewModel.getCustodyInfo(for: day)
+        let custodyInfo = getCustodyInfoWithDebug(for: day)
         return !custodyInfo.text.isEmpty
     }
     
     private func getCustodyText(for day: Date) -> String {
-        let custodyInfo = viewModel.getCustodyInfo(for: day)
-        
-        // Debug for Monday 21st
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        let dateString = formatter.string(from: day)
-        if dateString.contains("-21") {
-            print("🔍 ThreeDayView: getCustodyText for Monday 21st (\(dateString)) = '\(custodyInfo.text)' (owner: '\(custodyInfo.owner)')")
-        }
-        
+        let custodyInfo = getCustodyInfoWithDebug(for: day)
         return custodyInfo.text.capitalized
     }
     
@@ -364,6 +355,20 @@ struct ThreeDayView: View {
         let timeString = String(format: "%02d:%02d", handoffTime.hour, handoffTime.minute)
         let location = handoffTime.location ?? "daycare"
         return "\(timeString) at \(location)"
+    }
+    
+    private func getCustodyInfoWithDebug(for date: Date) -> (owner: String, text: String) {
+        let custodyInfo = viewModel.getCustodyInfo(for: date)
+        
+        // Debug for Monday 21st
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let dateString = formatter.string(from: date)
+        if dateString.contains("-21") {
+            print("🔍 ThreeDayView: getCustodyInfo for Monday 21st (\(dateString)) = '\(custodyInfo.text)' (owner: '\(custodyInfo.owner)')")
+        }
+        
+        return custodyInfo
     }
 }
 

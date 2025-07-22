@@ -43,17 +43,9 @@ struct DayView: View {
                     .font(.headline)
                     .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                 
-                let custodyInfo = viewModel.getCustodyInfo(for: viewModel.currentDate)
+                let custodyInfo = getCustodyInfoWithDebug(for: viewModel.currentDate)
                 let ownerName = custodyInfo.text
                 let ownerId = custodyInfo.owner
-                
-                // Debug for Monday 21st
-                let formatter = DateFormatter()
-                formatter.dateFormat = "yyyy-MM-dd"
-                let dateString = formatter.string(from: viewModel.currentDate)
-                if dateString.contains("-21") {
-                    print("🔍 DayView: getCustodyInfo for Monday 21st (\(dateString)) = '\(ownerName)' (owner: '\(ownerId)')")
-                }
                 
                 if !ownerName.isEmpty {
                     Button(action: {
@@ -255,6 +247,20 @@ struct DayView: View {
         let timeString = String(format: "%02d:%02d", handoffTime.hour, handoffTime.minute)
         let location = handoffTime.location ?? "daycare"
         return "\(timeString) at \(location)"
+    }
+    
+    private func getCustodyInfoWithDebug(for date: Date) -> (owner: String, text: String) {
+        let custodyInfo = viewModel.getCustodyInfo(for: date)
+        
+        // Debug for Monday 21st
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let dateString = formatter.string(from: date)
+        if dateString.contains("-21") {
+            print("🔍 DayView: getCustodyInfo for Monday 21st (\(dateString)) = '\(custodyInfo.text)' (owner: '\(custodyInfo.owner)')")
+        }
+        
+        return custodyInfo
     }
 }
 

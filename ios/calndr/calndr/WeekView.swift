@@ -80,17 +80,9 @@ struct WeekView: View {
 
                             
                             // Custody information and toggle button
-                            let custodyInfo = viewModel.getCustodyInfo(for: day)
+                            let custodyInfo = getCustodyInfoWithDebug(for: day)
                             let ownerName = custodyInfo.text
                             let ownerId = custodyInfo.owner
-                            
-                            // Debug for Monday 21st
-                            let formatter = DateFormatter()
-                            formatter.dateFormat = "yyyy-MM-dd"
-                            let dateString = formatter.string(from: day)
-                            if dateString.contains("-21") {
-                                print("🔍 WeekView: getCustodyInfo for Monday 21st (\(dateString)) = '\(ownerName)' (owner: '\(ownerId)')")
-                            }
                             
                             if !ownerName.isEmpty {
                                 Button(action: {
@@ -184,6 +176,20 @@ struct WeekView: View {
         }
         
         return Array(handoffDays).sorted()
+    }
+    
+    private func getCustodyInfoWithDebug(for date: Date) -> (owner: String, text: String) {
+        let custodyInfo = viewModel.getCustodyInfo(for: date)
+        
+        // Debug for Monday 21st
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let dateString = formatter.string(from: date)
+        if dateString.contains("-21") {
+            print("🔍 WeekView: getCustodyInfo for Monday 21st (\(dateString)) = '\(custodyInfo.text)' (owner: '\(custodyInfo.owner)')")
+        }
+        
+        return custodyInfo
     }
 }
 
