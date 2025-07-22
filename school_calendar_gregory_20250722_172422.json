@@ -1,0 +1,94 @@
+{
+  "metadata": {
+    "scraped_at": "2025-07-22T17:24:22.289248",
+    "source_url": "https://gregory.nhcs.net/about-us/calendar",
+    "total_events": 9,
+    "date_range": {
+      "start": "2025-09-01",
+      "end": "2026-09-26"
+    }
+  },
+  "events": [
+    {
+      "date": "2025-09-01",
+      "title": "Labor Day Holiday",
+      "year": 2025,
+      "month": 9,
+      "day": 1,
+      "source_url": "https://gregory.nhcs.net/about-us/calendar?cal_date=2025-09-01",
+      "event_link": "#"
+    },
+    {
+      "date": "2025-09-10",
+      "title": "BOG3 Day",
+      "year": 2025,
+      "month": 9,
+      "day": 10,
+      "source_url": "https://gregory.nhcs.net/about-us/calendar?cal_date=2025-09-10",
+      "event_link": "#"
+    },
+    {
+      "date": "2025-09-11",
+      "title": "BOG3 Makeup Day",
+      "year": 2025,
+      "month": 9,
+      "day": 11,
+      "source_url": "https://gregory.nhcs.net/about-us/calendar?cal_date=2025-09-11",
+      "event_link": "#"
+    },
+    {
+      "date": "2025-09-26",
+      "title": "Interim Reports",
+      "year": 2025,
+      "month": 9,
+      "day": 26,
+      "source_url": "https://gregory.nhcs.net/about-us/calendar?cal_date=2025-09-26",
+      "event_link": "#"
+    },
+    {
+      "date": "2026-07-04",
+      "title": "July 4th Holiday",
+      "year": 2026,
+      "month": 7,
+      "day": 4,
+      "source_url": "https://gregory.nhcs.net/about-us/calendar?cal_date=2026-07-04",
+      "event_link": "#"
+    },
+    {
+      "date": "2026-09-01",
+      "title": "Labor Day Holiday",
+      "year": 2026,
+      "month": 9,
+      "day": 1,
+      "source_url": "https://gregory.nhcs.net/about-us/calendar?cal_date=2026-09-01",
+      "event_link": "#"
+    },
+    {
+      "date": "2026-09-10",
+      "title": "BOG3 Day",
+      "year": 2026,
+      "month": 9,
+      "day": 10,
+      "source_url": "https://gregory.nhcs.net/about-us/calendar?cal_date=2026-09-10",
+      "event_link": "#"
+    },
+    {
+      "date": "2026-09-11",
+      "title": "BOG3 Makeup Day",
+      "year": 2026,
+      "month": 9,
+      "day": 11,
+      "source_url": "https://gregory.nhcs.net/about-us/calendar?cal_date=2026-09-11",
+      "event_link": "#"
+    },
+    {
+      "date": "2026-09-26",
+      "title": "Interim Reports",
+      "year": 2026,
+      "month": 9,
+      "day": 26,
+      "source_url": "https://gregory.nhcs.net/about-us/calendar?cal_date=2026-09-26",
+      "event_link": "#"
+    }
+  ]
+}
