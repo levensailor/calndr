@@ -1,0 +1,82 @@
+Module,Path,Method,Endpoint,Description,Category
+Authentication,/api/auth,POST,/token,Get authentication token,Authentication & Users
+Authentication,/api/auth,POST,/register,Register new user,Authentication & Users
+Authentication,/api/auth,POST,/apple/server-notify,Apple server notification,Authentication & Users
+Authentication,/api/auth,GET,/apple/login,Apple login redirect,Authentication & Users
+Authentication,/api/auth,POST,/apple/callback,Apple login callback,Authentication & Users
+Authentication,/api/auth,GET,/google/login,Google login redirect,Authentication & Users
+Authentication,/api/auth,POST,/google/callback,Google login callback,Authentication & Users
+Authentication,/api/auth,POST,/google/ios-login,Google iOS login,Authentication & Users
+Authentication,/api/auth,POST,/facebook/ios-login,Facebook iOS login,Authentication & Users
+Users,/api/users,GET,/profile,Get user profile,Authentication & Users
+Users,/api/users,GET,/me,Get current user info,Authentication & Users
+Users,/api/users,PUT,/profile,Update user profile,Authentication & Users
+Users,/api/users,PUT,/me/password,Update password,Authentication & Users
+Users,/api/users,POST,/me/device-token,Register device token,Authentication & Users
+Users,/api/users,POST,/me/last-signin,Update last signin,Authentication & Users
+Users,/api/users,PUT,/preferences,Update user preferences,Authentication & Users
+Users,/api/users,POST,/location,Update user location,Authentication & Users
+Users,/api/users,POST,/profile/photo,Upload profile photo,Authentication & Users
+Family,/api/family,POST,/invite,Invite family member,Family Management
+Family,/api/family,GET,/custodians,Get custodians list,Family Management
+Family,/api/family,GET,/emails,Get family emails,Family Management
+Family,/api/family,GET,/members,Get family members,Family Management
+Family,/api/family,POST,/request-location/{target_user_id},Request location from family member,Family Management
+Events,/api/events,GET,/{year}/{month},Get events by month,Calendar & Scheduling
+Events,/api/events,GET,/,Get all events,Calendar & Scheduling
+Events,/api/events,POST,/,Create new event,Calendar & Scheduling
+Events,/api/events,PUT,/{event_id},Update event,Calendar & Scheduling
+Events,/api/events,DELETE,/{event_id},Delete event,Calendar & Scheduling
+Custody,/api/custody,GET,/{year}/{month},Get custody schedule by month,Calendar & Scheduling
+Custody,/api/custody,POST,/,Create custody entry,Calendar & Scheduling
+Custody,/api/custody,PUT,/date/{custody_date},Update custody by date,Calendar & Scheduling
+Custody,/api/custody,PUT,/{custody_id},Update custody by ID,Calendar & Scheduling
+Custody,/api/custody,POST,/bulk,Bulk create custody entries,Calendar & Scheduling
+Children,/api/children,GET,/,Get all children,Family Management
+Children,/api/children,POST,/,Add new child,Family Management
+Children,/api/children,PUT,/{child_id},Update child info,Family Management
+Children,/api/children,DELETE,/{child_id},Remove child,Family Management
+Daycare Providers,/api/daycare-providers,GET,/,Get daycare providers,Family Management
+Daycare Providers,/api/daycare-providers,POST,/,Add daycare provider,Family Management
+Daycare Providers,/api/daycare-providers,PUT,/{provider_id},Update daycare provider,Family Management
+Daycare Providers,/api/daycare-providers,DELETE,/{provider_id},Remove daycare provider,Family Management
+Daycare Providers,/api/daycare-providers,GET,/{provider_id}/discover-calendar,Discover calendar URL,Family Management
+Daycare Providers,/api/daycare-providers,POST,/{provider_id}/parse-events,Parse calendar events,Family Management
+Daycare Providers,/api/daycare-providers,POST,/search,Search daycare providers,Family Management
+Journal,/api/journal,GET,/,Get journal entries,Communication
+Journal,/api/journal,POST,/,Create journal entry,Communication
+Journal,/api/journal,PUT,/{entry_id},Update journal entry,Communication
+Journal,/api/journal,DELETE,/{entry_id},Delete journal entry,Communication
+Journal,/api/journal,GET,/{entry_id},Get specific journal entry,Communication
+Notifications,/api/notifications,GET,/emails,Get notification emails,Communication
+Notifications,/api/notifications,POST,/emails,Add notification email,Communication
+Notifications,/api/notifications,PUT,/emails/{email_id},Update notification email,Communication
+Notifications,/api/notifications,DELETE,/emails/{email_id},Remove notification email,Communication
+Themes,/api/themes,POST,/,Create theme,Communication
+Themes,/api/themes,GET,/,Get all themes,Communication
+Themes,/api/themes,PUT,/{theme_id},Update theme,Communication
+Themes,/api/themes,DELETE,/{theme_id},Delete theme,Communication
+Themes,/api/themes,PUT,/set-preference/{theme_id},Set theme preference,Communication
+Weather,/api/weather,GET,/{latitude}/{longitude},Get current weather,External Integration
+Weather,/api/weather,GET,/historic/{latitude}/{longitude},Get historic weather,External Integration
+Emergency Contacts,/api/emergency-contacts,GET,/,Get emergency contacts,Family Management
+Emergency Contacts,/api/emergency-contacts,POST,/,Add emergency contact,Family Management
+Emergency Contacts,/api/emergency-contacts,PUT,/{contact_id},Update emergency contact,Family Management
+Emergency Contacts,/api/emergency-contacts,DELETE,/{contact_id},Remove emergency contact,Family Management
+Babysitters,/api/babysitters,GET,/,Get babysitters,Family Management
+Babysitters,/api/babysitters,POST,/,Add babysitter,Family Management
+Babysitters,/api/babysitters,PUT,/{babysitter_id},Update babysitter,Family Management
+Babysitters,/api/babysitters,DELETE,/{babysitter_id},Remove babysitter,Family Management
+Schedule Templates,/api/schedule-templates,GET,/,Get schedule templates,Calendar & Scheduling
+Schedule Templates,/api/schedule-templates,GET,/{template_id},Get specific template,Calendar & Scheduling
+Schedule Templates,/api/schedule-templates,POST,/,Create schedule template,Calendar & Scheduling
+Schedule Templates,/api/schedule-templates,PUT,/{template_id},Update schedule template,Calendar & Scheduling
+Schedule Templates,/api/schedule-templates,DELETE,/{template_id},Delete schedule template,Calendar & Scheduling
+Schedule Templates,/api/schedule-templates,POST,/apply,Apply schedule template,Calendar & Scheduling
+Profile,/api/user/profile,POST,/photo,Upload profile photo,Authentication & Users
+Reminders,/api/reminders,GET,/,Get reminders,Communication
+Phone Verification,/api/phone-verification,POST,/send-pin,Send verification PIN,Authentication & Users
+Phone Verification,/api/phone-verification,POST,/verify-pin,Verify PIN,Authentication & Users
+Phone Verification,/api/phone-verification,POST,/cleanup-expired,Cleanup expired PINs,Authentication & Users
+School Events,/api/school-events,GET,/,Get school events,Calendar & Scheduling
+Group Chat,/api/group-chat,POST,/,Send group message,Communication
