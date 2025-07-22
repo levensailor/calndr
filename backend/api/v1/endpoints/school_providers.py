@@ -174,6 +174,7 @@ async def discover_school_calendar(provider_id: int, current_user = Depends(get_
     """
     Discover calendar URL for a school provider.
     """
+    logger.info(f"🔍 School calendar discovery request for provider {provider_id} by user {current_user['id']}")
     try:
         # Check if provider exists and belongs to user's family
         check_query = school_providers.select().where(
@@ -185,13 +186,30 @@ async def discover_school_calendar(provider_id: int, current_user = Depends(get_
         if not provider:
             raise HTTPException(status_code=404, detail="School provider not found")
         
+        # Check if provider has a website
+        if not provider['website']:
+            return {
+                "provider_id": provider_id,
+                "provider_name": provider['name'],
+                "base_website": "",
+                "discovered_calendar_url": None,
+                "success": False
+            }
+        
         # Try to discover calendar URL
+        logger.info(f"🌐 Attempting calendar discovery for {provider['name']} at {provider['website']}")
         calendar_url = await discover_calendar_url(provider['name'], provider['website'])
         
-        if calendar_url:
-            return {"calendar_url": calendar_url, "success": True}
-        else:
-            return {"calendar_url": None, "success": False, "message": "No calendar URL found"}
+        response_data = {
+            "provider_id": provider_id,
+            "provider_name": provider['name'],
+            "base_website": provider['website'] or "",
+            "discovered_calendar_url": calendar_url,
+            "success": calendar_url is not None
+        }
+        
+        logger.info(f"📊 School calendar discovery response: {response_data}")
+        return response_data
     except Exception as e:
         logger.error(f"Error discovering school calendar: {e}")
         raise HTTPException(status_code=500, detail="Failed to discover calendar")
