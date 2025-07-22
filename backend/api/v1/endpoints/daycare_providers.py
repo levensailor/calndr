@@ -177,7 +177,7 @@ async def discover_daycare_calendar_url(provider_id: int, current_user = Depends
         # Get the daycare provider
         query = daycare_providers.select().where(
             (daycare_providers.c.id == provider_id) &
-            (daycare_providers.c.created_by_user_id == current_user['id'])
+            (daycare_providers.c.family_id == current_user['family_id'])
         )
         provider = await database.fetch_one(query)
         
@@ -222,7 +222,7 @@ async def parse_daycare_events(
         # Get the daycare provider for context
         query = daycare_providers.select().where(
             (daycare_providers.c.id == provider_id) &
-            (daycare_providers.c.created_by_user_id == current_user['id'])
+            (daycare_providers.c.family_id == current_user['family_id'])
         )
         provider = await database.fetch_one(query)
         
@@ -231,6 +231,10 @@ async def parse_daycare_events(
         
         # Parse events from the calendar URL
         events = await parse_events_from_url(calendar_url)
+        
+        # Store events using the daycare events service
+        if events:
+            await get_daycare_events(current_user['family_id'], events, provider['name'])
         
         # Record or update the calendar sync configuration
         if events:  # Only track successful syncs
@@ -311,7 +315,8 @@ async def search_daycare_providers(search_data: DaycareSearchRequest, current_us
                 "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.rating,places.websiteUri,places.businessStatus,places.regularOpeningHours"
             }
             body = {
-                "textQuery": f"daycare centers near {search_data.zipcode}"
+                "textQuery": f"daycare centers near {search_data.zipcode}",
+                "maxResultCount": 20  # Request more results
             }
             use_distance_calculation = False  # No reference point for distance
             use_new_api = True
@@ -438,3 +443,53 @@ async def search_daycare_providers(search_data: DaycareSearchRequest, current_us
     except Exception as e:
         logger.error(f"Error searching daycare providers: {e}")
         raise HTTPException(status_code=500, detail="Failed to search daycare providers")
+
+@router.get("/{provider_id}/calendar-sync")
+async def get_daycare_calendar_sync(provider_id: int, current_user = Depends(get_current_user)):
+    """
+    Get the calendar sync configuration for a daycare provider.
+    """
+    try:
+        # Check if provider exists and belongs to user's family
+        provider_query = daycare_providers.select().where(
+            (daycare_providers.c.id == provider_id) &
+            (daycare_providers.c.family_id == current_user['family_id'])
+        )
+        provider = await database.fetch_one(provider_query)
+        
+        if not provider:
+            raise HTTPException(status_code=404, detail="Daycare provider not found")
+        
+        # Get calendar sync config
+        sync_query = daycare_calendar_syncs.select().where(
+            daycare_calendar_syncs.c.daycare_provider_id == provider_id
+        ).order_by(daycare_calendar_syncs.c.created_at.desc())
+        
+        sync_config = await database.fetch_one(sync_query)
+        
+        if not sync_config:
+            return {
+                "provider_id": provider_id,
+                "provider_name": provider['name'],
+                "calendar_url": None,
+                "sync_enabled": False,
+                "last_sync_at": None,
+                "last_sync_success": None,
+                "events_count": 0
+            }
+        
+        return {
+            "provider_id": provider_id,
+            "provider_name": provider['name'],
+            "calendar_url": sync_config['calendar_url'],
+            "sync_enabled": sync_config['sync_enabled'],
+            "last_sync_at": sync_config['last_sync_at'].isoformat() if sync_config['last_sync_at'] else None,
+            "last_sync_success": sync_config['last_sync_success'],
+            "events_count": sync_config['events_count']
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting calendar sync for provider {provider_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get calendar sync info")

@@ -3304,5 +3304,33 @@ class APIService {
         }.resume()
     }
 
+    func getDaycareCalendarSync(providerId: Int, completion: @escaping (Result<DaycareCalendarSyncInfo, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/daycare-providers/\(providerId)/calendar-sync")
+        let request = createAuthenticatedRequest(url: url)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                return
+            }
+            
+            do {
+                let syncInfo = try JSONDecoder().decode(DaycareCalendarSyncInfo.self, from: data)
+                completion(.success(syncInfo))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
 
 } 

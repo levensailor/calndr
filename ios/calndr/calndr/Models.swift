@@ -1139,4 +1139,24 @@ struct ReminderByDate: Codable {
         case updatedAt = "updated_at"
     }
 }
+
+struct DaycareCalendarSyncInfo: Codable {
+    let providerId: Int
+    let providerName: String
+    let calendarURL: String?
+    let syncEnabled: Bool
+    let lastSyncAt: String?
+    let lastSyncSuccess: Bool?
+    let eventsCount: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case providerId = "provider_id"
+        case providerName = "provider_name"
+        case calendarURL = "calendar_url"
+        case syncEnabled = "sync_enabled"
+        case lastSyncAt = "last_sync_at"
+        case lastSyncSuccess = "last_sync_success"
+        case eventsCount = "events_count"
+    }
+}
  

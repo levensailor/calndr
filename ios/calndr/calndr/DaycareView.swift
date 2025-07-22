@@ -443,14 +443,13 @@ struct DaycareSearchView: View {
                     
                     // ZIP Code Input (if needed)
                     if searchType == .zipCode {
-                        HStack {
+                        HStack(spacing: 12) {
                             FloatingLabelTextField(
                                 title: "ZIP Code",
                                 text: $zipCode,
                                 isSecure: false
                             )
                             .keyboardType(.numberPad)
-                            .frame(height: 44)
                             
                             Button("Search") {
                                 searchDaycares()
@@ -685,9 +684,11 @@ struct DaycareEventsModal: View {
     @State private var discoveredURL: String? = nil
     @State private var isDiscovering = false
     @State private var isLoading = false
+    @State private var isLoadingSync = false
     @State private var showingSuccessMessage = false
     @State private var showingErrorMessage = false
     @State private var errorMessage = ""
+    @State private var syncInfo: DaycareCalendarSyncInfo?
     
     var body: some View {
         NavigationView {
@@ -702,68 +703,81 @@ struct DaycareEventsModal: View {
                     Text("For \(provider.name)")
                         .font(.headline)
                         .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+                    
+                    // Sync Status Info
+                    if let syncInfo = syncInfo {
+                        if syncInfo.syncEnabled {
+                            HStack {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Calendar sync is active")
+                                        .font(.caption)
+                                        .foregroundColor(.green)
+                                    if let lastSync = syncInfo.lastSyncAt {
+                                        Text("Last synced: \(formatDate(lastSync))")
+                                            .font(.caption2)
+                                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
+                                    }
+                                    Text("\(syncInfo.eventsCount) events synced")
+                                        .font(.caption2)
+                                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
+                                }
+                                Spacer()
+                            }
+                            .padding(.top, 8)
+                        }
+                    }
                 }
                 .padding(.horizontal)
                 
                 // Warning Section
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Image(systemName: "exclamationmark.triangle.fill")
+                        Image(systemName: "exclamationmark.triangle")
                             .foregroundColor(.orange)
-                        Text("Best Effort Parsing")
+                        Text("Important")
                             .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color)
+                            .foregroundColor(.orange)
                     }
                     
-                    Text("Event parsing is experimental and works on a best-effort basis. Results may vary depending on the website structure and format. We recommend verifying important dates manually.")
-                        .font(.subheadline)
-                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
-                        .fixedSize(horizontal: false, vertical: true)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("• This will parse events from the daycare's public calendar")
+                        Text("• Events will be added to your family calendar")
+                        Text("• This feature is experimental and may not work with all calendar formats")
+                        Text("• Contact support if you experience issues")
+                    }
+                    .font(.caption)
+                    .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                 }
                 .padding()
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: 8)
                         .fill(Color.orange.opacity(0.1))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-                        )
                 )
                 .padding(.horizontal)
                 
-                // URL Discovery Section
-                if let website = provider.website, !website.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Auto-Discovery")
-                            .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color)
-                        
-                        Text("We'll try to find the calendar page automatically from \(provider.name)'s website")
-                            .font(.caption)
-                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
-                        
-                        Button(action: discoverCalendarURL) {
-                            HStack {
-                                if isDiscovering {
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                        .scaleEffect(0.8)
-                                } else {
-                                    Image(systemName: "magnifyingglass")
-                                }
-                                Text(isDiscovering ? "Discovering..." : "Discover Calendar URL")
-                            }
-                            .font(.subheadline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .cornerRadius(8)
+                // Auto-discover button
+                Button(action: discoverCalendarURL) {
+                    HStack {
+                        if isDiscovering {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "magnifyingglass")
                         }
-                        .disabled(isDiscovering)
+                        Text(isDiscovering ? "Discovering..." : "Auto Discover Calendar URL")
                     }
-                    .padding(.horizontal)
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(provider.website?.isEmpty == false ? Color.blue : Color.gray)
+                    .cornerRadius(10)
                 }
+                .disabled(provider.website?.isEmpty != false || isDiscovering)
+                .padding(.horizontal)
                 
                 // URL Input Section
                 VStack(alignment: .leading, spacing: 12) {
@@ -771,7 +785,7 @@ struct DaycareEventsModal: View {
                         .font(.headline)
                         .foregroundColor(themeManager.currentTheme.textColor.color)
                     
-                    Text(discoveredURL != nil ? "Discovered URL (you can edit if needed):" : "Enter the URL manually:")
+                    Text(discoveredURL != nil ? "Discovered URL (you can edit if needed):" : syncInfo?.calendarURL != nil ? "Currently synced URL (you can change it):" : "Enter the URL manually:")
                         .font(.caption)
                         .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
                     
@@ -793,7 +807,7 @@ struct DaycareEventsModal: View {
                         } else {
                             Image(systemName: "arrow.down.doc")
                         }
-                                                    Text(isLoading ? "Syncing..." : "Sync Events Calendar")
+                        Text(isLoading ? "Syncing..." : syncInfo?.calendarURL != nil ? "Update Events Calendar" : "Sync Events Calendar")
                     }
                     .font(.headline)
                     .foregroundColor(.white)
@@ -818,6 +832,9 @@ struct DaycareEventsModal: View {
                 }
             }
         }
+        .onAppear {
+            loadCalendarSyncInfo()
+        }
         .alert("Success", isPresented: $showingSuccessMessage) {
             Button("OK") {
                 dismiss()
@@ -830,6 +847,39 @@ struct DaycareEventsModal: View {
         } message: {
             Text(errorMessage)
         }
+    }
+    
+    private func loadCalendarSyncInfo() {
+        isLoadingSync = true
+        
+        APIService.shared.getDaycareCalendarSync(providerId: provider.id) { result in
+            DispatchQueue.main.async {
+                isLoadingSync = false
+                
+                switch result {
+                case .success(let info):
+                    syncInfo = info
+                    // Pre-populate the URL field if we have a stored URL
+                    if let storedURL = info.calendarURL, eventURL.isEmpty {
+                        eventURL = storedURL
+                    }
+                case .failure(let error):
+                    print("Failed to load calendar sync info: \(error.localizedDescription)")
+                    // Don't show error to user - just means no sync is configured yet
+                }
+            }
+        }
+    }
+    
+    private func formatDate(_ dateString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        if let date = formatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateStyle = .short
+            displayFormatter.timeStyle = .short
+            return displayFormatter.string(from: date)
+        }
+        return dateString
     }
     
     private func discoverCalendarURL() {

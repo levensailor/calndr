@@ -261,7 +261,7 @@ async def parse_events_from_url(calendar_url: str) -> List[Dict[str, str]]:
         logger.error(f"Error parsing events from {calendar_url}: {e}")
         return []
 
-async def get_daycare_events(base_url: str) -> Tuple[Optional[str], List[Dict[str, str]]]:
+async def get_all_daycare_events(base_url: str) -> Tuple[Optional[str], List[Dict[str, str]]]:
     """
     Complete workflow: discover calendar URL and parse events.
     Returns (calendar_url, events_list).
@@ -271,4 +271,67 @@ async def get_daycare_events(base_url: str) -> Tuple[Optional[str], List[Dict[st
         return None, []
     
     events = await parse_events_from_url(calendar_url)
-    return calendar_url, events 
+    return calendar_url, events
+
+async def get_daycare_events(family_id: str, events_list: List[Dict[str, str]], daycare_name: str):
+    """
+    Store daycare events in the events table, similar to school events.
+    
+    Args:
+        family_id: The family ID to associate events with
+        events_list: List of events with 'date' and 'title' keys
+        daycare_name: Name of the daycare for event prefixing
+    """
+    from core.database import database
+    from db.models import events
+    from datetime import datetime
+    
+    if not events_list:
+        logger.info("No daycare events to store")
+        return
+    
+    try:
+        logger.info(f"Storing {len(events_list)} daycare events for family {family_id}")
+        
+        # Delete existing daycare events for this family first to avoid duplicates
+        delete_query = events.delete().where(
+            (events.c.family_id == family_id) &
+            (events.c.event_type == 'daycare')
+        )
+        deleted_count = await database.execute(delete_query)
+        logger.info(f"Deleted {deleted_count} existing daycare events")
+        
+        # Insert new daycare events
+        inserted_count = 0
+        for event in events_list:
+            try:
+                # Parse the date
+                event_date = datetime.strptime(event['date'], '%Y-%m-%d').date()
+                
+                # Create event content with daycare prefix
+                content = f"[{daycare_name}] {event['title']}"
+                
+                # Insert the event with position 5 to distinguish from regular events
+                insert_query = events.insert().values(
+                    family_id=family_id,
+                    date=event_date,
+                    content=content,
+                    position=5,  # Use position 5 for daycare events
+                    event_type='daycare'
+                )
+                
+                await database.execute(insert_query)
+                inserted_count += 1
+                
+            except ValueError as e:
+                logger.error(f"Error parsing date for daycare event: {event['date']} - {e}")
+                continue
+            except Exception as e:
+                logger.error(f"Error inserting daycare event: {e}")
+                continue
+        
+        logger.info(f"Successfully stored {inserted_count} daycare events for {daycare_name}")
+        
+    except Exception as e:
+        logger.error(f"Error storing daycare events: {e}")
+        raise 
