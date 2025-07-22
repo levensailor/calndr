@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		E72B92F42E2CA105007C3109 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = E72B92F32E2CA105007C3109 /* GoogleSignIn */; };
 		E72B92F62E2CA105007C3109 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = E72B92F52E2CA105007C3109 /* GoogleSignInSwift */; };
+		E7D437372E2FF0AB00AA8942 /* MapKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E7D437362E2FF0AB00AA8942 /* MapKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -32,6 +33,7 @@
 		E744AF062E0C54D000DA25AB /* calndr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = calndr.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E744AF132E0C54D600DA25AB /* calndrTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = calndrTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E744AF1D2E0C54D700DA25AB /* calndrUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = calndrUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		E7D437362E2FF0AB00AA8942 /* MapKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MapKit.framework; path = System/Library/Frameworks/MapKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -71,6 +73,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E72B92F42E2CA105007C3109 /* GoogleSignIn in Frameworks */,
+				E7D437372E2FF0AB00AA8942 /* MapKit.framework in Frameworks */,
 				E72B92F62E2CA105007C3109 /* GoogleSignInSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -98,6 +101,7 @@
 				E744AF082E0C54D000DA25AB /* calndr */,
 				E744AF162E0C54D600DA25AB /* calndrTests */,
 				E744AF202E0C54D700DA25AB /* calndrUITests */,
+				E7D437352E2FF0AB00AA8942 /* Frameworks */,
 				E744AF072E0C54D000DA25AB /* Products */,
 			);
 			sourceTree = "<group>";
@@ -110,6 +114,14 @@
 				E744AF1D2E0C54D700DA25AB /* calndrUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		E7D437352E2FF0AB00AA8942 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				E7D437362E2FF0AB00AA8942 /* MapKit.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

@@ -53,8 +53,8 @@ class SchoolSearchManager: ObservableObject {
     
     func searchSchoolsInRegion(_ region: MKCoordinateRegion) async -> [MapKitSchoolResult] {
         let center = region.center
-        let radius = max(region.span.latitudeDelta, region.span.longitudeDelta) * 111000 / 2 // Convert degrees to meters
-        return await performSearch(center: center, radius: min(radius, 50000)) // Cap at 50km
+        let radius = Swift.max(region.span.latitudeDelta, region.span.longitudeDelta) * 111000 / 2 // Convert degrees to meters
+        return await performSearch(center: center, radius: Swift.min(radius, 50000)) // Cap at 50km
     }
     
     func searchSchoolsByZipCode(_ zipCode: String) async -> [MapKitSchoolResult] {
@@ -83,7 +83,7 @@ class SchoolSearchManager: ObservableObject {
             let response = try await search.start()
             
             let results = response.mapItems.compactMap { mapItem -> MapKitSchoolResult? in
-                createSchoolResult(from: mapItem, relativeTo: region?.center)
+                createSchoolResult(from: mapItem, relativeTo: region?.center, centerLocation: nil, maxDistance: nil)
             }
             
             DispatchQueue.main.async {
@@ -133,7 +133,7 @@ class SchoolSearchManager: ObservableObject {
             
             // Sort by distance
             let sortedResults = results.sorted { result1, result2 in
-                (result1.distance ?? Double.max) < (result2.distance ?? Double.max)
+                (result1.distance ?? Double.greatestFiniteMagnitude) < (result2.distance ?? Double.greatestFiniteMagnitude)
             }
             
             DispatchQueue.main.async {
@@ -188,7 +188,7 @@ class SchoolSearchManager: ObservableObject {
             distance = centerLocation.distance(from: itemLocation)
             
             // Filter by maximum distance if specified
-            if let maxDistance = maxDistance, distance! > maxDistance {
+            if let maxDistance = maxDistance, let distance = distance, distance > maxDistance {
                 return nil
             }
         }

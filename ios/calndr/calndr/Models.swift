@@ -619,6 +619,19 @@ struct SchoolSearchResult: Codable, Identifiable {
         case distance
     }
     
+    // Memberwise initializer for creating instances programmatically
+    init(id: String, placeId: String, name: String, address: String, phoneNumber: String? = nil, rating: Double? = nil, website: String? = nil, hours: String? = nil, distance: Double? = nil) {
+        self.id = id
+        self.placeId = placeId
+        self.name = name
+        self.address = address
+        self.phoneNumber = phoneNumber
+        self.rating = rating
+        self.website = website
+        self.hours = hours
+        self.distance = distance
+    }
+    
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.placeId = try container.decode(String.self, forKey: .placeId)
