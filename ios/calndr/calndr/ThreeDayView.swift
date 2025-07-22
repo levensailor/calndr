@@ -243,6 +243,15 @@ struct ThreeDayView: View {
     
     private func getCustodyText(for day: Date) -> String {
         let custodyInfo = viewModel.getCustodyInfo(for: day)
+        
+        // Debug for Monday 21st
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let dateString = formatter.string(from: day)
+        if dateString.contains("-21") {
+            print("🔍 ThreeDayView: getCustodyText for Monday 21st (\(dateString)) = '\(custodyInfo.text)' (owner: '\(custodyInfo.owner)')")
+        }
+        
         return custodyInfo.text.capitalized
     }
     

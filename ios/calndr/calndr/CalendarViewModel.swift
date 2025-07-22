@@ -504,23 +504,60 @@ class CalendarViewModel: ObservableObject {
     func getCustodyInfo(for date: Date) -> (owner: String, text: String) {
         let dateString = isoDateString(from: date)
         
+        // Special debugging for Monday the 21st issue
+        if dateString.contains("-21") {
+            print("🔍 DEBUG: getCustodyInfo called for Monday 21st (\(dateString))")
+            print("🔍 DEBUG: isHandoffDataReady = \(isHandoffDataReady)")
+            print("🔍 DEBUG: custodyRecords.count = \(custodyRecords.count)")
+            print("🔍 DEBUG: custodianOneId = '\(custodianOneId ?? "nil")', custodianTwoId = '\(custodianTwoId ?? "nil")'")
+            print("🔍 DEBUG: custodianOneName = '\(custodianOneName)', custodianTwoName = '\(custodianTwoName)'")
+        }
+        
         // If custodian data isn't loaded yet, return empty info to avoid race conditions
         guard isHandoffDataReady else {
+            if dateString.contains("-21") {
+                print("🔍 DEBUG: Monday 21st - Data not ready, returning empty")
+            }
             return ("", "")
         }
         
         // NEW: Check custody records first (from dedicated custody API)
         if let custodyRecord = custodyRecords.first(where: { $0.event_date == dateString }) {
+            if dateString.contains("-21") {
+                print("🔍 DEBUG: Monday 21st - Found custody record:")
+                print("   - Record ID: \(custodyRecord.id)")
+                print("   - Record custodian_id: '\(custodyRecord.custodian_id)'")
+                print("   - Record content: '\(custodyRecord.content)'")
+                print("   - Record handoff_day: \(custodyRecord.handoff_day ?? false)")
+            }
+            
             // CORRECTED: Compare the custodian_id directly
             if custodyRecord.custodian_id == self.custodianOneId {
+                if dateString.contains("-21") {
+                    print("🔍 DEBUG: Monday 21st - Returning custodian ONE (Jeff): '\(self.custodianOneName)'")
+                }
                 return (self.custodianOneId ?? "", self.custodianOneName)
             } else if custodyRecord.custodian_id == self.custodianTwoId {
+                if dateString.contains("-21") {
+                    print("🔍 DEBUG: Monday 21st - Returning custodian TWO (Deanna): '\(self.custodianTwoName)'")
+                }
                 return (self.custodianTwoId ?? "", self.custodianTwoName)
             } else {
                 print("⚠️ getCustodyInfo(\(dateString)): Custody record found but custodian_id doesn't match known IDs")
                 print("   Record custodian_id: '\(custodyRecord.custodian_id)'")
                 print("   Custodian one ID: '\(self.custodianOneId ?? "nil")'")
                 print("   Custodian two ID: '\(self.custodianTwoId ?? "nil")'")
+            }
+        } else {
+            if dateString.contains("-21") {
+                print("🔍 DEBUG: Monday 21st - No custody record found in custodyRecords array")
+                print("🔍 DEBUG: Available custody records:")
+                for record in custodyRecords.prefix(5) {
+                    print("   - \(record.event_date): \(record.content) (ID: \(record.custodian_id))")
+                }
+                if custodyRecords.count > 5 {
+                    print("   - ... and \(custodyRecords.count - 5) more records")
+                }
             }
         }
         

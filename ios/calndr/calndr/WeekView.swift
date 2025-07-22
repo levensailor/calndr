@@ -84,6 +84,14 @@ struct WeekView: View {
                             let ownerName = custodyInfo.text
                             let ownerId = custodyInfo.owner
                             
+                            // Debug for Monday 21st
+                            let formatter = DateFormatter()
+                            formatter.dateFormat = "yyyy-MM-dd"
+                            let dateString = formatter.string(from: day)
+                            if dateString.contains("-21") {
+                                print("🔍 WeekView: getCustodyInfo for Monday 21st (\(dateString)) = '\(ownerName)' (owner: '\(ownerId)')")
+                            }
+                            
                             if !ownerName.isEmpty {
                                 Button(action: {
                                     viewModel.toggleCustodian(for: day)
