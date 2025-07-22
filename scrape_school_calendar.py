@@ -16,7 +16,7 @@ import json
 import logging
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class SchoolCalendarScraper:
@@ -148,26 +148,43 @@ class SchoolCalendarScraper:
         """
         events = []
         
+        logger.info(f"🏫 Starting Finalsite calendar parsing for {year}-{month:02d}")
+        
         # Find the main calendar container
         calendar_container = soup.find('div', class_=re.compile(r'fsCalendar'))
         
         if not calendar_container:
             logger.warning(f"⚠️ No Finalsite calendar container found for {year}-{month:02d}")
+            # Try alternative selectors
+            alternative_containers = soup.find_all('div', class_=lambda x: x and any(cls for cls in x if 'calendar' in cls.lower()))
+            logger.info(f"🔍 Found {len(alternative_containers)} alternative calendar containers")
+            for i, container in enumerate(alternative_containers):
+                logger.debug(f"  Container {i+1}: classes={container.get('class', [])}")
             return events
+        
+        logger.info(f"✅ Found Finalsite calendar container with classes: {calendar_container.get('class', [])}")
         
         # Find all day boxes that have events
         day_boxes = calendar_container.find_all('div', class_=re.compile(r'fsCalendarDaybox'))
         
         logger.info(f"🔍 Found {len(day_boxes)} calendar day boxes")
         
-        for day_box in day_boxes:
+        # Count how many have events
+        event_boxes = [box for box in day_boxes if 'fsStateHasEvents' in box.get('class', [])]
+        logger.info(f"📊 {len(event_boxes)} day boxes have events (fsStateHasEvents)")
+        
+        for i, day_box in enumerate(day_boxes):
+            logger.debug(f"🔄 Processing day box {i+1}/{len(day_boxes)}")
             try:
-                events.extend(self.extract_finalsite_events_from_daybox(day_box, year, month))
+                box_events = self.extract_finalsite_events_from_daybox(day_box, year, month)
+                events.extend(box_events)
+                if box_events:
+                    logger.info(f"📈 Day box {i+1} contributed {len(box_events)} events")
             except Exception as e:
-                logger.debug(f"Error processing day box: {e}")
+                logger.error(f"❌ Error processing day box {i+1}: {e}")
                 continue
         
-        logger.info(f"📊 Extracted {len(events)} events for {year}-{month:02d}")
+        logger.info(f"📊 Finalsite parsing complete: extracted {len(events)} total events for {year}-{month:02d}")
         return events
     
     def extract_finalsite_events_from_daybox(self, day_box, year: int, month: int) -> List[Dict]:
@@ -186,17 +203,24 @@ class SchoolCalendarScraper:
         
         # Check if this day box has events
         has_events = 'fsStateHasEvents' in (day_box.get('class', []))
+        day_box_classes = day_box.get('class', [])
+        
+        logger.debug(f"🔍 Processing day box with classes: {day_box_classes}")
+        logger.debug(f"📋 Has events flag: {has_events}")
         
         if not has_events:
+            logger.debug(f"⏭️ Skipping day box - no events flag")
             return events
         
         # Find the date within this day box
         date_element = day_box.find('div', class_='fsCalendarDate')
         if not date_element:
+            logger.debug(f"❌ No fsCalendarDate element found in day box")
             return events
         
         # Extract day number - handle different formats
         day_text = date_element.get_text(strip=True)
+        logger.info(f"📅 Processing date element: '{day_text}'")
         
         # Try different patterns for day extraction
         day_match = (
@@ -206,13 +230,15 @@ class SchoolCalendarScraper:
         )
         
         if not day_match:
-            logger.debug(f"Could not extract day from: '{day_text}'")
+            logger.warning(f"❌ Could not extract day from: '{day_text}'")
             return events
         
         day = int(day_match.group(1))
+        logger.info(f"📊 Extracted day: {day}")
         
         # Extract month information from the day text if available
         extracted_month = month  # Default to requested month
+        original_year = year
         
         # Check if day text contains month name
         month_names = {
@@ -221,40 +247,62 @@ class SchoolCalendarScraper:
         }
         
         day_text_lower = day_text.lower()
+        logger.debug(f"🔍 Checking for month names in: '{day_text_lower}'")
+        
         for month_name, month_num in month_names.items():
             if month_name in day_text_lower:
                 extracted_month = month_num
+                logger.info(f"📆 Found month '{month_name}' = {month_num}")
                 # Adjust year if needed (for calendar views showing multiple months)
                 if extracted_month < month and month >= 8:  # School year transition
                     year = year + 1
+                    logger.info(f"🗓️ Adjusted year to {year} for school year transition")
                 elif extracted_month > month and month <= 6:  # School year transition  
                     year = year
+                    logger.debug(f"🗓️ Keeping year {year}")
                 break
+        
+        logger.info(f"📋 Final date components: year={year}, month={extracted_month}, day={day}")
         
         # Validate day is reasonable for the extracted month
         try:
             event_date = date(year, extracted_month, day)
-        except ValueError:
-            logger.debug(f"Invalid date: {year}-{extracted_month}-{day}")
+            logger.info(f"✅ Valid event date: {event_date.isoformat()}")
+        except ValueError as e:
+            logger.error(f"❌ Invalid date: {year}-{extracted_month}-{day}: {e}")
             return events
         
         # Skip if this is an out-of-range day (previous/next month) and we want current month only
         if 'fsCalendarOutOfRange' in day_box.get('class', []):
+            logger.debug(f"⏭️ Skipping out-of-range day")
             return events
         
         # Find event information in this day box
         event_info_elements = day_box.find_all('div', class_='fsCalendarInfo')
+        logger.info(f"🔍 Found {len(event_info_elements)} fsCalendarInfo elements")
         
-        for info_element in event_info_elements:
+        for i, info_element in enumerate(event_info_elements):
+            logger.debug(f"📋 Processing info element {i+1}")
+            
+            # Get raw HTML for debugging
+            logger.debug(f"🔍 Info element HTML: {info_element}")
+            
             # Look for event details within the info element
             event_links = info_element.find_all('a')
+            logger.info(f"🔗 Found {len(event_links)} links in info element {i+1}")
             
-            for link in event_links:
+            for j, link in enumerate(event_links):
                 event_text = link.get_text(strip=True)
+                link_href = link.get('href', 'no-href')
+                
+                logger.info(f"🔗 Link {j+1}: text='{event_text}', href='{link_href}'")
                 
                 if event_text:
                     # Clean up event text
+                    original_text = event_text
                     event_text = self.normalize_event_text(event_text)
+                    
+                    logger.info(f"🧹 Normalized: '{original_text}' → '{event_text}'")
                     
                     if event_text:  # Only add if we have meaningful text after normalization
                         event = {
@@ -267,17 +315,26 @@ class SchoolCalendarScraper:
                             'event_link': link.get('href') if link.get('href') else None
                         }
                         events.append(event)
-                        logger.debug(f"📌 Found event: {event_date.isoformat()} - {event_text}")
+                        logger.info(f"✅ Added event: {event_date.isoformat()} - {event_text}")
+                    else:
+                        logger.debug(f"⏭️ Skipping normalized empty text")
+                else:
+                    logger.debug(f"⏭️ Skipping empty link text")
             
             # Also check for plain text events (not in links)
             info_text = info_element.get_text(strip=True)
+            logger.debug(f"📄 Full info text: '{info_text}'")
             
             # Remove link text from the full text to see if there's additional text
+            remaining_text = info_text
             for link in event_links:
-                info_text = info_text.replace(link.get_text(strip=True), '').strip()
+                link_text = link.get_text(strip=True)
+                remaining_text = remaining_text.replace(link_text, '').strip()
+                logger.debug(f"🧹 After removing '{link_text}': '{remaining_text}'")
             
-            if info_text and info_text not in [link.get_text(strip=True) for link in event_links]:
-                event_text = self.normalize_event_text(info_text)
+            if remaining_text and remaining_text not in [link.get_text(strip=True) for link in event_links]:
+                logger.info(f"📄 Found additional text: '{remaining_text}'")
+                event_text = self.normalize_event_text(remaining_text)
                 
                 if event_text:
                     event = {
@@ -290,8 +347,11 @@ class SchoolCalendarScraper:
                         'event_link': None
                     }
                     events.append(event)
-                    logger.debug(f"📌 Found text event: {event_date.isoformat()} - {event_text}")
+                    logger.info(f"✅ Added text event: {event_date.isoformat()} - {event_text}")
+                else:
+                    logger.debug(f"⏭️ Skipping normalized empty additional text")
         
+        logger.info(f"📊 Day box processing complete: {len(events)} events extracted")
         return events
     
     def parse_calendar_grid(self, soup: BeautifulSoup, year: int, month: int) -> List[Dict]:
@@ -448,18 +508,25 @@ class SchoolCalendarScraper:
             Cleaned event text or None if not meaningful
         """
         if not text:
+            logger.debug(f"🧹 Normalization: empty input")
             return None
+        
+        original_text = text
+        logger.debug(f"🧹 Normalizing: '{original_text}'")
         
         # Basic cleaning
         text = text.strip()
         text = re.sub(r'\s+', ' ', text)  # Normalize whitespace
+        logger.debug(f"🧹 After basic cleaning: '{text}'")
         
         # Skip if it's just a number (day number)
         if re.match(r'^\d+$', text):
+            logger.debug(f"🧹 Rejected: just a number")
             return None
         
         # Skip very short text that's likely not an event
         if len(text) < 3:
+            logger.debug(f"🧹 Rejected: too short ({len(text)} chars)")
             return None
         
         # Skip common non-event text
@@ -470,11 +537,21 @@ class SchoolCalendarScraper:
         
         for pattern in skip_patterns:
             if re.match(pattern, text, re.IGNORECASE):
+                logger.debug(f"🧹 Rejected: matches skip pattern '{pattern}'")
                 return None
         
-        # Capitalize first letter
-        text = text[0].upper() + text[1:] if len(text) > 1 else text.upper()
+        # Remove "All Day" suffix if present
+        if text.lower().endswith('all day'):
+            text = text[:-7].strip()
+            logger.debug(f"🧹 Removed 'All Day' suffix: '{text}'")
         
+        # Capitalize first letter
+        if len(text) > 1:
+            text = text[0].upper() + text[1:]
+        else:
+            text = text.upper()
+        
+        logger.debug(f"🧹 Final normalized text: '{text}'")
         return text
     
     async def scrape_school_year(self, start_year: int = None) -> List[Dict]:
@@ -504,6 +581,32 @@ class SchoolCalendarScraper:
                 
                 # Parse events from this month
                 month_events = self.parse_calendar_grid(soup, year, month)
+                
+                # If no events found, log page structure for debugging
+                if not month_events:
+                    logger.warning(f"❌ No events found for {year}-{month:02d}")
+                    
+                    # Log some page structure for debugging
+                    all_divs = soup.find_all('div')
+                    calendar_divs = [d for d in all_divs if d.get('class') and any('calendar' in str(c).lower() for c in d.get('class', []))]
+                    event_divs = [d for d in all_divs if d.get('class') and any('event' in str(c).lower() for c in d.get('class', []))]
+                    
+                    logger.debug(f"🔍 Page structure debug:")
+                    logger.debug(f"  Total divs: {len(all_divs)}")
+                    logger.debug(f"  Calendar-related divs: {len(calendar_divs)}")
+                    logger.debug(f"  Event-related divs: {len(event_divs)}")
+                    
+                    # Sample some calendar div classes
+                    for i, div in enumerate(calendar_divs[:5]):
+                        logger.debug(f"    Calendar div {i+1}: {div.get('class', [])}")
+                    
+                    # Check for any text that might be events
+                    page_text = soup.get_text()
+                    holiday_keywords = ['holiday', 'day off', 'break', 'vacation', 'closed', 'workday', 'teacher', 'report']
+                    found_keywords = [kw for kw in holiday_keywords if kw.lower() in page_text.lower()]
+                    if found_keywords:
+                        logger.info(f"🔍 Found potential event keywords in page: {found_keywords}")
+                    
                 all_events.extend(month_events)
                 
                 # Small delay to be respectful
@@ -512,10 +615,23 @@ class SchoolCalendarScraper:
                 logger.warning(f"⚠️ Skipping {year}-{month:02d} due to fetch failure")
         
         # Remove duplicates and sort by date
+        logger.info(f"📊 Before deduplication: {len(all_events)} events")
         all_events = self.deduplicate_events(all_events)
         all_events.sort(key=lambda x: x['date'])
         
         logger.info(f"🎉 Scraping complete! Found {len(all_events)} total events")
+        
+        # Log summary of found events
+        if all_events:
+            logger.info(f"📅 Date range: {all_events[0]['date']} to {all_events[-1]['date']}")
+            logger.info(f"📋 Sample events:")
+            for event in all_events[:3]:
+                logger.info(f"  • {event['date']}: {event['title']}")
+            if len(all_events) > 3:
+                logger.info(f"  ... and {len(all_events) - 3} more events")
+        else:
+            logger.warning(f"❌ No events found across entire school year!")
+        
         return all_events
     
     def deduplicate_events(self, events: List[Dict]) -> List[Dict]:
