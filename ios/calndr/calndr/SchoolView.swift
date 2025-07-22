@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreLocation
 
 struct SchoolView: View {
     @EnvironmentObject var viewModel: CalendarViewModel
@@ -466,7 +467,7 @@ struct SchoolSearchView: View {
                 }
                 
                 // Request current location
-                userLocation = await withCheckedContinuation { continuation in
+                userLocation = await withCheckedContinuation { (continuation: CheckedContinuation<CLLocation?, Never>) in
                     locationManager.requestCurrentLocation { location in
                         continuation.resume(returning: location)
                     }
