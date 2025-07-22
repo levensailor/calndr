@@ -133,6 +133,14 @@ struct SettingsView: View {
                 itemCount: nil
             ),
             SettingsSection(
+                title: "Schools",
+                icon: "building.columns",
+                description: "Schools and educational institutions",
+                color: .blue,
+                destination: .schools,
+                itemCount: viewModel.schoolProviders.count
+            ),
+            SettingsSection(
                 title: "Daycare",
                 icon: "building.2",
                 description: "Daycare providers and childcare information",
@@ -176,6 +184,8 @@ struct SettingsView: View {
             SecuritySettingsView()
         case .preferences:
             PreferencesView().environmentObject(viewModel)
+        case .schools:
+            SchoolView().environmentObject(viewModel)
         case .daycare:
             DaycareView().environmentObject(viewModel)
         case .sitters:

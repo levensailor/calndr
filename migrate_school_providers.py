@@ -9,15 +9,26 @@ import asyncpg
 import os
 import uuid
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 async def run_migration():
     """Run the migration to add school providers tables."""
     
     # Database connection parameters
-    DATABASE_URL = os.getenv("DATABASE_URL")
-    if not DATABASE_URL:
-        print("❌ DATABASE_URL environment variable not set")
+    DB_USER = os.getenv("DB_USER")
+    DB_PASSWORD = os.getenv("DB_PASSWORD") 
+    DB_HOST = os.getenv("DB_HOST")
+    DB_PORT = os.getenv("DB_PORT")
+    DB_NAME = os.getenv("DB_NAME")
+
+    if not all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
+        print("❌ Database environment variables not set. Please check your .env file.")
         return False
+
+    DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     
     try:
         # Connect to database

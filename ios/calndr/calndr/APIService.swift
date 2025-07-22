@@ -2588,6 +2588,245 @@ class APIService {
         }.resume()
     }
     
+    // MARK: - School Provider API Methods
+    
+    func fetchSchoolProviders(completion: @escaping (Result<[SchoolProvider], Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/school-providers")
+        let request = createAuthenticatedRequest(url: url)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error"])))
+                return
+            }
+            
+            do {
+                let providers = try JSONDecoder().decode([SchoolProvider].self, from: data)
+                completion(.success(providers))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func createSchoolProvider(_ providerData: SchoolProviderCreate, completion: @escaping (Result<SchoolProvider, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/school-providers")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(providerData)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error"])))
+                return
+            }
+            
+            do {
+                let provider = try JSONDecoder().decode(SchoolProvider.self, from: data)
+                completion(.success(provider))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func updateSchoolProvider(_ providerId: Int, providerData: SchoolProviderCreate, completion: @escaping (Result<SchoolProvider, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/school-providers/\(providerId)")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "PUT"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(providerData)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error"])))
+                return
+            }
+            
+            do {
+                let provider = try JSONDecoder().decode(SchoolProvider.self, from: data)
+                completion(.success(provider))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func deleteSchoolProvider(_ providerId: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/school-providers/\(providerId)")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "DELETE"
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error"])))
+                return
+            }
+            
+            completion(.success(()))
+        }.resume()
+    }
+    
+    func searchSchoolProviders(_ searchRequest: SchoolSearchRequest, completion: @escaping (Result<[SchoolSearchResult], Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/school-providers/search")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(searchRequest)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error"])))
+                return
+            }
+            
+            do {
+                let searchResults = try JSONDecoder().decode([SchoolSearchResult].self, from: data)
+                completion(.success(searchResults))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func discoverSchoolCalendarURL(providerId: Int, completion: @escaping (Result<SchoolCalendarDiscoveryResponse, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/school-providers/\(providerId)/discover-calendar")
+        let request = createAuthenticatedRequest(url: url)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                return
+            }
+            
+            do {
+                let response = try JSONDecoder().decode(SchoolCalendarDiscoveryResponse.self, from: data)
+                completion(.success(response))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func parseSchoolEvents(providerId: Int, calendarURL: String, completion: @escaping (Result<SchoolEventsParseResponse, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/school-providers/\(providerId)/parse-events")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let requestBody = ["calendar_url": calendarURL]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                return
+            }
+            
+            do {
+                let response = try JSONDecoder().decode(SchoolEventsParseResponse.self, from: data)
+                completion(.success(response))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
     // MARK: - Phone Verification
     
     func sendPhoneVerificationPin(phoneNumber: String, completion: @escaping (Result<PhoneVerificationResponse, Error>) -> Void) {

@@ -38,6 +38,7 @@ class CalendarViewModel: ObservableObject {
     @Published var children: [Child] = []
     @Published var otherFamilyMembers: [OtherFamilyMember] = []
     @Published var daycareProviders: [DaycareProvider] = []
+    @Published var schoolProviders: [SchoolProvider] = []
     @Published var scheduleTemplates: [ScheduleTemplate] = []
     @Published var babysitters: [Babysitter] = []
     @Published var emergencyContacts: [EmergencyContact] = []
@@ -1445,6 +1446,11 @@ class CalendarViewModel: ObservableObject {
         }
         
         dispatchGroup.enter()
+        fetchSchoolProviders {
+            dispatchGroup.leave()
+        }
+        
+        dispatchGroup.enter()
         fetchScheduleTemplates {
             dispatchGroup.leave()
         }
@@ -2096,6 +2102,81 @@ class CalendarViewModel: ObservableObject {
     
     func searchDaycareProviders(_ searchRequest: DaycareSearchRequest, completion: @escaping (Result<[DaycareSearchResult], Error>) -> Void) {
         APIService.shared.searchDaycareProviders(searchRequest) { result in
+            DispatchQueue.main.async {
+                completion(result)
+            }
+        }
+    }
+    
+    // MARK: - School Provider Management
+    
+    func fetchSchoolProviders(completion: (() -> Void)? = nil) {
+        APIService.shared.fetchSchoolProviders { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let providers):
+                    self?.schoolProviders = providers
+                    print("✅ Successfully fetched \(providers.count) school providers")
+                case .failure(let error):
+                    print("❌ Error fetching school providers: \(error.localizedDescription)")
+                }
+                completion?()
+            }
+        }
+    }
+    
+    func saveSchoolProvider(_ provider: SchoolProviderCreate, completion: @escaping (Bool) -> Void) {
+        APIService.shared.createSchoolProvider(provider) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let savedProvider):
+                    self?.schoolProviders.append(savedProvider)
+                    print("✅ Successfully saved school provider: \(savedProvider.name)")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error saving school provider: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func updateSchoolProvider(_ providerId: Int, provider: SchoolProviderCreate, completion: @escaping (Bool) -> Void) {
+        APIService.shared.updateSchoolProvider(providerId, providerData: provider) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let updatedProvider):
+                    if let index = self?.schoolProviders.firstIndex(where: { $0.id == providerId }) {
+                        self?.schoolProviders[index] = updatedProvider
+                    }
+                    print("✅ Successfully updated school provider: \(updatedProvider.name)")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error updating school provider: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func deleteSchoolProvider(_ providerId: Int, completion: @escaping (Bool) -> Void) {
+        APIService.shared.deleteSchoolProvider(providerId) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    self?.schoolProviders.removeAll { $0.id == providerId }
+                    print("✅ Successfully deleted school provider")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error deleting school provider: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func searchSchoolProviders(_ searchRequest: SchoolSearchRequest, completion: @escaping (Result<[SchoolSearchResult], Error>) -> Void) {
+        APIService.shared.searchSchoolProviders(searchRequest) { result in
             DispatchQueue.main.async {
                 completion(result)
             }

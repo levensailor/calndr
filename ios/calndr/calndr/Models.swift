@@ -523,6 +523,155 @@ struct DaycareEventsParseResponse: Codable {
     }
 }
 
+// MARK: - School Provider Models
+
+struct SchoolProvider: Codable, Identifiable {
+    let id: Int
+    let name: String
+    let address: String?
+    let phoneNumber: String?
+    let email: String?
+    let hours: String?
+    let notes: String?
+    let googlePlaceId: String?
+    let rating: Double?
+    let website: String?
+    let createdByUserId: String
+    let createdAt: String
+    let updatedAt: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case address
+        case phoneNumber = "phone_number"
+        case email
+        case hours
+        case notes
+        case googlePlaceId = "google_place_id"
+        case rating
+        case website
+        case createdByUserId = "created_by_user_id"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+struct SchoolProviderCreate: Codable {
+    let name: String
+    let address: String?
+    let phoneNumber: String?
+    let email: String?
+    let hours: String?
+    let notes: String?
+    let googlePlaceId: String?
+    let rating: Double?
+    let website: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case name
+        case address
+        case phoneNumber = "phone_number"
+        case email
+        case hours
+        case notes
+        case googlePlaceId = "google_place_id"
+        case rating
+        case website
+    }
+}
+
+struct SchoolSearchRequest: Codable {
+    let locationType: String
+    let zipcode: String?
+    let latitude: Double?
+    let longitude: Double?
+    let radius: Int?
+    
+    enum CodingKeys: String, CodingKey {
+        case locationType = "location_type"
+        case zipcode
+        case latitude
+        case longitude
+        case radius
+    }
+}
+
+struct SchoolSearchResult: Codable, Identifiable {
+    let id: String
+    let placeId: String
+    let name: String
+    let address: String
+    let phoneNumber: String?
+    let rating: Double?
+    let website: String?
+    let hours: String?
+    let distance: Double?
+    
+    enum CodingKeys: String, CodingKey {
+        case placeId = "place_id"
+        case name
+        case address
+        case phoneNumber = "phone_number"
+        case rating
+        case website
+        case hours
+        case distance
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.placeId = try container.decode(String.self, forKey: .placeId)
+        self.id = placeId // Use placeId as the id for Identifiable
+        self.name = try container.decode(String.self, forKey: .name)
+        self.address = try container.decode(String.self, forKey: .address)
+        self.phoneNumber = try container.decodeIfPresent(String.self, forKey: .phoneNumber)
+        self.rating = try container.decodeIfPresent(Double.self, forKey: .rating)
+        self.website = try container.decodeIfPresent(String.self, forKey: .website)
+        self.hours = try container.decodeIfPresent(String.self, forKey: .hours)
+        self.distance = try container.decodeIfPresent(Double.self, forKey: .distance)
+    }
+}
+
+struct SchoolCalendarDiscoveryResponse: Codable {
+    let providerId: Int
+    let providerName: String
+    let baseWebsite: String
+    let discoveredCalendarURL: String?
+    let success: Bool
+    
+    enum CodingKeys: String, CodingKey {
+        case providerId = "provider_id"
+        case providerName = "provider_name"
+        case baseWebsite = "base_website"
+        case discoveredCalendarURL = "discovered_calendar_url"
+        case success
+    }
+}
+
+struct SchoolEventResponse: Codable {
+    let date: String
+    let title: String
+}
+
+struct SchoolEventsParseResponse: Codable {
+    let providerId: Int
+    let providerName: String
+    let calendarURL: String
+    let eventsCount: Int
+    let events: [SchoolEventResponse]
+    let success: Bool
+    
+    enum CodingKeys: String, CodingKey {
+        case providerId = "provider_id"
+        case providerName = "provider_name"
+        case calendarURL = "calendar_url"
+        case eventsCount = "events_count"
+        case events
+        case success
+    }
+}
+
 struct ScheduleTemplate: Codable, Identifiable {
     let id: Int
     let name: String
@@ -855,6 +1004,7 @@ enum SettingsDestination: Hashable {
     case account
     case security
     case preferences
+    case schools
     case daycare
     case sitters
     case schedules
