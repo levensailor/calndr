@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreLocation
+import MapKit
 
 struct SchoolView: View {
     @EnvironmentObject var viewModel: CalendarViewModel
@@ -865,7 +866,6 @@ struct SchoolEventsModal: View {
                         dismiss()
                     }
                     .foregroundColor(themeManager.currentTheme.textColor.color)
-                    .disabled(isEnhancing)
                 }
             }
 

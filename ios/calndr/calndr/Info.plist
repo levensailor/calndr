@@ -4,6 +4,8 @@
 <dict>
 	<key>GIDClientID</key>
 	<string>427740229486-irmioidbvts681onsl3crtfghlmmsjhq.apps.googleusercontent.com</string>
+	<key>GOOGLE_PLACES_API_KEY</key>
+	<string>AIzaSyDmIvnSjIpXZAeUKCByHUmZmauE7vlW45k</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
