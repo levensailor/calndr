@@ -1,0 +1,239 @@
+{
+  "apiName": "Calndr Backend API",
+  "basePath": "/api",
+  "version": "1.0",
+  "categories": {
+    "Authentication & Users": {
+      "color": "#FFE6CC",
+      "modules": [
+        {
+          "name": "Authentication",
+          "path": "/api/auth",
+          "endpoints": [
+            {"method": "POST", "path": "/token", "description": "Get authentication token"},
+            {"method": "POST", "path": "/register", "description": "Register new user"},
+            {"method": "POST", "path": "/apple/server-notify", "description": "Apple server notification"},
+            {"method": "GET", "path": "/apple/login", "description": "Apple login redirect"},
+            {"method": "POST", "path": "/apple/callback", "description": "Apple login callback"},
+            {"method": "GET", "path": "/google/login", "description": "Google login redirect"},
+            {"method": "POST", "path": "/google/callback", "description": "Google login callback"},
+            {"method": "POST", "path": "/google/ios-login", "description": "Google iOS login"},
+            {"method": "POST", "path": "/facebook/ios-login", "description": "Facebook iOS login"}
+          ]
+        },
+        {
+          "name": "Users",
+          "path": "/api/users",
+          "endpoints": [
+            {"method": "GET", "path": "/profile", "description": "Get user profile"},
+            {"method": "GET", "path": "/me", "description": "Get current user info"},
+            {"method": "PUT", "path": "/profile", "description": "Update user profile"},
+            {"method": "PUT", "path": "/me/password", "description": "Update password"},
+            {"method": "POST", "path": "/me/device-token", "description": "Register device token"},
+            {"method": "POST", "path": "/me/last-signin", "description": "Update last signin"},
+            {"method": "PUT", "path": "/preferences", "description": "Update user preferences"},
+            {"method": "POST", "path": "/location", "description": "Update user location"},
+            {"method": "POST", "path": "/profile/photo", "description": "Upload profile photo"}
+          ]
+        },
+        {
+          "name": "Profile",
+          "path": "/api/user/profile",
+          "endpoints": [
+            {"method": "POST", "path": "/photo", "description": "Upload profile photo"}
+          ]
+        },
+        {
+          "name": "Phone Verification",
+          "path": "/api/phone-verification",
+          "endpoints": [
+            {"method": "POST", "path": "/send-pin", "description": "Send verification PIN"},
+            {"method": "POST", "path": "/verify-pin", "description": "Verify PIN"},
+            {"method": "POST", "path": "/cleanup-expired", "description": "Cleanup expired PINs"}
+          ]
+        }
+      ]
+    },
+    "Calendar & Scheduling": {
+      "color": "#DAE8FC",
+      "modules": [
+        {
+          "name": "Events",
+          "path": "/api/events",
+          "endpoints": [
+            {"method": "GET", "path": "/{year}/{month}", "description": "Get events by month"},
+            {"method": "GET", "path": "/", "description": "Get all events"},
+            {"method": "POST", "path": "/", "description": "Create new event"},
+            {"method": "PUT", "path": "/{event_id}", "description": "Update event"},
+            {"method": "DELETE", "path": "/{event_id}", "description": "Delete event"}
+          ]
+        },
+        {
+          "name": "Custody",
+          "path": "/api/custody",
+          "endpoints": [
+            {"method": "GET", "path": "/{year}/{month}", "description": "Get custody schedule by month"},
+            {"method": "POST", "path": "/", "description": "Create custody entry"},
+            {"method": "PUT", "path": "/date/{custody_date}", "description": "Update custody by date"},
+            {"method": "PUT", "path": "/{custody_id}", "description": "Update custody by ID"},
+            {"method": "POST", "path": "/bulk", "description": "Bulk create custody entries"}
+          ]
+        },
+        {
+          "name": "Schedule Templates",
+          "path": "/api/schedule-templates",
+          "endpoints": [
+            {"method": "GET", "path": "/", "description": "Get schedule templates"},
+            {"method": "GET", "path": "/{template_id}", "description": "Get specific template"},
+            {"method": "POST", "path": "/", "description": "Create schedule template"},
+            {"method": "PUT", "path": "/{template_id}", "description": "Update schedule template"},
+            {"method": "DELETE", "path": "/{template_id}", "description": "Delete schedule template"},
+            {"method": "POST", "path": "/apply", "description": "Apply schedule template"}
+          ]
+        },
+        {
+          "name": "School Events",
+          "path": "/api/school-events",
+          "endpoints": [
+            {"method": "GET", "path": "/", "description": "Get school events"}
+          ]
+        }
+      ]
+    },
+    "Family Management": {
+      "color": "#F8CECC",
+      "modules": [
+        {
+          "name": "Family",
+          "path": "/api/family",
+          "endpoints": [
+            {"method": "POST", "path": "/invite", "description": "Invite family member"},
+            {"method": "GET", "path": "/custodians", "description": "Get custodians list"},
+            {"method": "GET", "path": "/emails", "description": "Get family emails"},
+            {"method": "GET", "path": "/members", "description": "Get family members"},
+            {"method": "POST", "path": "/request-location/{target_user_id}", "description": "Request location from family member"}
+          ]
+        },
+        {
+          "name": "Children",
+          "path": "/api/children",
+          "endpoints": [
+            {"method": "GET", "path": "/", "description": "Get all children"},
+            {"method": "POST", "path": "/", "description": "Add new child"},
+            {"method": "PUT", "path": "/{child_id}", "description": "Update child info"},
+            {"method": "DELETE", "path": "/{child_id}", "description": "Remove child"}
+          ]
+        },
+        {
+          "name": "Daycare Providers",
+          "path": "/api/daycare-providers",
+          "endpoints": [
+            {"method": "GET", "path": "/", "description": "Get daycare providers"},
+            {"method": "POST", "path": "/", "description": "Add daycare provider"},
+            {"method": "PUT", "path": "/{provider_id}", "description": "Update daycare provider"},
+            {"method": "DELETE", "path": "/{provider_id}", "description": "Remove daycare provider"},
+            {"method": "GET", "path": "/{provider_id}/discover-calendar", "description": "Discover calendar URL"},
+            {"method": "POST", "path": "/{provider_id}/parse-events", "description": "Parse calendar events"},
+            {"method": "POST", "path": "/search", "description": "Search daycare providers"}
+          ]
+        },
+        {
+          "name": "Emergency Contacts",
+          "path": "/api/emergency-contacts",
+          "endpoints": [
+            {"method": "GET", "path": "/", "description": "Get emergency contacts"},
+            {"method": "POST", "path": "/", "description": "Add emergency contact"},
+            {"method": "PUT", "path": "/{contact_id}", "description": "Update emergency contact"},
+            {"method": "DELETE", "path": "/{contact_id}", "description": "Remove emergency contact"}
+          ]
+        },
+        {
+          "name": "Babysitters",
+          "path": "/api/babysitters",
+          "endpoints": [
+            {"method": "GET", "path": "/", "description": "Get babysitters"},
+            {"method": "POST", "path": "/", "description": "Add babysitter"},
+            {"method": "PUT", "path": "/{babysitter_id}", "description": "Update babysitter"},
+            {"method": "DELETE", "path": "/{babysitter_id}", "description": "Remove babysitter"}
+          ]
+        }
+      ]
+    },
+    "Communication": {
+      "color": "#E1D5E7",
+      "modules": [
+        {
+          "name": "Journal",
+          "path": "/api/journal",
+          "endpoints": [
+            {"method": "GET", "path": "/", "description": "Get journal entries"},
+            {"method": "POST", "path": "/", "description": "Create journal entry"},
+            {"method": "PUT", "path": "/{entry_id}", "description": "Update journal entry"},
+            {"method": "DELETE", "path": "/{entry_id}", "description": "Delete journal entry"},
+            {"method": "GET", "path": "/{entry_id}", "description": "Get specific journal entry"}
+          ]
+        },
+        {
+          "name": "Notifications",
+          "path": "/api/notifications",
+          "endpoints": [
+            {"method": "GET", "path": "/emails", "description": "Get notification emails"},
+            {"method": "POST", "path": "/emails", "description": "Add notification email"},
+            {"method": "PUT", "path": "/emails/{email_id}", "description": "Update notification email"},
+            {"method": "DELETE", "path": "/emails/{email_id}", "description": "Remove notification email"}
+          ]
+        },
+        {
+          "name": "Themes",
+          "path": "/api/themes",
+          "endpoints": [
+            {"method": "POST", "path": "/", "description": "Create theme"},
+            {"method": "GET", "path": "/", "description": "Get all themes"},
+            {"method": "PUT", "path": "/{theme_id}", "description": "Update theme"},
+            {"method": "DELETE", "path": "/{theme_id}", "description": "Delete theme"},
+            {"method": "PUT", "path": "/set-preference/{theme_id}", "description": "Set theme preference"}
+          ]
+        },
+        {
+          "name": "Reminders",
+          "path": "/api/reminders",
+          "endpoints": [
+            {"method": "GET", "path": "/", "description": "Get reminders"}
+          ]
+        },
+        {
+          "name": "Group Chat",
+          "path": "/api/group-chat",
+          "endpoints": [
+            {"method": "POST", "path": "/", "description": "Send group message"}
+          ]
+        }
+      ]
+    },
+    "External Integration": {
+      "color": "#D4E1F5",
+      "modules": [
+        {
+          "name": "Weather",
+          "path": "/api/weather",
+          "endpoints": [
+            {"method": "GET", "path": "/{latitude}/{longitude}", "description": "Get current weather"},
+            {"method": "GET", "path": "/historic/{latitude}/{longitude}", "description": "Get historic weather"}
+          ]
+        }
+      ]
+    }
+  },
+  "externalServices": [
+    {"name": "Twilio", "type": "SMS", "usage": "Phone verification and SMS notifications"},
+    {"name": "SendGrid", "type": "Email", "usage": "Email notifications"},
+    {"name": "Weather API", "type": "Data", "usage": "Weather information"},
+    {"name": "Apple Auth", "type": "Authentication", "usage": "Apple Sign In"},
+    {"name": "Google OAuth", "type": "Authentication", "usage": "Google Sign In"},
+    {"name": "Facebook Auth", "type": "Authentication", "usage": "Facebook Sign In"}
+  ],
+  "database": {
+    "type": "PostgreSQL",
+    "orm": "SQLAlchemy"
+  }
+}
