@@ -147,7 +147,7 @@ class EnhancedSchoolSearchManager: ObservableObject {
         )
         
         // Convert to enhanced results
-        var enhancedResults: [EnhancedSchoolResult] = mapKitResults.compactMap { result in
+        let enhancedResults: [EnhancedSchoolResult] = mapKitResults.compactMap { result in
             convertToEnhancedResult(from: result)
         }
         
@@ -162,7 +162,7 @@ class EnhancedSchoolSearchManager: ObservableObject {
     }
     
     func enhanceSchoolWithGoogleData(_ school: EnhancedSchoolResult) async -> EnhancedSchoolResult {
-        guard let googleApiKey = googleApiKey else {
+        guard googleApiKey != nil else {
             print("⚠️ Google Places API key not available - skipping enhancement")
             return school
         }
@@ -171,27 +171,23 @@ class EnhancedSchoolSearchManager: ObservableObject {
         
         var enhancedSchool = school
         
-        do {
-            // Step 1: Find the school on Google Places using text search
-            if let googlePlace = await findSchoolOnGoogle(name: school.name, coordinate: school.coordinate) {
-                // Step 2: Get detailed information
-                if let details = await getGooglePlaceDetails(placeId: googlePlace.placeId) {
-                    enhancedSchool.googlePlaceId = details.placeId
-                    enhancedSchool.website = details.website
-                    enhancedSchool.rating = details.rating
-                    enhancedSchool.priceLevel = details.priceLevel
-                    
-                    // Format opening hours
-                    if let weekdayText = details.openingHours?.weekdayText {
-                        enhancedSchool.hours = weekdayText.joined(separator: "\n")
-                    }
-                    
-                    enhancedSchool.isEnhanced = true
-                    print("✅ Enhanced school '\(school.name)' with Google data")
+        // Step 1: Find the school on Google Places using text search
+        if let googlePlace = await findSchoolOnGoogle(name: school.name, coordinate: school.coordinate) {
+            // Step 2: Get detailed information
+            if let details = await getGooglePlaceDetails(placeId: googlePlace.placeId) {
+                enhancedSchool.googlePlaceId = details.placeId
+                enhancedSchool.website = details.website
+                enhancedSchool.rating = details.rating
+                enhancedSchool.priceLevel = details.priceLevel
+                
+                // Format opening hours
+                if let weekdayText = details.openingHours?.weekdayText {
+                    enhancedSchool.hours = weekdayText.joined(separator: "\n")
                 }
+                
+                enhancedSchool.isEnhanced = true
+                print("✅ Enhanced school '\(school.name)' with Google data")
             }
-        } catch {
-            print("❌ Failed to enhance school '\(school.name)': \(error.localizedDescription)")
         }
         
         isEnhancing = false
