@@ -59,7 +59,7 @@ struct FocusedDayView: View {
                             .font(.headline.bold())
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                            .background(ownerId == viewModel.custodianOneId ? themeManager.currentTheme.parentTwoColor.color : themeManager.currentTheme.parentOneColor.color)
+                            .background(ownerId == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColor.color : themeManager.currentTheme.parentTwoColor.color)
                             .foregroundColor(themeManager.currentTheme.textColor.color)
                             .cornerRadius(10)
                             .contentShape(Rectangle())

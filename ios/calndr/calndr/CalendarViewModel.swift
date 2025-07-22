@@ -506,39 +506,29 @@ class CalendarViewModel: ObservableObject {
         
         // If custodian data isn't loaded yet, return empty info to avoid race conditions
         guard isHandoffDataReady else {
-            print("🔍 getCustodyInfo(\(dateString)): Data not ready, returning empty")
             return ("", "")
         }
         
         // NEW: Check custody records first (from dedicated custody API)
         if let custodyRecord = custodyRecords.first(where: { $0.event_date == dateString }) {
-            print("🔍 getCustodyInfo(\(dateString)): Found custody record - custodian_id: \(custodyRecord.custodian_id)")
-            
             // CORRECTED: Compare the custodian_id directly
             if custodyRecord.custodian_id == self.custodianOneId {
-                print("🔍 getCustodyInfo(\(dateString)): Returning custodian one - \(self.custodianOneName)")
                 return (self.custodianOneId ?? "", self.custodianOneName)
             } else if custodyRecord.custodian_id == self.custodianTwoId {
-                print("🔍 getCustodyInfo(\(dateString)): Returning custodian two - \(self.custodianTwoName)")
                 return (self.custodianTwoId ?? "", self.custodianTwoName)
             } else {
-                print("🔍 getCustodyInfo(\(dateString)): ⚠️ Custody record found but custodian_id doesn't match known IDs")
-                print("🔍   Record custodian_id: '\(custodyRecord.custodian_id)'")
-                print("🔍   Custodian one ID: '\(self.custodianOneId ?? "nil")'")
-                print("🔍   Custodian two ID: '\(self.custodianTwoId ?? "nil")'")
+                print("⚠️ getCustodyInfo(\(dateString)): Custody record found but custodian_id doesn't match known IDs")
+                print("   Record custodian_id: '\(custodyRecord.custodian_id)'")
+                print("   Custodian one ID: '\(self.custodianOneId ?? "nil")'")
+                print("   Custodian two ID: '\(self.custodianTwoId ?? "nil")'")
             }
-        } else {
-            print("🔍 getCustodyInfo(\(dateString)): No custody record found")
         }
         
         // LEGACY: Check for old custody events in events array (position 4) for backward compatibility
         if let custodyEvent = events.first(where: { $0.event_date == dateString && $0.position == 4 }) {
-            print("🔍 getCustodyInfo(\(dateString)): Found legacy custody event - content: \(custodyEvent.content)")
             if custodyEvent.content.lowercased() == self.custodianOneName.lowercased() {
-                print("🔍 getCustodyInfo(\(dateString)): Legacy event matches custodian one")
                 return (self.custodianOneId ?? "", self.custodianOneName)
             } else if custodyEvent.content.lowercased() == self.custodianTwoName.lowercased() {
-                print("🔍 getCustodyInfo(\(dateString)): Legacy event matches custodian two")
                 return (self.custodianTwoId ?? "", self.custodianTwoName)
             }
         }
@@ -552,11 +542,9 @@ class CalendarViewModel: ObservableObject {
         
         if dateToCheck < today {
             // Past date - return empty to hide custody display
-            print("🔍 getCustodyInfo(\(dateString)): Past date, returning empty")
             return ("", "")
         } else {
             // Future date - show assignment prompt
-            print("🔍 getCustodyInfo(\(dateString)): Future date, returning 'No custody assigned'")
             return ("", "No custody assigned")
         }
     }
@@ -907,8 +895,16 @@ class CalendarViewModel: ObservableObject {
                         print("🔄 Added new custody record for \(dateString)")
                     }
                     
-                    // Force a UI refresh to ensure all views update immediately
+                    // Ensure custody records stay sorted by date
+                    self?.custodyRecords.sort { $0.event_date < $1.event_date }
+                    
+                    // Force multiple UI refresh signals to ensure all views update
                     self?.objectWillChange.send()
+                    
+                    // Additional refresh with slight delay to catch any lazy-loaded views
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                        self?.objectWillChange.send()
+                    }
                     
                     self?.updateCustodyStreak()
                     self?.updateCustodyPercentages()
