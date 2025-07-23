@@ -387,3 +387,83 @@ async def get_all_school_events(base_url: str) -> Tuple[Optional[str], List[Dict
     
     events = await parse_events_from_url(calendar_url)
     return calendar_url, events
+
+async def store_school_events(school_provider_id: int, events_list: List[Dict[str, Any]], school_name: str = "School"):
+    """
+    Store discovered school events in the new school_events table.
+    
+    Args:
+        school_provider_id: The school provider ID to associate events with
+        events_list: List of events with 'date' and 'title' keys
+        school_name: Name of the school for logging
+    """
+    from core.database import database
+    from db.models import school_events
+    from datetime import datetime
+    
+    if not events_list:
+        logger.info("No school events to store")
+        return
+    
+    try:
+        logger.info(f"Storing {len(events_list)} school events for school provider {school_provider_id} ({school_name})")
+        
+        # Delete existing events for this school provider first to avoid duplicates
+        delete_query = school_events.delete().where(
+            school_events.c.school_provider_id == school_provider_id
+        )
+        deleted_count = await database.execute(delete_query)
+        logger.info(f"Deleted {deleted_count} existing school events")
+        
+        # Insert new school events
+        inserted_count = 0
+        for event in events_list:
+            try:
+                # Parse the date
+                event_date = datetime.strptime(event['date'], '%Y-%m-%d').date()
+                
+                # Determine event type based on title
+                event_type = 'event'  # default
+                title_lower = event['title'].lower()
+                if any(word in title_lower for word in ['closed', 'closure', 'holiday', 'break', 'vacation']):
+                    event_type = 'closure'
+                elif any(word in title_lower for word in ['early', 'dismissal', 'half day', 'early release']):
+                    event_type = 'early_dismissal'
+                elif any(word in title_lower for word in ['pd day', 'professional development', 'teacher workday']):
+                    event_type = 'pd_day'
+                
+                # Insert the event
+                insert_query = school_events.insert().values(
+                    school_provider_id=school_provider_id,
+                    event_date=event_date,
+                    title=event['title'],
+                    description=event.get('description'),
+                    event_type=event_type,
+                    all_day=True  # Default to all day for now
+                )
+                
+                await database.execute(insert_query)
+                inserted_count += 1
+                
+            except ValueError as e:
+                logger.error(f"Error parsing date for school event: {event['date']} - {e}")
+                continue
+            except Exception as e:
+                logger.error(f"Error inserting school event: {e}")
+                continue
+        
+        logger.info(f"Successfully stored {inserted_count} school events for {school_name}")
+        
+    except Exception as e:
+        logger.error(f"Error storing school events: {e}")
+        raise
+
+# Keep the old function for backward compatibility but deprecate it
+async def get_school_events(family_id: str, events_list: List[Dict[str, str]], school_name: str):
+    """
+    DEPRECATED: Use store_school_events instead.
+    This function is kept for backward compatibility but should not be used for new code.
+    """
+    logger.warning("get_school_events is deprecated. Use store_school_events instead.")
+    # This function will be removed in a future update
+    pass

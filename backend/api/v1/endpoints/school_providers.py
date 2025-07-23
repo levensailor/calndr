@@ -10,7 +10,7 @@ from core.security import get_current_user
 from core.logging import logger
 from db.models import school_providers, school_calendar_syncs
 from schemas.school import SchoolProviderCreate, SchoolProviderResponse, SchoolSearchRequest, SchoolSearchResult
-from services.school_events_service import discover_calendar_url, parse_events_from_url, get_school_events
+from services.school_events_service import discover_calendar_url, parse_events_from_url, store_school_events
 
 router = APIRouter()
 
@@ -241,9 +241,9 @@ async def parse_school_events(
         # Parse events from the calendar URL
         events = await parse_events_from_url(calendar_url)
         
-        # Store events using the school events service
+        # Store events using the new school events service
         if events:
-            await get_school_events(current_user['family_id'], events, provider['name'])
+            await store_school_events(provider_id, events, provider['name'])
         
         # Record or update the calendar sync configuration
         if events:  # Only track successful syncs

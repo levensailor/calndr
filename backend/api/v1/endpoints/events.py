@@ -4,6 +4,7 @@ from typing import List, Optional
 from datetime import date, datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.dialects import postgresql
+from sqlalchemy import text
 
 from core.database import database
 from core.security import get_current_user
@@ -16,8 +17,7 @@ router = APIRouter()
 @router.get("/{year}/{month}")
 async def get_events_by_month(year: int, month: int, current_user = Depends(get_current_user)):
     """
-    Returns non-custody events for the specified month.
-    Custody events are now handled by the separate custody API.
+    Returns all events for the specified month, including family events, school events, and daycare events.
     """
     logger.info(f"Getting events for {year}/{month}")
     # Calculate start and end dates for the month
@@ -26,25 +26,72 @@ async def get_events_by_month(year: int, month: int, current_user = Depends(get_
         end_date = date(year + 1, 1, 1) - timedelta(days=1)
     else:
         end_date = date(year, month + 1, 1) - timedelta(days=1)
-        
-    query = events.select().where(
-        (events.c.family_id == current_user['family_id']) &
-        (events.c.date.between(start_date, end_date)) &
-        (events.c.event_type != 'custody')  # Exclude custody events
+    
+    # Use the family_all_events view to get all events
+    query = text("""
+        SELECT 
+            id,
+            event_date,
+            title as content,
+            description,
+            event_type,
+            start_time,
+            end_time,
+            all_day,
+            source_type,
+            provider_id,
+            provider_name,
+            CASE 
+                WHEN source_type = 'family' THEN NULL
+                WHEN source_type = 'school' THEN 6
+                WHEN source_type = 'daycare' THEN 5
+            END as position
+        FROM family_all_events
+        WHERE family_id = :family_id
+        AND event_date BETWEEN :start_date AND :end_date
+        ORDER BY event_date, start_time
+    """)
+    
+    db_events = await database.fetch_all(
+        query, 
+        values={
+            'family_id': current_user['family_id'],
+            'start_date': start_date,
+            'end_date': end_date
+        }
     )
-    db_events = await database.fetch_all(query)
     
     # Convert events to the format expected by frontend
     frontend_events = []
     try:
         for event in db_events:
+            # Format content based on source type
+            content = event['content']
+            if event['source_type'] == 'school' and event['provider_name']:
+                content = f"[{event['provider_name']}] {content}"
+            elif event['source_type'] == 'daycare' and event['provider_name']:
+                content = f"[{event['provider_name']}] {content}"
+            
             event_data = {
                 'id': event['id'],
-                'family_id': str(event['family_id']),
-                'event_date': str(event['date']),
-                'content': event['content'],
-                'position': event['position']
+                'family_id': str(current_user['family_id']),
+                'event_date': str(event['event_date']),
+                'content': content,
+                'position': event['position'],
+                'source_type': event['source_type'],
+                'event_type': event['event_type']
             }
+            
+            # Add optional fields if they exist
+            if event['description']:
+                event_data['description'] = event['description']
+            if event['start_time']:
+                event_data['start_time'] = str(event['start_time'])
+            if event['end_time']:
+                event_data['end_time'] = str(event['end_time'])
+            if event['all_day'] is not None:
+                event_data['all_day'] = event['all_day']
+                
             frontend_events.append(event_data)
     except Exception as e:
         logger.error(f"Error processing event records for /api/events/{{year}}/{{month}}: {e}", exc_info=True)
@@ -60,8 +107,8 @@ async def get_events_by_date_range(
     current_user = Depends(get_current_user)
 ):
     """
-    Returns non-custody events for the specified date range (iOS app compatibility).
-    Custody events are now handled by the separate custody API.
+    Returns all events for the specified date range (iOS app compatibility).
+    Includes family events, school events, and daycare events.
     """
     logger.info(f"iOS app requesting events from {start_date} to {end_date}")
     
@@ -73,26 +120,72 @@ async def get_events_by_date_range(
         end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
-        
-    query = events.select().where(
-        (events.c.family_id == current_user['family_id']) &
-        (events.c.date.between(start_date_obj, end_date_obj)) &
-        (events.c.event_type != 'custody')  # Exclude custody events
-    )
     
-    db_events = await database.fetch_all(query)
+    # Use the family_all_events view to get all events
+    query = text("""
+        SELECT 
+            id,
+            event_date,
+            title as content,
+            description,
+            event_type,
+            start_time,
+            end_time,
+            all_day,
+            source_type,
+            provider_id,
+            provider_name,
+            CASE 
+                WHEN source_type = 'family' THEN NULL
+                WHEN source_type = 'school' THEN 6
+                WHEN source_type = 'daycare' THEN 5
+            END as position
+        FROM family_all_events
+        WHERE family_id = :family_id
+        AND event_date BETWEEN :start_date AND :end_date
+        ORDER BY event_date, start_time
+    """)
+    
+    db_events = await database.fetch_all(
+        query, 
+        values={
+            'family_id': current_user['family_id'],
+            'start_date': start_date_obj,
+            'end_date': end_date_obj
+        }
+    )
     
     # Convert events to the format expected by iOS app
     frontend_events = []
     try:
         for event in db_events:
+            # Format content based on source type
+            content = event['content']
+            if event['source_type'] == 'school' and event['provider_name']:
+                content = f"[{event['provider_name']}] {content}"
+            elif event['source_type'] == 'daycare' and event['provider_name']:
+                content = f"[{event['provider_name']}] {content}"
+            
             event_data = {
                 'id': event['id'],
-                'family_id': str(event['family_id']),
-                'event_date': str(event['date']),
-                'content': event['content'],
-                'position': event['position']
+                'family_id': str(current_user['family_id']),
+                'event_date': str(event['event_date']),
+                'content': content,
+                'position': event['position'],
+                'source_type': event['source_type'],
+                'event_type': event['event_type']
             }
+            
+            # Add optional fields if they exist
+            if event['description']:
+                event_data['description'] = event['description']
+            if event['start_time']:
+                event_data['start_time'] = str(event['start_time'])
+            if event['end_time']:
+                event_data['end_time'] = str(event['end_time'])
+            if event['all_day'] is not None:
+                event_data['all_day'] = event['all_day']
+                
             frontend_events.append(event_data)
     except Exception as e:
         logger.error(f"Error processing event records for /api/events: {e}", exc_info=True)
