@@ -9,7 +9,7 @@ from core.security import get_current_user
 from core.logging import logger
 from db.models import daycare_providers, daycare_calendar_syncs
 from schemas.daycare import DaycareProviderCreate, DaycareProviderResponse, DaycareSearchRequest, DaycareSearchResult
-from services.daycare_events_service import discover_calendar_url, parse_events_from_url, get_daycare_events
+from services.daycare_events_service import discover_calendar_url, parse_events_from_url, store_daycare_events
 
 router = APIRouter()
 
@@ -232,9 +232,9 @@ async def parse_daycare_events(
         # Parse events from the calendar URL
         events = await parse_events_from_url(calendar_url)
         
-        # Store events using the daycare events service
+        # Store events using the new daycare events service
         if events:
-            await get_daycare_events(current_user['family_id'], events, provider['name'])
+            await store_daycare_events(provider_id, events, provider['name'])
         
         # Record or update the calendar sync configuration
         if events:  # Only track successful syncs
