@@ -27,39 +27,70 @@ async def get_events_by_month(year: int, month: int, current_user = Depends(get_
     else:
         end_date = date(year, month + 1, 1) - timedelta(days=1)
     
-    # Use the family_all_events view to get all events
-    query = text("""
-        SELECT 
-            id,
-            event_date,
-            title as content,
-            description,
-            event_type,
-            start_time,
-            end_time,
-            all_day,
-            source_type,
-            provider_id,
-            provider_name,
-            CASE 
-                WHEN source_type = 'family' THEN NULL
-                WHEN source_type = 'school' THEN 6
-                WHEN source_type = 'daycare' THEN 5
-            END as position
-        FROM family_all_events
-        WHERE family_id = :family_id
-        AND event_date BETWEEN :start_date AND :end_date
-        ORDER BY event_date, start_time
-    """)
-    
-    db_events = await database.fetch_all(
-        query, 
-        values={
-            'family_id': current_user['family_id'],
-            'start_date': start_date,
-            'end_date': end_date
-        }
-    )
+    try:
+        # Try to use the family_all_events view first
+        query = text("""
+            SELECT 
+                id,
+                event_date,
+                title as content,
+                description,
+                event_type,
+                start_time,
+                end_time,
+                all_day,
+                source_type,
+                provider_id,
+                provider_name,
+                CASE 
+                    WHEN source_type = 'family' THEN NULL
+                    WHEN source_type = 'school' THEN 6
+                    WHEN source_type = 'daycare' THEN 5
+                END as position
+            FROM family_all_events
+            WHERE family_id = :family_id
+            AND event_date BETWEEN :start_date AND :end_date
+            ORDER BY event_date, start_time
+        """)
+        
+        db_events = await database.fetch_all(
+            query, 
+            {
+                'family_id': current_user['family_id'],
+                'start_date': start_date,
+                'end_date': end_date
+            }
+        )
+    except Exception as e:
+        # Fallback to legacy events table if view doesn't exist
+        logger.warning(f"family_all_events view not available, using fallback query: {e}")
+        
+        # Use the traditional events table query
+        query = events.select().where(
+            (events.c.family_id == current_user['family_id']) &
+            (events.c.date.between(start_date, end_date)) &
+            (events.c.event_type != 'custody')  # Exclude custody events
+        )
+        db_events = await database.fetch_all(query)
+        
+        # Convert to expected format for legacy events
+        legacy_events = []
+        for event in db_events:
+            legacy_events.append({
+                'id': event['id'],
+                'event_date': event['date'],
+                'content': event['content'],
+                'description': None,
+                'event_type': event['event_type'],
+                'start_time': None,
+                'end_time': None,
+                'all_day': False,
+                'source_type': 'family',
+                'provider_id': None,
+                'provider_name': None,
+                'position': event['position']
+            })
+        db_events = legacy_events
     
     # Convert events to the format expected by frontend
     frontend_events = []
@@ -67,9 +98,9 @@ async def get_events_by_month(year: int, month: int, current_user = Depends(get_
         for event in db_events:
             # Format content based on source type
             content = event['content']
-            if event['source_type'] == 'school' and event['provider_name']:
+            if event.get('source_type') == 'school' and event.get('provider_name'):
                 content = f"[{event['provider_name']}] {content}"
-            elif event['source_type'] == 'daycare' and event['provider_name']:
+            elif event.get('source_type') == 'daycare' and event.get('provider_name'):
                 content = f"[{event['provider_name']}] {content}"
             
             event_data = {
@@ -77,19 +108,19 @@ async def get_events_by_month(year: int, month: int, current_user = Depends(get_
                 'family_id': str(current_user['family_id']),
                 'event_date': str(event['event_date']),
                 'content': content,
-                'position': event['position'],
-                'source_type': event['source_type'],
-                'event_type': event['event_type']
+                'position': event.get('position'),
+                'source_type': event.get('source_type', 'family'),
+                'event_type': event.get('event_type', 'regular')
             }
             
             # Add optional fields if they exist
-            if event['description']:
+            if event.get('description'):
                 event_data['description'] = event['description']
-            if event['start_time']:
+            if event.get('start_time'):
                 event_data['start_time'] = str(event['start_time'])
-            if event['end_time']:
+            if event.get('end_time'):
                 event_data['end_time'] = str(event['end_time'])
-            if event['all_day'] is not None:
+            if event.get('all_day') is not None:
                 event_data['all_day'] = event['all_day']
                 
             frontend_events.append(event_data)
@@ -121,39 +152,70 @@ async def get_events_by_date_range(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
     
-    # Use the family_all_events view to get all events
-    query = text("""
-        SELECT 
-            id,
-            event_date,
-            title as content,
-            description,
-            event_type,
-            start_time,
-            end_time,
-            all_day,
-            source_type,
-            provider_id,
-            provider_name,
-            CASE 
-                WHEN source_type = 'family' THEN NULL
-                WHEN source_type = 'school' THEN 6
-                WHEN source_type = 'daycare' THEN 5
-            END as position
-        FROM family_all_events
-        WHERE family_id = :family_id
-        AND event_date BETWEEN :start_date AND :end_date
-        ORDER BY event_date, start_time
-    """)
-    
-    db_events = await database.fetch_all(
-        query, 
-        values={
-            'family_id': current_user['family_id'],
-            'start_date': start_date_obj,
-            'end_date': end_date_obj
-        }
-    )
+    try:
+        # Try to use the family_all_events view first
+        query = text("""
+            SELECT 
+                id,
+                event_date,
+                title as content,
+                description,
+                event_type,
+                start_time,
+                end_time,
+                all_day,
+                source_type,
+                provider_id,
+                provider_name,
+                CASE 
+                    WHEN source_type = 'family' THEN NULL
+                    WHEN source_type = 'school' THEN 6
+                    WHEN source_type = 'daycare' THEN 5
+                END as position
+            FROM family_all_events
+            WHERE family_id = :family_id
+            AND event_date BETWEEN :start_date AND :end_date
+            ORDER BY event_date, start_time
+        """)
+        
+        db_events = await database.fetch_all(
+            query, 
+            {
+                'family_id': current_user['family_id'],
+                'start_date': start_date_obj,
+                'end_date': end_date_obj
+            }
+        )
+    except Exception as e:
+        # Fallback to legacy events table if view doesn't exist
+        logger.warning(f"family_all_events view not available, using fallback query: {e}")
+        
+        # Use the traditional events table query
+        query = events.select().where(
+            (events.c.family_id == current_user['family_id']) &
+            (events.c.date.between(start_date_obj, end_date_obj)) &
+            (events.c.event_type != 'custody')  # Exclude custody events
+        )
+        db_events = await database.fetch_all(query)
+        
+        # Convert to expected format for legacy events
+        legacy_events = []
+        for event in db_events:
+            legacy_events.append({
+                'id': event['id'],
+                'event_date': event['date'],
+                'content': event['content'],
+                'description': None,
+                'event_type': event['event_type'],
+                'start_time': None,
+                'end_time': None,
+                'all_day': False,
+                'source_type': 'family',
+                'provider_id': None,
+                'provider_name': None,
+                'position': event['position']
+            })
+        db_events = legacy_events
     
     # Convert events to the format expected by iOS app
     frontend_events = []
@@ -161,9 +223,9 @@ async def get_events_by_date_range(
         for event in db_events:
             # Format content based on source type
             content = event['content']
-            if event['source_type'] == 'school' and event['provider_name']:
+            if event.get('source_type') == 'school' and event.get('provider_name'):
                 content = f"[{event['provider_name']}] {content}"
-            elif event['source_type'] == 'daycare' and event['provider_name']:
+            elif event.get('source_type') == 'daycare' and event.get('provider_name'):
                 content = f"[{event['provider_name']}] {content}"
             
             event_data = {
@@ -171,19 +233,19 @@ async def get_events_by_date_range(
                 'family_id': str(current_user['family_id']),
                 'event_date': str(event['event_date']),
                 'content': content,
-                'position': event['position'],
-                'source_type': event['source_type'],
-                'event_type': event['event_type']
+                'position': event.get('position'),
+                'source_type': event.get('source_type', 'family'),
+                'event_type': event.get('event_type', 'regular')
             }
             
             # Add optional fields if they exist
-            if event['description']:
+            if event.get('description'):
                 event_data['description'] = event['description']
-            if event['start_time']:
+            if event.get('start_time'):
                 event_data['start_time'] = str(event['start_time'])
-            if event['end_time']:
+            if event.get('end_time'):
                 event_data['end_time'] = str(event['end_time'])
-            if event['all_day'] is not None:
+            if event.get('all_day') is not None:
                 event_data['all_day'] = event['all_day']
                 
             frontend_events.append(event_data)
