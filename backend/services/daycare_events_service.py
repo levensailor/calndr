@@ -273,17 +273,17 @@ async def get_all_daycare_events(base_url: str) -> Tuple[Optional[str], List[Dic
     events = await parse_events_from_url(calendar_url)
     return calendar_url, events
 
-async def get_daycare_events(family_id: str, events_list: List[Dict[str, str]], daycare_name: str):
+async def store_daycare_events(daycare_provider_id: int, events_list: List[Dict[str, Any]], daycare_name: str = "Daycare"):
     """
-    Store daycare events in the events table, similar to school events.
+    Store discovered daycare events in the new daycare_events table.
     
     Args:
-        family_id: The family ID to associate events with
+        daycare_provider_id: The daycare provider ID to associate events with
         events_list: List of events with 'date' and 'title' keys
-        daycare_name: Name of the daycare for event prefixing
+        daycare_name: Name of the daycare for logging
     """
     from core.database import database
-    from db.models import events
+    from db.models import daycare_events
     from datetime import datetime
     
     if not events_list:
@@ -291,12 +291,11 @@ async def get_daycare_events(family_id: str, events_list: List[Dict[str, str]], 
         return
     
     try:
-        logger.info(f"Storing {len(events_list)} daycare events for family {family_id}")
+        logger.info(f"Storing {len(events_list)} daycare events for daycare provider {daycare_provider_id} ({daycare_name})")
         
-        # Delete existing daycare events for this family first to avoid duplicates
-        delete_query = events.delete().where(
-            (events.c.family_id == family_id) &
-            (events.c.event_type == 'daycare')
+        # Delete existing events for this daycare provider first to avoid duplicates
+        delete_query = daycare_events.delete().where(
+            daycare_events.c.daycare_provider_id == daycare_provider_id
         )
         deleted_count = await database.execute(delete_query)
         logger.info(f"Deleted {deleted_count} existing daycare events")
@@ -308,16 +307,22 @@ async def get_daycare_events(family_id: str, events_list: List[Dict[str, str]], 
                 # Parse the date
                 event_date = datetime.strptime(event['date'], '%Y-%m-%d').date()
                 
-                # Create event content with daycare prefix
-                content = f"[{daycare_name}] {event['title']}"
+                # Determine event type based on title
+                event_type = 'event'  # default
+                title_lower = event['title'].lower()
+                if any(word in title_lower for word in ['closed', 'closure', 'holiday']):
+                    event_type = 'closure'
+                elif any(word in title_lower for word in ['early', 'dismissal', 'half day']):
+                    event_type = 'early_dismissal'
                 
-                # Insert the event with position 5 to distinguish from regular events
-                insert_query = events.insert().values(
-                    family_id=family_id,
-                    date=event_date,
-                    content=content,
-                    position=5,  # Use position 5 for daycare events
-                    event_type='daycare'
+                # Insert the event
+                insert_query = daycare_events.insert().values(
+                    daycare_provider_id=daycare_provider_id,
+                    event_date=event_date,
+                    title=event['title'],
+                    description=event.get('description'),
+                    event_type=event_type,
+                    all_day=True  # Default to all day for now
                 )
                 
                 await database.execute(insert_query)

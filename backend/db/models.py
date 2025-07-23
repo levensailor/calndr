@@ -271,6 +271,42 @@ schedule_templates = sqlalchemy.Table(
     sqlalchemy.Column("updated_at", sqlalchemy.DateTime, nullable=True, default=datetime.now, onupdate=datetime.now),
 )
 
+# School events table
+school_events = sqlalchemy.Table(
+    "school_events",
+    metadata,
+    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
+    sqlalchemy.Column("school_provider_id", sqlalchemy.Integer, sqlalchemy.ForeignKey("school_providers.id", ondelete="CASCADE"), nullable=False),
+    sqlalchemy.Column("event_date", sqlalchemy.Date, nullable=False),
+    sqlalchemy.Column("title", sqlalchemy.String(255), nullable=False),
+    sqlalchemy.Column("description", sqlalchemy.Text, nullable=True),
+    sqlalchemy.Column("event_type", sqlalchemy.String(50), nullable=True),  # holiday, closure, early_dismissal, event, etc.
+    sqlalchemy.Column("start_time", sqlalchemy.Time, nullable=True),
+    sqlalchemy.Column("end_time", sqlalchemy.Time, nullable=True),
+    sqlalchemy.Column("all_day", sqlalchemy.Boolean, default=False, nullable=False),
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime(timezone=True), nullable=True, default=datetime.now),
+    sqlalchemy.Column("updated_at", sqlalchemy.DateTime(timezone=True), nullable=True, default=datetime.now, onupdate=datetime.now),
+    sqlalchemy.UniqueConstraint("school_provider_id", "event_date", "title", name="unique_school_event"),
+)
+
+# Daycare events table
+daycare_events = sqlalchemy.Table(
+    "daycare_events",
+    metadata,
+    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
+    sqlalchemy.Column("daycare_provider_id", sqlalchemy.Integer, sqlalchemy.ForeignKey("daycare_providers.id", ondelete="CASCADE"), nullable=False),
+    sqlalchemy.Column("event_date", sqlalchemy.Date, nullable=False),
+    sqlalchemy.Column("title", sqlalchemy.String(255), nullable=False),
+    sqlalchemy.Column("description", sqlalchemy.Text, nullable=True),
+    sqlalchemy.Column("event_type", sqlalchemy.String(50), nullable=True),  # holiday, closure, early_dismissal, event, etc.
+    sqlalchemy.Column("start_time", sqlalchemy.Time, nullable=True),
+    sqlalchemy.Column("end_time", sqlalchemy.Time, nullable=True),
+    sqlalchemy.Column("all_day", sqlalchemy.Boolean, default=False, nullable=False),
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime(timezone=True), nullable=True, default=datetime.now),
+    sqlalchemy.Column("updated_at", sqlalchemy.DateTime(timezone=True), nullable=True, default=datetime.now, onupdate=datetime.now),
+    sqlalchemy.UniqueConstraint("daycare_provider_id", "event_date", "title", name="unique_daycare_event"),
+)
+
 # Journal entries table
 journal_entries = sqlalchemy.Table(
     "journal_entries",
