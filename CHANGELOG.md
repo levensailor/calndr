@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2024-01-24] - Fixed Optional Chaining in iOS CalendarViewModel
+
+### Fixed
+- **Optional chaining consistency**: Correctly distinguish between strong and weak self captures in closure contexts
+- **Memory management**: Proper use of optional chaining (`self?.property`) for `[weak self]` captured closures
+- **Code compilation**: Resolved "Value of optional type 'CalendarViewModel?' must be unwrapped" Swift errors
+
 ## [2024-01-24] - Automatic School and Daycare Events in iOS App
 
 ### Enhanced
