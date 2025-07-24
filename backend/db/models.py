@@ -32,7 +32,9 @@ families = sqlalchemy.Table(
     "families",
     metadata,
     sqlalchemy.Column("id", UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
-    sqlalchemy.Column("name", sqlalchemy.String, nullable=False)
+    sqlalchemy.Column("name", sqlalchemy.String, nullable=False),
+    sqlalchemy.Column("daycare_sync_id", sqlalchemy.Integer, sqlalchemy.ForeignKey("daycare_calendar_syncs.id", ondelete="SET NULL"), nullable=True),
+    sqlalchemy.Column("school_sync_id", sqlalchemy.Integer, sqlalchemy.ForeignKey("school_calendar_syncs.id", ondelete="SET NULL"), nullable=True),
 )
 
 # Events table

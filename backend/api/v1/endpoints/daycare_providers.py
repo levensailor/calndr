@@ -10,6 +10,7 @@ from core.logging import logger
 from db.models import daycare_providers, daycare_calendar_syncs
 from schemas.daycare import DaycareProviderCreate, DaycareProviderResponse, DaycareSearchRequest, DaycareSearchResult
 from services.daycare_events_service import discover_calendar_url, parse_events_from_url, store_daycare_events
+from services.sync_management_service import assign_daycare_sync_to_family
 
 router = APIRouter()
 
@@ -263,15 +264,20 @@ async def parse_daycare_events(
                         .where(daycare_calendar_syncs.c.id == existing_sync['id'])
                         .values(**sync_data)
                     )
+                    # Assign sync to family if it's enabled
+                    if sync_data.get("sync_enabled", True):
+                        await assign_daycare_sync_to_family(provider_id, existing_sync['id'])
                 else:
                     # Create new sync config
                     sync_data.update({
                         "daycare_provider_id": provider_id,
                         "calendar_url": calendar_url
                     })
-                    await database.execute(
+                    sync_id = await database.execute(
                         daycare_calendar_syncs.insert().values(**sync_data)
                     )
+                    # Assign the new sync to the family
+                    await assign_daycare_sync_to_family(provider_id, sync_id)
                 
                 logger.info(f"Recorded calendar sync for provider {provider_id}: {len(events)} events")
                 

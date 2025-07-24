@@ -11,6 +11,7 @@ from core.logging import logger
 from db.models import school_providers, school_calendar_syncs
 from schemas.school import SchoolProviderCreate, SchoolProviderResponse, SchoolSearchRequest, SchoolSearchResult
 from services.school_events_service import discover_calendar_url, parse_events_from_url, store_school_events
+from services.sync_management_service import assign_school_sync_to_family
 
 router = APIRouter()
 
@@ -272,15 +273,20 @@ async def parse_school_events(
                         .where(school_calendar_syncs.c.id == existing_sync['id'])
                         .values(**sync_data)
                     )
+                    # Assign sync to family if it's enabled
+                    if sync_data.get("sync_enabled", True):
+                        await assign_school_sync_to_family(provider_id, existing_sync['id'])
                 else:
                     # Create new sync config
                     sync_data.update({
                         "school_provider_id": provider_id,
                         "calendar_url": calendar_url
                     })
-                    await database.execute(
+                    sync_id = await database.execute(
                         school_calendar_syncs.insert().values(**sync_data)
                     )
+                    # Assign the new sync to the family
+                    await assign_school_sync_to_family(provider_id, sync_id)
                 
                 logger.info(f"Recorded calendar sync for school provider {provider_id}: {len(events)} events")
                 
