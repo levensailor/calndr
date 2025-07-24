@@ -29,7 +29,7 @@ async def get_events_by_month(year: int, month: int, current_user = Depends(get_
     
     try:
         # Try to use the family_all_events view first
-        query = text("""
+        query = """
             SELECT 
                 id,
                 event_date,
@@ -46,7 +46,7 @@ async def get_events_by_month(year: int, month: int, current_user = Depends(get_
             WHERE family_id = :family_id
             AND event_date BETWEEN :start_date AND :end_date
             ORDER BY event_date, start_time
-        """)
+        """
         
         db_events = await database.fetch_all(
             query, 
@@ -147,7 +147,7 @@ async def get_events_by_date_range(
     
     try:
         # Try to use the family_all_events view first
-        query = text("""
+        query = """
             SELECT 
                 id,
                 event_date,
@@ -164,7 +164,7 @@ async def get_events_by_date_range(
             WHERE family_id = :family_id
             AND event_date BETWEEN :start_date AND :end_date
             ORDER BY event_date, start_time
-        """)
+        """
         
         db_events = await database.fetch_all(
             query, 
@@ -404,7 +404,7 @@ async def get_school_events_by_month(year: int, month: int, current_user = Depen
     
     try:
         # Query to get school events based on family's school sync
-        query = text("""
+        query = """
             SELECT 
                 se.id,
                 se.event_date,
@@ -425,7 +425,7 @@ async def get_school_events_by_month(year: int, month: int, current_user = Depen
             AND scs.sync_enabled = TRUE
             AND se.event_date BETWEEN :start_date AND :end_date
             ORDER BY se.event_date, se.start_time
-        """)
+        """
         
         db_events = await database.fetch_all(
             query,
@@ -486,7 +486,7 @@ async def get_daycare_events_by_month(year: int, month: int, current_user = Depe
     
     try:
         # Query to get daycare events based on family's daycare sync
-        query = text("""
+        query = """
             SELECT 
                 de.id,
                 de.event_date,
@@ -507,7 +507,7 @@ async def get_daycare_events_by_month(year: int, month: int, current_user = Depe
             AND dcs.sync_enabled = TRUE
             AND de.event_date BETWEEN :start_date AND :end_date
             ORDER BY de.event_date, de.start_time
-        """)
+        """
         
         db_events = await database.fetch_all(
             query,
@@ -574,7 +574,7 @@ async def get_school_events_by_date_range(
     
     try:
         # Query to get school events based on family's school sync
-        query = text("""
+        query = """
             SELECT 
                 se.id,
                 se.event_date,
@@ -595,7 +595,7 @@ async def get_school_events_by_date_range(
             AND scs.sync_enabled = TRUE
             AND se.event_date BETWEEN :start_date AND :end_date
             ORDER BY se.event_date, se.start_time
-        """)
+        """
         
         db_events = await database.fetch_all(
             query,
@@ -662,7 +662,7 @@ async def get_daycare_events_by_date_range(
     
     try:
         # Query to get daycare events based on family's daycare sync
-        query = text("""
+        query = """
             SELECT 
                 de.id,
                 de.event_date,
@@ -683,7 +683,7 @@ async def get_daycare_events_by_date_range(
             AND dcs.sync_enabled = TRUE
             AND de.event_date BETWEEN :start_date AND :end_date
             ORDER BY de.event_date, de.start_time
-        """)
+        """
         
         db_events = await database.fetch_all(
             query,
