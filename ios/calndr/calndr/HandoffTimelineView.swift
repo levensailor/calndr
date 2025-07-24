@@ -478,17 +478,7 @@ struct HandoffTimelineView: View {
     }
     
     private func formatTimeString(hour: Int, minute: Int) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "h:mm a"
-        
-        var components = DateComponents()
-        components.hour = hour
-        components.minute = minute
-        
-        if let time = Calendar.current.date(from: components) {
-            return formatter.string(from: time)
-        }
-        return "\(hour):\(String(format: "%02d", minute))"
+        return TimeFormatter.format12Hour(hour: hour, minute: minute)
     }
     
     private func updateHandoffTime(

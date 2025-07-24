@@ -376,7 +376,7 @@ struct ThreeDayView: View {
     
     private func getHandoffTextForDate(_ date: Date) -> String {
         let handoffTime = viewModel.getHandoffTimeForDate(date)
-        let timeString = String(format: "%02d:%02d", handoffTime.hour, handoffTime.minute)
+        let timeString = TimeFormatter.format12Hour(hour: handoffTime.hour, minute: handoffTime.minute)
         let location = handoffTime.location ?? "daycare"
         return "\(timeString) at \(location)"
     }
