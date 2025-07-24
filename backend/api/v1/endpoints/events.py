@@ -397,9 +397,10 @@ async def delete_event(event_id: int, current_user = Depends(get_current_user)):
 @router.get("/school/{year}/{month}")
 async def get_school_events_by_month(year: int, month: int, current_user = Depends(get_current_user)):
     """
-    Returns school events for the specified month based on the family's school sync.
+    Returns school closure events for the specified month based on the family's school sync.
+    Only includes closure events (holidays, vacations, etc.) - not regular school events.
     """
-    logger.info(f"Getting school events for {year}/{month} for family {current_user['family_id']}")
+    logger.info(f"Getting school closure events for {year}/{month} for family {current_user['family_id']}")
     
     # Calculate start and end dates for the month
     start_date = date(year, month, 1)
@@ -409,7 +410,7 @@ async def get_school_events_by_month(year: int, month: int, current_user = Depen
         end_date = date(year, month + 1, 1) - timedelta(days=1)
     
     try:
-        # Query to get school events based on family's school sync
+        # Query to get school closure events based on family's school sync
         query = """
             SELECT 
                 se.id,
@@ -430,6 +431,7 @@ async def get_school_events_by_month(year: int, month: int, current_user = Depen
             WHERE f.id = :family_id
             AND scs.sync_enabled = TRUE
             AND se.event_date BETWEEN :start_date AND :end_date
+            AND se.event_type = 'closure'
             ORDER BY se.event_date, se.start_time
         """
         
@@ -571,9 +573,10 @@ async def get_school_events_by_date_range(
     current_user = Depends(get_current_user)
 ):
     """
-    Returns school events for the specified date range based on the family's school sync.
+    Returns school closure events for the specified date range based on the family's school sync.
+    Only includes closure events (holidays, vacations, etc.) - not regular school events.
     """
-    logger.info(f"Getting school events from {start_date} to {end_date} for family {current_user['family_id']}")
+    logger.info(f"Getting school closure events from {start_date} to {end_date} for family {current_user['family_id']}")
     
     if not start_date or not end_date:
         raise HTTPException(status_code=400, detail="start_date and end_date query parameters are required")
@@ -585,7 +588,7 @@ async def get_school_events_by_date_range(
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
     
     try:
-        # Query to get school events based on family's school sync
+        # Query to get school closure events based on family's school sync
         query = """
             SELECT 
                 se.id,
@@ -606,6 +609,7 @@ async def get_school_events_by_date_range(
             WHERE f.id = :family_id
             AND scs.sync_enabled = TRUE
             AND se.event_date BETWEEN :start_date AND :end_date
+            AND se.event_type = 'closure'
             ORDER BY se.event_date, se.start_time
         """
         

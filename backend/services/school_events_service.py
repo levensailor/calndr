@@ -42,6 +42,47 @@ EVENT_DATE_PATTERNS = [
     r'(\w+\s+\d{1,2})',            # January 15
 ]
 
+def _is_valid_event_title(title: str) -> bool:
+    """
+    Check if an event title is valid and should be included.
+    Filters out day-only events, empty content, and other invalid titles.
+    """
+    if not title or len(title.strip()) < 3:
+        return False
+    
+    title_lower = title.lower().strip()
+    
+    # Filter out day-only events
+    day_only_patterns = [
+        r'^(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\.?,?\s*$',
+        r'^(mon|tue|wed|thu|fri|sat|sun)\.?,?\s*$',
+        r'^(mo|tu|we|th|fr|sa|su)\.?,?\s*$'
+    ]
+    
+    for pattern in day_only_patterns:
+        if re.match(pattern, title_lower):
+            return False
+    
+    # Filter out generic invalid content
+    invalid_patterns = [
+        r'^[\d\s\-\.,]+$',  # Only numbers, spaces, dashes, periods, commas
+        r'^[^\w]+$',        # Only special characters
+        r'^(all day|view|more|details?|info|click|link|here)\.?\s*$',  # Generic words
+        r'^(monthweekday|weekday|day)\s*\d*\s*$',  # Calendar navigation elements
+        r'^\s*(previous|next|back|forward)\s*$',  # Navigation words
+    ]
+    
+    for pattern in invalid_patterns:
+        if re.match(pattern, title_lower):
+            return False
+    
+    # Filter out very short or meaningless content
+    meaningful_words = re.findall(r'\b[a-zA-Z]{3,}\b', title)
+    if len(meaningful_words) == 0:
+        return False
+    
+    return True
+
 async def discover_calendar_url(school_name: str, base_url: str) -> Optional[str]:
     """
     Crawl a school website to discover potential calendar/events URLs.
@@ -209,7 +250,8 @@ async def parse_events_from_url(calendar_url: str) -> List[Dict[str, str]]:
                                 event_title = re.sub(r'^[-:\s]+', '', event_title)
                                 event_title = re.sub(r'[-:\s]+$', '', event_title)
                                 
-                                if event_title and len(event_title) > 2:
+                                # Filter out invalid event titles
+                                if event_title and len(event_title) > 2 and _is_valid_event_title(event_title):
                                     events[iso_date] = event_title[:100]  # Limit title length
                         
                         except ValueError:
@@ -256,7 +298,8 @@ async def parse_events_from_url(calendar_url: str) -> List[Dict[str, str]]:
                                     event_title = re.sub(r'^[-:\s]+', '', event_title)
                                     event_title = re.sub(r'[-:\s]+$', '', event_title)
                                     
-                                    if event_title and len(event_title) > 2:
+                                    # Filter out invalid event titles
+                                    if event_title and len(event_title) > 2 and _is_valid_event_title(event_title):
                                         events[iso_date] = event_title[:100]
                             
                             except ValueError:
@@ -417,8 +460,15 @@ async def store_school_events(school_provider_id: int, events_list: List[Dict[st
         
         # Insert new school events
         inserted_count = 0
+        skipped_count = 0
         for event in events_list:
             try:
+                # Validate event title before storing
+                if not _is_valid_event_title(event['title']):
+                    logger.debug(f"Skipping invalid event title: '{event['title']}'")
+                    skipped_count += 1
+                    continue
+                
                 # Parse the date
                 event_date = datetime.strptime(event['date'], '%Y-%m-%d').date()
                 
@@ -452,7 +502,7 @@ async def store_school_events(school_provider_id: int, events_list: List[Dict[st
                 logger.error(f"Error inserting school event: {e}")
                 continue
         
-        logger.info(f"Successfully stored {inserted_count} school events for {school_name}")
+        logger.info(f"Successfully stored {inserted_count} school events for {school_name} (skipped {skipped_count} invalid events)")
         
     except Exception as e:
         logger.error(f"Error storing school events: {e}")
