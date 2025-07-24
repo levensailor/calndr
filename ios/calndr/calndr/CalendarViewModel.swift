@@ -294,23 +294,72 @@ class CalendarViewModel: ObservableObject {
     
     private func fetchRegularEvents(from startDate: String, to endDate: String) {
         print("📅 CalendarViewModel: fetchRegularEvents() called for \(startDate) to \(endDate)")
-        APIService.shared.fetchEvents(from: startDate, to: endDate) { [weak self] result in
+        
+        let dispatchGroup = DispatchGroup()
+        var familyEvents: [Event] = []
+        var schoolEvents: [Event] = []
+        var daycareEvents: [Event] = []
+        var hasError = false
+        
+        // Fetch family events
+        dispatchGroup.enter()
+        APIService.shared.fetchEvents(from: startDate, to: endDate) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let events):
-                    self?.events = events
-                    print("📅✅ CalendarViewModel: Successfully fetched \(events.count) regular events for the visible date range.")
+                    familyEvents = events
+                    print("📅✅ CalendarViewModel: Successfully fetched \(events.count) family events")
                 case .failure(let error):
-                    print("📅❌ CalendarViewModel: Error fetching regular events: \(error.localizedDescription)")
-                    print("📅❌ CalendarViewModel: Error code: \((error as NSError).code)")
-                    print("📅❌ CalendarViewModel: Error domain: \((error as NSError).domain)")
-                    
+                    print("📅❌ CalendarViewModel: Error fetching family events: \(error.localizedDescription)")
                     if (error as NSError).code == 401 {
                         print("📅❌🔐 CalendarViewModel: 401 UNAUTHORIZED ERROR - TRIGGERING LOGOUT!")
-                        print("📅❌🔐 CalendarViewModel: This means the token is invalid/expired")
-                        self?.authManager.logout()
+                        self.authManager.logout()
+                        hasError = true
                     }
                 }
+                dispatchGroup.leave()
+            }
+        }
+        
+        // Fetch school events
+        dispatchGroup.enter()
+        APIService.shared.fetchSchoolEvents(from: startDate, to: endDate) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let events):
+                    schoolEvents = events
+                    print("📅✅ CalendarViewModel: Successfully fetched \(events.count) school events")
+                case .failure(let error):
+                    print("📅❌ CalendarViewModel: Error fetching school events: \(error.localizedDescription)")
+                    // Don't trigger logout for school/daycare events - they might just not have syncs
+                }
+                dispatchGroup.leave()
+            }
+        }
+        
+        // Fetch daycare events
+        dispatchGroup.enter()
+        APIService.shared.fetchDaycareEvents(from: startDate, to: endDate) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let events):
+                    daycareEvents = events
+                    print("📅✅ CalendarViewModel: Successfully fetched \(events.count) daycare events")
+                case .failure(let error):
+                    print("📅❌ CalendarViewModel: Error fetching daycare events: \(error.localizedDescription)")
+                    // Don't trigger logout for school/daycare events - they might just not have syncs
+                }
+                dispatchGroup.leave()
+            }
+        }
+        
+        // Combine all events when all requests complete
+        dispatchGroup.notify(queue: .main) {
+            if !hasError {
+                // Combine all events into a single array
+                let allEvents = familyEvents + schoolEvents + daycareEvents
+                self.events = allEvents
+                print("📅✅ CalendarViewModel: Combined events - Family: \(familyEvents.count), School: \(schoolEvents.count), Daycare: \(daycareEvents.count), Total: \(allEvents.count)")
             }
         }
     }

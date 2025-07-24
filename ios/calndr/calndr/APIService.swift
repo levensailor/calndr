@@ -490,8 +490,18 @@ class APIService {
     }
 
     // Placeholder for fetching school events
-    func fetchSchoolEvents(completion: @escaping (Result<[SchoolEvent], Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/school-events")
+    func fetchSchoolEvents(from startDate: String, to endDate: String, completion: @escaping (Result<[Event], Error>) -> Void) {
+        var components = URLComponents(url: baseURL.appendingPathComponent("/events/school/"), resolvingAgainstBaseURL: false)!
+        components.queryItems = [
+            URLQueryItem(name: "start_date", value: startDate),
+            URLQueryItem(name: "end_date", value: endDate)
+        ]
+        
+        guard let url = components.url else {
+            completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL for fetching school events"])))
+            return
+        }
+        
         let request = createAuthenticatedRequest(url: url)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
@@ -499,19 +509,62 @@ class APIService {
                 completion(.failure(error))
                 return
             }
-            guard let data = data else {
-                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received for school events"])))
+
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
                 return
             }
+
+            if httpResponse.statusCode == 401 {
+                // Unauthorized, likely bad token
+                completion(.failure(NSError(domain: "APIService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Unauthorized"])))
+                return
+            }
+
             do {
-                let schoolEvents = try JSONDecoder().decode([SchoolEvent].self, from: data)
-                completion(.success(schoolEvents))
+                let events = try JSONDecoder().decode([Event].self, from: data)
+                completion(.success(events))
             } catch {
-                let nsError = error as NSError
-                print("Decoding error: \(nsError)")
-                if let jsonString = String(data: data, encoding: .utf8) {
-                    print("Raw JSON response on error: \(jsonString)")
-                }
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+
+    func fetchDaycareEvents(from startDate: String, to endDate: String, completion: @escaping (Result<[Event], Error>) -> Void) {
+        var components = URLComponents(url: baseURL.appendingPathComponent("/events/daycare/"), resolvingAgainstBaseURL: false)!
+        components.queryItems = [
+            URLQueryItem(name: "start_date", value: startDate),
+            URLQueryItem(name: "end_date", value: endDate)
+        ]
+        
+        guard let url = components.url else {
+            completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL for fetching daycare events"])))
+            return
+        }
+        
+        let request = createAuthenticatedRequest(url: url)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+
+            if httpResponse.statusCode == 401 {
+                // Unauthorized, likely bad token
+                completion(.failure(NSError(domain: "APIService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Unauthorized"])))
+                return
+            }
+
+            do {
+                let events = try JSONDecoder().decode([Event].self, from: data)
+                completion(.success(events))
+            } catch {
                 completion(.failure(error))
             }
         }.resume()
