@@ -1,12 +1,14 @@
 # CHANGELOG
 
-## [2025-07-24] - Fixed TextClause Error in Daycare Events API
+## [2025-07-24] - Fixed Database Parameter Binding and Record Access Issues in Events API
 
 ### Fixed
 - **SQL query parameter binding**: Removed text() wrapper from SQL queries to fix 'TextClause' object has no attribute 'values' error
+- **PostgreSQL date parameter binding**: Fixed DataError by using date objects instead of strings for date range queries
+- **Database record access**: Fixed AttributeError by converting database records to dicts before using .get() method  
 - **API consistency**: Updated all parameterized SQL queries in events.py to use plain string queries instead of SQLAlchemy text() wrapper
-- **Daycare events endpoint**: Fixed critical error preventing daycare events from being fetched properly
-- **School events endpoint**: Applied same fix to school events queries for consistency and error prevention
+- **Comprehensive event endpoints**: Applied fixes to all event functions (family, school, and daycare events by month and date range)
+- **Record processing**: Ensures consistent database record handling across all event fetching functions
 
 ## [2024-01-24] - Fixed School/Daycare Events API Parameter Binding
 
