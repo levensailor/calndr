@@ -327,8 +327,15 @@ class CalendarViewModel: ObservableObject {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let events):
-                    schoolEvents = events
-                    print("📅✅ CalendarViewModel: Successfully fetched \(events.count) school events")
+                    // Convert [Event] to [SchoolEvent] for compatibility with old system
+                    let schoolEvents = events.compactMap { event -> SchoolEvent? in
+                        // School events from the new API are prefixed with provider name in brackets
+                        // e.g., "[Gregory Elementary] Event Title"
+                        guard event.content.hasPrefix("[") && event.content.contains("]") else { return nil }
+                        return SchoolEvent(date: event.event_date, event: event.content)
+                    }
+                    self?.schoolEvents = schoolEvents
+                    print("Successfully fetched \(schoolEvents.count) school events for legacy system.")
                 case .failure(let error):
                     print("📅❌ CalendarViewModel: Error fetching school events: \(error.localizedDescription)")
                     // Don't trigger logout for school/daycare events - they might just not have syncs
@@ -536,8 +543,9 @@ class CalendarViewModel: ObservableObject {
                 case .success(let events):
                     // Convert [Event] to [SchoolEvent] for compatibility with old system
                     let schoolEvents = events.compactMap { event -> SchoolEvent? in
-                        // Only include school events (filter out family events that might be mixed in)
-                        guard event.content.contains("[") || event.event_type == "school" else { return nil }
+                        // School events from the new API are prefixed with provider name in brackets
+                        // e.g., "[Gregory Elementary] Event Title"
+                        guard event.content.hasPrefix("[") && event.content.contains("]") else { return nil }
                         return SchoolEvent(date: event.event_date, event: event.content)
                     }
                     self?.schoolEvents = schoolEvents
