@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [2025-07-24] - Enhanced Focused Day View with School/Daycare Events
+
+### Added
+- **School events section**: Non-editable school events now display in focused day view with orange background and graduation cap icon
+- **Daycare events section**: Non-editable daycare events now display in focused day view with purple background and building icon
+- **Event categorization**: Clear visual separation between editable family events and non-editable school/daycare events
+- **ScrollView support**: Content now scrolls to accommodate multiple event sections
+
+### Improved
+- **Background blur**: Reduced modal background blur from ultraThinMaterial to thinMaterial for better visibility
+- **Modal size**: Increased focused day modal from 300x400 to 320x480 to fit all event sections
+- **User experience**: Family events remain in editable "Your Events" section while school/daycare events are clearly displayed but protected from editing
+
 ## [2025-07-24] - Fixed Handoff Times to Display in 12-Hour AM/PM Format
 
 ### Fixed
