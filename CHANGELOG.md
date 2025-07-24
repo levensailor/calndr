@@ -1,5 +1,29 @@
 # CHANGELOG
 
+## [2024-01-24] - Dedicated School and Daycare Events API Endpoints
+
+### Added
+- **School events API**: New `/api/v1/events/school/{year}/{month}` endpoint for school-specific events
+- **Daycare events API**: New `/api/v1/events/daycare/{year}/{month}` endpoint for daycare-specific events
+- **Date range support**: Added `/api/v1/events/school/?start_date=X&end_date=Y` and `/api/v1/events/daycare/?start_date=X&end_date=Y` for flexible date queries
+- **Family sync integration**: Endpoints automatically resolve events based on family's active sync relationships
+
+### Technical Implementation
+- **Sync relationship chain**: User → Family → Sync ID → Provider ID → Events table
+- **Query optimization**: Direct joins through family sync IDs for efficient event retrieval
+- **Event formatting**: Provider name prefixed to event titles for clear identification
+- **Complete metadata**: Includes description, start/end times, all_day flags, and event types
+- **Authentication**: Secured endpoints requiring valid user authentication
+- **Error handling**: Comprehensive error responses for invalid dates and missing syncs
+
+### API Endpoints
+```
+GET /api/v1/events/school/2025/7          # School events for July 2025
+GET /api/v1/events/daycare/2025/7         # Daycare events for July 2025
+GET /api/v1/events/school/?start_date=2025-07-01&end_date=2025-07-31
+GET /api/v1/events/daycare/?start_date=2025-07-01&end_date=2025-07-31
+```
+
 ## [2024-01-24] - Single Text Field Event Modal
 
 ### Changed
