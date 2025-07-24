@@ -387,3 +387,343 @@ async def delete_event(event_id: int, current_user = Depends(get_current_user)):
     except Exception as e:
         logger.error(f"Exception in delete_event: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@router.get("/school/{year}/{month}")
+async def get_school_events_by_month(year: int, month: int, current_user = Depends(get_current_user)):
+    """
+    Returns school events for the specified month based on the family's school sync.
+    """
+    logger.info(f"Getting school events for {year}/{month} for family {current_user['family_id']}")
+    
+    # Calculate start and end dates for the month
+    start_date = date(year, month, 1)
+    if month == 12:
+        end_date = date(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        end_date = date(year, month + 1, 1) - timedelta(days=1)
+    
+    try:
+        # Query to get school events based on family's school sync
+        query = text("""
+            SELECT 
+                se.id,
+                se.event_date,
+                se.title as content,
+                se.description,
+                se.event_type,
+                se.start_time,
+                se.end_time,
+                se.all_day,
+                'school' as source_type,
+                sp.id as provider_id,
+                sp.name as provider_name
+            FROM school_events se
+            JOIN school_calendar_syncs scs ON se.school_provider_id = scs.school_provider_id
+            JOIN families f ON f.school_sync_id = scs.id
+            JOIN school_providers sp ON se.school_provider_id = sp.id
+            WHERE f.id = :family_id
+            AND scs.sync_enabled = TRUE
+            AND se.event_date BETWEEN :start_date AND :end_date
+            ORDER BY se.event_date, se.start_time
+        """)
+        
+        db_events = await database.fetch_all(
+            query,
+            {
+                "family_id": current_user['family_id'],
+                "start_date": start_date,
+                "end_date": end_date
+            }
+        )
+        
+        logger.info(f"Found {len(db_events)} school events for family {current_user['family_id']}")
+        
+        # Convert events to the format expected by frontend
+        frontend_events = []
+        for event in db_events:
+            event_data = {
+                'id': event['id'],
+                'family_id': str(current_user['family_id']),
+                'event_date': str(event['event_date']),
+                'content': f"[{event['provider_name']}] {event['content']}",
+                'source_type': event['source_type'],
+                'event_type': event.get('event_type', 'school'),
+                'provider_id': event['provider_id'],
+                'provider_name': event['provider_name']
+            }
+            
+            # Add optional fields if they exist
+            if event.get('description'):
+                event_data['description'] = event['description']
+            if event.get('start_time'):
+                event_data['start_time'] = str(event['start_time'])
+            if event.get('end_time'):
+                event_data['end_time'] = str(event['end_time'])
+            if event.get('all_day') is not None:
+                event_data['all_day'] = event['all_day']
+                
+            frontend_events.append(event_data)
+            
+        return frontend_events
+        
+    except Exception as e:
+        logger.error(f"Error fetching school events: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching school events")
+
+@router.get("/daycare/{year}/{month}")
+async def get_daycare_events_by_month(year: int, month: int, current_user = Depends(get_current_user)):
+    """
+    Returns daycare events for the specified month based on the family's daycare sync.
+    """
+    logger.info(f"Getting daycare events for {year}/{month} for family {current_user['family_id']}")
+    
+    # Calculate start and end dates for the month
+    start_date = date(year, month, 1)
+    if month == 12:
+        end_date = date(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        end_date = date(year, month + 1, 1) - timedelta(days=1)
+    
+    try:
+        # Query to get daycare events based on family's daycare sync
+        query = text("""
+            SELECT 
+                de.id,
+                de.event_date,
+                de.title as content,
+                de.description,
+                de.event_type,
+                de.start_time,
+                de.end_time,
+                de.all_day,
+                'daycare' as source_type,
+                dp.id as provider_id,
+                dp.name as provider_name
+            FROM daycare_events de
+            JOIN daycare_calendar_syncs dcs ON de.daycare_provider_id = dcs.daycare_provider_id
+            JOIN families f ON f.daycare_sync_id = dcs.id
+            JOIN daycare_providers dp ON de.daycare_provider_id = dp.id
+            WHERE f.id = :family_id
+            AND dcs.sync_enabled = TRUE
+            AND de.event_date BETWEEN :start_date AND :end_date
+            ORDER BY de.event_date, de.start_time
+        """)
+        
+        db_events = await database.fetch_all(
+            query,
+            {
+                "family_id": current_user['family_id'],
+                "start_date": start_date,
+                "end_date": end_date
+            }
+        )
+        
+        logger.info(f"Found {len(db_events)} daycare events for family {current_user['family_id']}")
+        
+        # Convert events to the format expected by frontend
+        frontend_events = []
+        for event in db_events:
+            event_data = {
+                'id': event['id'],
+                'family_id': str(current_user['family_id']),
+                'event_date': str(event['event_date']),
+                'content': f"[{event['provider_name']}] {event['content']}",
+                'source_type': event['source_type'],
+                'event_type': event.get('event_type', 'daycare'),
+                'provider_id': event['provider_id'],
+                'provider_name': event['provider_name']
+            }
+            
+            # Add optional fields if they exist
+            if event.get('description'):
+                event_data['description'] = event['description']
+            if event.get('start_time'):
+                event_data['start_time'] = str(event['start_time'])
+            if event.get('end_time'):
+                event_data['end_time'] = str(event['end_time'])
+            if event.get('all_day') is not None:
+                event_data['all_day'] = event['all_day']
+                
+            frontend_events.append(event_data)
+            
+        return frontend_events
+        
+    except Exception as e:
+        logger.error(f"Error fetching daycare events: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching daycare events")
+
+@router.get("/school/")
+async def get_school_events_by_date_range(
+    start_date: str = Query(..., description="Start date in YYYY-MM-DD format"), 
+    end_date: str = Query(..., description="End date in YYYY-MM-DD format"), 
+    current_user = Depends(get_current_user)
+):
+    """
+    Returns school events for the specified date range based on the family's school sync.
+    """
+    logger.info(f"Getting school events from {start_date} to {end_date} for family {current_user['family_id']}")
+    
+    if not start_date or not end_date:
+        raise HTTPException(status_code=400, detail="start_date and end_date query parameters are required")
+    
+    try:
+        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    
+    try:
+        # Query to get school events based on family's school sync
+        query = text("""
+            SELECT 
+                se.id,
+                se.event_date,
+                se.title as content,
+                se.description,
+                se.event_type,
+                se.start_time,
+                se.end_time,
+                se.all_day,
+                'school' as source_type,
+                sp.id as provider_id,
+                sp.name as provider_name
+            FROM school_events se
+            JOIN school_calendar_syncs scs ON se.school_provider_id = scs.school_provider_id
+            JOIN families f ON f.school_sync_id = scs.id
+            JOIN school_providers sp ON se.school_provider_id = sp.id
+            WHERE f.id = :family_id
+            AND scs.sync_enabled = TRUE
+            AND se.event_date BETWEEN :start_date AND :end_date
+            ORDER BY se.event_date, se.start_time
+        """)
+        
+        db_events = await database.fetch_all(
+            query,
+            {
+                "family_id": current_user['family_id'],
+                "start_date": start_date_obj,
+                "end_date": end_date_obj
+            }
+        )
+        
+        logger.info(f"Found {len(db_events)} school events for family {current_user['family_id']}")
+        
+        # Convert events to the format expected by frontend
+        frontend_events = []
+        for event in db_events:
+            event_data = {
+                'id': event['id'],
+                'family_id': str(current_user['family_id']),
+                'event_date': str(event['event_date']),
+                'content': f"[{event['provider_name']}] {event['content']}",
+                'source_type': event['source_type'],
+                'event_type': event.get('event_type', 'school'),
+                'provider_id': event['provider_id'],
+                'provider_name': event['provider_name']
+            }
+            
+            # Add optional fields if they exist
+            if event.get('description'):
+                event_data['description'] = event['description']
+            if event.get('start_time'):
+                event_data['start_time'] = str(event['start_time'])
+            if event.get('end_time'):
+                event_data['end_time'] = str(event['end_time'])
+            if event.get('all_day') is not None:
+                event_data['all_day'] = event['all_day']
+                
+            frontend_events.append(event_data)
+            
+        return frontend_events
+        
+    except Exception as e:
+        logger.error(f"Error fetching school events: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching school events")
+
+@router.get("/daycare/")
+async def get_daycare_events_by_date_range(
+    start_date: str = Query(..., description="Start date in YYYY-MM-DD format"), 
+    end_date: str = Query(..., description="End date in YYYY-MM-DD format"), 
+    current_user = Depends(get_current_user)
+):
+    """
+    Returns daycare events for the specified date range based on the family's daycare sync.
+    """
+    logger.info(f"Getting daycare events from {start_date} to {end_date} for family {current_user['family_id']}")
+    
+    if not start_date or not end_date:
+        raise HTTPException(status_code=400, detail="start_date and end_date query parameters are required")
+    
+    try:
+        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    
+    try:
+        # Query to get daycare events based on family's daycare sync
+        query = text("""
+            SELECT 
+                de.id,
+                de.event_date,
+                de.title as content,
+                de.description,
+                de.event_type,
+                de.start_time,
+                de.end_time,
+                de.all_day,
+                'daycare' as source_type,
+                dp.id as provider_id,
+                dp.name as provider_name
+            FROM daycare_events de
+            JOIN daycare_calendar_syncs dcs ON de.daycare_provider_id = dcs.daycare_provider_id
+            JOIN families f ON f.daycare_sync_id = dcs.id
+            JOIN daycare_providers dp ON de.daycare_provider_id = dp.id
+            WHERE f.id = :family_id
+            AND dcs.sync_enabled = TRUE
+            AND de.event_date BETWEEN :start_date AND :end_date
+            ORDER BY de.event_date, de.start_time
+        """)
+        
+        db_events = await database.fetch_all(
+            query,
+            {
+                "family_id": current_user['family_id'],
+                "start_date": start_date_obj,
+                "end_date": end_date_obj
+            }
+        )
+        
+        logger.info(f"Found {len(db_events)} daycare events for family {current_user['family_id']}")
+        
+        # Convert events to the format expected by frontend
+        frontend_events = []
+        for event in db_events:
+            event_data = {
+                'id': event['id'],
+                'family_id': str(current_user['family_id']),
+                'event_date': str(event['event_date']),
+                'content': f"[{event['provider_name']}] {event['content']}",
+                'source_type': event['source_type'],
+                'event_type': event.get('event_type', 'daycare'),
+                'provider_id': event['provider_id'],
+                'provider_name': event['provider_name']
+            }
+            
+            # Add optional fields if they exist
+            if event.get('description'):
+                event_data['description'] = event['description']
+            if event.get('start_time'):
+                event_data['start_time'] = str(event['start_time'])
+            if event.get('end_time'):
+                event_data['end_time'] = str(event['end_time'])
+            if event.get('all_day') is not None:
+                event_data['all_day'] = event['all_day']
+                
+            frontend_events.append(event_data)
+            
+        return frontend_events
+        
+    except Exception as e:
+        logger.error(f"Error fetching daycare events: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching daycare events")

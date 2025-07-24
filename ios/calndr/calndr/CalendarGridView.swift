@@ -40,7 +40,7 @@ struct CalendarGridView: View {
                             weatherInfo: viewModel.weatherInfoForDate(date),
                             isCurrentMonth: isDateInCurrentMonth(date),
                             isToday: isToday(date),
-                            custodyOwner: getCustodyOwnerWithDebug(for: date),
+                            custodyOwner: viewModel.getCustodyInfo(for: date).text,
                             custodyID: viewModel.getCustodyInfo(for: date).owner
                         )
                         .frame(height: rowHeight) // Adaptive height based on number of weeks
