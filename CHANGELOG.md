@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [2025-07-24] - Updated FocusedDayView Section Titles with Dynamic Names
+
+### Improved
+- **Family events section**: Changed from "Your Events" to dynamic month/day format (e.g., "July 4th Events", "December 25th Events")
+- **School events section**: Now displays actual school provider name instead of generic "School Events" (e.g., "Gregory Elementary")
+- **Daycare events section**: Now displays actual daycare provider name in brackets instead of generic "Daycare Events" (e.g., "[The Learning Tree]")
+- **Date formatting**: Added proper ordinal suffixes (1st, 2nd, 3rd, 4th, etc.) for better readability
+- **Fallback logic**: Gracefully handles cases where provider information isn't available with sensible defaults
+
+### Technical Details
+- Added `getFamilyEventsTitle(for:)` function with ordinal suffix support
+- Added `getSchoolEventsTitle()` function that extracts provider names from viewModel.schoolProviders
+- Added `getDaycareEventsTitle()` function that extracts provider names from viewModel.daycareProviders
+- Includes fallback to extract provider names from event content if providers array is empty
+
 ## [2025-07-24] - Enhanced Focused Day View with School/Daycare Events
 
 ### Added
