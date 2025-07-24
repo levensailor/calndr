@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## [2024-01-24] - Single Text Field Event Modal
+
+### Changed
+- **Event modal redesign**: Replaced 4 position-based text fields with a single large TextEditor that spans the modal height
+- **Simplified event model**: Made position field optional in Event model and backend schemas
+- **Streamlined API**: Removed position requirements from events endpoints - only event_date and content are required
+- **Enhanced user experience**: Events now display as a single cohesive text area for easier multi-line note taking
+
+### Removed
+- **Position-based layout**: Eliminated the rigid 4-position system for event display
+- **Position validation**: Removed position field from API responses and validation logic
+- **Position sorting**: Removed position-based sorting in calendar views
+
+### Technical Details
+- Updated `FocusedDayView.swift` to use `TextEditor` instead of multiple `TextField` components
+- Modified `CalendarViewModel.swift` methods to work without position dependency
+- Updated event filtering across `DayView`, `ThreeDayView`, and `DayContentView` to exclude only custody events
+- Made `position` field optional in `Event` model and `LegacyEvent` schema
+- Simplified save/update event logic to handle single text content
+
 ## [2024-01-24] - Family Sync Management System
 
 ### Added
