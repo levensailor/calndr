@@ -295,78 +295,35 @@ class CalendarViewModel: ObservableObject {
     private func fetchRegularEvents(from startDate: String, to endDate: String) {
         print("📅 CalendarViewModel: fetchRegularEvents() called for \(startDate) to \(endDate)")
         
-        let dispatchGroup = DispatchGroup()
-        var familyEvents: [Event] = []
-        var schoolEvents: [Event] = []
-        var daycareEvents: [Event] = []
-        var hasError = false
-        
-        // Fetch family events
-        dispatchGroup.enter()
+        // The main /events/ API already returns ALL events (family, school, daycare) combined
+        // via the family_all_events view, so we don't need separate API calls
         APIService.shared.fetchEvents(from: startDate, to: endDate) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let events):
-                    familyEvents = events
-                    print("📅✅ CalendarViewModel: Successfully fetched \(events.count) family events")
+                    self.events = events
+                    
+                    // Update the legacy schoolEvents array for compatibility with old UI components
+                    let schoolEventsList = events.filter { $0.source_type == "school" }
+                        .compactMap { event -> SchoolEvent? in
+                            return SchoolEvent(date: event.event_date, event: event.content)
+                        }
+                    self.schoolEvents = schoolEventsList
+                    
+                    // Log breakdown for debugging
+                    let familyCount = events.filter { $0.source_type == "family" || $0.source_type == nil }.count
+                    let schoolCount = events.filter { $0.source_type == "school" }.count
+                    let daycareCount = events.filter { $0.source_type == "daycare" }.count
+                    
+                    print("📅✅ CalendarViewModel: Fetched \(events.count) total events - Family: \(familyCount), School: \(schoolCount), Daycare: \(daycareCount)")
+                    
                 case .failure(let error):
-                    print("📅❌ CalendarViewModel: Error fetching family events: \(error.localizedDescription)")
+                    print("📅❌ CalendarViewModel: Error fetching events: \(error.localizedDescription)")
                     if (error as NSError).code == 401 {
                         print("📅❌🔐 CalendarViewModel: 401 UNAUTHORIZED ERROR - TRIGGERING LOGOUT!")
                         self.authManager.logout()
-                        hasError = true
                     }
                 }
-                dispatchGroup.leave()
-            }
-        }
-        
-        // Fetch school events
-        dispatchGroup.enter()
-        APIService.shared.fetchSchoolEvents(from: startDate, to: endDate) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let events):
-                    // Convert [Event] to [SchoolEvent] for compatibility with old system
-                    let schoolEvents = events.compactMap { event -> SchoolEvent? in
-                        // School events from the new API are prefixed with provider name in brackets
-                        // e.g., "[Gregory Elementary] Event Title"
-                        guard event.content.hasPrefix("[") && event.content.contains("]") else { return nil }
-                        return SchoolEvent(date: event.event_date, event: event.content)
-                    }
-                    self.schoolEvents = schoolEvents
-                    print("Successfully fetched \(schoolEvents.count) school events for legacy system.")
-                case .failure(let error):
-                    print("📅❌ CalendarViewModel: Error fetching school events: \(error.localizedDescription)")
-                    // Don't trigger logout for school/daycare events - they might just not have syncs
-                }
-                dispatchGroup.leave()
-            }
-        }
-        
-        // Fetch daycare events
-        dispatchGroup.enter()
-        APIService.shared.fetchDaycareEvents(from: startDate, to: endDate) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let events):
-                    daycareEvents = events
-                    print("📅✅ CalendarViewModel: Successfully fetched \(events.count) daycare events")
-                case .failure(let error):
-                    print("📅❌ CalendarViewModel: Error fetching daycare events: \(error.localizedDescription)")
-                    // Don't trigger logout for school/daycare events - they might just not have syncs
-                }
-                dispatchGroup.leave()
-            }
-        }
-        
-        // Combine all events when all requests complete
-        dispatchGroup.notify(queue: .main) {
-            if !hasError {
-                // Combine all events into a single array
-                let allEvents = familyEvents + schoolEvents + daycareEvents
-                self.events = allEvents
-                print("📅✅ CalendarViewModel: Combined events - Family: \(familyEvents.count), School: \(schoolEvents.count), Daycare: \(daycareEvents.count), Total: \(allEvents.count)")
             }
         }
     }
