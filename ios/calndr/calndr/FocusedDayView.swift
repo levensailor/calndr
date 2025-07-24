@@ -19,7 +19,7 @@ struct FocusedDayView: View {
                     // Disable focused day closing when handoff timeline is active
                     if !viewModel.showHandoffTimeline {
                         saveChanges()
-                        withAnimation(.interactiveSpring(response: 0.3, dampingFraction: 0.8, blendDuration: 0.8)) {
+                        withAnimation(.interactiveSpring(response: 0.1, dampingFraction: 0.4, blendDuration: 0.8)) {
                             focusedDate = nil
                         }
                     }
@@ -41,7 +41,7 @@ struct FocusedDayView: View {
                         
                         // Family Events Section (Editable)
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Your Events")
+                            Text(getFamilyEventsTitle(for: date))
                                 .font(.headline)
                                 .foregroundColor(themeManager.currentTheme.textColor.color)
                             
@@ -61,7 +61,7 @@ struct FocusedDayView: View {
                                 HStack {
                                     Image(systemName: "graduationcap.fill")
                                         .foregroundColor(.orange)
-                                    Text("School Events")
+                                    Text(getSchoolEventsTitle())
                                         .font(.headline)
                                         .foregroundColor(themeManager.currentTheme.textColor.color)
                                 }
@@ -85,7 +85,7 @@ struct FocusedDayView: View {
                                 HStack {
                                     Image(systemName: "building.2.fill")
                                         .foregroundColor(.purple)
-                                    Text("Daycare Events")
+                                    Text(getDaycareEventsTitle())
                                         .font(.headline)
                                         .foregroundColor(themeManager.currentTheme.textColor.color)
                                 }
@@ -140,6 +140,65 @@ struct FocusedDayView: View {
 
     private func isDateInPast(_ date: Date) -> Bool {
         return date < Calendar.current.startOfDay(for: Date())
+    }
+    
+    private func getFamilyEventsTitle(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM d"
+        let dateString = formatter.string(from: date)
+        
+        // Add ordinal suffix
+        let day = Calendar.current.component(.day, from: date)
+        let ordinalSuffix = getOrdinalSuffix(for: day)
+        
+        let components = dateString.components(separatedBy: " ")
+        if components.count >= 2 {
+            return "\(components[0]) \(components[1])\(ordinalSuffix) Events"
+        }
+        return "\(dateString) Events"
+    }
+    
+    private func getOrdinalSuffix(for day: Int) -> String {
+        switch day {
+        case 11...13:
+            return "th"
+        default:
+            switch day % 10 {
+            case 1: return "st"
+            case 2: return "nd"
+            case 3: return "rd"
+            default: return "th"
+            }
+        }
+    }
+    
+    private func getSchoolEventsTitle() -> String {
+        // Get the first school provider name if available
+        if let firstSchoolProvider = viewModel.schoolProviders.first {
+            return firstSchoolProvider.name
+        }
+        
+        // Fallback: Try to extract provider name from school events content
+        // School events are often prefixed with [Provider Name]
+        for event in schoolEvents {
+            if event.content.hasPrefix("[") {
+                if let endBracket = event.content.firstIndex(of: "]") {
+                    let providerName = String(event.content[event.content.index(after: event.content.startIndex)..<endBracket])
+                    return providerName
+                }
+            }
+        }
+        
+        return "School Events"
+    }
+    
+    private func getDaycareEventsTitle() -> String {
+        // Get the first daycare provider name if available
+        if let firstDaycareProvider = viewModel.daycareProviders.first {
+            return "[\(firstDaycareProvider.name)]"
+        }
+        
+        return "[Daycare Events]"
     }
 
     private func dayString(from date: Date) -> String {
