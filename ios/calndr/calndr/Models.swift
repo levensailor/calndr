@@ -8,9 +8,10 @@ struct Event: Codable, Identifiable {
     let event_date: String
     let content: String
     let position: Int? // Made optional - no longer required
+    let source_type: String? // Added to distinguish between family, school, and daycare events
     
     enum CodingKeys: String, CodingKey {
-        case id, family_id, event_date, content, position
+        case id, family_id, event_date, content, position, source_type
     }
     
     init(from decoder: Decoder) throws {
@@ -20,15 +21,17 @@ struct Event: Codable, Identifiable {
         event_date = try container.decode(String.self, forKey: .event_date)
         content = try container.decode(String.self, forKey: .content)
         position = try container.decodeIfPresent(Int.self, forKey: .position) // Now optional
+        source_type = try container.decodeIfPresent(String.self, forKey: .source_type) ?? "family" // Default to family
     }
     
     // Convenience init for creating new events locally
-    init(id: Int = 0, family_id: String? = nil, event_date: String, content: String, position: Int? = nil) {
+    init(id: Int = 0, family_id: String? = nil, event_date: String, content: String, position: Int? = nil, source_type: String? = "family") {
         self.id = id
         self.family_id = family_id
         self.event_date = event_date
         self.content = content
         self.position = position
+        self.source_type = source_type
     }
 }
 

@@ -575,6 +575,16 @@ class CalendarViewModel: ObservableObject {
         return schoolEvents.first { $0.date == dateString }?.event
     }
     
+    func daycareEventForDate(_ date: Date) -> String? {
+        let dateString = isoDateString(from: date)
+        // Find daycare events by checking the source_type field
+        let daycareEvent = events.first { event in
+            event.event_date == dateString &&
+            event.source_type == "daycare"
+        }
+        return daycareEvent?.content
+    }
+    
     func getCustodyInfo(for date: Date) -> (owner: String, text: String) {
         let dateString = isoDateString(from: date)
         
@@ -1344,7 +1354,13 @@ class CalendarViewModel: ObservableObject {
         let dateString = isoDateString(from: date)
         
         // Find if an event already exists for this date to update it, otherwise create a new one.
-        let existingEvent = events.first { $0.event_date == dateString && $0.position != 4 } // Exclude custody events
+        // Only consider family events (exclude custody, school, and daycare events)
+        let existingEvent = events.first { 
+            $0.event_date == dateString && 
+            $0.position != 4 && // Exclude custody events
+            $0.source_type != "school" && // Exclude school events
+            $0.source_type != "daycare" // Exclude daycare events
+        }
         
         let eventDetails: [String: Any] = [
             "event_date": dateString,

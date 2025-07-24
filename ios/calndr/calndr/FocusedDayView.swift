@@ -93,10 +93,22 @@ struct FocusedDayView: View {
         guard let date = focusedDate else { return }
         let dailyEvents = viewModel.eventsForDate(date)
         
-        // Combine all events into a single text with line breaks
-        let eventTexts = dailyEvents
-            .filter { !$0.content.isEmpty }
-            .map { $0.content }
+        // Filter to only show family events (non-school, non-daycare) since these are the only editable events
+        let familyEvents = dailyEvents.filter { event in
+            // Exclude school and daycare events using source_type
+            if event.source_type == "school" || event.source_type == "daycare" {
+                return false
+            }
+            // Exclude custody events
+            if event.position == 4 {
+                return false
+            }
+            // Include only non-empty family events
+            return !event.content.isEmpty
+        }
+        
+        // Combine family events into a single text with line breaks
+        let eventTexts = familyEvents.map { $0.content }
         
         self.eventContent = eventTexts.joined(separator: "\n")
     }
@@ -107,8 +119,19 @@ struct FocusedDayView: View {
         let dailyEvents = viewModel.eventsForDate(date)
         let newContent = eventContent.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        // Get the first existing event to update, or create a new one
-        let existingEvent = dailyEvents.first
+        // Get the first existing family event to update, or create a new one
+        // Only consider family events (exclude school/daycare events and custody events)
+        let existingEvent = dailyEvents.first { event in
+            // Exclude school and daycare events using source_type
+            if event.source_type == "school" || event.source_type == "daycare" {
+                return false
+            }
+            // Exclude custody events
+            if event.position == 4 {
+                return false
+            }
+            return true
+        }
         
         let group = DispatchGroup()
         
@@ -135,8 +158,21 @@ struct FocusedDayView: View {
             APIService.shared.saveEvent(eventDetails: eventDetails, existingEvent: nil) { _ in group.leave() }
         }
         
-        // Delete any additional events that existed (since we're now using only one)
-        for event in dailyEvents.dropFirst() {
+        // Delete any additional family events that existed (since we're now using only one)
+        // Only delete family events, not school/daycare events
+        let additionalFamilyEvents = dailyEvents.dropFirst().filter { event in
+            // Exclude school and daycare events using source_type
+            if event.source_type == "school" || event.source_type == "daycare" {
+                return false
+            }
+            // Exclude custody events
+            if event.position == 4 {
+                return false
+            }
+            return true
+        }
+        
+        for event in additionalFamilyEvents {
             group.enter()
             APIService.shared.deleteEvent(eventId: event.id) { _ in group.leave() }
         }

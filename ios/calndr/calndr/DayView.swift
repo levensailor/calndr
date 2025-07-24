@@ -156,9 +156,14 @@ struct DayView: View {
                     .font(.headline)
                     .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                 
-                let events = viewModel.eventsForDate(viewModel.currentDate).filter { $0.position != 4 } // Exclude custody events
+                let events = viewModel.eventsForDate(viewModel.currentDate).filter { 
+                    $0.position != 4 && // Exclude custody events
+                    $0.source_type != "school" && // Exclude school events (non-editable)
+                    $0.source_type != "daycare" // Exclude daycare events (non-editable)
+                }
                 let schoolEvent = viewModel.schoolEventForDate(viewModel.currentDate)
-                let hasAnyEvents = !events.isEmpty || schoolEvent != nil
+                let daycareEvent = viewModel.daycareEventForDate(viewModel.currentDate)
+                let hasAnyEvents = !events.isEmpty || schoolEvent != nil || daycareEvent != nil
                 
                 if !hasAnyEvents {
                     Text("No events scheduled.")
@@ -174,18 +179,37 @@ struct DayView: View {
                             .cornerRadius(10)
                     }
                     
-                    // School Events (only shown if enabled and exists)
+                    // School Events (only shown if enabled and exists) - Orange color
                     if let schoolEvent = schoolEvent {
                         Text(schoolEvent)
                             .padding()
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.green.opacity(0.8))
+                            .background(Color.orange.opacity(0.8))
                             .foregroundColor(.white)
                             .cornerRadius(10)
                             .overlay(
                                 HStack {
                                     Spacer()
                                     Image(systemName: "graduationcap.fill")
+                                        .font(.caption)
+                                        .foregroundColor(.white.opacity(0.8))
+                                }
+                                .padding(.trailing, 12)
+                            )
+                    }
+                    
+                    // Daycare Events - Purple color
+                    if let daycareEvent = daycareEvent {
+                        Text(daycareEvent)
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.purple.opacity(0.8))
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                            .overlay(
+                                HStack {
+                                    Spacer()
+                                    Image(systemName: "building.2.fill")
                                         .font(.caption)
                                         .foregroundColor(.white.opacity(0.8))
                                 }

@@ -61,18 +61,39 @@ struct ThreeDayView: View {
                                 .padding(.horizontal, 16)
                             }
                             
-                            // School event
+                            // School event - Orange color
                             if let schoolEvent = viewModel.schoolEventForDate(day) {
                                 HStack(spacing: 8) {
                                     Image(systemName: "graduationcap.fill")
                                         .font(.title3)
-                                        .foregroundColor(.green)
+                                        .foregroundColor(.orange)
                                     
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("School")
                                             .font(.caption)
                                             .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                                         Text(schoolEvent)
+                                            .font(.subheadline)
+                                            .foregroundColor(themeManager.currentTheme.textColor.color)
+                                    }
+                                    
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 16)
+                            }
+                            
+                            // Daycare event - Purple color
+                            if let daycareEvent = viewModel.daycareEventForDate(day) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "building.2.fill")
+                                        .font(.title3)
+                                        .foregroundColor(.purple)
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Daycare")
+                                            .font(.caption)
+                                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+                                        Text(daycareEvent)
                                             .font(.subheadline)
                                             .foregroundColor(themeManager.currentTheme.textColor.color)
                                     }
@@ -221,7 +242,10 @@ struct ThreeDayView: View {
     private func getFilteredEvents(for day: Date) -> [Event] {
         let dayEvents = viewModel.eventsForDate(day)
         let filteredEvents = dayEvents.filter { event in
-            event.position != 4 && !event.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            event.position != 4 && // Exclude custody events
+            !event.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            event.source_type != "school" && // Exclude school events (non-editable)
+            event.source_type != "daycare" // Exclude daycare events (non-editable)
         }
         return filteredEvents
     }

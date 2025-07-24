@@ -6,6 +6,7 @@ struct DayContentView: View {
     let date: Date
     let events: [Event]
     let schoolEvent: String?
+    let daycareEvent: String?
     let weatherInfo: WeatherInfo?
     let custodyOwner: String
     let custodyID: String
@@ -32,19 +33,35 @@ struct DayContentView: View {
             .padding(.horizontal, 1)
             .frame(height: 15) // Give a fixed height to maintain layout
 
-            // School Event
+            // School Event - Orange color
             if let schoolEvent = schoolEvent {
                 Text(schoolEvent)
                     .font(.system(size: 7))
                     .lineLimit(2)
                     .foregroundColor(.white)
                     .padding(.horizontal, 1)
-                    .background(Color.green)
+                    .background(Color.orange)
+                    .cornerRadius(3)
+            }
+            
+            // Daycare Event - Purple color
+            if let daycareEvent = daycareEvent {
+                Text(daycareEvent)
+                    .font(.system(size: 7))
+                    .lineLimit(2)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 1)
+                    .background(Color.purple)
                     .cornerRadius(3)
             }
 
-            // Event rows
-            ForEach(events.filter { $0.position != 4 && !$0.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) { event in
+            // Family Event rows (exclude school/daycare events and custody events)
+            ForEach(events.filter { 
+                $0.position != 4 && 
+                !$0.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+                $0.source_type != "school" &&
+                $0.source_type != "daycare"
+            }) { event in
                 Text(event.content)
                     .font(.system(size: 7))
                     .lineLimit(4)

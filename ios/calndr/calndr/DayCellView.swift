@@ -9,6 +9,7 @@ struct DayCellView: View {
     let date: Date
     let events: [Event]
     let schoolEvent: String?
+    let daycareEvent: String?
     let weatherInfo: WeatherInfo?
     let isCurrentMonth: Bool
     let isToday: Bool
@@ -28,6 +29,7 @@ struct DayCellView: View {
                 date: date,
                 events: events,
                 schoolEvent: schoolEvent,
+                daycareEvent: daycareEvent,
                 weatherInfo: weatherInfo,
                 custodyOwner: custodyOwner,
                 custodyID: custodyID,

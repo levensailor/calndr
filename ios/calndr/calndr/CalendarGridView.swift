@@ -37,6 +37,7 @@ struct CalendarGridView: View {
                             date: date,
                             events: viewModel.eventsForDate(date),
                             schoolEvent: viewModel.schoolEventForDate(date),
+                            daycareEvent: viewModel.daycareEventForDate(date),
                             weatherInfo: viewModel.weatherInfoForDate(date),
                             isCurrentMonth: isDateInCurrentMonth(date),
                             isToday: isToday(date),
