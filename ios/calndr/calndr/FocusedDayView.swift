@@ -5,13 +5,15 @@ struct FocusedDayView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @Binding var focusedDate: Date?
     @State private var eventContent: String = ""
+    @State private var schoolEvents: [Event] = []
+    @State private var daycareEvents: [Event] = []
     
     var namespace: Namespace.ID
 
     var body: some View {
         if let date = focusedDate {
             Rectangle()
-                .fill(.ultraThinMaterial)
+                .fill(.thinMaterial)  // Less blurry than ultraThinMaterial
                 .edgesIgnoringSafeArea(.all)
                 .onTapGesture {
                     // Disable focused day closing when handoff timeline is active
@@ -30,48 +32,105 @@ struct FocusedDayView: View {
                         .transition(.opacity.animation(.easeInOut))
                 }
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(dayString(from: date))
-                        .font(.title3.bold())
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                        .padding(.trailing)
-                    
-                    // Single large text field that spans the height
-                    TextEditor(text: $eventContent)
-                        .font(.body)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 8)
-                        .background(themeManager.currentTheme.textColor.color.opacity(eventContent.isEmpty ? 0.1 : 0.3))
-                        .foregroundColor(themeManager.currentTheme.textColor.color)
-                        .cornerRadius(6)
-                        .frame(minHeight: 200) // Give it substantial height
-                    
-                    let custodyInfo = viewModel.getCustodyInfo(for: date)
-                    let ownerName = custodyInfo.text
-                    let ownerId = custodyInfo.owner
-                    if !ownerName.isEmpty {
-                        Text(ownerName.capitalized)
-                            .font(.headline.bold())
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(ownerId == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColor.color : themeManager.currentTheme.parentTwoColor.color)
-                            .foregroundColor(themeManager.currentTheme.textColor.color)
-                            .cornerRadius(10)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                // Disable custody toggle when handoff timeline is active
-                                if !viewModel.showHandoffTimeline {
-                                    viewModel.toggleCustodian(for: date)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(dayString(from: date))
+                            .font(.title3.bold())
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                            .padding(.trailing)
+                        
+                        // Family Events Section (Editable)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Your Events")
+                                .font(.headline)
+                                .foregroundColor(themeManager.currentTheme.textColor.color)
+                            
+                            TextEditor(text: $eventContent)
+                                .font(.body)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 8)
+                                .background(themeManager.currentTheme.textColor.color.opacity(eventContent.isEmpty ? 0.1 : 0.3))
+                                .foregroundColor(themeManager.currentTheme.textColor.color)
+                                .cornerRadius(6)
+                                .frame(minHeight: 120)
+                        }
+                        
+                        // School Events Section (Non-editable)
+                        if !schoolEvents.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Image(systemName: "graduationcap.fill")
+                                        .foregroundColor(.orange)
+                                    Text("School Events")
+                                        .font(.headline)
+                                        .foregroundColor(themeManager.currentTheme.textColor.color)
+                                }
+                                
+                                ForEach(schoolEvents) { event in
+                                    Text(event.content)
+                                        .font(.body)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 6)
+                                        .background(Color.orange.opacity(0.2))
+                                        .foregroundColor(themeManager.currentTheme.textColor.color)
+                                        .cornerRadius(6)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                 }
                             }
-                            .disabled(isDateInPast(date) && !UserDefaults.standard.bool(forKey: "allowPastCustodyEditing"))
-                            .opacity((isDateInPast(date) && !UserDefaults.standard.bool(forKey: "allowPastCustodyEditing")) ? 0.5 : 1.0)
+                        }
+                        
+                        // Daycare Events Section (Non-editable)
+                        if !daycareEvents.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Image(systemName: "building.2.fill")
+                                        .foregroundColor(.purple)
+                                    Text("Daycare Events")
+                                        .font(.headline)
+                                        .foregroundColor(themeManager.currentTheme.textColor.color)
+                                }
+                                
+                                ForEach(daycareEvents) { event in
+                                    Text(event.content)
+                                        .font(.body)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 6)
+                                        .background(Color.purple.opacity(0.2))
+                                        .foregroundColor(themeManager.currentTheme.textColor.color)
+                                        .cornerRadius(6)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                            }
+                        }
+                        
+                        // Custody Information
+                        let custodyInfo = viewModel.getCustodyInfo(for: date)
+                        let ownerName = custodyInfo.text
+                        let ownerId = custodyInfo.owner
+                        if !ownerName.isEmpty {
+                            Text(ownerName.capitalized)
+                                .font(.headline.bold())
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(ownerId == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColor.color : themeManager.currentTheme.parentTwoColor.color)
+                                .foregroundColor(themeManager.currentTheme.textColor.color)
+                                .cornerRadius(10)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    // Disable custody toggle when handoff timeline is active
+                                    if !viewModel.showHandoffTimeline {
+                                        viewModel.toggleCustodian(for: date)
+                                    }
+                                }
+                                .disabled(isDateInPast(date) && !UserDefaults.standard.bool(forKey: "allowPastCustodyEditing"))
+                                .opacity((isDateInPast(date) && !UserDefaults.standard.bool(forKey: "allowPastCustodyEditing")) ? 0.5 : 1.0)
+                        }
                     }
+                    .padding()
                 }
             }
-            .padding()
             .matchedGeometryEffect(id: date, in: namespace)
-            .frame(width: 300, height: 400)
+            .frame(width: 320, height: 480)  // Slightly larger to accommodate sections
             .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
             .cornerRadius(20)
             .shadow(radius: 10)
@@ -93,23 +152,25 @@ struct FocusedDayView: View {
         guard let date = focusedDate else { return }
         let dailyEvents = viewModel.eventsForDate(date)
         
-        // Filter to only show family events (non-school, non-daycare) since these are the only editable events
+        // Separate events by type
         let familyEvents = dailyEvents.filter { event in
-            // Exclude school and daycare events using source_type
-            if event.source_type == "school" || event.source_type == "daycare" {
-                return false
-            }
-            // Exclude custody events
-            if event.position == 4 {
-                return false
-            }
-            // Include only non-empty family events
-            return !event.content.isEmpty
+            // Only include family events (exclude school, daycare, and custody)
+            event.source_type != "school" && 
+            event.source_type != "daycare" && 
+            event.position != 4 && 
+            !event.content.isEmpty
+        }
+        
+        self.schoolEvents = dailyEvents.filter { event in
+            event.source_type == "school" && !event.content.isEmpty
+        }
+        
+        self.daycareEvents = dailyEvents.filter { event in
+            event.source_type == "daycare" && !event.content.isEmpty
         }
         
         // Combine family events into a single text with line breaks
         let eventTexts = familyEvents.map { $0.content }
-        
         self.eventContent = eventTexts.joined(separator: "\n")
     }
 
