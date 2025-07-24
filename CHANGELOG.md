@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## [2025-07-24] - Removed Provider Name Prefixes from School and Daycare Events
+
+### Changed
+- **Event content display**: Removed automatic `[provider_name]` prefixes from school and daycare event content
+- **Clean event names**: School and daycare events now display their original content without bracketed provider names
+- **Improved readability**: Event titles are cleaner and more readable (e.g., "Independence Day" instead of "[Gregory Elementary] Independence Day")
+
+### Backend Changes
+- Updated all event API endpoints (`get_events_by_month`, `get_events_by_date_range`, `get_school_events_by_month`, `get_school_events_by_date_range`, `get_daycare_events_by_month`, `get_daycare_events_by_date_range`)
+- Removed automatic content formatting that added `f"[{event_dict['provider_name']}] {event_dict['content']}"` 
+- Provider information remains available through separate `provider_name` and `provider_id` fields for UI organization
+
+### iOS Changes
+- Updated `FocusedDayView.getDaycareEventsTitle()` to return clean provider name without brackets
+- Daycare section titles now show provider name directly (e.g., "The Learning Tree" instead of "[The Learning Tree]")
+
+### Benefits
+- **Cleaner interface**: Event content displays naturally without redundant provider prefixes
+- **Better organization**: Provider context is maintained through section titles and UI organization
+- **Improved user experience**: Events are more readable and less cluttered
+
 ## [2025-07-24] - Updated FocusedDayView Section Titles with Dynamic Names
 
 ### Improved
