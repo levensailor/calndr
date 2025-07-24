@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## [2024-01-24] - Automatic School and Daycare Events in iOS App
+
+### Enhanced
+- **Automatic event syncing**: iOS app now automatically fetches school and daycare events when calendar loads
+- **Unified event display**: School and daycare events seamlessly appear alongside family events in calendar views
+- **Concurrent API calls**: Uses DispatchGroup to fetch family, school, and daycare events simultaneously for optimal performance
+- **Smart error handling**: Authentication errors trigger logout, while sync errors (no active syncs) are gracefully handled
+
+### Technical Implementation
+- **New API methods**: Added `fetchSchoolEvents()` and `fetchDaycareEvents()` to `APIService.swift`
+- **Enhanced CalendarViewModel**: Modified `fetchRegularEvents()` to orchestrate multiple concurrent API calls
+- **Event combination**: All event types combined into single array for unified calendar display
+- **Performance optimized**: Parallel fetching reduces loading time compared to sequential calls
+
+### User Experience
+- **No manual sync needed**: Events automatically appear when syncs are active
+- **Seamless integration**: No UI changes required - events appear in existing calendar views
+- **Real-time updates**: Events refresh whenever calendar view changes or app loads
+- **Provider identification**: School and daycare events clearly labeled with provider names
+
 ## [2024-01-24] - Dedicated School and Daycare Events API Endpoints
 
 ### Added
