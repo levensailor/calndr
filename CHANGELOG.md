@@ -1,5 +1,31 @@
 # CHANGELOG
 
+## [2025-07-24] - Fixed Duplicate Daycare Events in iOS App
+
+### Fixed
+- **Duplicate daycare events**: Resolved July 4th showing twice under Daycare section in iOS app
+- **Event fetching optimization**: Reduced API calls from 3 to 1 for better performance
+- **Data consistency**: Ensured single source of truth for all event types
+
+### Root Cause Analysis
+- **Database verification**: Only 1 daycare event existed for July 4th ("Fourth of July")
+- **iOS duplication**: App was fetching daycare events twice:
+  - Via `/events/` API (returns ALL events via `family_all_events` view)
+  - Via `/events/daycare/` API (returns daycare-only events)
+- **Combination issue**: `familyEvents + schoolEvents + daycareEvents` caused duplicates
+
+### iOS CalendarViewModel Improvements
+- **Simplified API logic**: Removed separate `fetchSchoolEvents()` and `fetchDaycareEvents()` calls
+- **Single endpoint**: Main `/events/` API already returns ALL event types (family, school, daycare)
+- **Backward compatibility**: Maintained legacy `schoolEvents` array for existing UI components
+- **Enhanced logging**: Added detailed event breakdown by `source_type` for debugging
+
+### Technical Benefits
+- **Performance improvement**: 66% reduction in API calls (3→1) for event fetching
+- **Consistency**: Single source of truth eliminates synchronization issues
+- **Reliability**: Reduces potential for race conditions and data inconsistencies
+- **Maintainability**: Simplified code logic with better error handling
+
 ## [2025-07-24] - Fixed Database Connection Pool Exhaustion Issue
 
 ### Fixed
