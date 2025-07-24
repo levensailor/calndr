@@ -34,11 +34,6 @@ struct FocusedDayView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text(dayString(from: date))
-                            .font(.title3.bold())
-                            .frame(maxWidth: .infinity, alignment: .trailing)
-                            .padding(.trailing)
-                        
                         // Family Events Section (Editable)
                         VStack(alignment: .leading, spacing: 8) {
                             Text(getFamilyEventsTitle(for: date))
@@ -195,10 +190,10 @@ struct FocusedDayView: View {
     private func getDaycareEventsTitle() -> String {
         // Get the first daycare provider name if available
         if let firstDaycareProvider = viewModel.daycareProviders.first {
-            return "[\(firstDaycareProvider.name)]"
+            return firstDaycareProvider.name
         }
         
-        return "[Daycare Events]"
+        return "Daycare Events"
     }
 
     private func dayString(from date: Date) -> String {

@@ -93,12 +93,8 @@ async def get_events_by_month(year: int, month: int, current_user = Depends(get_
             # Convert record to dict for easier access
             event_dict = dict(event)
             
-            # Format content based on source type
+            # Use content as-is without provider name prefix
             content = event_dict['content']
-            if event_dict.get('source_type') == 'school' and event_dict.get('provider_name'):
-                content = f"[{event_dict['provider_name']}] {content}"
-            elif event_dict.get('source_type') == 'daycare' and event_dict.get('provider_name'):
-                content = f"[{event_dict['provider_name']}] {content}"
             
             event_data = {
                 'id': event_dict['id'],
@@ -214,12 +210,8 @@ async def get_events_by_date_range(
             # Convert record to dict for easier access
             event_dict = dict(event)
             
-            # Format content based on source type
+            # Use content as-is without provider name prefix
             content = event_dict['content']
-            if event_dict.get('source_type') == 'school' and event_dict.get('provider_name'):
-                content = f"[{event_dict['provider_name']}] {content}"
-            elif event_dict.get('source_type') == 'daycare' and event_dict.get('provider_name'):
-                content = f"[{event_dict['provider_name']}] {content}"
             
             event_data = {
                 'id': event_dict['id'],
@@ -456,7 +448,7 @@ async def get_school_events_by_month(year: int, month: int, current_user = Depen
                 'id': event_dict['id'],
                 'family_id': str(current_user['family_id']),
                 'event_date': str(event_dict['event_date']),
-                'content': f"[{event_dict['provider_name']}] {event_dict['content']}",
+                'content': event_dict['content'],
                 'source_type': event_dict['source_type'],
                 'event_type': event_dict.get('event_type', 'school'),
                 'provider_id': event_dict['provider_id'],
@@ -541,7 +533,7 @@ async def get_daycare_events_by_month(year: int, month: int, current_user = Depe
                 'id': event_dict['id'],
                 'family_id': str(current_user['family_id']),
                 'event_date': str(event_dict['event_date']),
-                'content': f"[{event_dict['provider_name']}] {event_dict['content']}",
+                'content': event_dict['content'],
                 'source_type': event_dict['source_type'],
                 'event_type': event_dict.get('event_type', 'daycare'),
                 'provider_id': event_dict['provider_id'],
@@ -634,7 +626,7 @@ async def get_school_events_by_date_range(
                 'id': event_dict['id'],
                 'family_id': str(current_user['family_id']),
                 'event_date': str(event_dict['event_date']),
-                'content': f"[{event_dict['provider_name']}] {event_dict['content']}",
+                'content': event_dict['content'],
                 'source_type': event_dict['source_type'],
                 'event_type': event_dict.get('event_type', 'school'),
                 'provider_id': event_dict['provider_id'],
@@ -725,7 +717,7 @@ async def get_daycare_events_by_date_range(
                 'id': event_dict['id'],
                 'family_id': str(current_user['family_id']),
                 'event_date': str(event_dict['event_date']),
-                'content': f"[{event_dict['provider_name']}] {event_dict['content']}",
+                'content': event_dict['content'],
                 'source_type': event_dict['source_type'],
                 'event_type': event_dict.get('event_type', 'daycare'),
                 'provider_id': event_dict['provider_id'],
