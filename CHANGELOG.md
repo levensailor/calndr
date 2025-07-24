@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## [2025-07-24] - Improved School Events Filtering and API Quality
+
+### Fixed
+- **School events filtering**: Added comprehensive validation to filter out day-only events (Monday, Tuesday, etc.) from school calendar scraping
+- **Event title validation**: Added `_is_valid_event_title()` function to reject meaningless calendar navigation elements
+- **API scope refinement**: Updated school events API to only return closure events (holidays, vacations) instead of all events
+- **Data quality improvements**: Added filtering during both parsing and storage phases to prevent invalid events
+- **July 4th event fix**: Fixed garbled event title "th HolidayAll Day" to proper "Independence Day Holiday"
+
+### Enhanced  
+- **Logging improvements**: Added skipped events count to show how many invalid events were filtered out
+- **API documentation**: Updated school events endpoints to clarify they only return closure events
+- **Database cleanup**: Removed 34 invalid day-only events from existing data
+
 ## [2025-07-24] - Fixed Database Parameter Binding and Record Access Issues in Events API
 
 ### Fixed
