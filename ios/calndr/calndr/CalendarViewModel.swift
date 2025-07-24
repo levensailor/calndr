@@ -548,7 +548,7 @@ class CalendarViewModel: ObservableObject {
                         guard event.content.hasPrefix("[") && event.content.contains("]") else { return nil }
                         return SchoolEvent(date: event.event_date, event: event.content)
                     }
-                    self.schoolEvents = schoolEvents
+                    self?.schoolEvents = schoolEvents
                     print("Successfully fetched \(schoolEvents.count) school events for legacy system.")
                 case .failure(let error):
                     print("Error fetching school events: \(error.localizedDescription)")
