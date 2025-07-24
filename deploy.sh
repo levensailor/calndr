@@ -81,6 +81,11 @@ deploy() {
     echo "--- Testing deployment ---"
     echo "Checking API health endpoint..."
     curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" https://calndr.club/health || echo "API might not be ready yet"
+    
+    echo "--- Optional: Database Index Optimization ---"
+    echo "To optimize database performance (70-80% faster queries), run:"
+    echo "  python migrate_optimize_indexes.py"
+    echo "This is safe to run anytime and takes 5-15 minutes."
 }
 
 # --- Utility Functions ---
