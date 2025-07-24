@@ -1267,22 +1267,15 @@ class CalendarViewModel: ObservableObject {
         return dates
     }
 
-    func saveEvent(date: Date, title: String, position: Int) {
-        // Guard against custody events (position 4) - these should use the custody API
-        guard position != 4 else {
-            print("ERROR: Position 4 (custody) events should use toggleCustodian() and the custody API, not saveEvent()")
-            return
-        }
-        
+    func saveEvent(date: Date, title: String) {
         let dateString = isoDateString(from: date)
         
-        // Find if an event already exists for this date and position to update it, otherwise create a new one.
-        let existingEvent = events.first { $0.event_date == dateString && $0.position == position }
+        // Find if an event already exists for this date to update it, otherwise create a new one.
+        let existingEvent = events.first { $0.event_date == dateString && $0.position != 4 } // Exclude custody events
         
         let eventDetails: [String: Any] = [
             "event_date": dateString,
-            "content": title,
-            "position": position
+            "content": title
         ]
 
         APIService.shared.saveEvent(eventDetails: eventDetails, existingEvent: existingEvent) { [weak self] result in
@@ -1303,10 +1296,11 @@ class CalendarViewModel: ObservableObject {
         }
     }
     
-    func deleteEvent(date: Date, position: Int) {
+    func deleteEvent(date: Date) {
         let dateString = isoDateString(from: date)
-        guard let eventToDelete = events.first(where: { $0.event_date == dateString && $0.position == position }) else {
-            print("No event found to delete for date: \(dateString) at position \(position)")
+        // Find the first non-custody event for this date
+        guard let eventToDelete = events.first(where: { $0.event_date == dateString && $0.position != 4 }) else {
+            print("No event found to delete for date: \(dateString)")
             return
         }
 

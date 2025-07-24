@@ -221,9 +221,9 @@ struct ThreeDayView: View {
     private func getFilteredEvents(for day: Date) -> [Event] {
         let dayEvents = viewModel.eventsForDate(day)
         let filteredEvents = dayEvents.filter { event in
-            event.position < 4 && !event.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            event.position != 4 && !event.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
-        return filteredEvents.sorted { $0.position < $1.position }
+        return filteredEvents
     }
     
     private func getCustodyBackgroundColor(for day: Date) -> Color {

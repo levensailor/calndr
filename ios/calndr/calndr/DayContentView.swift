@@ -44,7 +44,7 @@ struct DayContentView: View {
             }
 
             // Event rows
-            ForEach(events.filter { $0.position < 4 && !$0.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.sorted(by: { $0.position < $1.position })) { event in
+            ForEach(events.filter { $0.position != 4 && !$0.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) { event in
                 Text(event.content)
                     .font(.system(size: 7))
                     .lineLimit(4)

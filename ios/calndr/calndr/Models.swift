@@ -7,7 +7,7 @@ struct Event: Codable, Identifiable {
     let family_id: String?
     let event_date: String
     let content: String
-    let position: Int
+    let position: Int? // Made optional - no longer required
     
     enum CodingKeys: String, CodingKey {
         case id, family_id, event_date, content, position
@@ -19,11 +19,11 @@ struct Event: Codable, Identifiable {
         family_id = try container.decodeIfPresent(String.self, forKey: .family_id)
         event_date = try container.decode(String.self, forKey: .event_date)
         content = try container.decode(String.self, forKey: .content)
-        position = try container.decode(Int.self, forKey: .position)
+        position = try container.decodeIfPresent(Int.self, forKey: .position) // Now optional
     }
     
     // Convenience init for creating new events locally
-    init(id: Int = 0, family_id: String? = nil, event_date: String, content: String, position: Int) {
+    init(id: Int = 0, family_id: String? = nil, event_date: String, content: String, position: Int? = nil) {
         self.id = id
         self.family_id = family_id
         self.event_date = event_date

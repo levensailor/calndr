@@ -4,7 +4,7 @@ struct FocusedDayView: View {
     @ObservedObject var viewModel: CalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
     @Binding var focusedDate: Date?
-    @State private var eventContents: [Int: String] = [:]
+    @State private var eventContent: String = ""
     
     var namespace: Namespace.ID
 
@@ -36,20 +36,15 @@ struct FocusedDayView: View {
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .padding(.trailing)
                     
-                    ForEach(0..<4) { index in
-                        TextField("Event...", text: Binding(
-                            get: { self.eventContents[index, default: ""] },
-                            set: { self.eventContents[index] = $0 }
-                        ))
+                    // Single large text field that spans the height
+                    TextEditor(text: $eventContent)
                         .font(.body)
                         .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(themeManager.currentTheme.textColor.color.opacity(eventContents[index, default: ""].isEmpty ? 0.1 : 0.3))
+                        .padding(.vertical, 8)
+                        .background(themeManager.currentTheme.textColor.color.opacity(eventContent.isEmpty ? 0.1 : 0.3))
                         .foregroundColor(themeManager.currentTheme.textColor.color)
                         .cornerRadius(6)
-                    }
-                    
-                    Spacer()
+                        .frame(minHeight: 200) // Give it substantial height
                     
                     let custodyInfo = viewModel.getCustodyInfo(for: date)
                     let ownerName = custodyInfo.text
@@ -97,47 +92,53 @@ struct FocusedDayView: View {
     private func loadEvents() {
         guard let date = focusedDate else { return }
         let dailyEvents = viewModel.eventsForDate(date)
-        for event in dailyEvents {
-            if event.position >= 0 && event.position < 4 {
-                self.eventContents[event.position] = event.content
-            }
-        }
+        
+        // Combine all events into a single text with line breaks
+        let eventTexts = dailyEvents
+            .filter { !$0.content.isEmpty }
+            .map { $0.content }
+        
+        self.eventContent = eventTexts.joined(separator: "\n")
     }
 
     private func saveChanges() {
         guard let date = focusedDate else { return }
         
         let dailyEvents = viewModel.eventsForDate(date)
+        let newContent = eventContent.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Get the first existing event to update, or create a new one
+        let existingEvent = dailyEvents.first
+        
         let group = DispatchGroup()
         
-        for position in 0..<4 {
-            let existingEvent = dailyEvents.first { $0.position == position }
-            let newContent = eventContents[position, default: ""].trimmingCharacters(in: .whitespacesAndNewlines)
-
-            if let existingEvent = existingEvent {
-                if existingEvent.content != newContent {
-                    group.enter()
-                    if newContent.isEmpty {
-                        APIService.shared.deleteEvent(eventId: existingEvent.id) { _ in group.leave() }
-                    } else {
-                        let eventDetails: [String: Any] = [
-                            "id": existingEvent.id,
-                            "event_date": viewModel.isoDateString(from: date),
-                            "content": newContent,
-                            "position": position
-                        ]
-                        APIService.shared.saveEvent(eventDetails: eventDetails, existingEvent: existingEvent) { _ in group.leave() }
-                    }
-                }
-            } else if !newContent.isEmpty {
+        if let existingEvent = existingEvent {
+            if existingEvent.content != newContent {
                 group.enter()
-                let eventDetails: [String: Any] = [
-                    "event_date": viewModel.isoDateString(from: date),
-                    "content": newContent,
-                    "position": position
-                ]
-                APIService.shared.saveEvent(eventDetails: eventDetails, existingEvent: nil) { _ in group.leave() }
+                if newContent.isEmpty {
+                    APIService.shared.deleteEvent(eventId: existingEvent.id) { _ in group.leave() }
+                } else {
+                    let eventDetails: [String: Any] = [
+                        "id": existingEvent.id,
+                        "event_date": viewModel.isoDateString(from: date),
+                        "content": newContent
+                    ]
+                    APIService.shared.saveEvent(eventDetails: eventDetails, existingEvent: existingEvent) { _ in group.leave() }
+                }
             }
+        } else if !newContent.isEmpty {
+            group.enter()
+            let eventDetails: [String: Any] = [
+                "event_date": viewModel.isoDateString(from: date),
+                "content": newContent
+            ]
+            APIService.shared.saveEvent(eventDetails: eventDetails, existingEvent: nil) { _ in group.leave() }
+        }
+        
+        // Delete any additional events that existed (since we're now using only one)
+        for event in dailyEvents.dropFirst() {
+            group.enter()
+            APIService.shared.deleteEvent(eventId: event.id) { _ in group.leave() }
         }
         
         group.notify(queue: .main) {

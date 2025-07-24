@@ -156,7 +156,7 @@ struct DayView: View {
                     .font(.headline)
                     .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                 
-                let events = viewModel.eventsForDate(viewModel.currentDate).filter { $0.position < 4 }
+                let events = viewModel.eventsForDate(viewModel.currentDate).filter { $0.position != 4 } // Exclude custody events
                 let schoolEvent = viewModel.schoolEventForDate(viewModel.currentDate)
                 let hasAnyEvents = !events.isEmpty || schoolEvent != nil
                 
