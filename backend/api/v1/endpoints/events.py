@@ -90,31 +90,34 @@ async def get_events_by_month(year: int, month: int, current_user = Depends(get_
     frontend_events = []
     try:
         for event in db_events:
+            # Convert record to dict for easier access
+            event_dict = dict(event)
+            
             # Format content based on source type
-            content = event['content']
-            if event.get('source_type') == 'school' and event.get('provider_name'):
-                content = f"[{event['provider_name']}] {content}"
-            elif event.get('source_type') == 'daycare' and event.get('provider_name'):
-                content = f"[{event['provider_name']}] {content}"
+            content = event_dict['content']
+            if event_dict.get('source_type') == 'school' and event_dict.get('provider_name'):
+                content = f"[{event_dict['provider_name']}] {content}"
+            elif event_dict.get('source_type') == 'daycare' and event_dict.get('provider_name'):
+                content = f"[{event_dict['provider_name']}] {content}"
             
             event_data = {
-                'id': event['id'],
+                'id': event_dict['id'],
                 'family_id': str(current_user['family_id']),
-                'event_date': str(event['event_date']),
+                'event_date': str(event_dict['event_date']),
                 'content': content,
-                'source_type': event.get('source_type', 'family'),
-                'event_type': event.get('event_type', 'regular')
+                'source_type': event_dict.get('source_type', 'family'),
+                'event_type': event_dict.get('event_type', 'regular')
             }
             
             # Add optional fields if they exist
-            if event.get('description'):
-                event_data['description'] = event['description']
-            if event.get('start_time'):
-                event_data['start_time'] = str(event['start_time'])
-            if event.get('end_time'):
-                event_data['end_time'] = str(event['end_time'])
-            if event.get('all_day') is not None:
-                event_data['all_day'] = event['all_day']
+            if event_dict.get('description'):
+                event_data['description'] = event_dict['description']
+            if event_dict.get('start_time'):
+                event_data['start_time'] = str(event_dict['start_time'])
+            if event_dict.get('end_time'):
+                event_data['end_time'] = str(event_dict['end_time'])
+            if event_dict.get('all_day') is not None:
+                event_data['all_day'] = event_dict['all_day']
                 
             frontend_events.append(event_data)
     except Exception as e:
@@ -208,31 +211,34 @@ async def get_events_by_date_range(
     frontend_events = []
     try:
         for event in db_events:
+            # Convert record to dict for easier access
+            event_dict = dict(event)
+            
             # Format content based on source type
-            content = event['content']
-            if event.get('source_type') == 'school' and event.get('provider_name'):
-                content = f"[{event['provider_name']}] {content}"
-            elif event.get('source_type') == 'daycare' and event.get('provider_name'):
-                content = f"[{event['provider_name']}] {content}"
+            content = event_dict['content']
+            if event_dict.get('source_type') == 'school' and event_dict.get('provider_name'):
+                content = f"[{event_dict['provider_name']}] {content}"
+            elif event_dict.get('source_type') == 'daycare' and event_dict.get('provider_name'):
+                content = f"[{event_dict['provider_name']}] {content}"
             
             event_data = {
-                'id': event['id'],
+                'id': event_dict['id'],
                 'family_id': str(current_user['family_id']),
-                'event_date': str(event['event_date']),
+                'event_date': str(event_dict['event_date']),
                 'content': content,
-                'source_type': event.get('source_type', 'family'),
-                'event_type': event.get('event_type', 'regular')
+                'source_type': event_dict.get('source_type', 'family'),
+                'event_type': event_dict.get('event_type', 'regular')
             }
             
             # Add optional fields if they exist
-            if event.get('description'):
-                event_data['description'] = event['description']
-            if event.get('start_time'):
-                event_data['start_time'] = str(event['start_time'])
-            if event.get('end_time'):
-                event_data['end_time'] = str(event['end_time'])
-            if event.get('all_day') is not None:
-                event_data['all_day'] = event['all_day']
+            if event_dict.get('description'):
+                event_data['description'] = event_dict['description']
+            if event_dict.get('start_time'):
+                event_data['start_time'] = str(event_dict['start_time'])
+            if event_dict.get('end_time'):
+                event_data['end_time'] = str(event_dict['end_time'])
+            if event_dict.get('all_day') is not None:
+                event_data['all_day'] = event_dict['all_day']
                 
             frontend_events.append(event_data)
     except Exception as e:
@@ -441,26 +447,29 @@ async def get_school_events_by_month(year: int, month: int, current_user = Depen
         # Convert events to the format expected by frontend
         frontend_events = []
         for event in db_events:
+            # Convert record to dict for easier access
+            event_dict = dict(event)
+            
             event_data = {
-                'id': event['id'],
+                'id': event_dict['id'],
                 'family_id': str(current_user['family_id']),
-                'event_date': str(event['event_date']),
-                'content': f"[{event['provider_name']}] {event['content']}",
-                'source_type': event['source_type'],
-                'event_type': event.get('event_type', 'school'),
-                'provider_id': event['provider_id'],
-                'provider_name': event['provider_name']
+                'event_date': str(event_dict['event_date']),
+                'content': f"[{event_dict['provider_name']}] {event_dict['content']}",
+                'source_type': event_dict['source_type'],
+                'event_type': event_dict.get('event_type', 'school'),
+                'provider_id': event_dict['provider_id'],
+                'provider_name': event_dict['provider_name']
             }
             
             # Add optional fields if they exist
-            if event.get('description'):
-                event_data['description'] = event['description']
-            if event.get('start_time'):
-                event_data['start_time'] = str(event['start_time'])
-            if event.get('end_time'):
-                event_data['end_time'] = str(event['end_time'])
-            if event.get('all_day') is not None:
-                event_data['all_day'] = event['all_day']
+            if event_dict.get('description'):
+                event_data['description'] = event_dict['description']
+            if event_dict.get('start_time'):
+                event_data['start_time'] = str(event_dict['start_time'])
+            if event_dict.get('end_time'):
+                event_data['end_time'] = str(event_dict['end_time'])
+            if event_dict.get('all_day') is not None:
+                event_data['all_day'] = event_dict['all_day']
                 
             frontend_events.append(event_data)
             
@@ -523,26 +532,29 @@ async def get_daycare_events_by_month(year: int, month: int, current_user = Depe
         # Convert events to the format expected by frontend
         frontend_events = []
         for event in db_events:
+            # Convert record to dict for easier access
+            event_dict = dict(event)
+            
             event_data = {
-                'id': event['id'],
+                'id': event_dict['id'],
                 'family_id': str(current_user['family_id']),
-                'event_date': str(event['event_date']),
-                'content': f"[{event['provider_name']}] {event['content']}",
-                'source_type': event['source_type'],
-                'event_type': event.get('event_type', 'daycare'),
-                'provider_id': event['provider_id'],
-                'provider_name': event['provider_name']
+                'event_date': str(event_dict['event_date']),
+                'content': f"[{event_dict['provider_name']}] {event_dict['content']}",
+                'source_type': event_dict['source_type'],
+                'event_type': event_dict.get('event_type', 'daycare'),
+                'provider_id': event_dict['provider_id'],
+                'provider_name': event_dict['provider_name']
             }
             
             # Add optional fields if they exist
-            if event.get('description'):
-                event_data['description'] = event['description']
-            if event.get('start_time'):
-                event_data['start_time'] = str(event['start_time'])
-            if event.get('end_time'):
-                event_data['end_time'] = str(event['end_time'])
-            if event.get('all_day') is not None:
-                event_data['all_day'] = event['all_day']
+            if event_dict.get('description'):
+                event_data['description'] = event_dict['description']
+            if event_dict.get('start_time'):
+                event_data['start_time'] = str(event_dict['start_time'])
+            if event_dict.get('end_time'):
+                event_data['end_time'] = str(event_dict['end_time'])
+            if event_dict.get('all_day') is not None:
+                event_data['all_day'] = event_dict['all_day']
                 
             frontend_events.append(event_data)
             
@@ -611,26 +623,29 @@ async def get_school_events_by_date_range(
         # Convert events to the format expected by frontend
         frontend_events = []
         for event in db_events:
+            # Convert record to dict for easier access
+            event_dict = dict(event)
+            
             event_data = {
-                'id': event['id'],
+                'id': event_dict['id'],
                 'family_id': str(current_user['family_id']),
-                'event_date': str(event['event_date']),
-                'content': f"[{event['provider_name']}] {event['content']}",
-                'source_type': event['source_type'],
-                'event_type': event.get('event_type', 'school'),
-                'provider_id': event['provider_id'],
-                'provider_name': event['provider_name']
+                'event_date': str(event_dict['event_date']),
+                'content': f"[{event_dict['provider_name']}] {event_dict['content']}",
+                'source_type': event_dict['source_type'],
+                'event_type': event_dict.get('event_type', 'school'),
+                'provider_id': event_dict['provider_id'],
+                'provider_name': event_dict['provider_name']
             }
             
             # Add optional fields if they exist
-            if event.get('description'):
-                event_data['description'] = event['description']
-            if event.get('start_time'):
-                event_data['start_time'] = str(event['start_time'])
-            if event.get('end_time'):
-                event_data['end_time'] = str(event['end_time'])
-            if event.get('all_day') is not None:
-                event_data['all_day'] = event['all_day']
+            if event_dict.get('description'):
+                event_data['description'] = event_dict['description']
+            if event_dict.get('start_time'):
+                event_data['start_time'] = str(event_dict['start_time'])
+            if event_dict.get('end_time'):
+                event_data['end_time'] = str(event_dict['end_time'])
+            if event_dict.get('all_day') is not None:
+                event_data['all_day'] = event_dict['all_day']
                 
             frontend_events.append(event_data)
             
@@ -689,8 +704,8 @@ async def get_daycare_events_by_date_range(
             query,
             {
                 "family_id": current_user['family_id'],
-                "start_date": start_date,
-                "end_date": end_date
+                "start_date": start_date_obj,
+                "end_date": end_date_obj
             }
         )
         
@@ -699,26 +714,29 @@ async def get_daycare_events_by_date_range(
         # Convert events to the format expected by frontend
         frontend_events = []
         for event in db_events:
+            # Convert record to dict for easier access
+            event_dict = dict(event)
+            
             event_data = {
-                'id': event['id'],
+                'id': event_dict['id'],
                 'family_id': str(current_user['family_id']),
-                'event_date': str(event['event_date']),
-                'content': f"[{event['provider_name']}] {event['content']}",
-                'source_type': event['source_type'],
-                'event_type': event.get('event_type', 'daycare'),
-                'provider_id': event['provider_id'],
-                'provider_name': event['provider_name']
+                'event_date': str(event_dict['event_date']),
+                'content': f"[{event_dict['provider_name']}] {event_dict['content']}",
+                'source_type': event_dict['source_type'],
+                'event_type': event_dict.get('event_type', 'daycare'),
+                'provider_id': event_dict['provider_id'],
+                'provider_name': event_dict['provider_name']
             }
             
             # Add optional fields if they exist
-            if event.get('description'):
-                event_data['description'] = event['description']
-            if event.get('start_time'):
-                event_data['start_time'] = str(event['start_time'])
-            if event.get('end_time'):
-                event_data['end_time'] = str(event['end_time'])
-            if event.get('all_day') is not None:
-                event_data['all_day'] = event['all_day']
+            if event_dict.get('description'):
+                event_data['description'] = event_dict['description']
+            if event_dict.get('start_time'):
+                event_data['start_time'] = str(event_dict['start_time'])
+            if event_dict.get('end_time'):
+                event_data['end_time'] = str(event_dict['end_time'])
+            if event_dict.get('all_day') is not None:
+                event_data['all_day'] = event_dict['all_day']
                 
             frontend_events.append(event_data)
             
