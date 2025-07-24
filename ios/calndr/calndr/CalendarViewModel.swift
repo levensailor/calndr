@@ -520,12 +520,28 @@ class CalendarViewModel: ObservableObject {
             print("Offline, not fetching school events.")
             return
         }
-        APIService.shared.fetchSchoolEvents { [weak self] result in
+        
+        // Get the current visible date range
+        let visibleDates = getVisibleDates()
+        guard let firstDate = visibleDates.first, let lastDate = visibleDates.last else {
+            return
+        }
+        
+        let firstDateString = isoDateString(from: firstDate)
+        let lastDateString = isoDateString(from: lastDate)
+        
+        APIService.shared.fetchSchoolEvents(from: firstDateString, to: lastDateString) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let schoolEvents):
+                case .success(let events):
+                    // Convert [Event] to [SchoolEvent] for compatibility with old system
+                    let schoolEvents = events.compactMap { event -> SchoolEvent? in
+                        // Only include school events (filter out family events that might be mixed in)
+                        guard event.content.contains("[") || event.event_type == "school" else { return nil }
+                        return SchoolEvent(date: event.event_date, event: event.content)
+                    }
                     self?.schoolEvents = schoolEvents
-                    print("Successfully fetched \(schoolEvents.count) school events.")
+                    print("Successfully fetched \(schoolEvents.count) school events for legacy system.")
                 case .failure(let error):
                     print("Error fetching school events: \(error.localizedDescription)")
                 }
