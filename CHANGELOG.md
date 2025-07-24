@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [2025-07-24] - Fixed Handoff Times to Display in 12-Hour AM/PM Format
+
+### Fixed
+- **Handoff time display**: Fixed handoff times in week/3-day/day views to show 12-hour AM/PM format instead of 24-hour format
+- **User experience**: Handoff times now display as "5:00 PM" instead of "17:00" for better readability
+- **Consistency**: Added TimeFormatter.format12Hour utility function for consistent time formatting across the app
+- **API compatibility**: Backend API calls continue to use 24-hour format for proper communication
+
+### Technical Details
+- Updated DayView.swift and ThreeDayView.swift getHandoffTextForDate functions
+- Enhanced ValidationUtils.swift with TimeFormatter utility class
+- Maintained 24-hour format for API calls while improving user-facing displays
+
 ## [2025-07-24] - Fixed School Events Date Parameter Binding Error
 
 ### Fixed
