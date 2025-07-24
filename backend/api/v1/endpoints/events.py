@@ -617,8 +617,8 @@ async def get_school_events_by_date_range(
             query,
             {
                 "family_id": current_user['family_id'],
-                "start_date": start_date,
-                "end_date": end_date
+                "start_date": start_date_obj,
+                "end_date": end_date_obj
             }
         )
         
