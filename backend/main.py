@@ -42,7 +42,40 @@ def create_app() -> FastAPI:
     @app.get("/health")
     async def health_check():
         """Health check endpoint for monitoring."""
-        return {"status": "healthy", "service": "calndr-backend", "version": settings.VERSION}
+        try:
+            # Test database connection
+            await database.fetch_one("SELECT 1 as test")
+            db_status = "connected"
+        except Exception as e:
+            db_status = f"error: {str(e)}"
+        
+        return {
+            "status": "healthy" if db_status == "connected" else "unhealthy",
+            "service": "calndr-backend", 
+            "version": settings.VERSION,
+            "database": db_status
+        }
+    
+    # Add database connection info endpoint for debugging
+    @app.get("/db-info")
+    async def database_info():
+        """Database connection information for debugging."""
+        try:
+            # Get current connection info
+            pool_info = {
+                "min_size": getattr(database._backend._pool, "minsize", "unknown"),
+                "max_size": getattr(database._backend._pool, "maxsize", "unknown"),
+                "size": getattr(database._backend._pool, "size", "unknown"),
+                "freesize": getattr(database._backend._pool, "freesize", "unknown"),
+            }
+        except AttributeError:
+            pool_info = {"error": "Pool information not available"}
+        
+        return {
+            "database_url_host": settings.DB_HOST,
+            "database_name": settings.DB_NAME,
+            "pool_info": pool_info
+        }
     
     return app
 
