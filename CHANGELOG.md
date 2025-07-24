@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## [2025-07-24] - Implemented Event Type Filtering and Color Coding in iOS App
+
+### Enhanced
+- **Event type filtering**: FocusedDayView now only shows editable family events, excluding school and daycare events since they're not editable
+- **Calendar color coding**: School events display in orange, daycare events display in purple for clear visual distinction
+- **Event model enhancement**: Added source_type field to Event model to properly distinguish between family, school, and daycare events
+- **Comprehensive filtering**: Updated all views (DayView, ThreeDayView, DayContentView) to consistently filter out non-editable events
+- **Save event protection**: Modified saveEvent function to only update family events, preserving school and daycare events
+
+### Visual Improvements  
+- **School events**: Changed from green to orange color with graduation cap icon
+- **Daycare events**: Added purple color display with building icon
+- **Event separation**: Clear visual and functional separation between editable family events and read-only institutional events
+
 ## [2025-07-24] - Improved School Events Filtering and API Quality
 
 ### Fixed
