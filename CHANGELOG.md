@@ -1,5 +1,33 @@
 # CHANGELOG
 
+## [2025-07-24] - Fixed Database Connection Pool Exhaustion Issue
+
+### Fixed
+- **Database connection error**: Resolved `asyncpg.exceptions.TooManyConnectionsError: remaining connection slots are reserved for roles with privileges of the "rds_reserved" role`
+- **Connection pool management**: Implemented proper connection pooling with configurable limits
+- **Resource optimization**: Reduced server resource usage and improved stability
+
+### Database Connection Pool Configuration
+- **databases.Database**: Added `min_size=1`, `max_size=5` per worker with `force_rollback=True` and `ssl="prefer"`
+- **SQLAlchemy engine**: Configured `pool_size=5`, `max_overflow=10`, `pool_timeout=30s`, `pool_recycle=3600s`, `pool_pre_ping=True`
+- **Connection limits**: Maximum 10 total connections (2 workers × 5 connections each)
+
+### Worker Optimization
+- **Reduced workers**: Changed from 4 to 2 gunicorn workers to minimize connection usage
+- **Improved efficiency**: Better resource utilization while maintaining performance
+- **Connection management**: Each worker limited to 5 database connections maximum
+
+### Monitoring & Debugging
+- **Enhanced health endpoint**: `/health` now tests database connectivity and reports connection status
+- **Database info endpoint**: Added `/db-info` for connection pool monitoring and debugging
+- **Proactive monitoring**: Database status included in health checks for better observability
+
+### Technical Benefits
+- **Prevents connection exhaustion**: Proper pooling prevents hitting RDS connection limits
+- **Automatic recovery**: Connection recycling and pre-ping ensure healthy connections
+- **Better error handling**: Graceful degradation when connections are unavailable
+- **Production stability**: Reduced risk of service outages due to connection issues
+
 ## [2025-07-24] - Removed Provider Name Prefixes from School and Daycare Events
 
 ### Changed
