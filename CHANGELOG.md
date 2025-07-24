@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2025-07-24] - Fixed School Events Date Parameter Binding Error
+
+### Fixed
+- **School events API error**: Fixed DataError in get_school_events_by_date_range where string dates were passed to database query expecting date objects
+- **Parameter binding**: Updated parameter dictionary to use date objects (start_date_obj, end_date_obj) instead of string values
+- **Error resolution**: Resolved `'str' object has no attribute 'toordinal'` error when fetching school closure events by date range
+
 ## [2025-07-24] - Implemented Event Type Filtering and Color Coding in iOS App
 
 ### Enhanced
