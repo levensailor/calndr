@@ -144,12 +144,21 @@ class RedisService:
             cache_pattern = self._generate_cache_key(pattern)
             keys = await self.redis_pool.keys(cache_pattern)
             
-            if keys:
-                deleted_count = await self.redis_pool.delete(*keys)
-                logger.debug(f"Deleted {deleted_count} keys matching pattern: {cache_pattern}")
-                return deleted_count
+            if not keys:
+                return 0
             
-            return 0
+            # Delete keys in batches to avoid timeouts
+            batch_size = 100
+            total_deleted = 0
+            
+            for i in range(0, len(keys), batch_size):
+                batch_keys = keys[i:i + batch_size]
+                deleted_count = await self.redis_pool.delete(*batch_keys)
+                total_deleted += deleted_count
+                logger.debug(f"Deleted batch of {deleted_count} keys (batch {i//batch_size + 1})")
+            
+            logger.debug(f"Deleted {total_deleted} keys matching pattern: {cache_pattern}")
+            return total_deleted
             
         except Exception as e:
             logger.error(f"Error deleting keys with pattern {pattern}: {e}")
@@ -185,10 +194,27 @@ class RedisService:
     
     async def clear_family_cache(self, family_id: int) -> int:
         """Clear all cached data for a specific family."""
-        pattern = f"family:{family_id}:*"
-        deleted = await self.delete_pattern(pattern)
-        logger.info(f"Cleared {deleted} cache entries for family {family_id}")
-        return deleted
+        try:
+            total_deleted = 0
+            
+            # Clear events cache patterns
+            events_patterns = [
+                f"events:family:{family_id}:*",
+                f"api_cache:*/api/v1/events/*family_id*{family_id}*",
+                f"family:{family_id}:*"
+            ]
+            
+            for pattern in events_patterns:
+                deleted = await self.delete_pattern(pattern)
+                total_deleted += deleted
+                logger.debug(f"Deleted {deleted} keys for pattern: {pattern}")
+            
+            logger.info(f"Cleared {total_deleted} cache entries for family {family_id}")
+            return total_deleted
+            
+        except Exception as e:
+            logger.error(f"Error clearing family cache for {family_id}: {e}")
+            return 0
     
     async def clear_user_cache(self, user_id: int) -> int:
         """Clear all cached data for a specific user."""

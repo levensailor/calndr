@@ -10,6 +10,7 @@ from core.logging import logger
 from db.models import custody, users
 from schemas.custody import CustodyRecord, CustodyResponse
 from services.notification_service import send_custody_change_notification
+from services.redis_service import redis_service
 
 router = APIRouter()
 
@@ -135,6 +136,10 @@ async def create_custody(custody_data: CustodyRecord, current_user = Depends(get
             
         # Send push notification to the other parent
         await send_custody_change_notification(sender_id=actor_id, family_id=family_id, event_date=custody_data.date)
+        
+        # Invalidate cache for this family since custody affects events display
+        await redis_service.clear_family_cache(family_id)
+        logger.info(f"Invalidated events cache for family {family_id} after creating custody record")
             
         # Get custodian name for response
         custodian_user = await database.fetch_one(users.select().where(users.c.id == custody_data.custodian_id))
@@ -195,6 +200,10 @@ async def update_custody_by_date(custody_date: date, custody_data: CustodyRecord
         
         # Send push notification to the other parent
         await send_custody_change_notification(sender_id=actor_id, family_id=family_id, event_date=custody_date)
+        
+        # Invalidate cache for this family since custody affects events display
+        await redis_service.clear_family_cache(family_id)
+        logger.info(f"Invalidated events cache for family {family_id} after updating custody record")
         
         # Get custodian name for response
         custodian_user = await database.fetch_one(users.select().where(users.c.id == custody_data.custodian_id))
@@ -257,6 +266,10 @@ async def update_custody_by_id(custody_id: int, custody_data: CustodyRecord, cur
         
         # Send push notification to the other parent
         await send_custody_change_notification(sender_id=actor_id, family_id=family_id, event_date=custody_data.date)
+        
+        # Invalidate cache for this family since custody affects events display
+        await redis_service.clear_family_cache(family_id)
+        logger.info(f"Invalidated events cache for family {family_id} after updating custody record by ID")
         
         # Get custodian name for response
         custodian_user = await database.fetch_one(users.select().where(users.c.id == custody_data.custodian_id))
@@ -343,6 +356,10 @@ async def bulk_create_custody(custody_records: List[CustodyRecord], current_user
             await database.execute_many(insert_query, insert_values)
             
             logger.info(f"Successfully created {len(insert_values)} custody records via bulk insert")
+            
+            # Invalidate cache for this family since custody affects events display
+            await redis_service.clear_family_cache(family_id)
+            logger.info(f"Invalidated events cache for family {family_id} after bulk creating custody records")
             
             return {
                 "status": "success",

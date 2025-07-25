@@ -7,6 +7,7 @@ from core.database import database
 from core.security import get_current_user, uuid_to_string
 from core.logging import logger
 from db.models import schedule_templates, custody
+from services.redis_service import redis_service
 from schemas.schedule import (
     ScheduleTemplate, ScheduleTemplateCreate, ScheduleApplication, 
     ScheduleApplicationResponse, SchedulePatternType, WeeklySchedulePattern,
@@ -484,6 +485,10 @@ async def apply_schedule_template(application: ScheduleApplication, current_user
                     previous_custodian_id = actual_custodian_id
             
             current_date += timedelta(days=1)
+        
+        # Invalidate cache for this family since we created/updated custody records
+        await redis_service.clear_family_cache(family_id)
+        logger.info(f"Invalidated events cache for family {family_id} after applying schedule template")
         
         return ScheduleApplicationResponse(
             success=True,
