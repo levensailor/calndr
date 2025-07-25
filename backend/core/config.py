@@ -91,7 +91,7 @@ class Settings(BaseSettings):
     CACHE_TTL_WEATHER_FORECAST: int = int(os.getenv("CACHE_TTL_WEATHER_FORECAST", "3600"))  # 1 hour
     CACHE_TTL_WEATHER_HISTORIC: int = int(os.getenv("CACHE_TTL_WEATHER_HISTORIC", "259200"))  # 3 days
     CACHE_TTL_EVENTS: int = int(os.getenv("CACHE_TTL_EVENTS", "900"))  # 15 minutes
-    CACHE_TTL_CUSTODY: int = int(os.getenv("CACHE_TTL_CUSTODY", "900"))  # 15 minutes
+    CACHE_TTL_CUSTODY: int = int(os.getenv("CACHE_TTL_CUSTODY", "7200"))  # 2 hours (increased from 15 minutes)
     CACHE_TTL_USER_PROFILE: int = int(os.getenv("CACHE_TTL_USER_PROFILE", "1800"))  # 30 minutes
     CACHE_TTL_FAMILY_DATA: int = int(os.getenv("CACHE_TTL_FAMILY_DATA", "1800"))  # 30 minutes
     

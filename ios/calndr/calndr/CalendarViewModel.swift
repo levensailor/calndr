@@ -364,8 +364,27 @@ class CalendarViewModel: ObservableObject {
                 switch result {
                 case .success(let custodyRecords):
                     DispatchQueue.main.async {
-                        // Update on main thread
-                        allCustodyRecords.append(contentsOf: custodyRecords)
+                        // Defensive check: if we get an empty response but already have custody data 
+                        // for this month, don't replace it (could be cache expiry issue)
+                        if custodyRecords.isEmpty {
+                            let monthKey = "\(year)-\(String(format: "%02d", month))"
+                            let hasExistingData = allCustodyRecords.contains { record in
+                                record.event_date.hasPrefix(monthKey)
+                            } || self?.custodyRecords.contains { record in
+                                record.event_date.hasPrefix(monthKey)
+                            } == true
+                            
+                            if hasExistingData {
+                                print("⚠️ Received empty custody response for \(year)-\(month) but have existing data - preserving existing records")
+                                // Don't update allCustodyRecords with empty data
+                            } else {
+                                print("ℹ️ Received empty custody response for \(year)-\(month) - no existing data to preserve")
+                                allCustodyRecords.append(contentsOf: custodyRecords)
+                            }
+                        } else {
+                            print("✅ Received \(custodyRecords.count) custody records for \(year)-\(month)")
+                            allCustodyRecords.append(contentsOf: custodyRecords)
+                        }
                     }
                 case .failure(let error):
                     print("Error fetching custody records for \(year)-\(month): \(error.localizedDescription)")
@@ -375,9 +394,31 @@ class CalendarViewModel: ObservableObject {
         }
         
         dispatchGroup.notify(queue: .main) { [weak self] in
-            self?.custodyRecords = allCustodyRecords.sorted { $0.event_date < $1.event_date }
-            self?.updateCustodyStreak()
-            self?.updateCustodyPercentages()
+            guard let self = self else { return }
+            
+            // Merge new data with existing data instead of replacing entirely
+            if !allCustodyRecords.isEmpty {
+                // Create a dictionary of new records by date for efficient lookup
+                let newRecordsByDate = Dictionary(uniqueKeysWithValues: allCustodyRecords.map { ($0.event_date, $0) })
+                
+                // Update existing records or add new ones
+                for (date, newRecord) in newRecordsByDate {
+                    if let existingIndex = self.custodyRecords.firstIndex(where: { $0.event_date == date }) {
+                        self.custodyRecords[existingIndex] = newRecord
+                    } else {
+                        self.custodyRecords.append(newRecord)
+                    }
+                }
+                
+                // Sort the combined records
+                self.custodyRecords.sort { $0.event_date < $1.event_date }
+                print("🔄 Merged custody data: \(self.custodyRecords.count) total records")
+            } else {
+                print("ℹ️ No new custody data to merge")
+            }
+            
+            self.updateCustodyStreak()
+            self.updateCustodyPercentages()
             completion?() // Signal completion
         }
     }

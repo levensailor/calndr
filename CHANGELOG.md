@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## [2025-07-25] - Fixed Redis Caching Issues and Bot Filtering
+
+### Fixed
+- **Redis Timeout Issues**: Reduced Redis operation timeouts from 5s to 2s to prevent client disconnections (HTTP 499 errors)
+- **Invalid HTTP Request Warnings**: Added bot/scanner filtering middleware to prevent warnings from automated scanners
+- **Application Performance**: Optimized Redis connection settings with increased max connections (20) and proper error handling
+- **Cache Reliability**: Enhanced Redis error handling with JSON decode error cleanup and timeout resilience
+
+### Security Improvements  
+- **Bot Filtering**: Automatic filtering of known scanners (Censys, Shodan, crawlers, etc.) to reduce server load
+- **Scanner Path Blocking**: Filter common scanner paths (/.env, /wp-admin, /phpmyadmin, etc.)
+- **Request Validation**: Better handling of malformed HTTP requests to prevent log spam
+
+### Performance Optimizations
+- **Redis Operations**: Faster cache operations with reduced timeouts and smaller batch sizes
+- **Health Monitoring**: Enhanced health check endpoint showing Redis and database status separately  
+- **Cache Invalidation**: Improved batch deletion performance with individual timeout handling
+
 ## [2025-01-25] - Added Redis Cache for Performance Optimization
 
 ### Added

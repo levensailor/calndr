@@ -33,9 +33,13 @@ async def get_custody_records(year: int, month: int, current_user = Depends(get_
         # Check cache first for custody records
         custody_cache_key = f"custody:family:{family_id}:{start_date}:{end_date}"
         cached_custody = await redis_service.get(custody_cache_key)
-        if cached_custody:
-            logger.info(f"Returning cached custody records for {year}/{month}")
+        if cached_custody and len(cached_custody) > 0:
+            logger.info(f"Returning cached custody records for {year}/{month} ({len(cached_custody)} records)")
             return cached_custody
+        elif cached_custody is not None and len(cached_custody) == 0:
+            logger.info(f"Cache returned empty array for {year}/{month}, checking if this is valid...")
+            # Empty cache might be valid (no custody records for this month) or invalid (cache corruption)
+            # We'll fall through to database query to verify
         
         # Query custody records for the given month and family
         query = custody.select().where(
@@ -66,7 +70,7 @@ async def get_custody_records(year: int, month: int, current_user = Depends(get_
         # Cache the custody records (convert to dict for JSON serialization)
         custody_responses_dict = [resp.model_dump() for resp in custody_responses]
         await redis_service.set(custody_cache_key, custody_responses_dict, settings.CACHE_TTL_CUSTODY)
-        logger.info(f"Cached custody records for {year}/{month} (family {family_id})")
+        logger.info(f"Cached custody records for {year}/{month} (family {family_id}) - {len(custody_responses)} records")
         
         return custody_responses
     except Exception as e:
