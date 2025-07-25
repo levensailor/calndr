@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 from core.config import settings
 from core.database import database
-from core.middleware import add_no_cache_headers, bot_filter_middleware
+from core.middleware import add_no_cache_headers, bot_filter_middleware, request_validation_middleware
 from services.redis_service import redis_service
 from api.v1.api import api_router
 
@@ -33,6 +33,7 @@ def create_app() -> FastAPI:
     )
     
     # Add middleware
+    app.middleware("http")(request_validation_middleware)
     app.middleware("http")(bot_filter_middleware)
     app.middleware("http")(add_no_cache_headers)
     
