@@ -12,42 +12,56 @@ echo "--- Starting setup for refactored backend on the server ---"
 
 # 1. Install dependencies
 echo "--- Installing system packages ---"
-sudo yum update -y
-sudo yum install -y python3-pip python3-devel nginx certbot python3-certbot-nginx cronie
+
+# Detect package manager
+if command -v dnf &> /dev/null; then
+    PKG_MGR="dnf"
+    echo "Using dnf package manager (Amazon Linux 2023+)"
+elif command -v yum &> /dev/null; then
+    PKG_MGR="yum" 
+    echo "Using yum package manager (Amazon Linux 2)"
+else
+    PKG_MGR="yum"
+    echo "Defaulting to yum package manager"
+fi
+
+sudo $PKG_MGR update -y
+sudo $PKG_MGR install -y python3-pip python3-devel nginx certbot python3-certbot-nginx cronie
 
 # Install Redis - try multiple methods for different Amazon Linux versions
 echo "--- Installing Redis ---"
 REDIS_INSTALLED=false
 
-# Method 1: Amazon Linux Extras
-if sudo amazon-linux-extras list | grep -q redis; then
+# Method 1: Amazon Linux Extras (AL2 only)
+if sudo amazon-linux-extras list &>/dev/null && sudo amazon-linux-extras list | grep -q redis; then
     echo "Installing Redis via amazon-linux-extras..."
     if sudo amazon-linux-extras install -y redis6; then
         REDIS_INSTALLED=true
     fi
 fi
 
-# Method 2: Direct yum install
-if [ "$REDIS_INSTALLED" = false ] && sudo yum list available | grep -q "redis"; then
-    echo "Installing Redis via yum..."
-    if sudo yum install -y redis; then
+# Method 2: Direct package manager install (AL2023 and others)
+if [ "$REDIS_INSTALLED" = false ]; then
+    echo "Installing Redis via $PKG_MGR..."
+    if sudo $PKG_MGR install -y redis; then
         REDIS_INSTALLED=true
     fi
 fi
 
-# Method 3: EPEL repository
-if [ "$REDIS_INSTALLED" = false ]; then
+# Method 3: EPEL repository (AL2 only)
+if [ "$REDIS_INSTALLED" = false ] && [ "$PKG_MGR" = "yum" ]; then
     echo "Installing Redis via EPEL repository..."
-    sudo yum install -y epel-release
-    if sudo yum install -y redis; then
-        REDIS_INSTALLED=true
+    if sudo yum install -y epel-release; then
+        if sudo yum install -y redis; then
+            REDIS_INSTALLED=true
+        fi
     fi
 fi
 
 # Method 4: Compile from source as last resort
 if [ "$REDIS_INSTALLED" = false ]; then
     echo "Installing Redis from source..."
-    sudo yum install -y gcc make tcl
+    sudo $PKG_MGR install -y gcc make tcl
     cd /tmp
     wget http://download.redis.io/redis-stable.tar.gz
     tar xzf redis-stable.tar.gz
