@@ -13,7 +13,77 @@ echo "--- Starting setup for refactored backend on the server ---"
 # 1. Install dependencies
 echo "--- Installing system packages ---"
 sudo yum update -y
-sudo yum install -y python3-pip python3-devel nginx certbot python3-certbot-nginx cronie redis
+sudo yum install -y python3-pip python3-devel nginx certbot python3-certbot-nginx cronie
+
+# Install Redis - try multiple methods for different Amazon Linux versions
+echo "--- Installing Redis ---"
+REDIS_INSTALLED=false
+
+# Method 1: Amazon Linux Extras
+if sudo amazon-linux-extras list | grep -q redis; then
+    echo "Installing Redis via amazon-linux-extras..."
+    if sudo amazon-linux-extras install -y redis6; then
+        REDIS_INSTALLED=true
+    fi
+fi
+
+# Method 2: Direct yum install
+if [ "$REDIS_INSTALLED" = false ] && sudo yum list available | grep -q "redis"; then
+    echo "Installing Redis via yum..."
+    if sudo yum install -y redis; then
+        REDIS_INSTALLED=true
+    fi
+fi
+
+# Method 3: EPEL repository
+if [ "$REDIS_INSTALLED" = false ]; then
+    echo "Installing Redis via EPEL repository..."
+    sudo yum install -y epel-release
+    if sudo yum install -y redis; then
+        REDIS_INSTALLED=true
+    fi
+fi
+
+# Method 4: Compile from source as last resort
+if [ "$REDIS_INSTALLED" = false ]; then
+    echo "Installing Redis from source..."
+    sudo yum install -y gcc make tcl
+    cd /tmp
+    wget http://download.redis.io/redis-stable.tar.gz
+    tar xzf redis-stable.tar.gz
+    cd redis-stable
+    make
+    sudo make install
+    
+    # Create Redis user and directories
+    sudo useradd -r -s /bin/false redis || true
+    sudo mkdir -p /var/lib/redis /var/log/redis /etc/redis
+    sudo chown redis:redis /var/lib/redis /var/log/redis
+    
+    # Create systemd service file
+    sudo bash -c "cat > /etc/systemd/system/redis.service" << 'REDIS_SERVICE_EOF'
+[Unit]
+Description=Redis In-Memory Data Store
+After=network.target
+
+[Service]
+User=redis
+Group=redis
+ExecStart=/usr/local/bin/redis-server /etc/redis/redis.conf
+ExecStop=/usr/local/bin/redis-cli shutdown
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+REDIS_SERVICE_EOF
+    
+    sudo systemctl daemon-reload
+    REDIS_INSTALLED=true
+fi
+
+if [ "$REDIS_INSTALLED" = false ]; then
+    echo "ERROR: Failed to install Redis. Application will continue without caching."
+fi
 
 # 2. Create app directory and set permissions
 echo "--- Creating application directory and setting permissions ---"
@@ -53,7 +123,8 @@ else
 fi
 deactivate
 
-# 7. Configure and start Redis
+# 7. Configure and start Redis (only if Redis was installed)
+if [ "$REDIS_INSTALLED" = true ]; then
 echo "--- Configuring Redis for local caching ---"
 # Create Redis configuration for security and performance
 sudo bash -c "cat > /etc/redis.conf" << REDIS_EOF
@@ -104,6 +175,11 @@ if redis-cli ping | grep -q "PONG"; then
 else
     echo "✗ Redis connection failed"
     sudo systemctl status redis --no-pager
+fi
+
+else
+    echo "--- Skipping Redis configuration (Redis not installed) ---"
+    echo "Application will run without caching capabilities"
 fi
 
 # 8. Create a simple health check endpoint if it doesn't exist
@@ -475,7 +551,9 @@ fi
 echo ""
 echo "📊 API Endpoints:"
 echo "  - Health check: https://calndr.club/health"
-echo "  - Cache status: https://calndr.club/cache-status"
+if [ "$REDIS_INSTALLED" = true ]; then
+    echo "  - Cache status: https://calndr.club/cache-status"
+fi
 echo "  - API documentation: https://calndr.club/docs"
 echo "  - ReDoc: https://calndr.club/redoc"
 echo ""
@@ -488,9 +566,11 @@ echo ""
 echo "🔧 Useful commands:"
 echo "  - View app logs: sudo tail -f $LOG_DIR/backend.log"
 echo "  - View system logs: sudo journalctl -u cal-app -f"
-echo "  - Check Redis status: sudo systemctl status redis"
-echo "  - Monitor Redis: redis-cli monitor"
-echo "  - Redis memory usage: redis-cli info memory"
+if [ "$REDIS_INSTALLED" = true ]; then
+    echo "  - Check Redis status: sudo systemctl status redis"
+    echo "  - Monitor Redis: redis-cli monitor"
+    echo "  - Redis memory usage: redis-cli info memory"
+fi
 echo "  - Check SSL status: sudo certbot certificates"
 echo "  - Test SSL renewal: sudo certbot renew --dry-run"
 echo "  - Check renewal timer: sudo systemctl status ssl-renewal.timer" 
