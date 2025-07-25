@@ -82,7 +82,7 @@ struct MainTabView: View {
                     Text(headerTitle(for: currentView))
                         .font(.system(size: 24, weight: .black, design: .default))
                         .textCase(.uppercase)
-                        .letterSpacing(1.5)
+                        .tracking(1.5)
                         .foregroundColor(themeManager.currentTheme.headerTextColorSwiftUI)
                         .opacity(currentView == .month ? headerOpacity : 1.0)
                         .offset(y: currentView == .month ? headerOffset : 0.0)
@@ -231,7 +231,7 @@ struct MainTabView: View {
                         Text("HANDOFF")
                             .font(.system(size: 10, weight: .black, design: .default))
                             .textCase(.uppercase)
-                            .letterSpacing(0.5)
+                            .tracking(0.5)
                             .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.8))
                     }
                     
@@ -256,7 +256,7 @@ struct MainTabView: View {
                         Text("SETTINGS")
                             .font(.system(size: 10, weight: .black, design: .default))
                             .textCase(.uppercase)
-                            .letterSpacing(0.5)
+                            .tracking(0.5)
                             .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.8))
                     }
 
@@ -281,7 +281,7 @@ struct MainTabView: View {
                         Text("JOURNAL")
                             .font(.system(size: 10, weight: .black, design: .default))
                             .textCase(.uppercase)
-                            .letterSpacing(0.5)
+                            .tracking(0.5)
                             .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.8))
                     }
 
@@ -306,7 +306,7 @@ struct MainTabView: View {
                         Text("HELP")
                             .font(.system(size: 10, weight: .black, design: .default))
                             .textCase(.uppercase)
-                            .letterSpacing(0.5)
+                            .tracking(0.5)
                             .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.8))
                     }
                 }

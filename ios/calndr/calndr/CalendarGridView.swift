@@ -16,7 +16,7 @@ struct CalendarGridView: View {
                     Text(day)
                         .font(.system(size: 14, weight: .black, design: .default))
                         .textCase(.uppercase)
-                        .letterSpacing(1.0)
+                        .tracking(1.0)
                         .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)

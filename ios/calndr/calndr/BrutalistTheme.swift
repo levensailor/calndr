@@ -96,7 +96,7 @@ struct BrutalistButton: View {
             Text(title)
                 .font(.system(size: 16, weight: .black, design: .default))
                 .textCase(.uppercase)
-                .letterSpacing(1.5)
+                .tracking(1.5)
                 .foregroundColor(textColor)
                 .padding(.horizontal, 24)
                 .padding(.vertical, 16)
@@ -149,7 +149,7 @@ struct BrutalistTextField: View {
             Text(title)
                 .font(.system(size: 12, weight: .black, design: .default))
                 .textCase(.uppercase)
-                .letterSpacing(1.2)
+                .tracking(1.2)
                 .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
             
             Group {
@@ -185,7 +185,7 @@ struct BrutalistHeader: View {
         Text(title)
             .font(.system(size: 32, weight: .black, design: .default))
             .textCase(.uppercase)
-            .letterSpacing(2.0)
+            .tracking(2.0)
             .foregroundColor(themeManager.currentTheme.headerTextColorSwiftUI)
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity, alignment: .leading)

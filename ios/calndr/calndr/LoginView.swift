@@ -23,7 +23,7 @@ struct LoginView: View {
                 VStack(spacing: 8) {
                     Text("CALNDR")
                         .font(.system(size: 48, weight: .black, design: .default))
-                        .letterSpacing(3.0)
+                        .tracking(3.0)
                         .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                     
                     Rectangle()
