@@ -83,10 +83,10 @@ class RedisService:
         
         try:
             cache_key = self._generate_cache_key(key)
-            # Add timeout protection to prevent hanging
+            # Reduced timeout to prevent client disconnections
             cached_data = await asyncio.wait_for(
                 self.redis_pool.get(cache_key), 
-                timeout=5.0  # 5 second timeout
+                timeout=2.0  # Reduced from 5.0 to 2.0 seconds
             )
             
             if cached_data:
@@ -98,7 +98,12 @@ class RedisService:
                 return None
                 
         except asyncio.TimeoutError:
-            logger.warning(f"Redis get operation timed out for key {key}")
+            logger.warning(f"Redis get operation timed out for key {key} - returning None")
+            return None
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON decode error for cached data with key {key}: {e}")
+            # Clean up corrupted cache entry
+            await self.delete(key)
             return None
         except Exception as e:
             logger.error(f"Error getting cached data for key {key}: {e}")
@@ -114,23 +119,23 @@ class RedisService:
             cache_key = self._generate_cache_key(key)
             serialized_data = json.dumps(data, default=str)
             
-            # Add timeout protection to prevent hanging
+            # Reduced timeout to prevent blocking
             if ttl:
                 await asyncio.wait_for(
                     self.redis_pool.setex(cache_key, ttl, serialized_data),
-                    timeout=5.0
+                    timeout=2.0  # Reduced from 5.0 to 2.0 seconds
                 )
             else:
                 await asyncio.wait_for(
                     self.redis_pool.set(cache_key, serialized_data),
-                    timeout=5.0
+                    timeout=2.0  # Reduced from 5.0 to 2.0 seconds
                 )
             
             logger.debug(f"Cached data for key: {cache_key} (TTL: {ttl}s)")
             return True
         
         except asyncio.TimeoutError:
-            logger.warning(f"Redis set operation timed out for key {key}")
+            logger.warning(f"Redis set operation timed out for key {key} - skipping cache")
             return False
         except Exception as e:
             logger.error(f"Error setting cached data for key {key}: {e}")
@@ -160,34 +165,38 @@ class RedisService:
         
         try:
             cache_pattern = self._generate_cache_key(pattern)
-            # Add timeout protection for keys lookup
+            # Reduced timeout for keys lookup
             keys = await asyncio.wait_for(
                 self.redis_pool.keys(cache_pattern),
-                timeout=5.0
+                timeout=2.0  # Reduced from 5.0 to 2.0 seconds
             )
             
             if not keys:
                 return 0
             
-            # Delete keys in batches to avoid timeouts
-            batch_size = 50  # Reduced batch size for better timeout handling
+            # Delete keys in smaller batches to prevent timeouts
+            batch_size = 25  # Reduced from 50 to 25 for faster processing
             total_deleted = 0
             
             for i in range(0, len(keys), batch_size):
                 batch_keys = keys[i:i + batch_size]
-                # Add timeout protection for each batch deletion
-                deleted_count = await asyncio.wait_for(
-                    self.redis_pool.delete(*batch_keys),
-                    timeout=3.0  # Shorter timeout for individual batches
-                )
-                total_deleted += deleted_count
-                logger.debug(f"Deleted batch of {deleted_count} keys (batch {i//batch_size + 1})")
+                # Shorter timeout for each batch deletion
+                try:
+                    deleted_count = await asyncio.wait_for(
+                        self.redis_pool.delete(*batch_keys),
+                        timeout=1.5  # Reduced from 3.0 to 1.5 seconds
+                    )
+                    total_deleted += deleted_count
+                    logger.debug(f"Deleted batch of {deleted_count} keys (batch {i//batch_size + 1})")
+                except asyncio.TimeoutError:
+                    logger.warning(f"Timeout deleting batch {i//batch_size + 1}, continuing with next batch")
+                    continue
             
             logger.debug(f"Deleted {total_deleted} keys matching pattern: {cache_pattern}")
             return total_deleted
         
         except asyncio.TimeoutError:
-            logger.warning(f"Redis delete operation timed out for pattern {pattern}")
+            logger.warning(f"Redis delete pattern operation timed out for pattern {pattern}")
             return 0
         except Exception as e:
             logger.error(f"Error deleting keys with pattern {pattern}: {e}")

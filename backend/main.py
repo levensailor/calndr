@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 from core.config import settings
 from core.database import database
-from core.middleware import add_no_cache_headers
+from core.middleware import add_no_cache_headers, bot_filter_middleware
 from services.redis_service import redis_service
 from api.v1.api import api_router
 
@@ -33,6 +33,7 @@ def create_app() -> FastAPI:
     )
     
     # Add middleware
+    app.middleware("http")(bot_filter_middleware)
     app.middleware("http")(add_no_cache_headers)
     
     # Add CORS middleware
@@ -51,19 +52,32 @@ def create_app() -> FastAPI:
     @app.get("/health")
     async def health_check():
         """Health check endpoint for monitoring."""
+        health_status = {"service": "calndr-backend", "version": settings.VERSION}
+        
         try:
             # Test database connection
             await database.fetch_one("SELECT 1 as test")
-            db_status = "connected"
+            health_status["database"] = "connected"
         except Exception as e:
-            db_status = f"error: {str(e)}"
+            health_status["database"] = f"error: {str(e)}"
         
-        return {
-            "status": "healthy" if db_status == "connected" else "unhealthy",
-            "service": "calndr-backend", 
-            "version": settings.VERSION,
-            "database": db_status
-        }
+        # Test Redis connection
+        try:
+            await redis_service.redis_pool.ping()
+            health_status["redis"] = "connected"
+        except Exception as e:
+            health_status["redis"] = f"error: {str(e)}"
+        
+        # Determine overall status
+        overall_status = "healthy"
+        if "error" in health_status.get("database", "") or "error" in health_status.get("redis", ""):
+            overall_status = "degraded"
+        if "error" in health_status.get("database", ""):
+            overall_status = "unhealthy"
+            
+        health_status["status"] = overall_status
+        
+        return health_status
     
     # Add database connection info endpoint for debugging
     @app.get("/db-info")
