@@ -37,12 +37,13 @@ struct DayCellView: View {
                 isToday: isToday
             )
             
-            // Day Number on top
+            // Day Number on top with brutalist styling
             Text(dayString(from: date))
-                .font(.caption)
-                .bold()
-                .padding(2)
-                .foregroundColor(isCurrentMonth ? themeManager.currentTheme.textColorSwiftUI : themeManager.currentTheme.textColorSwiftUI.opacity(0.5))
+                .font(.system(size: 14, weight: .black, design: .default))
+                .foregroundColor(isToday ? themeManager.currentTheme.accentColorSwiftUI : 
+                              (isCurrentMonth ? themeManager.currentTheme.textColorSwiftUI : themeManager.currentTheme.textColorSwiftUI.opacity(0.4)))
+                .padding(4)
+                .background(isToday ? themeManager.currentTheme.textColorSwiftUI.opacity(0.1) : Color.clear)
         }
         // Add a tap gesture to the custody area specifically
         .overlay(
@@ -75,12 +76,14 @@ struct DayCellView: View {
         )
         .frame(minWidth: 0, maxWidth: .infinity)
         .background(isCurrentMonth ? themeManager.currentTheme.mainBackgroundColorSwiftUI : themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
-        .cornerRadius(0)
         .overlay(
-            // Inset border that doesn't interfere with grid lines
-            RoundedRectangle(cornerRadius: 0)
-                .inset(by: 0.5) // Small inset to ensure consistent placement
-                .stroke(showToggleFeedback ? .green : (isToday ? themeManager.currentTheme.accentColorSwiftUI : Color.clear), lineWidth: showToggleFeedback ? 3 : 2)
+            // Sharp rectangular border with brutalist styling
+            Rectangle()
+                .stroke(
+                    showToggleFeedback ? Color.green : 
+                    (isToday ? themeManager.currentTheme.accentColorSwiftUI : themeManager.currentTheme.textColorSwiftUI.opacity(0.2)), 
+                    lineWidth: showToggleFeedback ? 4 : (isToday ? 3 : 1)
+                )
         )
         .scaleEffect(showToggleFeedback ? 1.05 : 1.0)
         .matchedGeometryEffect(id: date, in: namespace, isSource: focusedDate != date)
