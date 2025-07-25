@@ -83,7 +83,7 @@ After=network.target
 [Service]
 User=redis
 Group=redis
-ExecStart=/usr/local/bin/redis-server /etc/redis/redis.conf
+ExecStart=/usr/local/bin/redis-server /etc/redis/redis.conf --supervised systemd --daemonize no
 ExecStop=/usr/local/bin/redis-cli shutdown
 Restart=always
 
@@ -140,8 +140,16 @@ deactivate
 # 7. Configure and start Redis (only if Redis was installed)
 if [ "$REDIS_INSTALLED" = true ]; then
 echo "--- Configuring Redis for local caching ---"
-# Create Redis configuration for security and performance
-sudo bash -c "cat > /etc/redis.conf" << REDIS_EOF
+# Create Redis configuration directory and file
+sudo mkdir -p /etc/redis
+
+# Backup any existing config
+if [ -f "/etc/redis.conf" ]; then
+    echo "Backing up existing Redis config..."
+    sudo cp /etc/redis.conf /etc/redis/redis.conf.backup
+fi
+
+sudo bash -c "cat > /etc/redis/redis.conf" << REDIS_EOF
 # Basic Redis configuration for calndr app caching
 bind 127.0.0.1
 port 6379
@@ -176,6 +184,23 @@ REDIS_EOF
 sudo mkdir -p /var/lib/redis /var/log/redis
 sudo chown redis:redis /var/lib/redis /var/log/redis
 sudo chmod 755 /var/lib/redis /var/log/redis
+
+# Update Redis systemd service to use our config file
+echo "--- Updating Redis systemd service configuration ---"
+if [ -f "/etc/systemd/system/redis.service" ]; then
+    # If we created our own service file (from source install), it should already be correct
+    echo "Using custom Redis service file"
+else
+    # For package-installed Redis, update the service to use our config
+    sudo mkdir -p /etc/systemd/system/redis.service.d
+    sudo bash -c "cat > /etc/systemd/system/redis.service.d/override.conf" << SERVICE_OVERRIDE_EOF
+[Service]
+ExecStart=
+ExecStart=/usr/bin/redis-server /etc/redis/redis.conf --supervised systemd --daemonize no
+SERVICE_OVERRIDE_EOF
+fi
+
+sudo systemctl daemon-reload
 
 # Start and enable Redis service
 echo "--- Starting Redis service ---"
