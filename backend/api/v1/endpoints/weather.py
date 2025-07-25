@@ -25,7 +25,7 @@ async def get_weather(
     
     # --- Caching ---
     cache_key = get_cache_key(latitude, longitude, start_date, end_date, f"forecast-{temperature_unit}")
-    cached_data = get_cached_weather(cache_key)
+    cached_data = await get_cached_weather(cache_key)
     if cached_data:
         logger.info("Returning cached forecast weather data.")
         return cached_data
@@ -49,7 +49,7 @@ async def get_weather(
             weather_data = response.json()
             
             # Cache the new data
-            cache_weather_data(cache_key, weather_data)
+            await cache_weather_data(cache_key, weather_data, "forecast")
             
             return weather_data
     except httpx.HTTPStatusError as e:
@@ -78,7 +78,7 @@ async def get_historic_weather(
 
     # --- Caching ---
     cache_key = get_cache_key(latitude, longitude, start_date, end_date, f"historic-{temperature_unit}")
-    cached_data = get_cached_weather(cache_key)
+    cached_data = await get_cached_weather(cache_key)
     if cached_data:
         logger.info("Returning cached historic weather data.")
         return cached_data
@@ -102,7 +102,7 @@ async def get_historic_weather(
             weather_data = response.json()
 
             # Cache the new data
-            cache_weather_data(cache_key, weather_data)
+            await cache_weather_data(cache_key, weather_data, "historic")
 
             return weather_data
     except httpx.HTTPStatusError as e:

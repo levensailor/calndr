@@ -9,8 +9,10 @@ from sqlalchemy import text
 from core.database import database
 from core.security import get_current_user
 from core.logging import logger
+from core.config import settings
 from db.models import events
 from schemas.event import LegacyEvent
+from services.redis_service import redis_service, events_cache_key
 
 router = APIRouter()
 
@@ -26,6 +28,13 @@ async def get_events_by_month(year: int, month: int, current_user = Depends(get_
         end_date = date(year + 1, 1, 1) - timedelta(days=1)
     else:
         end_date = date(year, month + 1, 1) - timedelta(days=1)
+    
+    # Check cache first
+    cache_key = events_cache_key(current_user['family_id'], str(start_date), str(end_date))
+    cached_events = await redis_service.get(cache_key)
+    if cached_events:
+        logger.info(f"Returning cached events for {year}/{month}")
+        return cached_events
     
     try:
         # Try to use the family_all_events view first
@@ -119,6 +128,10 @@ async def get_events_by_month(year: int, month: int, current_user = Depends(get_
     except Exception as e:
         logger.error(f"Error processing event records for /api/events/{{year}}/{{month}}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error processing event data")
+    
+    # Cache the results
+    await redis_service.set(cache_key, frontend_events, settings.CACHE_TTL_EVENTS)
+    logger.info(f"Cached events for {year}/{month} (family {current_user['family_id']})")
         
     logger.info(f"Payload for /api/events/{{year}}/{{month}}: {json.dumps(frontend_events, indent=2)}")
     return frontend_events
@@ -143,6 +156,13 @@ async def get_events_by_date_range(
         end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    
+    # Check cache first
+    cache_key = events_cache_key(current_user['family_id'], start_date, end_date)
+    cached_events = await redis_service.get(cache_key)
+    if cached_events:
+        logger.info(f"Returning cached events for date range {start_date} to {end_date}")
+        return cached_events
     
     try:
         # Try to use the family_all_events view first
@@ -236,6 +256,10 @@ async def get_events_by_date_range(
     except Exception as e:
         logger.error(f"Error processing event records for /api/events: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error processing event data")
+    
+    # Cache the results
+    await redis_service.set(cache_key, frontend_events, settings.CACHE_TTL_EVENTS)
+    logger.info(f"Cached events for date range {start_date} to {end_date} (family {current_user['family_id']})")
         
     return frontend_events
 
@@ -282,6 +306,10 @@ async def save_event(request: dict, current_user = Depends(get_current_user)):
             logger.info(f"Successfully executed insert, got event_id: {event_id}")
             
             logger.info(f"Successfully created event with ID {event_id}: content={legacy_event.content}")
+            
+            # Invalidate cache for this family
+            await redis_service.clear_family_cache(current_user['family_id'])
+            logger.info(f"Invalidated events cache for family {current_user['family_id']} after creating event")
             
             return {
                 'id': event_id,  # Return the actual database-generated ID
@@ -340,6 +368,10 @@ async def update_event(event_id: int, request: dict, current_user = Depends(get_
             
             logger.info(f"Successfully updated event {event_id}: content={legacy_event.content}")
             
+            # Invalidate cache for this family
+            await redis_service.clear_family_cache(current_user['family_id'])
+            logger.info(f"Invalidated events cache for family {current_user['family_id']} after updating event")
+            
             return {
                 'id': event_id,
                 'event_date': legacy_event.event_date,
@@ -378,6 +410,11 @@ async def delete_event(event_id: int, current_user = Depends(get_current_user)):
         await database.execute(delete_query)
         
         logger.info(f"Successfully deleted event {event_id}")
+        
+        # Invalidate cache for this family
+        await redis_service.clear_family_cache(current_user['family_id'])
+        logger.info(f"Invalidated events cache for family {current_user['family_id']} after deleting event")
+        
         return {"status": "success", "message": "Event deleted successfully"}
     
     except HTTPException:

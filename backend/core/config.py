@@ -79,6 +79,21 @@ class Settings(BaseSettings):
     # FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID", "your_facebook_app_id")
     # FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET", "your_facebook_app_secret")
     
+    # Redis Cache Configuration
+    REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
+    REDIS_PASSWORD: Optional[str] = os.getenv("REDIS_PASSWORD")
+    REDIS_DB: int = int(os.getenv("REDIS_DB", "0"))
+    REDIS_MAX_CONNECTIONS: int = int(os.getenv("REDIS_MAX_CONNECTIONS", "10"))
+    REDIS_SOCKET_TIMEOUT: int = int(os.getenv("REDIS_SOCKET_TIMEOUT", "5"))
+    
+    # Cache TTL settings (in seconds)
+    CACHE_TTL_WEATHER_FORECAST: int = int(os.getenv("CACHE_TTL_WEATHER_FORECAST", "3600"))  # 1 hour
+    CACHE_TTL_WEATHER_HISTORIC: int = int(os.getenv("CACHE_TTL_WEATHER_HISTORIC", "259200"))  # 3 days
+    CACHE_TTL_EVENTS: int = int(os.getenv("CACHE_TTL_EVENTS", "900"))  # 15 minutes
+    CACHE_TTL_USER_PROFILE: int = int(os.getenv("CACHE_TTL_USER_PROFILE", "1800"))  # 30 minutes
+    CACHE_TTL_FAMILY_DATA: int = int(os.getenv("CACHE_TTL_FAMILY_DATA", "1800"))  # 30 minutes
+    
     class Config:
         case_sensitive = True
         env_file = ".env"

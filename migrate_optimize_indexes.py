@@ -15,12 +15,14 @@ from datetime import datetime
 import time
 
 # Add the backend directory to sys.path
-sys.path.append('backend')
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
 
 try:
     from core.config import Settings
 except ImportError:
     print("❌ Error: Could not import Settings. Make sure you're running from the project root.")
+    print("Current working directory:", os.getcwd())
+    print("Python path:", sys.path)
     sys.exit(1)
 
 async def check_index_exists(conn, index_name):

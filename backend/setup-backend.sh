@@ -13,7 +13,7 @@ echo "--- Starting setup for refactored backend on the server ---"
 # 1. Install dependencies
 echo "--- Installing system packages ---"
 sudo yum update -y
-sudo yum install -y python3-pip python3-devel nginx certbot python3-certbot-nginx cronie
+sudo yum install -y python3-pip python3-devel nginx certbot python3-certbot-nginx cronie redis
 
 # 2. Create app directory and set permissions
 echo "--- Creating application directory and setting permissions ---"
@@ -53,7 +53,60 @@ else
 fi
 deactivate
 
-# 7. Create a simple health check endpoint if it doesn't exist
+# 7. Configure and start Redis
+echo "--- Configuring Redis for local caching ---"
+# Create Redis configuration for security and performance
+sudo bash -c "cat > /etc/redis.conf" << REDIS_EOF
+# Basic Redis configuration for calndr app caching
+bind 127.0.0.1
+port 6379
+timeout 300
+tcp-keepalive 60
+
+# Security settings
+protected-mode yes
+# requirepass your_redis_password_here  # Uncomment and set password for production
+
+# Memory management
+maxmemory 128mb
+maxmemory-policy allkeys-lru
+
+# Persistence - disabled for cache-only usage
+save ""
+appendonly no
+
+# Logging
+loglevel notice
+logfile /var/log/redis/redis.log
+
+# Working directory
+dir /var/lib/redis
+
+# Performance tuning
+tcp-backlog 511
+databases 1
+REDIS_EOF
+
+# Create Redis directories and set permissions
+sudo mkdir -p /var/lib/redis /var/log/redis
+sudo chown redis:redis /var/lib/redis /var/log/redis
+sudo chmod 755 /var/lib/redis /var/log/redis
+
+# Start and enable Redis service
+echo "--- Starting Redis service ---"
+sudo systemctl start redis
+sudo systemctl enable redis
+
+# Test Redis connection
+echo "--- Testing Redis connection ---"
+if redis-cli ping | grep -q "PONG"; then
+    echo "✓ Redis is running and responding"
+else
+    echo "✗ Redis connection failed"
+    sudo systemctl status redis --no-pager
+fi
+
+# 8. Create a simple health check endpoint if it doesn't exist
 echo "--- Ensuring health check endpoint exists ---"
 if ! grep -q "health" main.py; then
     echo "Adding health endpoint to main.py..."
@@ -156,6 +209,15 @@ server {
     }
 
     location /db-info {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$server_name;
+    }
+
+    location /cache-status {
         proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -413,6 +475,7 @@ fi
 echo ""
 echo "📊 API Endpoints:"
 echo "  - Health check: https://calndr.club/health"
+echo "  - Cache status: https://calndr.club/cache-status"
 echo "  - API documentation: https://calndr.club/docs"
 echo "  - ReDoc: https://calndr.club/redoc"
 echo ""
@@ -425,6 +488,9 @@ echo ""
 echo "🔧 Useful commands:"
 echo "  - View app logs: sudo tail -f $LOG_DIR/backend.log"
 echo "  - View system logs: sudo journalctl -u cal-app -f"
+echo "  - Check Redis status: sudo systemctl status redis"
+echo "  - Monitor Redis: redis-cli monitor"
+echo "  - Redis memory usage: redis-cli info memory"
 echo "  - Check SSL status: sudo certbot certificates"
 echo "  - Test SSL renewal: sudo certbot renew --dry-run"
 echo "  - Check renewal timer: sudo systemctl status ssl-renewal.timer" 
