@@ -2341,4 +2341,188 @@ class CalendarViewModel: ObservableObject {
             }
         }
     }
+
+    // MARK: - Data Preloading for Infinite Scroll
+    
+    @MainActor
+    func preloadDataForDate(_ date: Date) async {
+        let dateString = isoDateString(from: date)
+        
+        // Check if data is already loaded for this date
+        if hasDataForDate(date) {
+            return
+        }
+        
+        // Preload events for the date
+        await withCheckedContinuation { continuation in
+            APIService.shared.fetchEvents(from: dateString, to: dateString) { [weak self] result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let events):
+                        // Merge with existing events, avoiding duplicates
+                        self?.mergeEvents(events)
+                    case .failure(let error):
+                        print("Failed to preload events for \(dateString): \(error)")
+                    }
+                    continuation.resume()
+                }
+            }
+        }
+        
+        // Preload custody data if needed
+        let calendar = Calendar.current
+        let year = calendar.component(.year, from: date)
+        let month = calendar.component(.month, from: date)
+        
+        if !hasCustodyDataForMonth(year: year, month: month) {
+            await preloadCustodyForMonth(year: year, month: month)
+        }
+        
+        // Preload weather data if enabled
+        if showWeather {
+            await preloadWeatherForDate(date)
+        }
+    }
+    
+    @MainActor 
+    func preloadDataForDateRange(_ startDate: Date, to endDate: Date) async {
+        let calendar = Calendar.current
+        let startDateString = isoDateString(from: startDate)
+        let endDateString = isoDateString(from: endDate)
+        
+        // Preload events for the range
+        await withCheckedContinuation { continuation in
+            APIService.shared.fetchEvents(from: startDateString, to: endDateString) { [weak self] result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let events):
+                        self?.mergeEvents(events)
+                    case .failure(let error):
+                        print("Failed to preload events for range \(startDateString) to \(endDateString): \(error)")
+                    }
+                    continuation.resume()
+                }
+            }
+        }
+        
+        // Preload custody data for all months in range
+        var dateToCheck = startDate
+        let monthsToPreload = Set<String>() // Track unique year-month combinations
+        
+        while dateToCheck <= endDate {
+            let year = calendar.component(.year, from: dateToCheck)
+            let month = calendar.component(.month, from: dateToCheck)
+            let monthKey = "\(year)-\(month)"
+            
+            if !monthsToPreload.contains(monthKey) && !hasCustodyDataForMonth(year: year, month: month) {
+                await preloadCustodyForMonth(year: year, month: month)
+            }
+            
+            // Move to next month
+            dateToCheck = calendar.date(byAdding: .month, value: 1, to: dateToCheck) ?? endDate
+        }
+        
+        // Preload weather data if enabled
+        if showWeather {
+            await preloadWeatherForDateRange(startDate, to: endDate)
+        }
+    }
+    
+    private func hasDataForDate(_ date: Date) -> Bool {
+        let dateString = isoDateString(from: date)
+        
+        // Check if we have events for this date
+        let hasEvents = events.contains { event in
+            event.event_date == dateString
+        }
+        
+        // Check if we have custody data for this date
+        let hasCustody = custodyRecords.contains { record in
+            record.event_date == dateString
+        }
+        
+        return hasEvents || hasCustody
+    }
+    
+    private func hasCustodyDataForMonth(year: Int, month: Int) -> Bool {
+        let monthString = String(format: "%04d-%02d", year, month)
+        return custodyRecords.contains { record in
+            record.event_date.hasPrefix(monthString)
+        }
+    }
+    
+    private func mergeEvents(_ newEvents: [Event]) {
+        let existingEventIds = Set(events.map { $0.id })
+        let uniqueNewEvents = newEvents.filter { !existingEventIds.contains($0.id) }
+        events.append(contentsOf: uniqueNewEvents)
+    }
+    
+    @MainActor
+    private func preloadCustodyForMonth(year: Int, month: Int) async {
+        await withCheckedContinuation { continuation in
+            APIService.shared.fetchCustodyRecords(year: year, month: month) { [weak self] result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let custodyRecords):
+                        // Merge custody records, avoiding duplicates
+                        let existingRecordIds = Set(self?.custodyRecords.map { $0.id } ?? [])
+                        let uniqueNewRecords = custodyRecords.filter { !existingRecordIds.contains($0.id) }
+                        self?.custodyRecords.append(contentsOf: uniqueNewRecords)
+                    case .failure(let error):
+                        print("Failed to preload custody for \(year)-\(month): \(error)")
+                    }
+                    continuation.resume()
+                }
+            }
+        }
+    }
+    
+    @MainActor
+    private func preloadWeatherForDate(_ date: Date) async {
+        let dateString = isoDateString(from: date)
+        
+        // Check if weather data already exists
+        if weatherData[dateString] != nil {
+            return
+        }
+        
+        await withCheckedContinuation { continuation in
+            APIService.shared.fetchWeather(from: dateString, to: dateString) { [weak self] result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let weatherResponse):
+                        // Update weather data
+                        for weather in weatherResponse {
+                            self?.weatherData[weather.date] = weather
+                        }
+                    case .failure(let error):
+                        print("Failed to preload weather for \(dateString): \(error)")
+                    }
+                    continuation.resume()
+                }
+            }
+        }
+    }
+    
+    @MainActor
+    private func preloadWeatherForDateRange(_ startDate: Date, to endDate: Date) async {
+        let startDateString = isoDateString(from: startDate)
+        let endDateString = isoDateString(from: endDate)
+        
+        await withCheckedContinuation { continuation in
+            APIService.shared.fetchWeather(from: startDateString, to: endDateString) { [weak self] result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let weatherResponse):
+                        for weather in weatherResponse {
+                            self?.weatherData[weather.date] = weather
+                        }
+                    case .failure(let error):
+                        print("Failed to preload weather for range \(startDateString) to \(endDateString): \(error)")
+                    }
+                    continuation.resume()
+                }
+            }
+        }
+    }
 } 

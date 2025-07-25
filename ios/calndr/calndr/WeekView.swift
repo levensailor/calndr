@@ -8,9 +8,43 @@ struct WeekView: View {
     @State private var selectedDate: Date = Date()
     
     var body: some View {
+        CalendarInfiniteScrollView(
+            viewModel: viewModel,
+            viewType: .week
+        ) { weekStartDate in
+            WeekContentView(
+                viewModel: viewModel,
+                weekStartDate: weekStartDate,
+                showingReminderModal: $showingReminderModal,
+                showingHandoffModal: $showingHandoffModal,
+                selectedDate: $selectedDate
+            )
+            .environmentObject(themeManager)
+        }
+        .sheet(isPresented: $showingReminderModal) {
+            ReminderModal(date: selectedDate)
+                .environmentObject(viewModel)
+                .environmentObject(themeManager)
+        }
+        .sheet(isPresented: $showingHandoffModal) {
+            HandoffTimeModal(date: selectedDate, viewModel: viewModel, isPresented: $showingHandoffModal)
+                .environmentObject(themeManager)
+        }
+    }
+}
+
+struct WeekContentView: View {
+    @ObservedObject var viewModel: CalendarViewModel
+    @EnvironmentObject var themeManager: ThemeManager
+    let weekStartDate: Date
+    @Binding var showingReminderModal: Bool
+    @Binding var showingHandoffModal: Bool
+    @Binding var selectedDate: Date
+    
+    var body: some View {
         ZStack {
             VStack {
-                ForEach(getDaysForCurrentWeek(), id: \.self) { day in
+                ForEach(getDaysForWeek(startingFrom: weekStartDate), id: \.self) { day in
                     ZStack {
                         // Weather effects background
                         if viewModel.showWeather, let weatherInfo = viewModel.weatherInfoForDate(day) {
@@ -109,26 +143,14 @@ struct WeekView: View {
             }
             .padding(.horizontal)
         }
-        .sheet(isPresented: $showingReminderModal) {
-            ReminderModal(date: selectedDate)
-                .environmentObject(viewModel)
-                .environmentObject(themeManager)
-        }
-        .sheet(isPresented: $showingHandoffModal) {
-            HandoffTimeModal(date: selectedDate, viewModel: viewModel, isPresented: $showingHandoffModal)
-                .environmentObject(themeManager)
-        }
     }
     
-    private func getDaysForCurrentWeek() -> [Date] {
+    private func getDaysForWeek(startingFrom startDate: Date) -> [Date] {
         let calendar = Calendar.current
-        guard let weekInterval = calendar.dateInterval(of: .weekOfYear, for: viewModel.currentDate) else {
-            return []
-        }
-        
         var days: [Date] = []
+        
         for i in 0..<7 {
-            if let date = calendar.date(byAdding: .day, value: i, to: weekInterval.start) {
+            if let date = calendar.date(byAdding: .day, value: i, to: startDate) {
                 days.append(date)
             }
         }
@@ -144,7 +166,7 @@ struct WeekView: View {
         dateFormatter.dateFormat = "yyyy-MM-dd"
         
         var handoffDays: Set<Date> = []
-        let weekDaysSet = Set(getDaysForCurrentWeek())
+        let weekDaysSet = Set(getDaysForWeek(startingFrom: weekStartDate))
         
         for custodyRecord in viewModel.custodyRecords {
             if custodyRecord.handoff_day == true {
@@ -158,7 +180,7 @@ struct WeekView: View {
         
         var previousOwner: String?
         
-        for date in getDaysForCurrentWeek() {
+        for date in getDaysForWeek(startingFrom: weekStartDate) {
             let currentOwner = viewModel.getCustodyInfo(for: date).owner
             
             if let prev = previousOwner, prev != currentOwner {

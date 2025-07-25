@@ -21,151 +21,118 @@ struct CalendarGridView: View {
             .padding(.vertical, 4)
             .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
             
-            // Calendar grid with fixed height - cells adapt to fill space
-            let numberOfWeeks = calculateNumberOfWeeks()
-            let fixedCalendarHeight: CGFloat = 510 // Fixed height for consistent layout
-            let rowHeight = fixedCalendarHeight / CGFloat(numberOfWeeks)
-            
-            ZStack {
-                let columns = Array(repeating: GridItem(.flexible(), spacing: 1), count: 7)
-                LazyVGrid(columns: columns, spacing: 1) {
-                    ForEach(getDaysForCurrentMonth(), id: \.self) { date in
-                        DayCellView(
-                            viewModel: viewModel,
-                            focusedDate: $focusedDate,
-                            namespace: namespace,
-                            date: date,
-                            events: viewModel.eventsForDate(date),
-                            schoolEvent: viewModel.schoolEventForDate(date),
-                            daycareEvent: viewModel.daycareEventForDate(date),
-                            weatherInfo: viewModel.weatherInfoForDate(date),
-                            isCurrentMonth: isDateInCurrentMonth(date),
-                            isToday: isToday(date),
-                            custodyOwner: viewModel.getCustodyInfo(for: date).text,
-                            custodyID: viewModel.getCustodyInfo(for: date).owner
-                        )
-                        .frame(height: rowHeight) // Adaptive height based on number of weeks
-                        .opacity(viewModel.showHandoffTimeline ? 0.90 : 1.0) // Very slight dim when handoff timeline is active
-                    }
-                }
-                .background(themeManager.currentTheme.accentColorSwiftUI)
-                .allowsHitTesting(!viewModel.showHandoffTimeline) // Disable all interactions when handoff timeline is active
-                .animateThemeChanges(themeManager)
-                
-                // Handoff Timeline Overlay
-                if viewModel.showHandoffTimeline {
-                    if viewModel.isHandoffDataReady {
-                        HandoffTimelineView(viewModel: viewModel, calendarDays: getDaysForCurrentMonth())
-                            .environmentObject(themeManager)
-                            .allowsHitTesting(true) // Allow interactions with handoff bubbles
-                            .zIndex(1000) // Ensure handoff timeline is above everything else
-                    } else {
-                        // Loading state overlay
-                        ZStack {
-                            Rectangle()
-                                .fill(.ultraThinMaterial.opacity(0.2))
-                                .allowsHitTesting(false)
-                            
-                            VStack(spacing: 16) {
-                                if viewModel.isDataLoading {
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: Color.purple))
-                                        .scaleEffect(1.5)
-                                    
-                                    Text("Loading handoff data...")
-                                        .font(.headline)
-                                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
-                                } else {
-                                    // Data failed to load
-                                    VStack(spacing: 12) {
-                                        Image(systemName: "exclamationmark.triangle")
-                                            .font(.title)
-                                            .foregroundColor(.orange)
-                                        
-                                        Text("Failed to load handoff data")
-                                            .font(.headline)
-                                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
-                                        
-                                        Button("Retry") {
-                                            viewModel.fetchHandoffsAndCustody()
-                                        }
-                                        .padding(.horizontal, 20)
-                                        .padding(.vertical, 8)
-                                        .background(Color.purple)
-                                        .foregroundColor(.white)
-                                        .cornerRadius(8)
-                                    }
-                                }
-                            }
-                            .padding()
-                            .background(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
-                                    .shadow(radius: 8)
-                            )
-                        }
-                        .zIndex(1000)
-                    }
+            // Infinite scrolling calendar grid
+            MonthInfiniteScrollView(viewModel: viewModel) { monthStartDate in
+                CalendarMonthContentView(
+                    viewModel: viewModel,
+                    monthStartDate: monthStartDate,
+                    focusedDate: $focusedDate,
+                    namespace: namespace
+                )
+                .environmentObject(themeManager)
+            }
+        }
+    }
+}
+
+struct CalendarMonthContentView: View {
+    @ObservedObject var viewModel: CalendarViewModel
+    @EnvironmentObject var themeManager: ThemeManager
+    let monthStartDate: Date
+    @Binding var focusedDate: Date?
+    var namespace: Namespace.ID
+    
+    var body: some View {
+        let numberOfWeeks = calculateNumberOfWeeks()
+        let fixedCalendarHeight: CGFloat = 510 // Fixed height for consistent layout
+        let rowHeight = fixedCalendarHeight / CGFloat(numberOfWeeks)
+        
+        ZStack {
+            let columns = Array(repeating: GridItem(.flexible(), spacing: 1), count: 7)
+            LazyVGrid(columns: columns, spacing: 1) {
+                ForEach(getDaysForMonth(monthStartDate), id: \.self) { date in
+                    DayCellView(
+                        viewModel: viewModel,
+                        focusedDate: $focusedDate,
+                        namespace: namespace,
+                        date: date,
+                        events: viewModel.eventsForDate(date),
+                        schoolEvent: viewModel.schoolEventForDate(date),
+                        daycareEvent: viewModel.daycareEventForDate(date),
+                        weatherInfo: viewModel.weatherInfoForDate(date),
+                        isCurrentMonth: isDateInMonth(date, monthStartDate),
+                        isToday: isToday(date),
+                        custodyOwner: viewModel.getCustodyInfo(for: date).text,
+                        custodyID: viewModel.getCustodyInfo(for: date).owner
+                    )
+                    .frame(height: rowHeight) // Adaptive height based on number of weeks
+                    .opacity(viewModel.showHandoffTimeline ? 0.90 : 1.0) // Very slight dim when handoff timeline is active
                 }
             }
-            .frame(height: fixedCalendarHeight) // Fixed calendar height
+            .frame(height: fixedCalendarHeight)
+            .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
+            
+            // Handoff timeline overlay
+            if viewModel.showHandoffTimeline {
+                HandoffTimelineView(viewModel: viewModel, calendarDays: getDaysForMonth(monthStartDate))
+                    .environmentObject(themeManager)
+            }
         }
     }
     
-    private func getDaysForCurrentMonth() -> [Date] {
+    private func getDaysForMonth(_ monthStart: Date) -> [Date] {
         let calendar = Calendar.current
-        guard let monthInterval = calendar.dateInterval(of: .month, for: viewModel.currentDate) else {
+        guard let monthInterval = calendar.dateInterval(of: .month, for: monthStart) else {
             return []
         }
-
+        
         let firstDayOfMonth = monthInterval.start
-        let lastDayOfMonth = monthInterval.end
+        let firstWeekday = calendar.component(.weekday, from: firstDayOfMonth)
+        let startDate = calendar.date(byAdding: .day, value: -(firstWeekday - 1), to: firstDayOfMonth) ?? firstDayOfMonth
         
-        guard let firstDayOfWeek = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: firstDayOfMonth)),
-              let lastDayOfMonthWithTime = calendar.date(byAdding: .day, value: -1, to: lastDayOfMonth),
-              let lastDayOfWeek = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: lastDayOfMonthWithTime)) else {
-            return []
+        var dates: [Date] = []
+        let numberOfWeeks = calculateNumberOfWeeksForMonth(monthStart)
+        
+        for week in 0..<numberOfWeeks {
+            for day in 0..<7 {
+                let offset = week * 7 + day
+                if let date = calendar.date(byAdding: .day, value: offset, to: startDate) {
+                    dates.append(date)
+                }
+            }
         }
         
-        let startDate = firstDayOfWeek
-        let endDate = calendar.date(byAdding: .day, value: 6, to: lastDayOfWeek)!
-
-        var days: [Date] = []
-        var currentDate = startDate
-        while currentDate <= endDate {
-            days.append(currentDate)
-            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
-        }
-        return days
-    }
-    
-    private func dayString(from date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "d"
-        return formatter.string(from: date)
-    }
-
-    private func isToday(_ date: Date) -> Bool {
-        return Calendar.current.isDateInToday(date)
-    }
-
-    private func isDateInCurrentMonth(_ date: Date) -> Bool {
-        return Calendar.current.isDate(date, equalTo: viewModel.currentDate, toGranularity: .month)
+        return dates
     }
     
     private func calculateNumberOfWeeks() -> Int {
-        let days = getDaysForCurrentMonth()
-        return days.count / 7 // Each week has 7 days
+        return calculateNumberOfWeeksForMonth(monthStartDate)
     }
     
-    private func cellBackgroundColor(for date: Date) -> Color {
-        return isDateInCurrentMonth(date) ? Color.gray.opacity(0.1) : Color.clear
+    private func calculateNumberOfWeeksForMonth(_ monthStart: Date) -> Int {
+        let calendar = Calendar.current
+        guard let monthInterval = calendar.dateInterval(of: .month, for: monthStart) else {
+            return 6 // Default fallback
+        }
+        
+        let firstDayOfMonth = monthInterval.start
+        let lastDayOfMonth = calendar.date(byAdding: .day, value: -1, to: monthInterval.end) ?? monthInterval.start
+        
+        let firstWeekday = calendar.component(.weekday, from: firstDayOfMonth) // 1 = Sunday
+        let daysInMonth = calendar.component(.day, from: lastDayOfMonth)
+        
+        let totalCells = (firstWeekday - 1) + daysInMonth
+        return Int(ceil(Double(totalCells) / 7.0))
     }
     
-    private func cellForegroundColor(for date: Date) -> Color {
-        return isDateInCurrentMonth(date) ? .primary : .secondary
+    private func isDateInMonth(_ date: Date, _ monthStart: Date) -> Bool {
+        let calendar = Calendar.current
+        return calendar.isDate(date, equalTo: monthStart, toGranularity: .month)
     }
     
+    private func isToday(_ date: Date) -> Bool {
+        Calendar.current.isDateInToday(date)
+    }
 }
 
 struct CalendarGridView_Previews: PreviewProvider {

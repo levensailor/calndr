@@ -5,11 +5,46 @@ struct DayView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @State private var showingReminderModal = false
     @State private var showingHandoffModal = false
+    @State private var selectedDate: Date = Date()
+    
+    var body: some View {
+        CalendarInfiniteScrollView(
+            viewModel: viewModel,
+            viewType: .day
+        ) { currentDate in
+            DayContentView(
+                viewModel: viewModel,
+                currentDate: currentDate,
+                showingReminderModal: $showingReminderModal,
+                showingHandoffModal: $showingHandoffModal,
+                selectedDate: $selectedDate
+            )
+            .environmentObject(themeManager)
+        }
+        .sheet(isPresented: $showingReminderModal) {
+            ReminderModal(date: selectedDate)
+                .environmentObject(viewModel)
+                .environmentObject(themeManager)
+        }
+        .sheet(isPresented: $showingHandoffModal) {
+            HandoffTimeModal(date: selectedDate, viewModel: viewModel, isPresented: $showingHandoffModal)
+                .environmentObject(themeManager)
+        }
+    }
+}
+
+struct DayContentView: View {
+    @ObservedObject var viewModel: CalendarViewModel
+    @EnvironmentObject var themeManager: ThemeManager
+    let currentDate: Date
+    @Binding var showingReminderModal: Bool
+    @Binding var showingHandoffModal: Bool
+    @Binding var selectedDate: Date
     
     var body: some View {
         ZStack {
             // Weather effects background
-            if viewModel.showWeather, let weatherInfo = viewModel.weatherInfoForDate(viewModel.currentDate) {
+            if viewModel.showWeather, let weatherInfo = viewModel.weatherInfoForDate(currentDate) {
                 WeatherFXView(weatherInfo: weatherInfo, scale: 10.0, opacityMultiplier: 2.0)
                     .ignoresSafeArea()
             }
@@ -17,13 +52,13 @@ struct DayView: View {
             VStack(alignment: .leading, spacing: 20) {
                 // Header with temperature
                 VStack(spacing: 8) {
-//                    Text(viewModel.currentDate.formatted(.dateTime.weekday(.wide)))
+//                    Text(currentDate.formatted(.dateTime.weekday(.wide)))
 //                        .font(.largeTitle.bold())
 //                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
 //                        .frame(maxWidth: .infinity, alignment: .center)
                     
                     // Temperature display
-                    if viewModel.showWeather, let weatherInfo = viewModel.weatherInfoForDate(viewModel.currentDate) {
+                    if viewModel.showWeather, let weatherInfo = viewModel.weatherInfoForDate(currentDate) {
                         Text("\(Int(weatherInfo.temperature.rounded()))°F")
                             .font(.title2)
                             .fontWeight(.semibold)
@@ -43,13 +78,13 @@ struct DayView: View {
                     .font(.headline)
                     .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                 
-                let custodyInfo = getCustodyInfoWithDebug(for: viewModel.currentDate)
+                let custodyInfo = getCustodyInfoWithDebug(for: currentDate)
                 let ownerName = custodyInfo.text
                 let ownerId = custodyInfo.owner
                 
                 if !ownerName.isEmpty {
                     Button(action: {
-                        viewModel.toggleCustodian(for: viewModel.currentDate)
+                        viewModel.toggleCustodian(for: currentDate)
                     }) {
                         Text(ownerName.capitalized)
                             .font(.title2.bold())
@@ -59,8 +94,8 @@ struct DayView: View {
                             .background(ownerId == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColorSwiftUI : themeManager.currentTheme.parentTwoColorSwiftUI)
                             .cornerRadius(10)
                     }
-                    .disabled(isDateInPast(viewModel.currentDate) && !UserDefaults.standard.bool(forKey: "allowPastCustodyEditing"))
-                    .opacity((isDateInPast(viewModel.currentDate) && !UserDefaults.standard.bool(forKey: "allowPastCustodyEditing")) ? 0.5 : 1.0)
+                    .disabled(isDateInPast(currentDate) && !UserDefaults.standard.bool(forKey: "allowPastCustodyEditing"))
+                    .opacity((isDateInPast(currentDate) && !UserDefaults.standard.bool(forKey: "allowPastCustodyEditing")) ? 0.5 : 1.0)
                 }
             }
             
@@ -74,16 +109,17 @@ struct DayView: View {
                     Spacer()
                     
                     Button(action: {
+                        selectedDate = currentDate
                         showingReminderModal = true
                     }) {
-                        Image(systemName: viewModel.hasReminderForDate(viewModel.currentDate) ? "note.text" : "note.text.badge.plus")
+                        Image(systemName: viewModel.hasReminderForDate(currentDate) ? "note.text" : "note.text.badge.plus")
                             .font(.title2)
-                            .foregroundColor(viewModel.hasReminderForDate(viewModel.currentDate) ? .orange : .gray)
+                            .foregroundColor(viewModel.hasReminderForDate(currentDate) ? .orange : .gray)
                     }
                 }
                 
-                if viewModel.hasReminderForDate(viewModel.currentDate) {
-                    Text(viewModel.getReminderTextForDate(viewModel.currentDate))
+                if viewModel.hasReminderForDate(currentDate) {
+                    Text(viewModel.getReminderTextForDate(currentDate))
                         .font(.body)
                         .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                         .padding()
@@ -97,6 +133,7 @@ struct DayView: View {
                                 )
                         )
                         .onTapGesture {
+                            selectedDate = currentDate
                             showingReminderModal = true
                         }
                 } else {
@@ -117,16 +154,17 @@ struct DayView: View {
                     Spacer()
                     
                     Button(action: {
+                        selectedDate = currentDate
                         showingHandoffModal = true
                     }) {
                         Image(systemName: "arrow.triangle.2.circlepath")
                             .font(.title2)
-                            .foregroundColor(hasHandoffForDate(viewModel.currentDate) ? .purple : .gray)
+                            .foregroundColor(hasHandoffForDate(currentDate) ? .purple : .gray)
                     }
                 }
                 
-                if hasHandoffForDate(viewModel.currentDate) {
-                    Text(getHandoffTextForDate(viewModel.currentDate))
+                if hasHandoffForDate(currentDate) {
+                    Text(getHandoffTextForDate(currentDate))
                         .font(.body)
                         .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                         .padding()
@@ -140,6 +178,7 @@ struct DayView: View {
                                 )
                         )
                         .onTapGesture {
+                            selectedDate = currentDate
                             showingHandoffModal = true
                         }
                 } else {
@@ -156,13 +195,13 @@ struct DayView: View {
                     .font(.headline)
                     .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                 
-                let events = viewModel.eventsForDate(viewModel.currentDate).filter { 
+                let events = viewModel.eventsForDate(currentDate).filter { 
                     $0.position != 4 && // Exclude custody events
                     $0.source_type != "school" && // Exclude school events (non-editable)
                     $0.source_type != "daycare" // Exclude daycare events (non-editable)
                 }
-                let schoolEvent = viewModel.schoolEventForDate(viewModel.currentDate)
-                let daycareEvent = viewModel.daycareEventForDate(viewModel.currentDate)
+                let schoolEvent = viewModel.schoolEventForDate(currentDate)
+                let daycareEvent = viewModel.daycareEventForDate(currentDate)
                 let hasAnyEvents = !events.isEmpty || schoolEvent != nil || daycareEvent != nil
                 
                 if !hasAnyEvents {
@@ -226,15 +265,6 @@ struct DayView: View {
             .cornerRadius(12)
             .shadow(radius: 5)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .sheet(isPresented: $showingReminderModal) {
-            ReminderModal(date: viewModel.currentDate)
-                .environmentObject(viewModel)
-                .environmentObject(themeManager)
-        }
-        .sheet(isPresented: $showingHandoffModal) {
-            HandoffTimeModal(date: viewModel.currentDate, viewModel: viewModel, isPresented: $showingHandoffModal)
-                .environmentObject(themeManager)
         }
     }
     

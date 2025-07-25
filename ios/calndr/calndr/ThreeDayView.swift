@@ -8,6 +8,40 @@ struct ThreeDayView: View {
     @State private var selectedDate: Date = Date()
     
     var body: some View {
+        CalendarInfiniteScrollView(
+            viewModel: viewModel,
+            viewType: .threeDay
+        ) { threeDayStartDate in
+            ThreeDayContentView(
+                viewModel: viewModel,
+                threeDayStartDate: threeDayStartDate,
+                showingReminderModal: $showingReminderModal,
+                showingHandoffModal: $showingHandoffModal,
+                selectedDate: $selectedDate
+            )
+            .environmentObject(themeManager)
+        }
+        .sheet(isPresented: $showingReminderModal) {
+            ReminderModal(date: selectedDate)
+                .environmentObject(viewModel)
+                .environmentObject(themeManager)
+        }
+        .sheet(isPresented: $showingHandoffModal) {
+            HandoffTimeModal(date: selectedDate, viewModel: viewModel, isPresented: $showingHandoffModal)
+                .environmentObject(themeManager)
+        }
+    }
+}
+
+struct ThreeDayContentView: View {
+    @ObservedObject var viewModel: CalendarViewModel
+    @EnvironmentObject var themeManager: ThemeManager
+    let threeDayStartDate: Date
+    @Binding var showingReminderModal: Bool
+    @Binding var showingHandoffModal: Bool
+    @Binding var selectedDate: Date
+    
+    var body: some View {
         GeometryReader { geometry in
             VStack(spacing: 1) {
                 // Three day sections
@@ -196,27 +230,14 @@ struct ThreeDayView: View {
             }
         }
         .background(themeManager.currentTheme.mainBackgroundColor.color)
-        .onAppear {
-            viewModel.fetchEvents()
-        }
-        .sheet(isPresented: $showingReminderModal) {
-            ReminderModal(date: selectedDate)
-                .environmentObject(viewModel)
-                .environmentObject(themeManager)
-        }
-        .sheet(isPresented: $showingHandoffModal) {
-            HandoffTimeModal(date: selectedDate, viewModel: viewModel, isPresented: $showingHandoffModal)
-                .environmentObject(themeManager)
-        }
     }
     
     private func getThreeDays() -> [Date] {
         let calendar = Calendar.current
-        let startDate = calendar.date(byAdding: .day, value: -1, to: viewModel.currentDate) ?? viewModel.currentDate
         
         var days: [Date] = []
         for i in 0..<3 {
-            if let day = calendar.date(byAdding: .day, value: i, to: startDate) {
+            if let day = calendar.date(byAdding: .day, value: i, to: threeDayStartDate) {
                 days.append(day)
             }
         }
