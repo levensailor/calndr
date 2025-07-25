@@ -370,7 +370,7 @@ class CalendarViewModel: ObservableObject {
                             let monthKey = "\(year)-\(String(format: "%02d", month))"
                             let hasExistingData = allCustodyRecords.contains { record in
                                 record.event_date.hasPrefix(monthKey)
-                            } || self?.custodyRecords.contains { record in
+                            } || self.custodyRecords.contains { record in
                                 record.event_date.hasPrefix(monthKey)
                             } == true
                             

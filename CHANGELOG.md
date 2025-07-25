@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## [2025-07-25] - Fixed Custody Names Disappearing Issue
+
+### Fixed
+- **Custody Names Disappearing**: Fixed issue where custody names would disappear and show "no custody assigned" after cache expiry
+- **Cache Expiry Handling**: Increased custody cache TTL from 15 minutes to 2 hours since custody data changes infrequently  
+- **Empty Cache Response**: Added validation to prevent returning empty cache data when custody records should exist
+- **iOS Data Preservation**: Enhanced iOS app to preserve existing custody data when receiving empty API responses
+
+### Improvements
+- **Defensive Programming**: iOS app now merges new custody data with existing data instead of replacing entirely
+- **Better Cache Validation**: Backend validates cache responses and falls back to database when needed
+- **Improved Logging**: Added detailed logging for custody cache hits/misses for better troubleshooting
+- **Graceful Degradation**: App maintains custody display even during temporary cache or API issues
+
 ## [2025-07-25] - Fixed Redis Caching Issues and Bot Filtering
 
 ### Fixed
