@@ -62,61 +62,40 @@ struct DayContentView: View {
                 $0.source_type != "school" &&
                 $0.source_type != "daycare"
             }) { event in
-                Rectangle()
-                    .fill(themeManager.currentTheme.accentColorSwiftUI)
-                    .frame(height: 8)
-                    .overlay(
-                        Rectangle()
-                            .stroke(themeManager.currentTheme.textColorSwiftUI, lineWidth: 1)
-                    )
-                    .overlay(
-                        Text("■")
-                            .font(.system(size: 6, weight: .black))
-                            .foregroundColor(themeManager.currentTheme.smartTextColor(for: themeManager.currentTheme.accentColorSwiftUI))
-                    )
+                Text(event.content)
+                    .font(.system(size: 7))
+                    .lineLimit(4)
+                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+                    .padding(.horizontal, 1)
+                    .background(themeManager.currentTheme.iconActiveColorSwiftUI.opacity(0.1))
+                    .cornerRadius(3)
             }
             
             Spacer()
-            // Custody row logic with brutalist styling
+            // Custody row logic
             if !custodyOwner.isEmpty && !viewModel.showHandoffTimeline {
                 // Normal custody display
-                Rectangle()
-                    .fill(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColorSwiftUI : themeManager.currentTheme.parentTwoColorSwiftUI)
-                    .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24)
-                    .overlay(
-                        Rectangle()
-                            .stroke(themeManager.currentTheme.textColorSwiftUI, lineWidth: 2)
-                    )
-                    .overlay(
-                        Text(String(custodyOwner.prefix(1)).uppercased())
-                            .font(.system(size: 12, weight: .black, design: .default))
-                            .foregroundColor(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneTextColor : themeManager.currentTheme.parentTwoTextColor)
-                    )
+                Text(custodyOwner.capitalized)
+                    .font(.system(size: 9))
+                    .bold()
+                    .foregroundColor(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneTextColor : themeManager.currentTheme.parentTwoTextColor)
+                    .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24) // Fixed height
+                    .background(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColorSwiftUI : themeManager.currentTheme.parentTwoColorSwiftUI)
                     .opacity(isToday ? 1.0 : 0.6)
             } else if !custodyOwner.isEmpty && viewModel.showHandoffTimeline {
                 // Handoff timeline display
-                Rectangle()
-                    .fill(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColorSwiftUI : themeManager.currentTheme.parentTwoColorSwiftUI)
-                    .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24)
-                    .overlay(
-                        Rectangle()
-                            .stroke(themeManager.currentTheme.textColorSwiftUI, lineWidth: 1)
-                    )
-                    .overlay(
-                        Text(String(custodyOwner.prefix(1)).uppercased())
-                            .font(.system(size: 12, weight: .black, design: .default))
-                            .foregroundColor(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneTextColor : themeManager.currentTheme.parentTwoTextColor)
-                    )
+                Text(custodyOwner.capitalized)
+                    .font(.system(size: 9))
+                    .bold()
+                    .foregroundColor(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneTextColor : themeManager.currentTheme.parentTwoTextColor)
+                    .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24) // Fixed height
+                    .background(custodyID == viewModel.custodianOneId ? themeManager.currentTheme.parentOneColorSwiftUI : themeManager.currentTheme.parentTwoColorSwiftUI)
                     .opacity(0.3)
             } else if custodyOwner.isEmpty && isPastDate() {
                 // Past date with no custody - show subtle transparent gray
                 Rectangle()
-                    .fill(Color.gray.opacity(0.1))
                     .frame(maxWidth: .infinity, minHeight: 24, maxHeight: 24)
-                    .overlay(
-                        Rectangle()
-                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                    )
+                    .foregroundColor(Color.gray.opacity(0.1))
             }
         }
         .animateThemeChanges(themeManager)

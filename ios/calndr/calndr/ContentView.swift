@@ -77,21 +77,13 @@ struct MainTabView: View {
                         .padding(.top, -8)
                 }
                 
-                // Header with month/year centered - brutalist styling
-                VStack(spacing: 4) {
+                // Header with month/year centered
+                VStack {
                     Text(headerTitle(for: currentView))
-                        .font(.system(size: 24, weight: .black, design: .default))
-                        .textCase(.uppercase)
-                        .tracking(1.5)
-                        .foregroundColor(themeManager.currentTheme.headerTextColorSwiftUI)
+                        .font(.title.bold())
                         .opacity(currentView == .month ? headerOpacity : 1.0)
                         .offset(y: currentView == .month ? headerOffset : 0.0)
                         .frame(maxWidth: .infinity, alignment: .center)
-                    
-                    Rectangle()
-                        .fill(themeManager.currentTheme.accentColorSwiftUI)
-                        .frame(height: 3)
-                        .frame(maxWidth: 120)
                 }
                 .padding(.horizontal)
 
@@ -194,10 +186,9 @@ struct MainTabView: View {
                 }
                 .padding()
 
-                // Menu Bar - Brutalist styling
-                HStack(alignment: .center, spacing: 20) {
-                    // Handoff button
-                    VStack(spacing: 2) {
+                // Menu Bar
+                HStack(alignment: .top, spacing: 40) {
+                    VStack(spacing: 4) {
                         Button(action: {
                             if calendarViewModel.showHandoffTimeline {
                                 // If timeline is already showing, just hide it
@@ -210,104 +201,57 @@ struct MainTabView: View {
                         }) {
                             if calendarViewModel.isDataLoading && calendarViewModel.showHandoffTimeline {
                                 ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: themeManager.currentTheme.accentColorSwiftUI))
+                                    .progressViewStyle(CircularProgressViewStyle(tint: Color.purple))
                                     .font(.title2)
                             } else {
-                                Rectangle()
-                                    .fill(getHandoffIconColor())
-                                    .frame(width: 36, height: 36)
-                                    .overlay(
-                                        Rectangle()
-                                            .stroke(themeManager.currentTheme.textColorSwiftUI, lineWidth: 2)
-                                    )
-                                    .overlay(
-                                        Text("H")
-                                            .font(.system(size: 16, weight: .black, design: .default))
-                                            .foregroundColor(themeManager.currentTheme.smartTextColor(for: getHandoffIconColor()))
-                                    )
+                                Image(systemName: getHandoffIconName())
+                                    .font(.title2)
+                                    .foregroundColor(getHandoffIconColor())
                             }
                         }
                         .disabled(calendarViewModel.isDataLoading)
-                        Text("HANDOFF")
-                            .font(.system(size: 10, weight: .black, design: .default))
-                            .textCase(.uppercase)
-                            .tracking(0.5)
-                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.8))
+                        Text("Handoff")
+                            .font(.caption2)
+                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
                     }
                     
-                    // Settings button
-                    VStack(spacing: 2) {
+                    VStack(spacing: 4) {
                         Button(action: {
                             showSettings = true
                         }) {
-                            Rectangle()
-                                .fill(themeManager.currentTheme.iconColorSwiftUI)
-                                .frame(width: 36, height: 36)
-                                .overlay(
-                                    Rectangle()
-                                        .stroke(themeManager.currentTheme.textColorSwiftUI, lineWidth: 2)
-                                )
-                                .overlay(
-                                    Text("S")
-                                        .font(.system(size: 16, weight: .black, design: .default))
-                                        .foregroundColor(themeManager.currentTheme.smartTextColor(for: themeManager.currentTheme.iconColorSwiftUI))
-                                )
+                            Image(systemName: "gear")
+                                .font(.title2)
+                                .foregroundColor(themeManager.currentTheme.iconColorSwiftUI)
                         }
-                        Text("SETTINGS")
-                            .font(.system(size: 10, weight: .black, design: .default))
-                            .textCase(.uppercase)
-                            .tracking(0.5)
-                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.8))
+                        Text("Settings")
+                            .font(.caption2)
+                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
                     }
 
-                    // Journal button
-                    VStack(spacing: 2) {
+                    VStack(spacing: 4) {
                         Button(action: {
                             showJournal = true
                         }) {
-                            Rectangle()
-                                .fill(themeManager.currentTheme.iconColorSwiftUI)
-                                .frame(width: 36, height: 36)
-                                .overlay(
-                                    Rectangle()
-                                        .stroke(themeManager.currentTheme.textColorSwiftUI, lineWidth: 2)
-                                )
-                                .overlay(
-                                    Text("J")
-                                        .font(.system(size: 16, weight: .black, design: .default))
-                                        .foregroundColor(themeManager.currentTheme.smartTextColor(for: themeManager.currentTheme.iconColorSwiftUI))
-                                )
+                            Image(systemName: "book.closed")
+                                .font(.title2)
+                                .foregroundColor(themeManager.currentTheme.iconColorSwiftUI)
                         }
-                        Text("JOURNAL")
-                            .font(.system(size: 10, weight: .black, design: .default))
-                            .textCase(.uppercase)
-                            .tracking(0.5)
-                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.8))
+                        Text("Journal")
+                            .font(.caption2)
+                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
                     }
 
-                    // Help button
-                    VStack(spacing: 2) {
+                    VStack(spacing: 4) {
                         Button(action: {
                             showHelp = true
                         }) {
-                            Rectangle()
-                                .fill(themeManager.currentTheme.iconColorSwiftUI)
-                                .frame(width: 36, height: 36)
-                                .overlay(
-                                    Rectangle()
-                                        .stroke(themeManager.currentTheme.textColorSwiftUI, lineWidth: 2)
-                                )
-                                .overlay(
-                                    Text("?")
-                                        .font(.system(size: 16, weight: .black, design: .default))
-                                        .foregroundColor(themeManager.currentTheme.smartTextColor(for: themeManager.currentTheme.iconColorSwiftUI))
-                                )
+                            Image(systemName: "questionmark.circle")
+                                .font(.title2)
+                                .foregroundColor(themeManager.currentTheme.iconColorSwiftUI)
                         }
-                        Text("HELP")
-                            .font(.system(size: 10, weight: .black, design: .default))
-                            .textCase(.uppercase)
-                            .tracking(0.5)
-                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.8))
+                        Text("Help")
+                            .font(.caption2)
+                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
                     }
                 }
                 .padding(.bottom)

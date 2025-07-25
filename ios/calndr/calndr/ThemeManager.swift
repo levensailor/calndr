@@ -326,7 +326,6 @@ class ThemeManager: ObservableObject {
         self.themes = []
         self.currentTheme = Theme.defaultTheme
         loadThemes()
-        addBrutalistThemes() // Add brutalist themes to available options
     }
     
     // Configure the auth manager after initialization

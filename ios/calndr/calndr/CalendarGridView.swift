@@ -10,23 +10,16 @@ struct CalendarGridView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header for days of the week - always visible with brutalist styling
-            HStack(spacing: 1) {
+            // Header for days of the week - always visible
+            HStack(spacing: 0) {
                 ForEach(daysOfWeek, id: \.self) { day in
                     Text(day)
-                        .font(.system(size: 14, weight: .black, design: .default))
-                        .textCase(.uppercase)
-                        .tracking(1.0)
-                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                        .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
-                        .overlay(
-                            Rectangle()
-                                .stroke(themeManager.currentTheme.textColorSwiftUI.opacity(0.3), lineWidth: 1)
-                        )
+                        .font(.headline)
                 }
             }
+            .padding(.vertical, 4)
+            .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
             
             // Calendar grid with fixed height - cells adapt to fill space
             let numberOfWeeks = calculateNumberOfWeeks()

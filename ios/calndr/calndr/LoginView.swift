@@ -18,34 +18,27 @@ struct LoginView: View {
                     hideKeyboard()
                 }
             
-            VStack(spacing: 30) {
-                // Brutalist app title
-                VStack(spacing: 8) {
-                    Text("CALNDR")
-                        .font(.system(size: 48, weight: .black, design: .default))
-                        .tracking(3.0)
-                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
-                    
-                    Rectangle()
-                        .fill(themeManager.currentTheme.accentColorSwiftUI)
-                        .frame(height: 6)
-                        .frame(maxWidth: 200)
-                }
+            VStack(spacing: 20) {
+                Text("calndr")
+                    .font(.system(size: 60, weight: .bold, design: .default))
+                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                 
-                VStack(spacing: 20) {
-                    BrutalistTextField(
+                VStack(spacing: 15) {
+                    FloatingLabelTextField(
                         title: "Email",
                         text: $viewModel.email,
                         isSecure: false
                     )
+                    .frame(height: 56)
                     .keyboardType(.emailAddress)
                     .autocapitalization(.none)
 
-                    BrutalistTextField(
+                    FloatingLabelTextField(
                         title: "Password",
                         text: $viewModel.password,
                         isSecure: true
                     )
+                    .frame(height: 56)
                 }
                 .padding(.horizontal)
                 
@@ -57,24 +50,35 @@ struct LoginView: View {
                         .padding(.horizontal)
                 }
                 
-                BrutalistButton(
-                    title: viewModel.isLoading ? "LOADING..." : "LOGIN",
-                    action: {
-                        viewModel.login(authManager: authManager)
-                    },
-                    style: .primary
-                )
+                Button(action: {
+                    viewModel.login(authManager: authManager)
+                }) {
+                    HStack {
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        } else {
+                            Text("Login")
+                        }
+                    }
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(themeManager.currentTheme.accentColorSwiftUI)
+                    .cornerRadius(10)
+                    .padding(.horizontal)
+                }
                 .disabled(viewModel.isLoading)
-                .padding(.horizontal)
                 
-                BrutalistButton(
-                    title: "SIGN UP",
-                    action: {
-                        showingSignUp = true
-                    },
-                    style: .secondary
-                )
-                .padding(.horizontal)
+                Button(action: {
+                    showingSignUp = true
+                }) {
+                    Text("Don't have an account? Sign Up")
+                        .font(.footnote)
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+                        .padding()
+                }
                 
                 SignInWithAppleButton(.signIn) { request in
                     request.requestedScopes = [.fullName, .email]

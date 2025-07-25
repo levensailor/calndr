@@ -7,6 +7,7 @@ import traceback
 from core.database import database
 from core.security import get_current_user, uuid_to_string
 from core.logging import logger
+from core.config import settings
 from db.models import custody, users
 from schemas.custody import CustodyRecord, CustodyResponse
 from services.notification_service import send_custody_change_notification
@@ -28,6 +29,13 @@ async def get_custody_records(year: int, month: int, current_user = Depends(get_
             end_date = end_date.replace(day=1) - timedelta(days=1)
         else:
             end_date = date(year, month + 1, 1) - timedelta(days=1)
+        
+        # Check cache first for custody records
+        custody_cache_key = f"custody:family:{family_id}:{start_date}:{end_date}"
+        cached_custody = await redis_service.get(custody_cache_key)
+        if cached_custody:
+            logger.info(f"Returning cached custody records for {year}/{month}")
+            return cached_custody
         
         # Query custody records for the given month and family
         query = custody.select().where(
@@ -54,6 +62,11 @@ async def get_custody_records(year: int, month: int, current_user = Depends(get_
                 handoff_location=record['handoff_location']
             ) for record in db_records
         ]
+        
+        # Cache the custody records (convert to dict for JSON serialization)
+        custody_responses_dict = [resp.model_dump() for resp in custody_responses]
+        await redis_service.set(custody_cache_key, custody_responses_dict, settings.CACHE_TTL_CUSTODY)
+        logger.info(f"Cached custody records for {year}/{month} (family {family_id})")
         
         return custody_responses
     except Exception as e:
@@ -139,7 +152,10 @@ async def create_custody(custody_data: CustodyRecord, current_user = Depends(get
         
         # Invalidate cache for this family since custody affects events display
         await redis_service.clear_family_cache(family_id)
-        logger.info(f"Invalidated events cache for family {family_id} after creating custody record")
+        # Also clear custody-specific cache
+        custody_pattern = f"custody:family:{family_id}:*"
+        await redis_service.delete_pattern(custody_pattern)
+        logger.info(f"Invalidated events and custody cache for family {family_id} after creating custody record")
             
         # Get custodian name for response
         custodian_user = await database.fetch_one(users.select().where(users.c.id == custody_data.custodian_id))
@@ -203,7 +219,10 @@ async def update_custody_by_date(custody_date: date, custody_data: CustodyRecord
         
         # Invalidate cache for this family since custody affects events display
         await redis_service.clear_family_cache(family_id)
-        logger.info(f"Invalidated events cache for family {family_id} after updating custody record")
+        # Also clear custody-specific cache
+        custody_pattern = f"custody:family:{family_id}:*"
+        await redis_service.delete_pattern(custody_pattern)
+        logger.info(f"Invalidated events and custody cache for family {family_id} after updating custody record")
         
         # Get custodian name for response
         custodian_user = await database.fetch_one(users.select().where(users.c.id == custody_data.custodian_id))
@@ -269,7 +288,10 @@ async def update_custody_by_id(custody_id: int, custody_data: CustodyRecord, cur
         
         # Invalidate cache for this family since custody affects events display
         await redis_service.clear_family_cache(family_id)
-        logger.info(f"Invalidated events cache for family {family_id} after updating custody record by ID")
+        # Also clear custody-specific cache
+        custody_pattern = f"custody:family:{family_id}:*"
+        await redis_service.delete_pattern(custody_pattern)
+        logger.info(f"Invalidated events and custody cache for family {family_id} after updating custody record by ID")
         
         # Get custodian name for response
         custodian_user = await database.fetch_one(users.select().where(users.c.id == custody_data.custodian_id))
@@ -359,7 +381,10 @@ async def bulk_create_custody(custody_records: List[CustodyRecord], current_user
             
             # Invalidate cache for this family since custody affects events display
             await redis_service.clear_family_cache(family_id)
-            logger.info(f"Invalidated events cache for family {family_id} after bulk creating custody records")
+            # Also clear custody-specific cache
+            custody_pattern = f"custody:family:{family_id}:*"
+            await redis_service.delete_pattern(custody_pattern)
+            logger.info(f"Invalidated events and custody cache for family {family_id} after bulk creating custody records")
             
             return {
                 "status": "success",
