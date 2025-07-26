@@ -12,6 +12,8 @@
 - **🧹 Code Cleanup**: Removed unused variable initializations in InfiniteScrollView to eliminate compiler warnings
 - **⚡ Type Safety**: Fixed closure parameter type annotations and method signature mismatches
 - **🎯 CGSize Properties**: Fixed DragGesture translation/velocity access to use .width instead of .x (CGSize doesn't have .x property)
+- **🔧 Generic Type Inference**: Fixed withCheckedContinuation calls by adding explicit CheckedContinuation type parameters
+- **📊 Weather Data Structure**: Fixed WeatherInfo access to use dictionary key (date) instead of non-existent .date property
 
 ## [2025-07-25] - Infinite Scrolling Implementation for All Calendar Views
 

@@ -2354,7 +2354,7 @@ class CalendarViewModel: ObservableObject {
         }
         
         // Preload events for the date
-        await withCheckedContinuation { continuation in
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             APIService.shared.fetchEvents(from: dateString, to: dateString) { [weak self] result in
                 DispatchQueue.main.async {
                     switch result {
@@ -2391,7 +2391,7 @@ class CalendarViewModel: ObservableObject {
         let endDateString = isoDateString(from: endDate)
         
         // Preload events for the range
-        await withCheckedContinuation { continuation in
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             APIService.shared.fetchEvents(from: startDateString, to: endDateString) { [weak self] result in
                 DispatchQueue.main.async {
                     switch result {
@@ -2459,7 +2459,7 @@ class CalendarViewModel: ObservableObject {
     
     @MainActor
     private func preloadCustodyForMonth(year: Int, month: Int) async {
-        await withCheckedContinuation { continuation in
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             APIService.shared.fetchCustodyRecords(year: year, month: month) { [weak self] result in
                 DispatchQueue.main.async {
                     switch result {
@@ -2486,14 +2486,14 @@ class CalendarViewModel: ObservableObject {
             return
         }
         
-        await withCheckedContinuation { continuation in
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             APIService.shared.fetchWeather(latitude: 34.29, longitude: -77.97, startDate: dateString, endDate: dateString) { [weak self] result in
                 DispatchQueue.main.async {
                     switch result {
                     case .success(let weatherResponse):
-                        // Update weather data
-                        for (_, weather) in weatherResponse {
-                            self?.weatherData[weather.date] = weather
+                        // Update weather data - weatherResponse is [String: WeatherInfo] where key is date
+                        for (dateKey, weather) in weatherResponse {
+                            self?.weatherData[dateKey] = weather
                         }
                     case .failure(let error):
                         print("Failed to preload weather for \(dateString): \(error)")
@@ -2509,13 +2509,13 @@ class CalendarViewModel: ObservableObject {
         let startDateString = isoDateString(from: startDate)
         let endDateString = isoDateString(from: endDate)
         
-        await withCheckedContinuation { continuation in
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             APIService.shared.fetchWeather(latitude: 34.29, longitude: -77.97, startDate: startDateString, endDate: endDateString) { [weak self] result in
                 DispatchQueue.main.async {
                     switch result {
                     case .success(let weatherResponse):
-                        for (_, weather) in weatherResponse {
-                            self?.weatherData[weather.date] = weather
+                        for (dateKey, weather) in weatherResponse {
+                            self?.weatherData[dateKey] = weather
                         }
                     case .failure(let error):
                         print("Failed to preload weather for range \(startDateString) to \(endDateString): \(error)")
