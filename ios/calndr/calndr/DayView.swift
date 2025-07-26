@@ -12,7 +12,7 @@ struct DayView: View {
             viewModel: viewModel,
             viewType: .day
         ) { currentDate in
-            DayContentView(
+            DayDetailContentView(
                 viewModel: viewModel,
                 currentDate: currentDate,
                 showingReminderModal: $showingReminderModal,
@@ -33,7 +33,7 @@ struct DayView: View {
     }
 }
 
-struct DayContentView: View {
+struct DayDetailContentView: View {
     @ObservedObject var viewModel: CalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
     let currentDate: Date
