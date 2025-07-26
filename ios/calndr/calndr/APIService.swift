@@ -98,7 +98,7 @@ struct TokenResponse: Codable {
 
 class APIService {
     static let shared = APIService()
-    private let baseURL = URL(string: "https://calndr.club/api/v1")!
+    private let baseURL = URL(string: "https://staging.calndr.club/api/v1")!
 
     private init() {}
 

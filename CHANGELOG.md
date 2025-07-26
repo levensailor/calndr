@@ -1,5 +1,45 @@
 # CHANGELOG
 
+## [2025-01-28] - Backend URL Configuration Update
+
+### Infrastructure Changes
+- **🔧 Staging Environment**: Updated iOS app to use staging.calndr.club backend instead of production calndr.club
+- **🌐 API Configuration**: Modified APIService baseURL to point to staging environment for testing and development
+
+## [2025-07-25] - Infinite Scrolling Implementation for All Calendar Views
+
+### Major Features
+- **🔄 Infinite Scrolling**: Implemented smooth infinite scrolling for all calendar views (Day, 3-Day, Week, Month)
+- **📱 Enhanced Navigation**: Seamless swipe navigation between time periods with spring animations
+- **⚡ Performance Optimization**: Smart data preloading system prevents lag during navigation
+- **🎯 Gesture Recognition**: Advanced gesture detection with velocity thresholds for responsive control
+
+### New Components
+- **InfiniteScrollView**: Generic reusable infinite scroll component with configurable preload buffers
+- **CalendarInfiniteScrollView**: Specialized infinite scroll for calendar periods (day/week/3-day)
+- **MonthInfiniteScrollView**: Optimized infinite scroll for month-based calendar grid navigation
+
+### Performance Improvements
+- **Smart Preloading**: Automatic background loading of events, custody, and weather data
+- **Intelligent Caching**: Prevents duplicate API calls with smart cache validation
+- **Memory Efficient**: 2-item preload buffer maintains smooth scrolling without excessive memory usage
+- **Background Processing**: Async data preloading doesn't block UI interactions
+
+### User Experience Enhancements
+- **Fluid Navigation**: 30% swipe threshold with velocity detection for intuitive control
+- **Responsive Animations**: Spring-based animations (0.5s response, 0.8 damping) for natural feel
+- **Backward Compatibility**: Existing navigation gestures continue to work unchanged
+- **Visual Feedback**: Smooth transitions maintain visual context during navigation
+
+### Technical Implementation
+- **Data Preloading System**: 
+  * `preloadDataForDate()` - Individual date preloading
+  * `preloadDataForDateRange()` - Range-based batch preloading  
+  * Automatic preloading for adjacent periods
+- **View Architecture**: Separated content views from infinite scroll containers for modularity
+- **State Management**: Proper sync between scroll position and CalendarViewModel currentDate
+- **Error Handling**: Graceful fallbacks when data preloading fails
+
 ## [2025-07-25] - Fixed Custody Names Disappearing Issue
 
 ### Fixed
