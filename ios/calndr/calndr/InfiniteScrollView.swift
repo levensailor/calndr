@@ -40,14 +40,14 @@ struct InfiniteScrollView<Content: View>: View {
                         state = true
                     }
                     .onChanged { value in
-                        dragOffset = value.translation.x
+                        dragOffset = value.translation.width
                     }
                     .onEnded { value in
                         let threshold = width * 0.3 // 30% of screen width
-                        let velocity = abs(value.velocity.x)
+                        let velocity = abs(value.velocity.width)
                         
-                        if abs(value.translation.x) > threshold || velocity > 500 {
-                            if value.translation.x > 0 {
+                        if abs(value.translation.width) > threshold || velocity > 500 {
+                            if value.translation.width > 0 {
                                 // Swipe right - go to previous
                                 moveToOffset(currentOffset - 1)
                             } else {
@@ -316,14 +316,14 @@ struct MonthInfiniteScrollView<Content: View>: View {
                         state = true
                     }
                     .onChanged { value in
-                        dragOffset = value.translation.x
+                        dragOffset = value.translation.width
                     }
                     .onEnded { value in
                         let threshold = width * 0.3 // 30% of screen width
-                        let velocity = abs(value.velocity.x)
+                        let velocity = abs(value.velocity.width)
                         
-                        if abs(value.translation.x) > threshold || velocity > 500 {
-                            if value.translation.x > 0 {
+                        if abs(value.translation.width) > threshold || velocity > 500 {
+                            if value.translation.width > 0 {
                                 // Swipe right - go to previous month
                                 moveToOffset(currentIndex - 1)
                             } else {
