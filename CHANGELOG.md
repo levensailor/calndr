@@ -1,10 +1,16 @@
 # CHANGELOG
 
-## [2025-01-28] - Backend URL Configuration Update
+## [2025-01-28] - Backend URL Configuration Update and Compilation Fixes
 
 ### Infrastructure Changes
 - **🔧 Staging Environment**: Updated iOS app to use staging.calndr.club backend instead of production calndr.club
 - **🌐 API Configuration**: Modified APIService baseURL to point to staging environment for testing and development
+
+### Bug Fixes
+- **🔧 API Calls**: Fixed weather API calls to use proper latitude/longitude parameters instead of incorrect method signatures
+- **📱 iOS Compatibility**: Updated deprecated onChange syntax to iOS 17+ compatible version with two-parameter closure
+- **🧹 Code Cleanup**: Removed unused variable initializations in InfiniteScrollView to eliminate compiler warnings
+- **⚡ Type Safety**: Fixed closure parameter type annotations and method signature mismatches
 
 ## [2025-07-25] - Infinite Scrolling Implementation for All Calendar Views
 

@@ -154,7 +154,7 @@ struct CalendarInfiniteScrollView<Content: View>: View {
             // Sync with current viewModel date
             syncWithCurrentDate()
         }
-        .onChange(of: viewModel.currentDate) { _ in
+        .onChange(of: viewModel.currentDate) { oldValue, newValue in
             syncWithCurrentDate()
         }
     }
@@ -343,7 +343,7 @@ struct MonthInfiniteScrollView<Content: View>: View {
         .onAppear {
             syncWithCurrentDate()
         }
-        .onChange(of: viewModel.currentDate) { _ in
+        .onChange(of: viewModel.currentDate) { oldValue, newValue in
             syncWithCurrentDate()
         }
     }
@@ -389,8 +389,8 @@ struct MonthInfiniteScrollView<Content: View>: View {
     
     private func preloadDataForMonth(_ monthDate: Date) {
         let calendar = Calendar.current
-        let year = calendar.component(.year, from: monthDate)
-        let month = calendar.component(.month, from: monthDate)
+        let _ = calendar.component(.year, from: monthDate)
+        let _ = calendar.component(.month, from: monthDate)
         
         // Preload data in the background
         Task {

@@ -2487,12 +2487,12 @@ class CalendarViewModel: ObservableObject {
         }
         
         await withCheckedContinuation { continuation in
-            APIService.shared.fetchWeather(from: dateString, to: dateString) { [weak self] result in
+            APIService.shared.fetchWeather(latitude: 34.29, longitude: -77.97, startDate: dateString, endDate: dateString) { [weak self] result in
                 DispatchQueue.main.async {
                     switch result {
                     case .success(let weatherResponse):
                         // Update weather data
-                        for weather in weatherResponse {
+                        for (_, weather) in weatherResponse {
                             self?.weatherData[weather.date] = weather
                         }
                     case .failure(let error):
@@ -2510,11 +2510,11 @@ class CalendarViewModel: ObservableObject {
         let endDateString = isoDateString(from: endDate)
         
         await withCheckedContinuation { continuation in
-            APIService.shared.fetchWeather(from: startDateString, to: endDateString) { [weak self] result in
+            APIService.shared.fetchWeather(latitude: 34.29, longitude: -77.97, startDate: startDateString, endDate: endDateString) { [weak self] result in
                 DispatchQueue.main.async {
                     switch result {
                     case .success(let weatherResponse):
-                        for weather in weatherResponse {
+                        for (_, weather) in weatherResponse {
                             self?.weatherData[weather.date] = weather
                         }
                     case .failure(let error):
