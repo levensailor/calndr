@@ -54,11 +54,38 @@ struct CalendarGridView: View {
                 
                 // Handoff Timeline Overlay
                 if viewModel.showHandoffTimeline {
-                    if viewModel.isHandoffDataReady {
+                    if viewModel.custodiansReady || viewModel.custodyDataReady {
+                        // Show timeline progressively as data becomes available
                         HandoffTimelineView(viewModel: viewModel, calendarDays: getDaysForCurrentMonth())
                             .environmentObject(themeManager)
                             .allowsHitTesting(true) // Allow interactions with handoff bubbles
                             .zIndex(1000) // Ensure handoff timeline is above everything else
+                            .opacity(viewModel.isHandoffDataReady ? 1.0 : 0.7) // Slightly dimmed if still loading
+                        
+                        // Show loading indicator overlay if still loading
+                        if !viewModel.isHandoffDataReady && viewModel.isDataLoading {
+                            VStack {
+                                Spacer()
+                                HStack {
+                                    Spacer()
+                                    VStack(spacing: 8) {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: Color.purple))
+                                            .scaleEffect(0.8)
+                                        Text("Loading...")
+                                            .font(.caption)
+                                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+                                    }
+                                    .padding(12)
+                                    .background(.ultraThinMaterial)
+                                    .cornerRadius(8)
+                                    Spacer()
+                                }
+                                Spacer()
+                            }
+                            .allowsHitTesting(false)
+                            .zIndex(1001)
+                        }
                     } else {
                         // Loading state overlay
                         ZStack {

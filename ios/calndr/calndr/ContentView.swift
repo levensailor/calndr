@@ -194,9 +194,13 @@ struct MainTabView: View {
                                 // If timeline is already showing, just hide it
                                 calendarViewModel.showHandoffTimeline = false
                             } else {
-                                // If timeline is hidden, show it and refresh data
+                                // Show timeline immediately for better perceived performance
                                 calendarViewModel.showHandoffTimeline = true
-                                calendarViewModel.fetchHandoffsAndCustody()
+                                
+                                // Fetch data in background if needed
+                                if !calendarViewModel.isHandoffDataReady {
+                                    calendarViewModel.fetchHandoffsAndCustody()
+                                }
                             }
                         }) {
                             if calendarViewModel.isDataLoading && calendarViewModel.showHandoffTimeline {

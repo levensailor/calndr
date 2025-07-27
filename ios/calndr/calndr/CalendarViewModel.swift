@@ -49,6 +49,18 @@ class CalendarViewModel: ObservableObject {
     @Published var isHandoffDataReady: Bool = false // NEW: True when all handoff data is loaded
     @Published var isDataLoading: Bool = false
     
+    // Progressive loading tracking
+    @Published var custodiansReady: Bool = false // True when custodian names are loaded
+    @Published var custodyDataReady: Bool = false // True when custody records are loaded
+    
+    // Caching properties for handoff data performance
+    private var custodiansLastFetched: Date?
+    private var custodyDataLastFetched: Date?
+    private let cacheTimeout: TimeInterval = 30 * 60 // 30 minutes
+    
+    // Prevent duplicate API calls
+    private var isFetchingHandoffData: Bool = false
+    
     // Password Update
     @Published var currentPassword = ""
     @Published var newPassword = ""
@@ -201,17 +213,51 @@ class CalendarViewModel: ObservableObject {
             print("🏠❌ CalendarViewModel: No family ID, cannot fetch handoffs or custody.")
             return
         }
+        
+        // Prevent duplicate calls
+        if isFetchingHandoffData {
+            print("🏠⚠️ CalendarViewModel: Already fetching handoff data, skipping duplicate call")
+            return
+        }
+
+        // Check if we already have fresh data
+        let now = Date()
+        let custodiansCached = custodiansLastFetched != nil && 
+                               custodianOneId != nil && 
+                               custodianTwoId != nil && 
+                               now.timeIntervalSince(custodiansLastFetched!) < cacheTimeout
+        
+        let custodyCached = custodyDataLastFetched != nil && 
+                           !custodyRecords.isEmpty && 
+                           now.timeIntervalSince(custodyDataLastFetched!) < cacheTimeout
+        
+        print("🏠 CalendarViewModel: Cache status - Custodians: \(custodiansCached ? "cached" : "needs fetch"), Custody: \(custodyCached ? "cached" : "needs fetch")")
+        
+        // Set individual data readiness flags for progressive loading
+        self.custodiansReady = custodiansCached
+        self.custodyDataReady = custodyCached
+        
+        // If both are cached, mark as ready immediately
+        if custodiansCached && custodyCached {
+            print("🏠✅ CalendarViewModel: Using cached handoff data")
+            self.isHandoffDataReady = true
+            self.isDataLoading = false
+            self.isFetchingHandoffData = false
+            return
+        }
 
         print("🏠 CalendarViewModel: Setting loading states...")
+        self.isFetchingHandoffData = true
         self.isDataLoading = true
         self.isHandoffDataReady = false
         
         let dispatchGroup = DispatchGroup()
 
-        // Fetch custodian names
-        print("🏠 CalendarViewModel: Starting custodian names fetch...")
-        dispatchGroup.enter()
-        APIService.shared.fetchCustodianNames { [weak self] result in
+        // Fetch custodian names only if not cached
+        if !custodiansCached {
+            print("🏠 CalendarViewModel: Starting custodian names fetch...")
+            dispatchGroup.enter()
+            APIService.shared.fetchCustodianNames { [weak self] result in
             defer { dispatchGroup.leave() }
             DispatchQueue.main.async {
                 print("🏠 CalendarViewModel: Custodian names fetch completed")
@@ -223,6 +269,8 @@ class CalendarViewModel: ObservableObject {
                         self?.custodianTwoName = custodians[1].first_name
                         self?.custodianOneId = custodians[0].id
                         self?.custodianTwoId = custodians[1].id
+                        self?.custodiansLastFetched = Date() // Cache timestamp
+                        self?.custodiansReady = true // Progressive loading flag
                         print("🏠✅ CalendarViewModel: Successfully set custodian names: \(custodians[0].first_name), \(custodians[1].first_name)")
                         print("🏠✅ CalendarViewModel: Custodian IDs: \(custodians[0].id), \(custodians[1].id)")
                     } else {
@@ -237,11 +285,18 @@ class CalendarViewModel: ObservableObject {
                 }
             }
         }
+        } else {
+            print("🏠✅ CalendarViewModel: Using cached custodian data")
+        }
 
-        // Fetch custody records
-        dispatchGroup.enter()
-        fetchCustodyRecords {
-            dispatchGroup.leave()
+        // Fetch custody records only if not cached
+        if !custodyCached {
+            dispatchGroup.enter()
+            fetchCustodyRecords {
+                dispatchGroup.leave()
+            }
+        } else {
+            print("🏠✅ CalendarViewModel: Using cached custody data")
         }
 
         // When both are done, update the UI
@@ -266,6 +321,7 @@ class CalendarViewModel: ObservableObject {
                 }
             }
             self.isDataLoading = false // End loading state
+            self.isFetchingHandoffData = false // Clear duplicate call prevention
             
             // Calculate custody percentages after all data is loaded
             self.updateCustodyPercentages()
@@ -412,6 +468,8 @@ class CalendarViewModel: ObservableObject {
                 
                 // Sort the combined records
                 self.custodyRecords.sort { $0.event_date < $1.event_date }
+                self.custodyDataLastFetched = Date() // Cache timestamp
+                self.custodyDataReady = true // Progressive loading flag
                 print("🔄 Merged custody data: \(self.custodyRecords.count) total records")
             } else {
                 print("ℹ️ No new custody data to merge")
