@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## [2025-01-28 13:13 EST] - Handoff Performance Optimization - Reduced 15s Load Time
+
+### iOS Performance Improvements
+- **⚡ Caching System**: Implemented 30-minute TTL cache for custodian names and custody data to eliminate redundant API calls
+- **🚀 Optimistic UI**: Show handoff timeline immediately with background data loading instead of blocking UI
+- **📊 Progressive Loading**: Display partial data as it loads with separate tracking for custodians vs custody data
+- **🔄 Duplicate Prevention**: Prevent multiple simultaneous API calls to reduce server load and race conditions
+- **📲 Data Preloading**: Handoff data now preloaded at app startup for instant access
+
+### Technical Details
+- **API Call Reduction**: Skip API calls if fresh data exists (< 30 minutes old)
+- **UI Responsiveness**: Handoff button shows immediate response instead of 15-second wait
+- **Memory Efficiency**: Smart caching with automatic cache invalidation
+- **Network Optimization**: Reduced redundant calls from multiple rapid handoff clicks
+
+### User Experience
+- **Instant Response**: Cached handoff data displays immediately (0s load time)
+- **Smooth Loading**: Fresh data loads progressively with visual feedback
+- **No Blank Screens**: Timeline shows immediately with loading indicators
+- **Reliable Performance**: Consistent response times regardless of network conditions
+
 ## [2025-01-28 10:08 EST] - Hard Reset to Before Infinite Scrolling
 
 ### Repository Changes
