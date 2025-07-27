@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [2025-01-28 10:08 EST] - Hard Reset to Before Infinite Scrolling
+
+### Repository Changes
+- **🔄 Hard Reset**: Performed git hard reset to commit baf006b (before infinite scrolling implementation)
+- **📂 Repository State**: Completely reverted to working state before commit 412c233
+- **🗂️ File Removal**: InfiniteScrollView.swift and all infinite scrolling changes removed
+- **📱 Calendar Views**: All calendar views (Day, Week, Three-Day, Month) restored to original implementations
+- **🔧 Compilation**: All compilation errors resolved by returning to last known working state
+- **🚫 Force Push**: Used force push to update remote repository with clean state
+
+### Rationale
+- Manual revert attempts were encountering compilation issues
+- Hard reset ensures complete return to stable, working codebase
+- Preserves all other recent improvements while removing problematic infinite scrolling feature
+
 ## [2025-07-25] - Fixed Custody Names Disappearing Issue
 
 ### Fixed
