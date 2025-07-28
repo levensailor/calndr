@@ -1,5 +1,37 @@
 # CHANGELOG
 
+## [2025-01-28 00:15 EST] - JWT Token Corruption Debugging Enhancement
+
+### 🔐 Root Cause Identified: JWT Token Authentication Failure
+- **Backend Error**: JWT validation failed with "Not enough segments" 
+- **Token Length**: Only 10 characters (should be 200+)
+- **API Response**: 401 Unauthorized for custody toggle requests
+- **Issue Location**: Token corruption between storage and retrieval
+
+### 🔍 Enhanced Token Debugging
+- **🔑 KeychainManager Logging**: Track token save/load operations with length and previews
+- **🔐 APIService Authentication**: Monitor token validation and Authorization header setting
+- **📊 Token Flow Tracking**: Complete token lifecycle from storage to API request
+- **⚠️ Corruption Detection**: Identify where token gets truncated or corrupted
+
+### 🛠️ Technical Implementation
+- **KeychainManager.save()**: Log token length, previews, and storage success
+- **KeychainManager.loadToken()**: Track retrieval process and data conversion
+- **APIService.createAuthenticatedRequest()**: Enhanced token validation and header logging
+- **JWT Validation**: Show segment count and expiration details
+
+### 🎯 Debugging Strategy
+1. **🔑🔑🔑** - KeychainManager operations (save/load)
+2. **🔐** - APIService authentication flow
+3. **📡** - API call parameters and headers
+4. **✅/❌** - Success/failure indicators
+
+### 📝 Next Steps
+- Test custody button and capture detailed token logs
+- Compare token length at save vs load operations  
+- Verify JWT format corruption point
+- Implement token refresh if corruption confirmed
+
 ## [2025-01-28 23:44 EST] - Custody Toggle Debugging Enhancements
 
 ### iOS Debugging Improvements
