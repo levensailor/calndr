@@ -1129,8 +1129,12 @@ class CalendarViewModel: ObservableObject {
                     
                     if (error as NSError).code == 401 {
                         print("❌🔐 CalendarViewModel: 401 UNAUTHORIZED ERROR in toggleCustodian - TRIGGERING LOGOUT!")
-                        print("❌🔐 CalendarViewModel: This means the token is invalid/expired")
-                        self?.authManager.logout()
+                        print("❌🔐 CalendarViewModel: This means the token is invalid/expired/malformed")
+                        print("❌🔐 CalendarViewModel: Backend reported JWT validation failed - forcing re-authentication")
+                        
+                        DispatchQueue.main.async {
+                            self?.authManager.logout()
+                        }
                     }
                     // Could fall back to legacy API here if needed
                 }

@@ -109,13 +109,17 @@ class APIService {
         
         if let token = KeychainManager.shared.loadToken(for: "currentUser") {
             print("🔐 APIService: Token found in keychain (length: \(token.count))")
+            print("🔐 Token preview: \(String(token.prefix(20)))...")
+            print("🔐 Token suffix: ...\(String(token.suffix(10)))")
             
             // Validate token before using it
             if isTokenValid(token) {
                 print("🔐✅ APIService: Token is valid, adding to request")
                 request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                print("🔐✅ Authorization header set: Bearer \(String(token.prefix(20)))...")
             } else {
                 print("🔐❌ APIService: Token is expired or invalid, not adding to request")
+                print("🔐❌ Token segments: \(token.components(separatedBy: ".").count)")
                 // Note: The request will proceed without Authorization header,
                 // which will result in 401 and trigger logout in the caller
             }
