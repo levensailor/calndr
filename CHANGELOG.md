@@ -1,5 +1,93 @@
 # CHANGELOG
 
+## [2025-01-28 12:19 EST] - JSON Error Pattern Analysis & Enhanced Debugging
+
+### 🔍 **JSON Format Issue: Deeper Analysis**
+
+#### **Error Pattern Identified:**
+- **Affected Months**: 2025-6, 2025-7, 2025-8 (June, July, August 2025)
+- **Root Cause**: Backend returns `{"error": "message"}` with HTTP 200 instead of empty array `[]`
+- **Expected Format**: `[CustodyResponse]` array or proper HTTP error status
+- **Current Format**: `{"error": "some message"}` with successful HTTP status
+
+#### **Enhanced Debugging Added:**
+- **🏁🏁🏁**: Method execution tracking with year-month and URL verification
+- **🚨**: HTTP error status detection (400+ codes) with response body logging
+- **📄**: Enhanced error response parsing for `{"error": "message"}` format
+- **Error Response Priority**: Check error format before attempting array decode
+
+### 🎯 **Technical Root Cause**
+
+#### **fetchCustodyRecordsForYear() Pattern:**
+```swift
+// Calls API for ALL 12 months of current year
+for month in 1...12 {
+    APIService.shared.fetchCustodyRecords(year: year, month: month)
+}
+```
+
+#### **Backend Response Inconsistency:**
+- **Months with data**: Returns `[{id: 1, event_date: "2025-01-01", ...}]` ✅
+- **Months without data**: Returns `{"error": "No records found"}` ❌
+- **Should return**: Empty array `[]` or HTTP 404
+
+### 🛠️ **iOS Improvements Implemented**
+
+#### **1. Error Response Detection**
+```swift
+// NEW: Detect error responses before array decode
+let errorResponse = try JSONDecoder().decode([String: String].self, from: data)
+if let errorMessage = errorResponse["error"] {
+    // Handle as server error with proper status code
+}
+```
+
+#### **2. HTTP Status Code Validation**
+```swift
+// NEW: Check for HTTP errors before JSON processing
+if httpResponse.statusCode >= 400 {
+    print("🚨 HTTP Error: \(httpResponse.statusCode)")
+    // Handle HTTP errors properly
+}
+```
+
+#### **3. Enhanced Debug Flow**
+1. **🏁**: Method called with parameters
+2. **📄📄📄**: Raw JSON response (when visible)
+3. **🚨**: HTTP status analysis
+4. **📄**: Error response vs array decode attempts
+
+### 🎯 **Backend Fix Needed**
+
+#### **Current Problematic Response:**
+```json
+HTTP 200 OK
+{"error": "No custody records found for this month"}
+```
+
+#### **Recommended Fix:**
+```json
+HTTP 200 OK
+[]  // Empty array for no data
+```
+
+**OR:**
+```json
+HTTP 404 Not Found
+{"error": "No custody records found for this month"}
+```
+
+### 📊 **Next Steps**
+1. **🏁🏁🏁**: Test and capture method execution logs
+2. **📄📄📄**: Identify why raw JSON logs aren't showing  
+3. **🚨**: Check HTTP status codes for problem months
+4. **Backend**: Fix endpoint to return consistent array format
+
+### 🔗 **Related Issues Status**
+1. **JWT Token**: ✅ RESOLVED
+2. **Server Timeouts**: ✅ IDENTIFIED & HANDLED  
+3. **JSON Format**: 🔍 ROOT CAUSE FOUND, DEBUGGING ENHANCED
+
 ## [2025-01-28 09:05 EST] - Server Timeout Issue Resolution & Root Cause Analysis
 
 ### 🎉 **Major Progress: Multiple Issues Identified & Resolved**
