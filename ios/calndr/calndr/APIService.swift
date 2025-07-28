@@ -581,7 +581,11 @@ class APIService {
     // MARK: - Custody API (New dedicated custody endpoints)
     
     func fetchCustodyRecords(year: Int, month: Int, completion: @escaping (Result<[CustodyResponse], Error>) -> Void) {
+        print("🏁🏁🏁 STARTING fetchCustodyRecords for \(year)-\(month) 🏁🏁🏁")
+        
         let url = baseURL.appendingPathComponent("/custody/\(year)/\(month)")
+        print("🏁 Final URL: \(url.absoluteString)")
+        
         let request = createAuthenticatedRequest(url: url)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
@@ -605,7 +609,21 @@ class APIService {
             }
 
             if httpResponse.statusCode == 401 {
+                print("🚨 Received 401 Unauthorized for custody records")
                 completion(.failure(NSError(domain: "APIService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Unauthorized"])))
+                return
+            }
+            
+            // Check for other error status codes before JSON decoding
+            if httpResponse.statusCode >= 400 {
+                print("🚨 Received HTTP error status: \(httpResponse.statusCode)")
+                
+                // Try to extract error message from JSON
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("🚨 Error response body: \(jsonString)")
+                }
+                
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "HTTP Error \(httpResponse.statusCode)"])))
                 return
             }
 
@@ -618,6 +636,26 @@ class APIService {
                 print("❌ JSON Decoding Error for \(year)-\(month): \(error)")
                 if let decodingError = error as? DecodingError {
                     print("❌ Detailed Decoding Error: \(decodingError)")
+                    
+                    // Try to decode as error response first
+                    print("📄 Checking if this is an error response...")
+                    do {
+                        let errorResponse = try JSONDecoder().decode([String: String].self, from: data)
+                        if let errorMessage = errorResponse["error"] {
+                            print("🚨 Server returned error response: \(errorMessage)")
+                            print("🚨 HTTP Status was: \(httpResponse.statusCode)")
+                            
+                            // Check if this is an auth error
+                            if httpResponse.statusCode == 401 {
+                                completion(.failure(NSError(domain: "APIService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Unauthorized: \(errorMessage)"])))
+                            } else {
+                                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error: \(errorMessage)"])))
+                            }
+                            return
+                        }
+                    } catch {
+                        print("📄 Not an error response format, trying other strategies...")
+                    }
                     
                     // Try to decode as a single object or different structure
                     print("📄 Attempting alternative decoding strategies...")
