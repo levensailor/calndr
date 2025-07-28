@@ -979,12 +979,16 @@ class CalendarViewModel: ObservableObject {
         let selectedDate = calendar.startOfDay(for: date)
         let dateString = isoDateString(from: date)
         
-        print("🔄 toggleCustodian called for \(dateString)")
+        print("🔄🔄🔄 toggleCustodian called for \(dateString) 🔄🔄🔄")
+        print("🔍 Date details: today=\(isoDateString(from: today)), selected=\(isoDateString(from: selectedDate))")
         print("🔍 Current state: isHandoffDataReady=\(isHandoffDataReady), custodyRecords.count=\(custodyRecords.count)")
+        print("🔍 Custodian IDs: custodianOneId=\(custodianOneId ?? "nil"), custodianTwoId=\(custodianTwoId ?? "nil")")
+        print("🔍 Custodian Names: custodianOneName=\(custodianOneName), custodianTwoName=\(custodianTwoName)")
         
         // Check if data is ready before proceeding
         guard isHandoffDataReady else {
-            print("⚠️ Cannot toggle custodian for \(dateString) - handoff data not ready yet")
+            print("⚠️❌ Cannot toggle custodian for \(dateString) - handoff data not ready yet")
+            print("⚠️❌ custodiansReady=\(custodiansReady), custodyDataReady=\(custodyDataReady)")
             return
         }
         
@@ -1003,29 +1007,41 @@ class CalendarViewModel: ObservableObject {
             }
         }
         
-        let (currentOwner, _) = getCustodyInfo(for: date)
+        let (currentOwner, currentText) = getCustodyInfo(for: date)
+        print("🔍 Current custody info: owner='\(currentOwner)', text='\(currentText)'")
         
         // Determine the new custodian and their ID
         let newCustodianId: String
+        let newCustodianName: String
         if currentOwner == self.custodianOneId {
             newCustodianId = self.custodianTwoId ?? ""
+            newCustodianName = self.custodianTwoName
         } else {
             newCustodianId = self.custodianOneId ?? ""
+            newCustodianName = self.custodianOneName
         }
         
+        print("🔄 Toggling from '\(currentOwner)' to '\(newCustodianId)' (name: \(newCustodianName))")
+        
         guard !newCustodianId.isEmpty else {
-            print("Error: Could not determine new custodian ID")
+            print("❌ Error: Could not determine new custodian ID")
+            print("❌ custodianOneId=\(custodianOneId ?? "nil"), custodianTwoId=\(custodianTwoId ?? "nil")")
             return
         }
         
         // Mark this date as having an in-flight request
         inFlightCustodyUpdates.insert(dateString)
-        print("🔄 Starting custody update for \(dateString)")
+        print("🚀 Starting custody update for \(dateString)")
+        print("🚀 In-flight updates now: \(inFlightCustodyUpdates)")
         
         // Check if this should be a handoff day by comparing with previous day
         let previousDate = calendar.date(byAdding: .day, value: -1, to: date) ?? date
-        let (previousOwner, _) = getCustodyInfo(for: previousDate)
+        let previousDateString = isoDateString(from: previousDate)
+        let (previousOwner, previousText) = getCustodyInfo(for: previousDate)
         let isHandoffDay = !previousOwner.isEmpty && previousOwner != newCustodianId
+        
+        print("🔍 Handoff logic: previousDate=\(previousDateString), previousOwner='\(previousOwner)', previousText='\(previousText)'")
+        print("🔍 Handoff result: isHandoffDay=\(isHandoffDay)")
         
         var handoffTime: String? = nil
         var handoffLocation: String? = nil
@@ -1034,6 +1050,8 @@ class CalendarViewModel: ObservableObject {
             // Determine handoff time and location based on day of week
             let weekday = calendar.component(.weekday, from: date) // 1=Sunday, 7=Saturday
             let isWeekend = weekday == 1 || weekday == 7 // Sunday or Saturday
+            
+            print("🔍 Handoff scheduling: weekday=\(weekday), isWeekend=\(isWeekend)")
             
             if isWeekend {
                 // Weekend: noon at target custodian's home
@@ -1046,8 +1064,16 @@ class CalendarViewModel: ObservableObject {
                 handoffLocation = "daycare"
             }
             
-            print("Setting handoff for \(isoDateString(from: date)): \(handoffTime!) at \(handoffLocation!)")
+            print("🔄 Setting handoff for \(isoDateString(from: date)): \(handoffTime!) at \(handoffLocation!)")
         }
+        
+        // Log the API call parameters
+        print("📡 Calling updateCustodyRecord API with parameters:")
+        print("📡   dateString: '\(dateString)'")
+        print("📡   custodianId: '\(newCustodianId)' (name: \(newCustodianName))")
+        print("📡   handoffDay: \(isHandoffDay)")
+        print("📡   handoffTime: \(handoffTime ?? "nil")")
+        print("📡   handoffLocation: '\(handoffLocation ?? "nil")'")
         
         // Use the new custody API with handoff information
         APIService.shared.updateCustodyRecord(
