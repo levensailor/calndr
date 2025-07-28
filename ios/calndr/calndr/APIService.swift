@@ -596,11 +596,13 @@ class APIService {
             }
             
             // Log the raw data as a string for debugging
-//            if let jsonString = String(data: data, encoding: .utf8) {
-//                print("--- Raw JSON for fetchCustodyRecords ---")
-//                print(jsonString)
-//                print("--------------------------------------")
-//            }
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("📄📄📄 Raw JSON for fetchCustodyRecords (\(year)-\(month)) 📄📄📄")
+                print("📄 URL: \(url.absoluteString)")
+                print("📄 Status Code: \(httpResponse.statusCode)")
+                print("📄 Response: \(jsonString)")
+                print("📄📄📄 End Raw JSON 📄📄📄")
+            }
 
             if httpResponse.statusCode == 401 {
                 completion(.failure(NSError(domain: "APIService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Unauthorized"])))
@@ -608,13 +610,39 @@ class APIService {
             }
 
             do {
+                print("📄 Attempting to decode as [CustodyResponse] array...")
                 let custodyRecords = try JSONDecoder().decode([CustodyResponse].self, from: data)
-//                print("✅ Successfully decoded \(custodyRecords.count) custody records")
+                print("✅ Successfully decoded \(custodyRecords.count) custody records")
                 completion(.success(custodyRecords))
             } catch {
-                print("❌ JSON Decoding Error: \(error)")
+                print("❌ JSON Decoding Error for \(year)-\(month): \(error)")
                 if let decodingError = error as? DecodingError {
                     print("❌ Detailed Decoding Error: \(decodingError)")
+                    
+                    // Try to decode as a single object or different structure
+                    print("📄 Attempting alternative decoding strategies...")
+                    
+                    // Try decoding as a single CustodyResponse
+                    do {
+                        let singleRecord = try JSONDecoder().decode(CustodyResponse.self, from: data)
+                        print("✅ Successfully decoded as single CustodyResponse, wrapping in array")
+                        completion(.success([singleRecord]))
+                        return
+                    } catch {
+                        print("❌ Single object decode also failed: \(error)")
+                    }
+                    
+                    // Try decoding as a dictionary with data field
+                    do {
+                        let responseWrapper = try JSONDecoder().decode([String: [CustodyResponse]].self, from: data)
+                        if let records = responseWrapper["data"] ?? responseWrapper["custody_records"] ?? responseWrapper["records"] {
+                            print("✅ Successfully decoded from wrapper object with \(records.count) records")
+                            completion(.success(records))
+                            return
+                        }
+                    } catch {
+                        print("❌ Wrapper object decode also failed: \(error)")
+                    }
                 }
                 completion(.failure(error))
             }
