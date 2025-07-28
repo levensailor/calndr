@@ -1,5 +1,31 @@
 # CHANGELOG
 
+## [2025-01-28 23:44 EST] - Custody Toggle Debugging Enhancements
+
+### iOS Debugging Improvements
+- **🔍 Comprehensive Logging**: Added detailed logging to custody toggle functionality for debugging button unresponsiveness
+- **📊 API Call Tracking**: Enhanced logging in CalendarViewModel.toggleCustodian() to show current state, target state, and API parameters
+- **🌐 HTTP Request Logging**: Added detailed logging to APIService.updateCustodyRecord() including URL, payload, headers, and response status
+- **🔄 Fallback Monitoring**: Enhanced createCustodyRecord() logging to track POST fallback when PUT returns 404
+- **⚠️ Error Diagnostics**: Improved error messages with specific codes and context for custody update failures
+
+### Technical Details
+- **State Tracking**: Log custodian IDs, names, current custody owner, and target owner
+- **Handoff Logic**: Track handoff day calculations and time/location assignments  
+- **Request Payload**: Show exact JSON being sent to API endpoints
+- **Response Analysis**: Log HTTP status codes, headers, and response data
+- **Memory State**: Verify local custody records array updates and UI refresh signals
+
+### Debugging Guide
+- **🔄🔄🔄**: Look for these logs when custody button is clicked (CalendarViewModel)
+- **🌐🌐🌐**: Look for these logs for API request/response details (APIService)
+- **📡**: API call parameters and payload
+- **✅**: Successful operations
+- **❌**: Errors and failures
+
+### Issue Investigation
+User reported custody button in day view not changing parent - detailed logging will help identify if issue is in API call, server response, or UI update.
+
 ## [2025-01-28 13:13 EST] - Handoff Performance Optimization - Reduced 15s Load Time
 
 ### iOS Performance Improvements
