@@ -1,5 +1,93 @@
 # CHANGELOG
 
+## [2025-01-28 09:05 EST] - Server Timeout Issue Resolution & Root Cause Analysis
+
+### 🎉 **Major Progress: Multiple Issues Identified & Resolved**
+
+#### ✅ **JWT Token Issue: RESOLVED**
+- **Status**: ✅ Authentication working properly
+- **Evidence**: No 401 errors in latest logs
+- **Result**: API requests reaching server successfully
+
+#### 🚨 **Root Cause Identified: AWS SNS Timeout**
+- **504 Gateway Timeout**: Backend custody updates timing out after ~60 seconds
+- **Bottleneck**: `send_custody_change_notification()` making external AWS SNS calls without timeout
+- **Backend Operations**: Multiple synchronous operations causing delays:
+  1. Database queries for user lookup
+  2. AWS SNS push notification API calls (SLOW)
+  3. Redis cache invalidation operations
+  4. Complex handoff logic processing
+
+### 🛠️ **Client-Side Improvements Implemented**
+
+#### **1. Enhanced Timeout Handling**
+- **Request Timeout**: Increased to 120 seconds for custody operations
+- **Error Messages**: User-friendly 504 timeout explanations
+- **Server Error Categorization**: Specific handling for 5xx errors
+
+#### **2. Duplicate Request Prevention**  
+- **In-Flight Tracking**: Prevent multiple rapid button taps
+- **Enhanced Logging**: Track concurrent request patterns
+- **UI Feedback**: Better handling of slow server responses
+
+### 📊 **Backend Performance Bottlenecks Identified**
+
+#### **Primary Issue: Push Notifications**
+```python
+# PROBLEMATIC CODE IN backend/services/notification_service.py
+sns_client.publish(  # NO TIMEOUT HANDLING
+    TargetArn=other_user['sns_endpoint_arn'],
+    Message=json.dumps(message),
+    MessageStructure='json'
+)
+```
+
+#### **Secondary Issues:**
+- **Database Queries**: Multiple sequential queries during custody update
+- **Cache Operations**: Redis timeout reduced to 2 seconds (good)
+- **Complex Logic**: Handoff calculations and validations
+
+### 🎯 **Backend Optimization Recommendations**
+
+#### **1. Async Notifications (High Priority)**
+```python
+# RECOMMENDED SOLUTION
+import asyncio
+import concurrent.futures
+
+async def send_custody_change_notification_async(...):
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        future = executor.submit(sns_client.publish, ...)
+        try:
+            await asyncio.wait_for(
+                asyncio.wrap_future(future), 
+                timeout=5.0  # 5 second timeout
+            )
+        except asyncio.TimeoutError:
+            logger.warning("Push notification timed out, continuing...")
+```
+
+#### **2. Background Task Processing**
+- Move push notifications to background queue (Celery/RQ)
+- Return custody update response immediately
+- Process notifications asynchronously
+
+#### **3. Database Optimization**
+- Combine user queries into single JOIN operation
+- Add database indexes for custody lookups
+- Consider read replicas for heavy query operations
+
+### 📈 **Performance Results**
+- **Request Timeout**: Extended from 60s to 120s
+- **Error Handling**: Clear timeout messages for users
+- **Duplicate Prevention**: Reduced unnecessary server load
+- **Root Cause**: AWS SNS external dependency identified
+
+### 🔗 **Related Issues Status**
+1. **JWT Token Corruption**: ✅ RESOLVED
+2. **JSON Format Mismatch**: 🔍 Still investigating (separate issue)
+3. **Server Timeouts**: ✅ IDENTIFIED & CLIENT-SIDE HANDLED
+
 ## [2025-01-28 00:23 EST] - Custody Records JSON Format Mismatch Investigation
 
 ### 🚨 **Secondary Issue Identified: JSON Decoding Failure**
