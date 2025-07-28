@@ -729,6 +729,9 @@ class APIService {
 
         print("🌐 Sending PUT request...")
         
+        // Configure request timeout for slow custody operations
+        updateRequest.timeoutInterval = 120 // 2 minutes for custody updates
+        
         URLSession.shared.dataTask(with: updateRequest) { data, response, error in
             print("🌐 PUT Response received")
             
@@ -779,7 +782,18 @@ class APIService {
                 self.createCustodyRecord(for: date, custodianId: custodianId, handoffDay: handoffDay, handoffTime: handoffTime, handoffLocation: handoffLocation, completion: completion)
             } else {
                 print("🌐❌ PUT request failed with status: \(httpResponse.statusCode)")
-                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Failed to update custody record"])))
+                
+                // Handle specific error cases
+                if httpResponse.statusCode == 504 {
+                    print("🌐⏰ Gateway Timeout (504) - Backend server took too long to respond")
+                    print("🌐⏰ This suggests server performance issues or complex custody logic")
+                    completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server timeout - custody update took too long to process. Please try again."])))
+                } else if httpResponse.statusCode >= 500 {
+                    print("🌐❌ Server Error (\(httpResponse.statusCode)) - Backend infrastructure issue")
+                    completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server error (\(httpResponse.statusCode)) - please try again later"])))
+                } else {
+                    completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Failed to update custody record"])))
+                }
             }
         }.resume()
     }

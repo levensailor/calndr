@@ -995,6 +995,8 @@ class CalendarViewModel: ObservableObject {
         // Check if there's already an in-flight request for this date
         guard !inFlightCustodyUpdates.contains(dateString) else {
             print("⚠️ Custody update already in progress for \(dateString), ignoring duplicate request")
+            print("⚠️ Current in-flight updates: \(inFlightCustodyUpdates)")
+            print("⚠️ This may indicate UI lag or timeout issues causing multiple rapid taps")
             return
         }
         
