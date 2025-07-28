@@ -1,5 +1,35 @@
 # CHANGELOG
 
+## [2025-01-28 00:23 EST] - Custody Records JSON Format Mismatch Investigation
+
+### 🚨 **Secondary Issue Identified: JSON Decoding Failure**
+- **Error**: "Expected to decode Array<Any> but found a dictionary instead"
+- **Affected**: Custody records fetching for months 2025-6, 2025-7, 2025-8
+- **Root Cause**: iOS app expects array `[CustodyResponse]` but backend returns dictionary
+- **Status**: Debugging enhanced with comprehensive logging
+
+### 🔍 **JSON Response Debugging Added**
+- **📄 Raw JSON Logging**: Enable complete API response logging for custody endpoints
+- **🔄 Multi-Strategy Decoding**: Fallback decoding attempts for different response formats:
+  1. Try as expected array `[CustodyResponse]`
+  2. Fallback to single `CustodyResponse` wrapped in array
+  3. Fallback to dictionary wrapper with `data`/`custody_records`/`records` field
+- **📊 Enhanced Error Context**: Show URL, status code, and full response content
+
+### 🎯 **Backend Analysis**
+- **Expected Endpoint**: `GET /custody/{year}/{month}` → `List[CustodyResponse]` (array)
+- **API Definition**: `@router.get("/{year}/{month}", response_model=List[CustodyResponse])`
+- **Hypothesis**: Error responses or middleware may be wrapping array in dictionary
+
+### 📝 **Investigation Strategy**
+1. **📄📄📄** - Look for raw JSON response logs
+2. **📄 Status Code** - Check HTTP response status (200 vs error codes)
+3. **📄 Response** - Examine actual JSON structure returned
+4. **✅/❌** - Track decode success/failure patterns
+
+### 🔗 **Related Issues**
+This JSON format issue is separate from but may be related to the JWT token corruption issue. Both affect custody functionality but have different root causes.
+
 ## [2025-01-28 00:15 EST] - JWT Token Corruption Debugging Enhancement
 
 ### 🔐 Root Cause Identified: JWT Token Authentication Failure
