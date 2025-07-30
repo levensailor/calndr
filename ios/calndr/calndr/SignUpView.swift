@@ -14,7 +14,6 @@ struct SignUpView: View {
             themeManager.currentTheme.mainBackgroundColorSwiftUI.ignoresSafeArea()
             
             ScrollView {
-            VStack {
                 LazyVStack(spacing: 20) {
                     Text("Create Account")
                         .font(.system(size: 32, weight: .bold, design: .default))
@@ -119,7 +118,6 @@ struct SignUpView: View {
                 }
                 .padding(.bottom, 20)
             }
-        }
         .scrollTargetBehavior(CustomVerticalPagingBehavior())
         .navigationBarHidden(true)
         .onTapGesture {
