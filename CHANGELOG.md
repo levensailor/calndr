@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2025-01-28 14:20 EST] - Fix Blue Flash During Month Transitions
+
+Fixed the blue screen flash that appeared for a split second when scrolling between months in the iOS calendar. The issue was caused by extremely short animation durations (10ms) and TabView's default blue background showing through during transitions. Improved animation timing from 10ms to 150ms for smoother transitions and added explicit background color to prevent system blue from flashing.
+
 ## [2025-01-28 12:19 EST] - JSON Error Pattern Analysis & Enhanced Debugging
 
 ### 🔍 **JSON Format Issue: Deeper Analysis**
