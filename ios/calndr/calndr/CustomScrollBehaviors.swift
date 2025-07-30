@@ -175,7 +175,6 @@ struct CustomListPagingBehavior: ScrollTargetBehavior {
             return
         }
         
-        let originalOffset = context.originalTarget.rect.minY
         let targetOffset = target.rect.minY
         
         // Calculate which item should be at the top
