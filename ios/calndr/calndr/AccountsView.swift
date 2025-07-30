@@ -178,8 +178,8 @@ struct AccountsView: View {
                         .padding(.bottom, 20)
                     }
                 }
+                .scrollTargetBehavior(CustomVerticalPagingBehavior())
             }
-            .scrollTargetBehavior(CustomVerticalPagingBehavior())
         }
         .navigationTitle("Account")
         .onAppear {
