@@ -106,6 +106,7 @@ struct MainTabView: View {
                         .tag(CalendarViewType.day)
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
                 .onChange(of: currentView) { oldValue, newValue in
                     // Fetch appropriate data when view changes
                     if newValue == .year {
@@ -363,37 +364,36 @@ struct MainTabView: View {
     private func changeMonthWithAnimation(by amount: Int) {
         isAnimating = true
         
-        // Fly-out animation - fade out header and slide up
-        withAnimation(.easeInOut(duration: 0.01)) {
-            animationOpacity = 1.0
-            animationScale = 1.0
+        // Fly-out animation - fade out header and calendar content
+        withAnimation(.easeInOut(duration: 0.15)) {
+            animationOpacity = 0.0
+            animationScale = 0.95
             headerOpacity = 0.0
             headerOffset = -20.0
         }
         
         // Change the month at the midpoint of the animation
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.075) {
             let calendar = Calendar.current
             if let newDate = calendar.date(byAdding: .month, value: amount, to: calendarViewModel.currentDate) {
                 calendarViewModel.currentDate = newDate
                 calendarViewModel.fetchEvents()
             }
-        }
-        
-        // Fly-in animation - fade in header and slide down
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            // Start header from below
+            
+            // Immediately start the fly-in animation
             headerOffset = 20.0
             headerOpacity = 0.0
+            animationOpacity = 0.0
+            animationScale = 1.05
             
-            withAnimation(.easeInOut(duration: 0.01)) {
+            withAnimation(.easeInOut(duration: 0.15)) {
                 animationOpacity = 1.0
                 animationScale = 1.0
                 headerOpacity = 1.0
                 headerOffset = 0.0
             }
             
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                 isAnimating = false
             }
         }
