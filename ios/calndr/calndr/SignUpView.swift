@@ -8,7 +8,7 @@ struct SignUpView: View {
     @State private var isOnboardingPresented = false
     @State private var showingPhoneVerification = false
     @State private var phoneToVerify = ""
-
+    
     var body: some View {
         ZStack {
             themeManager.currentTheme.mainBackgroundColorSwiftUI.ignoresSafeArea()
@@ -29,7 +29,7 @@ struct SignUpView: View {
                         )
                         .frame(height: 56)
                         .autocapitalization(.words)
-
+                        
                         FloatingLabelTextField(
                             title: "Last Name",
                             text: $viewModel.lastName,
@@ -37,7 +37,7 @@ struct SignUpView: View {
                         )
                         .frame(height: 56)
                         .autocapitalization(.words)
-
+                        
                         FloatingLabelTextField(
                             title: "Email",
                             text: $viewModel.email,
@@ -46,21 +46,21 @@ struct SignUpView: View {
                         .frame(height: 56)
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
-
+                        
                         FloatingLabelTextField(
                             title: "Password",
                             text: $viewModel.password,
                             isSecure: true
                         )
                         .frame(height: 56)
-
+                        
                         FloatingLabelTextField(
                             title: "Confirm Password",
                             text: $viewModel.confirmPassword,
                             isSecure: true
                         )
                         .frame(height: 56)
-
+                        
                         FloatingLabelTextField(
                             title: "Phone Number",
                             text: $viewModel.phoneNumber,
@@ -118,31 +118,32 @@ struct SignUpView: View {
                 }
                 .padding(.bottom, 20)
             }
-        .scrollTargetBehavior(CustomVerticalPagingBehavior())
-        .navigationBarHidden(true)
-        .onTapGesture {
-            // Dismiss keyboard when tapping outside
-            hideKeyboard()
-        }
-        .fullScreenCover(isPresented: $showingPhoneVerification) {
-            PhoneVerificationView(phoneNumber: phoneToVerify) {
-                // Phone verified, now complete signup
-                viewModel.completeSignUp(authManager: authManager) { success in
-                    if success {
-                        showingPhoneVerification = false
-                        isOnboardingPresented = true
+            .scrollTargetBehavior(CustomVerticalPagingBehavior())
+            .navigationBarHidden(true)
+            .onTapGesture {
+                // Dismiss keyboard when tapping outside
+                hideKeyboard()
+            }
+            .fullScreenCover(isPresented: $showingPhoneVerification) {
+                PhoneVerificationView(phoneNumber: phoneToVerify) {
+                    // Phone verified, now complete signup
+                    viewModel.completeSignUp(authManager: authManager) { success in
+                        if success {
+                            showingPhoneVerification = false
+                            isOnboardingPresented = true
+                        }
                     }
                 }
+                .environmentObject(themeManager)
             }
-            .environmentObject(themeManager)
-        }
-        .fullScreenCover(isPresented: $isOnboardingPresented) {
-            OnboardingView(isOnboardingComplete: $isOnboardingPresented)
-                .environmentObject(authManager)
+            .fullScreenCover(isPresented: $isOnboardingPresented) {
+                OnboardingView(isOnboardingComplete: $isOnboardingPresented)
+                    .environmentObject(authManager)
+            }
         }
     }
     
     private func hideKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
-} 
+}
