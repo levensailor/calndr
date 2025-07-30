@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2025-01-28 14:45 EST] - Implement Custom Paging Behavior for All Scroll Views
+
+Implemented comprehensive custom paging behavior across all scroll views in the iOS app. Added CustomScrollBehaviors.swift with both horizontal and vertical paging behaviors featuring 1/3 threshold ratio, direction detection, and boundary handling. Applied CustomHorizontalPagingBehavior to theme selectors and CustomVerticalPagingBehavior to all vertical scroll views including JournalView, SchedulesView, AccountsView, SettingsView, and others. This provides consistent, smooth paging behavior throughout the entire app.
+
 ## [2025-01-28 14:20 EST] - Fix Blue Flash During Month Transitions
 
 Fixed the blue screen flash that appeared for a split second when scrolling between months in the iOS calendar. The issue was caused by extremely short animation durations (10ms) and TabView's default blue background showing through during transitions. Improved animation timing from 10ms to 150ms for smoother transitions and added explicit background color to prevent system blue from flashing.
