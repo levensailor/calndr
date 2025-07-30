@@ -153,6 +153,7 @@ struct SittersView: View {
                     Spacer(minLength: 80)
                 }
             }
+            .scrollTargetBehavior(CustomVerticalPagingBehavior())
             .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
             .onAppear {
                 loadFamilyData()

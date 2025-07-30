@@ -92,6 +92,7 @@ struct SettingsView: View {
                     Spacer(minLength: 80)
                 }
             }
+            .scrollTargetBehavior(CustomVerticalPagingBehavior())
             .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
             .preferredColorScheme(themeManager.currentTheme.preferredColorScheme)
             .navigationBarTitleDisplayMode(.inline)

@@ -179,6 +179,7 @@ struct AccountsView: View {
                     }
                 }
             }
+            .scrollTargetBehavior(CustomVerticalPagingBehavior())
         }
         .navigationTitle("Account")
         .onAppear {

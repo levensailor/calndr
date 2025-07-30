@@ -70,6 +70,7 @@ struct DaycareView: View {
                 }
             }
             .background(themeManager.currentTheme.mainBackgroundColor.color)
+            .scrollTargetBehavior(CustomVerticalPagingBehavior())
         }
         .sheet(isPresented: $showingAddDaycare) {
             AddDaycareView()

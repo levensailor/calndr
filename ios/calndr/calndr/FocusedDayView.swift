@@ -124,6 +124,7 @@ struct FocusedDayView: View {
                     .padding()
                 }
             }
+            .scrollTargetBehavior(CustomVerticalPagingBehavior())
             .matchedGeometryEffect(id: date, in: namespace)
             .frame(width: 320, height: 480)  // Slightly larger to accommodate sections
             .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)

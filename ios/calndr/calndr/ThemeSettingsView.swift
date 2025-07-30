@@ -11,6 +11,7 @@ struct ThemeSettingsView: View {
     var body: some View {
         VStack {
             ScrollView {
+            VStack {
                 LazyVGrid(columns: columns, spacing: 20) {
                     ForEach(themeManager.themes) { theme in
                         ThemePreviewView(
@@ -32,6 +33,7 @@ struct ThemeSettingsView: View {
                 .padding()
             }
         }
+        .scrollTargetBehavior(CustomVerticalPagingBehavior())
         .navigationTitle("Themes")
         .navigationBarTitleDisplayMode(.large)
         .preferredColorScheme(themeManager.currentTheme.preferredColorScheme)

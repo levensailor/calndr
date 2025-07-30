@@ -138,6 +138,7 @@ struct ThemeSelectorView: View {
                 }
                 .padding()
             }
+            .scrollTargetBehavior(CustomHorizontalPagingBehavior())
             .onChange(of: selectedTheme) { _, newTheme in
                 withAnimation {
                     proxy.scrollTo(newTheme.id, anchor: .center)

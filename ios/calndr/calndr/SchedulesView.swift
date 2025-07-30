@@ -19,6 +19,7 @@ struct SchedulesView: View {
                     Spacer(minLength: 80)
                 }
             }
+            .scrollTargetBehavior(CustomVerticalPagingBehavior())
             .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
             .navigationBarHidden(true)
         }

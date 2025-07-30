@@ -44,6 +44,7 @@ struct JournalView: View {
                         .padding(.horizontal)
                         .padding(.top, 8)
                     }
+                    .scrollTargetBehavior(CustomVerticalPagingBehavior())
                     .searchable(text: $searchText, prompt: "Search journal entries...")
                 }
             }

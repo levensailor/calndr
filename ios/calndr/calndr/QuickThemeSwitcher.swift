@@ -119,6 +119,7 @@ struct HorizontalThemeSwitcher: View {
             }
             .padding(.horizontal)
         }
+        .scrollTargetBehavior(CustomHorizontalPagingBehavior())
         .sheet(isPresented: $showingAllThemes) {
             NavigationView {
                 ThemeSettingsView()

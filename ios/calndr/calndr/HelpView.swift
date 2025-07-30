@@ -69,6 +69,7 @@ struct HelpView: View {
                 }
                 .padding()
             }
+            .scrollTargetBehavior(CustomVerticalPagingBehavior())
             .background(themeManager.currentTheme.mainBackgroundColorSwiftUI.ignoresSafeArea())
             .navigationTitle("Help & Support")
             .navigationBarTitleDisplayMode(.inline)
