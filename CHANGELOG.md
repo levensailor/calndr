@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2025-01-28 15:15 EST] - Remove Security Section from Settings
+
+Removed the security section from the app settings to simplify the user interface. Deleted SecuritySettingsView.swift and removed all security-related navigation from SettingsView. Users can still manage their account settings through the Account section, but security-specific options have been removed.
+
 ## [2025-01-28 14:45 EST] - Implement Custom Paging Behavior for All Scroll Views
 
 Implemented comprehensive custom paging behavior across all scroll views in the iOS app. Added CustomScrollBehaviors.swift with both horizontal and vertical paging behaviors featuring 1/3 threshold ratio, direction detection, and boundary handling. Applied CustomHorizontalPagingBehavior to theme selectors and CustomVerticalPagingBehavior to all vertical scroll views including JournalView, SchedulesView, AccountsView, SettingsView, and others. This provides consistent, smooth paging behavior throughout the entire app.
