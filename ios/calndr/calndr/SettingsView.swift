@@ -148,7 +148,7 @@ struct SettingsView: View {
                 description: "Babysitters and emergency contacts",
                 color: .orange,
                 destination: .sitters,
-                itemCount: viewModel.babysitters.count + viewModel.emergencyContacts.count
+                itemCount: viewModel.babysitters.count
             ),
             SettingsSection(
                 title: "Schedules",
