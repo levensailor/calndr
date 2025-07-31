@@ -117,14 +117,7 @@ struct SettingsView: View {
                 destination: .account,
                 itemCount: nil
             ),
-            SettingsSection(
-                title: "Security",
-                icon: "shield.lefthalf.filled",
-                description: "Password, authentication, and privacy",
-                color: .red,
-                destination: .security,
-                itemCount: nil
-            ),
+
             SettingsSection(
                 title: "Preferences",
                 icon: "slider.horizontal.3",
@@ -181,8 +174,7 @@ struct SettingsView: View {
         switch destination {
         case .account:
             AccountsView()
-        case .security:
-            SecuritySettingsView()
+
         case .preferences:
             PreferencesView().environmentObject(viewModel)
         case .schools:

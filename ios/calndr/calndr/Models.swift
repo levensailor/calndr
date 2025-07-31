@@ -1018,7 +1018,6 @@ struct SettingsSection: Identifiable {
 
 enum SettingsDestination: Hashable {
     case account
-    case security
     case preferences
     case schools
     case daycare
