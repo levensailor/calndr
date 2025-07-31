@@ -581,15 +581,36 @@ class APIService {
     // MARK: - Custody API (New dedicated custody endpoints)
     
     func fetchCustodyRecords(year: Int, month: Int, completion: @escaping (Result<[CustodyResponse], Error>) -> Void) {
-        print("🏁🏁🏁 STARTING fetchCustodyRecords for \(year)-\(month) 🏁🏁🏁")
+        fetchCustodyRecordsWithRetry(year: year, month: month, retryCount: 0, maxRetries: 3, completion: completion)
+    }
+    
+    private func fetchCustodyRecordsWithRetry(year: Int, month: Int, retryCount: Int, maxRetries: Int, completion: @escaping (Result<[CustodyResponse], Error>) -> Void) {
+        print("🏁🏁🏁 STARTING fetchCustodyRecords for \(year)-\(month) (attempt \(retryCount + 1)/\(maxRetries + 1)) 🏁🏁🏁")
         
         let url = baseURL.appendingPathComponent("/custody/\(year)/\(month)")
         print("🏁 Final URL: \(url.absoluteString)")
         
         let request = createAuthenticatedRequest(url: url)
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        // Create a custom URLSession with shorter timeout for custody records
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30.0  // 30 seconds timeout
+        config.timeoutIntervalForResource = 60.0 // 60 seconds total timeout
+        let session = URLSession(configuration: config)
+        
+        session.dataTask(with: request) { data, response, error in
             if let error = error {
+                // Handle network errors with retry logic
+                if retryCount < maxRetries {
+                    let delay = Double(retryCount + 1) * 2.0 // Exponential backoff: 2s, 4s, 6s
+                    print("🔄 Network error detected: \(error.localizedDescription). Retrying in \(delay) seconds... (attempt \(retryCount + 1)/\(maxRetries))")
+                    
+                    DispatchQueue.global().asyncAfter(deadline: .now() + delay) {
+                        self.fetchCustodyRecordsWithRetry(year: year, month: month, retryCount: retryCount + 1, maxRetries: maxRetries, completion: completion)
+                    }
+                    return
+                }
+                
                 completion(.failure(error))
                 return
             }
@@ -621,6 +642,17 @@ class APIService {
                 // Try to extract error message from JSON
                 if let jsonString = String(data: data, encoding: .utf8) {
                     print("🚨 Error response body: \(jsonString)")
+                }
+                
+                // Handle 504 Gateway Timeout with retry logic
+                if httpResponse.statusCode == 504 && retryCount < maxRetries {
+                    let delay = Double(retryCount + 1) * 2.0 // Exponential backoff: 2s, 4s, 6s
+                    print("🔄 504 Gateway Timeout detected. Retrying in \(delay) seconds... (attempt \(retryCount + 1)/\(maxRetries))")
+                    
+                    DispatchQueue.global().asyncAfter(deadline: .now() + delay) {
+                        self.fetchCustodyRecordsWithRetry(year: year, month: month, retryCount: retryCount + 1, maxRetries: maxRetries, completion: completion)
+                    }
+                    return
                 }
                 
                 completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "HTTP Error \(httpResponse.statusCode)"])))

@@ -444,6 +444,22 @@ class CalendarViewModel: ObservableObject {
                     }
                 case .failure(let error):
                     print("Error fetching custody records for \(year)-\(month): \(error.localizedDescription)")
+                    
+                    // Check if this is a timeout error and show appropriate message
+                    if let nsError = error as NSError? {
+                        if nsError.code == 504 {
+                            print("🔄 504 Gateway Timeout for \(year)-\(month) - retry mechanism should handle this")
+                        } else if nsError.domain == NSURLErrorDomain {
+                            switch nsError.code {
+                            case NSURLErrorTimedOut:
+                                print("🔄 Network timeout for \(year)-\(month) - retry mechanism should handle this")
+                            case NSURLErrorCannotConnectToHost:
+                                print("🔄 Cannot connect to host for \(year)-\(month) - retry mechanism should handle this")
+                            default:
+                                print("🔄 Network error for \(year)-\(month): \(nsError.localizedDescription)")
+                            }
+                        }
+                    }
                 }
                 dispatchGroup.leave()
             }
