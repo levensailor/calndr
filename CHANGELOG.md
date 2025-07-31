@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2025-01-28 15:30 EST] - Add Retry Logic for 504 Gateway Timeout Errors
+
+Implemented comprehensive retry mechanism to handle 504 Gateway Timeout errors when fetching custody records. Added exponential backoff retry logic that attempts up to 3 times with increasing delays (2s, 4s, 6s) for both HTTP 504 errors and network timeouts. Set custom timeout intervals (30s request, 60s resource) to prevent long waits and improve user experience. Enhanced error logging to track retry attempts and provide better debugging information.
+
 ## [2025-01-28 15:15 EST] - Remove Security Section from Settings
 
 Removed the security section from the app settings to simplify the user interface. Deleted SecuritySettingsView.swift and removed all security-related navigation from SettingsView. Users can still manage their account settings through the Account section, but security-specific options have been removed.
