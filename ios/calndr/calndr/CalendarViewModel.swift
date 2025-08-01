@@ -1800,7 +1800,7 @@ class CalendarViewModel: ObservableObject {
                 return member.id != self.currentUserID
             }
             
-            self?.coparents = filteredMembers.enumerated().compactMap { (index, member) in
+            self.coparents = filteredMembers.enumerated().compactMap { (index, member) in
                 let uniqueId = abs(member.id.hashValue) % 1000000
                 return Coparent(
                     id: uniqueId,
