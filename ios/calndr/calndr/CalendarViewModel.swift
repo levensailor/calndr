@@ -42,6 +42,8 @@ class CalendarViewModel: ObservableObject {
     @Published var scheduleTemplates: [ScheduleTemplate] = []
     @Published var babysitters: [Babysitter] = []
     @Published var emergencyContacts: [EmergencyContact] = []
+    @Published var medicalProviders: [MedicalProvider] = []
+    @Published var medications: [Medication] = []
     @Published var reminders: [Reminder] = []
     @Published var journalEntries: [JournalEntry] = []
     @Published var showHandoffTimeline: Bool = false // Toggle for handoff timeline view
@@ -2041,8 +2043,110 @@ class CalendarViewModel: ObservableObject {
             }
         }
     }
-
-
+    
+    // MARK: - Medical Provider Management
+    
+    func saveMedicalProvider(_ provider: MedicalProviderCreate, completion: @escaping (Bool) -> Void) {
+        APIService.shared.createMedicalProvider(provider) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let savedProvider):
+                    self?.medicalProviders.append(savedProvider)
+                    print("✅ Successfully saved medical provider: \(savedProvider.name)")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error saving medical provider: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func updateMedicalProvider(id: Int, provider: MedicalProviderUpdate, completion: @escaping (Bool) -> Void) {
+        APIService.shared.updateMedicalProvider(id: id, provider: provider) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let updatedProvider):
+                    if let index = self?.medicalProviders.firstIndex(where: { $0.id == id }) {
+                        self?.medicalProviders[index] = updatedProvider
+                    }
+                    print("✅ Successfully updated medical provider: \(updatedProvider.name)")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error updating medical provider: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func deleteMedicalProvider(_ provider: MedicalProvider, completion: @escaping (Bool) -> Void) {
+        APIService.shared.deleteMedicalProvider(id: provider.id) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    self?.medicalProviders.removeAll { $0.id == provider.id }
+                    print("✅ Successfully deleted medical provider: \(provider.name)")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error deleting medical provider: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Medication Management
+    
+    func saveMedication(_ medication: MedicationCreate, completion: @escaping (Bool) -> Void) {
+        APIService.shared.createMedication(medication) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let savedMedication):
+                    self?.medications.append(savedMedication)
+                    print("✅ Successfully saved medication: \(savedMedication.name)")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error saving medication: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func updateMedication(id: Int, medication: MedicationUpdate, completion: @escaping (Bool) -> Void) {
+        APIService.shared.updateMedication(id: id, medication: medication) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let updatedMedication):
+                    if let index = self?.medications.firstIndex(where: { $0.id == id }) {
+                        self?.medications[index] = updatedMedication
+                    }
+                    print("✅ Successfully updated medication: \(updatedMedication.name)")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error updating medication: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func deleteMedication(_ medication: Medication, completion: @escaping (Bool) -> Void) {
+        APIService.shared.deleteMedication(id: medication.id) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    self?.medications.removeAll { $0.id == medication.id }
+                    print("✅ Successfully deleted medication: \(medication.name)")
+                    completion(true)
+                case .failure(let error):
+                    print("❌ Error deleting medication: \(error.localizedDescription)")
+                    completion(false)
+                }
+            }
+        }
+    }
     
     func fetchUserThemePreference() {
         APIService.shared.fetchUserProfile { [weak self] result in

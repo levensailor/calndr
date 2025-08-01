@@ -1024,6 +1024,7 @@ enum SettingsDestination: Hashable {
     case sitters
     case schedules
     case family
+    case medical
 }
 
 // Handoff Time Models
@@ -1159,6 +1160,140 @@ struct DaycareCalendarSyncInfo: Codable {
         case lastSyncAt = "last_sync_at"
         case lastSyncSuccess = "last_sync_success"
         case eventsCount = "events_count"
+    }
+}
+
+// MARK: - Medical Models
+
+struct MedicalProvider: Codable, Identifiable {
+    let id: Int
+    let name: String
+    let specialty: String?
+    let address: String?
+    let phone: String?
+    let email: String?
+    let website: String?
+    let latitude: Double?
+    let longitude: Double?
+    let zipCode: String?
+    let notes: String?
+    let createdAt: String
+    let updatedAt: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name, specialty, address, phone, email, website, latitude, longitude
+        case zipCode = "zip_code"
+        case notes, createdAt = "created_at", updatedAt = "updated_at"
+    }
+}
+
+struct MedicalProviderCreate: Codable {
+    let name: String
+    let specialty: String?
+    let address: String?
+    let phone: String?
+    let email: String?
+    let website: String?
+    let latitude: Double?
+    let longitude: Double?
+    let zipCode: String?
+    let notes: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case name, specialty, address, phone, email, website, latitude, longitude
+        case zipCode = "zip_code"
+        case notes
+    }
+}
+
+struct MedicalProviderUpdate: Codable {
+    let name: String?
+    let specialty: String?
+    let address: String?
+    let phone: String?
+    let email: String?
+    let website: String?
+    let latitude: Double?
+    let longitude: Double?
+    let zipCode: String?
+    let notes: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case name, specialty, address, phone, email, website, latitude, longitude
+        case zipCode = "zip_code"
+        case notes
+    }
+}
+
+struct Medication: Codable, Identifiable {
+    let id: Int
+    let name: String
+    let dosage: String?
+    let frequency: String?
+    let instructions: String?
+    let startDate: String?
+    let endDate: String?
+    let isActive: Bool
+    let reminderEnabled: Bool
+    let reminderTime: String?
+    let notes: String?
+    let createdAt: String
+    let updatedAt: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name, dosage, frequency, instructions
+        case startDate = "start_date"
+        case endDate = "end_date"
+        case isActive = "is_active"
+        case reminderEnabled = "reminder_enabled"
+        case reminderTime = "reminder_time"
+        case notes, createdAt = "created_at", updatedAt = "updated_at"
+    }
+}
+
+struct MedicationCreate: Codable {
+    let name: String
+    let dosage: String?
+    let frequency: String?
+    let instructions: String?
+    let startDate: String?
+    let endDate: String?
+    let isActive: Bool
+    let reminderEnabled: Bool
+    let reminderTime: String?
+    let notes: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case name, dosage, frequency, instructions
+        case startDate = "start_date"
+        case endDate = "end_date"
+        case isActive = "is_active"
+        case reminderEnabled = "reminder_enabled"
+        case reminderTime = "reminder_time"
+        case notes
+    }
+}
+
+struct MedicationUpdate: Codable {
+    let name: String?
+    let dosage: String?
+    let frequency: String?
+    let instructions: String?
+    let startDate: String?
+    let endDate: String?
+    let isActive: Bool?
+    let reminderEnabled: Bool?
+    let reminderTime: String?
+    let notes: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case name, dosage, frequency, instructions
+        case startDate = "start_date"
+        case endDate = "end_date"
+        case isActive = "is_active"
+        case reminderEnabled = "reminder_enabled"
+        case reminderTime = "reminder_time"
+        case notes
     }
 }
  

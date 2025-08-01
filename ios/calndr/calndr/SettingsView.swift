@@ -165,6 +165,14 @@ struct SettingsView: View {
                 color: .pink,
                 destination: .family,
                 itemCount: viewModel.coparents.count + viewModel.children.count + viewModel.otherFamilyMembers.count
+            ),
+            SettingsSection(
+                title: "Medical",
+                icon: "cross.case.fill",
+                description: "Doctors, medications, and health tracking",
+                color: .red,
+                destination: .medical,
+                itemCount: viewModel.medicalProviders.count + viewModel.medications.count
             )
         ]
     }
@@ -187,6 +195,8 @@ struct SettingsView: View {
             SchedulesView().environmentObject(viewModel)
         case .family:
             FamilyView().environmentObject(viewModel)
+        case .medical:
+            MedicalView().environmentObject(viewModel)
         }
     }
 }
