@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2025-01-28 15:45 EST] - Implement Comprehensive Local Caching System
+
+Implemented a comprehensive local caching system to improve app performance and reduce API calls. Added CacheManager.swift with intelligent caching for user profiles (24h expiry), custody records (2h expiry), and event records (2h expiry). Implemented cache-first approach that loads cached data immediately on app startup, then fetches fresh data in the background. Added automatic cache invalidation, bulk operations, and cache statistics. The system caches current month data for instant access and provides seamless offline experience while maintaining data freshness.
+
 ## [2025-01-28 15:30 EST] - Add Retry Logic for 504 Gateway Timeout Errors
 
 Implemented comprehensive retry mechanism to handle 504 Gateway Timeout errors when fetching custody records. Added exponential backoff retry logic that attempts up to 3 times with increasing delays (2s, 4s, 6s) for both HTTP 504 errors and network timeouts. Set custom timeout intervals (30s request, 60s resource) to prevent long waits and improve user experience. Enhanced error logging to track retry attempts and provide better debugging information.
