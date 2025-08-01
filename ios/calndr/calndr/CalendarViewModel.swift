@@ -96,6 +96,7 @@ class CalendarViewModel: ObservableObject {
         
         setupBindings()
         setupAppLifecycleObservers()
+        loadCachedData()
         // fetchInitialData() - Removed, will be called from setupBindings when auth is ready
         
         // Prune the weather cache on app launch
@@ -351,6 +352,28 @@ class CalendarViewModel: ObservableObject {
     private func fetchRegularEvents(from startDate: String, to endDate: String) {
         print("📅 CalendarViewModel: fetchRegularEvents() called for \(startDate) to \(endDate)")
         
+        // Try to get cached events for current month first
+        let calendar = Calendar.current
+        let now = Date()
+        let currentYear = calendar.component(.year, from: now)
+        let currentMonth = calendar.component(.month, from: now)
+        
+        if let cachedEvents = CacheManager.shared.getCachedEventRecords(year: currentYear, month: currentMonth) {
+            print("📦 Using cached event records for \(currentYear)-\(currentMonth): \(cachedEvents.count) events")
+            DispatchQueue.main.async {
+                self.events = cachedEvents
+                
+                // Update the legacy schoolEvents array for compatibility with old UI components
+                let schoolEventsList = cachedEvents.filter { $0.source_type == "school" }
+                    .compactMap { event -> SchoolEvent? in
+                        return SchoolEvent(date: event.event_date, event: event.content)
+                    }
+                self.schoolEvents = schoolEventsList
+                
+                print("📦 Updated UI with cached event data: \(cachedEvents.count) events")
+            }
+        }
+        
         // The main /events/ API already returns ALL events (family, school, daycare) combined
         // via the family_all_events view, so we don't need separate API calls
         APIService.shared.fetchEvents(from: startDate, to: endDate) { result in
@@ -373,6 +396,13 @@ class CalendarViewModel: ObservableObject {
                     
                     print("📅✅ CalendarViewModel: Fetched \(events.count) total events - Family: \(familyCount), School: \(schoolCount), Daycare: \(daycareCount)")
                     
+                    // Cache the successful response for current month
+                    let calendar = Calendar.current
+                    let now = Date()
+                    let currentYear = calendar.component(.year, from: now)
+                    let currentMonth = calendar.component(.month, from: now)
+                    CacheManager.shared.cacheEventRecords(events, year: currentYear, month: currentMonth)
+                    
                 case .failure(let error):
                     print("📅❌ CalendarViewModel: Error fetching events: \(error.localizedDescription)")
                     if (error as NSError).code == 401 {
@@ -382,6 +412,60 @@ class CalendarViewModel: ObservableObject {
                 }
             }
         }
+    }
+    
+    // MARK: - Cache Management
+    
+    private func loadCachedData() {
+        print("📦 Loading cached data on app startup...")
+        
+        // Load cached user profile and family members
+        if let cachedData = CacheManager.shared.getCachedUserProfile() {
+            print("📦 Loaded cached user profile")
+            
+            // Update family members from cache
+            let filteredMembers = cachedData.familyMembers.filter { member in
+                return member.id != self.currentUserID
+            }
+            
+            self.coparents = filteredMembers.enumerated().compactMap { (index, member) in
+                let uniqueId = abs(member.id.hashValue) % 1000000
+                return Coparent(
+                    id: uniqueId,
+                    firstName: member.first_name,
+                    lastName: member.last_name,
+                    email: member.email,
+                    lastSignin: member.last_signed_in,
+                    notes: nil,
+                    phone_number: member.phone_number,
+                    isActive: member.status == "active",
+                    familyId: 0
+                )
+            }
+        }
+        
+        // Load cached current month data
+        let cachedData = CacheManager.shared.getCurrentMonthCachedData()
+        if !cachedData.custodyRecords.isEmpty {
+            self.custodyRecords = cachedData.custodyRecords.sorted { $0.event_date < $1.event_date }
+            print("📦 Loaded \(cachedData.custodyRecords.count) cached custody records")
+        }
+        
+        if !cachedData.events.isEmpty {
+            self.events = cachedData.events
+            print("📦 Loaded \(cachedData.events.count) cached event records")
+            
+            // Update school events from cached events
+            let schoolEventsList = cachedData.events.filter { $0.source_type == "school" }
+                .compactMap { event -> SchoolEvent? in
+                    return SchoolEvent(date: event.event_date, event: event.content)
+                }
+            self.schoolEvents = schoolEventsList
+        }
+        
+        // Print cache statistics
+        let stats = CacheManager.shared.getCacheStatistics()
+        print("📦 Cache statistics: \(stats)")
     }
     
     func fetchCustodyRecords(completion: (() -> Void)? = nil) {
@@ -405,15 +489,39 @@ class CalendarViewModel: ObservableObject {
         }
         
         var allCustodyRecords: [CustodyResponse] = []
+        var monthsToFetchFromAPI: [(year: Int, month: Int)] = []
         let dispatchGroup = DispatchGroup()
         
-        // Fetch custody data for all required months
+        // First, try to load from cache for each month
         for monthKey in monthsToFetch {
             let components = monthKey.split(separator: "-")
             guard components.count == 2,
                   let year = Int(components[0]),
                   let month = Int(components[1]) else { continue }
             
+            // Try to get cached data first
+            if let cachedRecords = CacheManager.shared.getCachedCustodyRecords(year: year, month: month) {
+                print("📦 Using cached custody records for \(year)-\(month): \(cachedRecords.count) records")
+                allCustodyRecords.append(contentsOf: cachedRecords)
+            } else {
+                // Cache miss - need to fetch from API
+                monthsToFetchFromAPI.append((year: year, month: month))
+            }
+        }
+        
+        // If we have cached data, update the UI immediately
+        if !allCustodyRecords.isEmpty {
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.custodyRecords = allCustodyRecords.sorted { $0.event_date < $1.event_date }
+                self.updateCustodyStreak()
+                self.updateCustodyPercentages()
+                print("📦 Updated UI with cached custody data: \(allCustodyRecords.count) records")
+            }
+        }
+        
+        // Fetch missing data from API
+        for (year, month) in monthsToFetchFromAPI {
             dispatchGroup.enter()
             APIService.shared.fetchCustodyRecords(year: year, month: month) { result in
                 // Process result in the background
@@ -440,6 +548,9 @@ class CalendarViewModel: ObservableObject {
                         } else {
                             print("✅ Received \(custodyRecords.count) custody records for \(year)-\(month)")
                             allCustodyRecords.append(contentsOf: custodyRecords)
+                            
+                            // Cache the successful response
+                            CacheManager.shared.cacheCustodyRecords(custodyRecords, year: year, month: month)
                         }
                     }
                 case .failure(let error):
@@ -1679,6 +1790,34 @@ class CalendarViewModel: ObservableObject {
     }
     
     func fetchFamilyMembers(completion: (() -> Void)? = nil) {
+        // Try to get cached user profile and family members first
+        if let cachedData = CacheManager.shared.getCachedUserProfile() {
+            print("📦 Using cached user profile and family members")
+            
+            // Update family members from cache
+            let filteredMembers = cachedData.familyMembers.filter { member in
+                return member.id != self?.currentUserID
+            }
+            
+            self?.coparents = filteredMembers.enumerated().compactMap { (index, member) in
+                let uniqueId = abs(member.id.hashValue) % 1000000
+                return Coparent(
+                    id: uniqueId,
+                    firstName: member.first_name,
+                    lastName: member.last_name,
+                    email: member.email,
+                    lastSignin: member.last_signed_in,
+                    notes: nil,
+                    phone_number: member.phone_number,
+                    isActive: member.status == "active",
+                    familyId: 0
+                )
+            }
+            
+            print("📦 Updated UI with cached family data: \(filteredMembers.count) coparents")
+        }
+        
+        // Fetch fresh data from API
         APIService.shared.fetchFamilyMembers { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
@@ -1706,6 +1845,21 @@ class CalendarViewModel: ObservableObject {
                         )
                     }
                     print("✅ Successfully fetched \(members.count) family members, filtered to \(filteredMembers.count) coparents (excluding current user)")
+                    
+                    // Cache the family members data
+                    // We need to also fetch the user profile to cache both together
+                    APIService.shared.fetchUserProfile { [weak self] userResult in
+                        DispatchQueue.main.async {
+                            switch userResult {
+                            case .success(let userProfile):
+                                // Cache both user profile and family members together
+                                CacheManager.shared.cacheUserProfile(userProfile, familyMembers: members)
+                                print("📦 Cached user profile and \(members.count) family members")
+                            case .failure(let error):
+                                print("❌ Error fetching user profile for caching: \(error.localizedDescription)")
+                            }
+                        }
+                    }
                 case .failure(let error):
                     print("❌ Error fetching family members: \(error.localizedDescription)")
                 }
