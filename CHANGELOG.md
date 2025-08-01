@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2025-01-28 15:50 EST] - Add Comprehensive Medical Section to Settings
+
+Added a comprehensive Medical section to the app settings with two main features: Doctors and Medications management. The Medical section includes location-based doctor search using MapKit, medication tracking with scheduling and reminders, and a tabbed interface for easy navigation. Created complete data models for MedicalProvider and Medication with full CRUD operations. Added location search functionality that allows users to find doctors by name, address, or zip code with automatic address filling. Implemented medication management with dosage tracking, frequency options, start/end dates, and reminder system integration. The system follows existing UI patterns and integrates with the current theme system.
+
 ## [2025-01-28 15:45 EST] - Implement Comprehensive Local Caching System
 
 Implemented a comprehensive local caching system to improve app performance and reduce API calls. Added CacheManager.swift with intelligent caching for user profiles (24h expiry), custody records (2h expiry), and event records (2h expiry). Implemented cache-first approach that loads cached data immediately on app startup, then fetches fresh data in the background. Added automatic cache invalidation, bulk operations, and cache statistics. The system caches current month data for instant access and provides seamless offline experience while maintaining data freshness.
