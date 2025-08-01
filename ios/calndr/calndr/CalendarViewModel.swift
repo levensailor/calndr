@@ -1796,7 +1796,7 @@ class CalendarViewModel: ObservableObject {
             
             // Update family members from cache
             let filteredMembers = cachedData.familyMembers.filter { member in
-                return member.id != self?.currentUserID
+                return member.id != self.currentUserID
             }
             
             self?.coparents = filteredMembers.enumerated().compactMap { (index, member) in
@@ -1824,7 +1824,8 @@ class CalendarViewModel: ObservableObject {
                 case .success(let members):
                     // Filter out the current logged-in user from the coparents list
                     let filteredMembers = members.filter { member in
-                        return member.id != self?.currentUserID
+                        guard let self = self else { return true }
+                        return member.id != self.currentUserID
                     }
                     
                     // Map FamilyMember to Coparent for the settings display
