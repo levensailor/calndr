@@ -12,7 +12,7 @@ struct FloatingLabelTextField: View {
             ZStack(alignment: .leading) {
                 // Background and border
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
+                    .fill(themeManager.currentTheme.isDarkMode ? themeManager.currentTheme.secondaryBackgroundColorSwiftUI : Color(white: 0.95))
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(isFocused ? Color.blue : themeManager.currentTheme.textColorSwiftUI.opacity(0.3), lineWidth: isFocused ? 2 : 1)
