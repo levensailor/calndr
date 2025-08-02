@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2025-01-28 17:21 EST] - Fix Medical Provider Manual Entry Form Theme in Light Mode
+
+Fixed theme styling issue where the medical provider manual entry form appeared with a dark background while in light mode. Applied proper theme styling to the Form component including scrollContentBackground(.hidden), theme-aware background and foreground colors, preferred color scheme, and section header styling. The form now consistently respects the current theme and provides the same user experience as other themed forms throughout the app.
+
 ## [2025-01-28 15:50 EST] - Add Comprehensive Medical Section to Settings
 
 Added a comprehensive Medical section to the app settings with two main features: Doctors and Medications management. The Medical section includes location-based doctor search using MapKit, medication tracking with scheduling and reminders, and a tabbed interface for easy navigation. Created complete data models for MedicalProvider and Medication with full CRUD operations. Added location search functionality that allows users to find doctors by name, address, or zip code with automatic address filling. Implemented medication management with dosage tracking, frequency options, start/end dates, and reminder system integration. The system follows existing UI patterns and integrates with the current theme system.
