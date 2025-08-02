@@ -1233,6 +1233,25 @@ class CalendarViewModel: ObservableObject {
                     // Ensure custody records stay sorted by date
                     self?.custodyRecords.sort { $0.event_date < $1.event_date }
                     
+                    // IMPORTANT: Update cache to reflect the change
+                    // Extract year and month from the updated date to invalidate the correct cache
+                    let dateComponents = custodyResponse.event_date.components(separatedBy: "-")
+                    if dateComponents.count >= 2,
+                       let year = Int(dateComponents[0]),
+                       let month = Int(dateComponents[1]) {
+                        print("🗄️ Invalidating custody cache for \(year)-\(month) due to custody update")
+                        
+                        // Get all custody records for this month and update the cache
+                        let monthKey = "\(year)-\(String(format: "%02d", month))"
+                        let updatedMonthRecords = self?.custodyRecords.filter { record in
+                            record.event_date.hasPrefix(monthKey)
+                        } ?? []
+                        
+                        // Update the cache with the new records for this month
+                        CacheManager.shared.cacheCustodyRecords(updatedMonthRecords, year: year, month: month)
+                        print("🗄️ Updated cache with \(updatedMonthRecords.count) custody records for \(year)-\(month)")
+                    }
+                    
                     // Force multiple UI refresh signals to ensure all views update
                     self?.objectWillChange.send()
                     
@@ -1699,6 +1718,25 @@ class CalendarViewModel: ObservableObject {
                         self.custodyRecords[index] = custodyResponse
                     } else {
                         self.custodyRecords.append(custodyResponse)
+                    }
+                    
+                    // IMPORTANT: Update cache to reflect the change
+                    // Extract year and month from the updated date to invalidate the correct cache
+                    let dateComponents = custodyResponse.event_date.components(separatedBy: "-")
+                    if dateComponents.count >= 2,
+                       let year = Int(dateComponents[0]),
+                       let month = Int(dateComponents[1]) {
+                        print("🗄️ Invalidating custody cache for \(year)-\(month) due to single day custody update")
+                        
+                        // Get all custody records for this month and update the cache
+                        let monthKey = "\(year)-\(String(format: "%02d", month))"
+                        let updatedMonthRecords = self.custodyRecords.filter { record in
+                            record.event_date.hasPrefix(monthKey)
+                        }
+                        
+                        // Update the cache with the new records for this month
+                        CacheManager.shared.cacheCustodyRecords(updatedMonthRecords, year: year, month: month)
+                        print("🗄️ Updated cache with \(updatedMonthRecords.count) custody records for \(year)-\(month)")
                     }
                 case .failure(let error):
                     print("Error updating custody record: \(error.localizedDescription)")
