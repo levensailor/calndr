@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2025-01-28 18:35 EST] - Fix Medical Provider Search JSON Parsing Error
+
+Fixed medical provider search functionality that was failing with "data couldn't be read because it isn't in the correct format" error. The issue was a mismatch between the backend response format and iOS expectations. Backend returns medical search results wrapped in an object with 'results' array and 'total' count, but iOS was expecting a direct array. Added MedicalSearchResponse wrapper model to match backend format and updated API decoding logic. Enhanced debugging logs helped identify the actual response structure. Medical provider search should now work correctly.
+
 ## [2025-01-28 18:32 EST] - Fix App Transport Security Error -1022 for API Calls
 
 Fixed critical App Transport Security (ATS) error that was blocking API calls to the staging server. The error indicated that HTTP requests were being blocked due to ATS security policy requiring secure connections. Added NSAppTransportSecurity configuration to Info.plist to allow both HTTP and HTTPS connections specifically for staging.calndr.club domain. Also added enhanced logging to fetchReminders API method to help debug URL construction and ATS-related issues. This resolves the "resource could not be loaded because the App Transport Security policy requires the use of a secure connection" error.
