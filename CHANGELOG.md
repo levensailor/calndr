@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2025-01-28 17:57 EST] - Fix Custody Cache Invalidation After Updates
+
+Fixed critical issue where custody changes appeared in the UI but reverted after refreshing the page. The problem was that successful custody updates were updating the local memory but not invalidating or updating the cached custody records. Now when custody is successfully changed via API, the cache is immediately updated with the new state to ensure changes persist across app refreshes and reloads. Added proper cache update logic to both toggleCustodian() and updateCustodyForSingleDay() methods.
+
 ## [2025-01-28 17:21 EST] - Fix Medical Provider Manual Entry Form Theme in Light Mode
 
 Fixed theme styling issue where the medical provider manual entry form appeared with a dark background while in light mode. Applied proper theme styling to the Form component including scrollContentBackground(.hidden), theme-aware background and foreground colors, preferred color scheme, and section header styling. The form now consistently respects the current theme and provides the same user experience as other themed forms throughout the app.
