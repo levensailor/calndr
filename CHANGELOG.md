@@ -1,5 +1,31 @@
 # CHANGELOG
 
+## [2025-08-02 19:55 EST] - Fix Medical Provider and Medication API Data Format Inconsistencies
+
+Fixed critical issues in provider and medication endpoints that were preventing frontend-backend communication:
+
+**Backend Medication Fixes:**
+- Fixed syntax error in medications endpoint query (missing `medications.select()`)
+- Updated MedicationCreate schema to not require family_id from frontend (set automatically from current_user)
+- Fixed MedicationResponse to return string timestamps for iOS compatibility instead of datetime objects
+- Ensured proper error handling and missing return statements in medication endpoints
+
+**Backend Medical Provider Fixes:**
+- Confirmed medical provider endpoints have complete CRUD operations and data consistency
+- Medical provider endpoints already properly handle string timestamps and family_id assignment
+- Google Places API search functionality working correctly with both legacy and new APIs
+
+**Data Format Standardization:**
+- Both endpoints now consistently return string format for created_at/updated_at fields
+- Family_id is automatically set from authenticated user context, not required in request payload
+- All CRUD operations (GET, POST, PUT, DELETE) tested and working properly
+
+**Deployment:**
+- Backend successfully deployed and running at https://calndr.club
+- Health endpoint confirms database and Redis connectivity
+- API documentation available at https://calndr.club/docs
+- All endpoints properly secured and returning expected authentication errors for unauthorized requests
+
 ## [2025-01-28 19:04 EST] - Enhance Medical Provider Functionality with Click-to-Call and Directions
 
 Major enhancement to medical provider functionality with improved user experience and automation:
