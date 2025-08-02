@@ -176,7 +176,7 @@ struct AddDoctorView: View {
                             )
                         }
                     }
-                    .background(themeManager.currentTheme.mainBackgroundColor.color)
+                    .scrollContentBackground(.visible)
                     .navigationTitle("Enter Provider Details")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
