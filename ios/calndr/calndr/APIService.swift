@@ -2315,6 +2315,9 @@ class APIService {
     
     func fetchReminders(startDate: String, endDate: String, completion: @escaping (Result<[Reminder], Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/reminders")
+        print("🔗 APIService.fetchReminders - baseURL: \(baseURL.absoluteString)")
+        print("🔗 APIService.fetchReminders - intermediate URL: \(url.absoluteString)")
+        
         var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false)
         urlComponents?.queryItems = [
             URLQueryItem(name: "start_date", value: startDate),
@@ -2326,10 +2329,23 @@ class APIService {
             return
         }
         
+        print("🔗 APIService.fetchReminders - final URL: \(finalURL.absoluteString)")
+        print("🔗 APIService.fetchReminders - URL scheme: \(finalURL.scheme ?? "nil")")
+        
         let request = createAuthenticatedRequest(url: finalURL)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
+                print("🔗❌ APIService.fetchReminders - Network error: \(error.localizedDescription)")
+                print("🔗❌ Error domain: \((error as NSError).domain)")
+                print("🔗❌ Error code: \((error as NSError).code)")
+                
+                // Check for ATS errors specifically
+                if (error as NSError).code == -1022 {
+                    print("🔗❌ ATS ERROR: App Transport Security is blocking this request")
+                    print("🔗❌ This suggests the server redirected to HTTP or there's a TLS issue")
+                }
+                
                 completion(.failure(error))
                 return
             }
