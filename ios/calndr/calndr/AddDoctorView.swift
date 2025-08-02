@@ -14,6 +14,7 @@ struct AddDoctorView: View {
     @State private var email = ""
     @State private var website = ""
     @State private var notes = ""
+    @State private var searchResults: [MedicalSearchResult] = []
     
     @StateObject private var locationManager = LocationManager.shared
     @State private var showingLocationPermissionAlert = false
@@ -42,7 +43,7 @@ struct AddDoctorView: View {
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(themeManager.currentTheme.accentColor.color)
-                        .foregroundColor(themeManager.currentTheme.textOnAccentColor.color)
+                        .foregroundColor(.white)
                         .cornerRadius(10)
                     }
                     .disabled(isSearching)
@@ -100,6 +101,7 @@ struct AddDoctorView: View {
                         })
                     }
                     .listStyle(PlainListStyle())
+                }
             }
             .background(themeManager.currentTheme.mainBackgroundColor.color)
             .navigationTitle("Add Medical Provider")
@@ -111,6 +113,16 @@ struct AddDoctorView: View {
                     }
                     .foregroundColor(themeManager.currentTheme.textColor.color)
                 }
+            }
+            .alert("Location Permission Required", isPresented: $showingLocationPermissionAlert) {
+                Button("Settings") {
+                    if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(settingsURL)
+                    }
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Please enable location access in Settings to search for nearby medical providers.")
             }
             .sheet(isPresented: $showingManualEntry) {
                 NavigationView {
@@ -187,8 +199,6 @@ struct AddDoctorView: View {
             }
         }
     }
-    
-    @State private var searchResults: [MedicalSearchResult] = []
     
     private func searchMedicalProviders() {
         errorMessage = nil
