@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2025-01-28 18:32 EST] - Fix App Transport Security Error -1022 for API Calls
+
+Fixed critical App Transport Security (ATS) error that was blocking API calls to the staging server. The error indicated that HTTP requests were being blocked due to ATS security policy requiring secure connections. Added NSAppTransportSecurity configuration to Info.plist to allow both HTTP and HTTPS connections specifically for staging.calndr.club domain. Also added enhanced logging to fetchReminders API method to help debug URL construction and ATS-related issues. This resolves the "resource could not be loaded because the App Transport Security policy requires the use of a secure connection" error.
+
 ## [2025-01-28 17:57 EST] - Fix Custody Cache Invalidation After Updates
 
 Fixed critical issue where custody changes appeared in the UI but reverted after refreshing the page. The problem was that successful custody updates were updating the local memory but not invalidating or updating the cached custody records. Now when custody is successfully changed via API, the cache is immediately updated with the new state to ensure changes persist across app refreshes and reloads. Added proper cache update logic to both toggleCustodian() and updateCustodyForSingleDay() methods.
