@@ -124,10 +124,11 @@ struct AddDoctorView: View {
             } message: {
                 Text("Please enable location access in Settings to search for nearby medical providers.")
             }
-            .sheet(isPresented: $showingManualEntry) {
+                        .sheet(isPresented: $showingManualEntry) {
                 NavigationView {
                     Form {
-                        Section("Medical Provider Information") {
+                        Section(header: Text("Medical Provider Information")
+                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))) {
                             FloatingLabelTextField(
                                 title: "Provider Name",
                                 text: $name,
@@ -168,15 +169,18 @@ struct AddDoctorView: View {
                             )
                             .keyboardType(.URL)
                             .autocapitalization(.none)
-                            
+
                             FloatingLabelTextField(
                                 title: "Notes (Optional)",
                                 text: $notes,
                                 isSecure: false
                             )
                         }
+                        .listRowBackground(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
                     }
-                    .scrollContentBackground(.visible)
+                    .scrollContentBackground(.hidden)
+                    .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
+                    .preferredColorScheme(themeManager.currentTheme.preferredColorScheme)
                     .navigationTitle("Enter Provider Details")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
