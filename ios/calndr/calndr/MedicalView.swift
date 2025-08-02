@@ -174,23 +174,41 @@ struct MedicalProviderCard: View {
             }
             
             if let address = provider.address {
-                HStack {
-                    Image(systemName: "location")
-                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
-                    Text(address)
-                        .font(.caption)
-                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.8))
+                Button(action: {
+                    openMapsForDirections(to: address)
+                }) {
+                    HStack {
+                        Image(systemName: "location")
+                            .foregroundColor(themeManager.currentTheme.accentColor.color)
+                        Text(address)
+                            .font(.caption)
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.8))
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                            .foregroundColor(themeManager.currentTheme.accentColor.color)
+                            .font(.caption2)
+                    }
                 }
+                .buttonStyle(PlainButtonStyle())
             }
             
             if let phone = provider.phone {
-                HStack {
-                    Image(systemName: "phone")
-                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
-                    Text(phone)
-                        .font(.caption)
-                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.8))
+                Button(action: {
+                    makePhoneCall(to: phone)
+                }) {
+                    HStack {
+                        Image(systemName: "phone")
+                            .foregroundColor(themeManager.currentTheme.accentColor.color)
+                        Text(phone)
+                            .font(.caption)
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.8))
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                            .foregroundColor(themeManager.currentTheme.accentColor.color)
+                            .font(.caption2)
+                    }
                 }
+                .buttonStyle(PlainButtonStyle())
             }
             
             if let notes = provider.notes, !notes.isEmpty {
@@ -219,6 +237,49 @@ struct MedicalProviderCard: View {
             }
         } message: {
             Text("Are you sure you want to delete \(provider.name)? This action cannot be undone.")
+        }
+    }
+    
+    private func makePhoneCall(to phoneNumber: String) {
+        // Clean the phone number - remove spaces, dashes, parentheses
+        let cleanNumber = phoneNumber.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+        
+        if let phoneURL = URL(string: "tel://\(cleanNumber)") {
+            if UIApplication.shared.canOpenURL(phoneURL) {
+                UIApplication.shared.open(phoneURL)
+                print("📞 Opening phone call to: \(phoneNumber)")
+            } else {
+                print("❌ Device cannot make phone calls")
+            }
+        }
+    }
+    
+    private func openMapsForDirections(to address: String) {
+        // URL encode the address
+        let encodedAddress = address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        
+        // Try to open in Apple Maps first
+        if let mapsURL = URL(string: "http://maps.apple.com/?daddr=\(encodedAddress)") {
+            if UIApplication.shared.canOpenURL(mapsURL) {
+                UIApplication.shared.open(mapsURL)
+                print("🗺️ Opening Apple Maps for directions to: \(address)")
+                return
+            }
+        }
+        
+        // Fallback to Google Maps if available
+        if let googleMapsURL = URL(string: "comgooglemaps://?daddr=\(encodedAddress)") {
+            if UIApplication.shared.canOpenURL(googleMapsURL) {
+                UIApplication.shared.open(googleMapsURL)
+                print("🗺️ Opening Google Maps for directions to: \(address)")
+                return
+            }
+        }
+        
+        // Final fallback to web-based maps
+        if let webMapsURL = URL(string: "https://maps.google.com/maps?daddr=\(encodedAddress)") {
+            UIApplication.shared.open(webMapsURL)
+            print("🗺️ Opening web maps for directions to: \(address)")
         }
     }
 }

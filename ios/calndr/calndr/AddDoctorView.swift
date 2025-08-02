@@ -276,7 +276,33 @@ struct AddDoctorView: View {
         phone = result.phoneNumber ?? ""
         email = ""
         website = result.website ?? ""
-        notes = ""
+        notes = result.distance != nil ? "Distance: \(String(format: "%.1f km", result.distance! / 1000))" : ""
+        
+        // Automatically save the provider from search result
+        let provider = MedicalProviderCreate(
+            name: result.name,
+            specialty: result.specialty,
+            address: result.address,
+            phone: result.phoneNumber,
+            email: nil,
+            website: result.website,
+            latitude: nil, // Could extract from placeId if needed
+            longitude: nil, // Could extract from placeId if needed
+            zipCode: nil,
+            notes: notes.isEmpty ? "Added from search results" : notes
+        )
+        
+        print("💾 Auto-saving medical provider from search: \(result.name)")
+        viewModel.saveMedicalProvider(provider) { success in
+            DispatchQueue.main.async {
+                if success {
+                    print("✅ Successfully auto-saved medical provider: \(result.name)")
+                } else {
+                    print("❌ Failed to auto-save medical provider: \(result.name)")
+                    // Note: We still populate the form as fallback so user can manually save
+                }
+            }
+        }
     }
 }
 
@@ -498,8 +524,9 @@ struct MedicalSearchResultRow: View {
     @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
-        Button(action: onSelect) {
-            VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
+            // Main provider info - tappable to select/add
+            Button(action: onSelect) {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(result.name)
@@ -511,37 +538,134 @@ struct MedicalSearchResultRow: View {
                                 .font(.subheadline)
                                 .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                         }
+                        
+                        if let distance = result.distance {
+                            Text(String(format: "%.1f km away", distance / 1000))
+                                .font(.caption)
+                                .foregroundColor(themeManager.currentTheme.accentColor.color)
+                        }
                     }
                     
                     Spacer()
                     
-                    if let rating = result.rating {
-                        HStack {
-                            ForEach(1...5, id: \.self) { star in
-                                Image(systemName: star <= Int(rating) ? "star.fill" : "star")
-                                    .foregroundColor(.yellow)
+                    VStack(alignment: .trailing, spacing: 4) {
+                        if let rating = result.rating {
+                            HStack {
+                                ForEach(1...5, id: \.self) { star in
+                                    Image(systemName: star <= Int(rating) ? "star.fill" : "star")
+                                        .foregroundColor(.yellow)
+                                        .font(.caption)
+                                }
+                                Text(String(format: "%.1f", rating))
                                     .font(.caption)
+                                    .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                             }
-                            Text(String(format: "%.1f", rating))
+                        }
+                        
+                        // Add button
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
+                                .foregroundColor(themeManager.currentTheme.accentColor.color)
                                 .font(.caption)
-                                .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+                            Text("Add")
+                                .font(.caption)
+                                .foregroundColor(themeManager.currentTheme.accentColor.color)
                         }
                     }
                 }
-                
-                Text(result.address)
-                    .font(.caption)
-                    .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
-                
-                if let phone = result.phoneNumber {
-                    Text(phone)
+            }
+            .buttonStyle(PlainButtonStyle())
+            
+            // Address - tappable for directions
+            Button(action: {
+                openMapsForDirections(to: result.address)
+            }) {
+                HStack {
+                    Image(systemName: "location")
+                        .foregroundColor(themeManager.currentTheme.accentColor.color)
                         .font(.caption)
-                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
+                    Text(result.address)
+                        .font(.caption)
+                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.8))
+                        .multilineTextAlignment(.leading)
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                        .foregroundColor(themeManager.currentTheme.accentColor.color)
+                        .font(.caption2)
                 }
             }
-            .padding(.vertical, 4)
+            .buttonStyle(PlainButtonStyle())
+            
+            // Phone number - tappable to call
+            if let phone = result.phoneNumber {
+                Button(action: {
+                    makePhoneCall(to: phone)
+                }) {
+                    HStack {
+                        Image(systemName: "phone")
+                            .foregroundColor(themeManager.currentTheme.accentColor.color)
+                            .font(.caption)
+                        Text(phone)
+                            .font(.caption)
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.8))
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                            .foregroundColor(themeManager.currentTheme.accentColor.color)
+                            .font(.caption2)
+                    }
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
         }
-        .buttonStyle(PlainButtonStyle())
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
+                .shadow(color: themeManager.currentTheme.textColor.color.opacity(0.1), radius: 2, x: 0, y: 1)
+        )
+    }
+    
+    private func makePhoneCall(to phoneNumber: String) {
+        // Clean the phone number - remove spaces, dashes, parentheses
+        let cleanNumber = phoneNumber.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+        
+        if let phoneURL = URL(string: "tel://\(cleanNumber)") {
+            if UIApplication.shared.canOpenURL(phoneURL) {
+                UIApplication.shared.open(phoneURL)
+                print("📞 Opening phone call to: \(phoneNumber)")
+            } else {
+                print("❌ Device cannot make phone calls")
+            }
+        }
+    }
+    
+    private func openMapsForDirections(to address: String) {
+        // URL encode the address
+        let encodedAddress = address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        
+        // Try to open in Apple Maps first
+        if let mapsURL = URL(string: "http://maps.apple.com/?daddr=\(encodedAddress)") {
+            if UIApplication.shared.canOpenURL(mapsURL) {
+                UIApplication.shared.open(mapsURL)
+                print("🗺️ Opening Apple Maps for directions to: \(address)")
+                return
+            }
+        }
+        
+        // Fallback to Google Maps if available
+        if let googleMapsURL = URL(string: "comgooglemaps://?daddr=\(encodedAddress)") {
+            if UIApplication.shared.canOpenURL(googleMapsURL) {
+                UIApplication.shared.open(googleMapsURL)
+                print("🗺️ Opening Google Maps for directions to: \(address)")
+                return
+            }
+        }
+        
+        // Final fallback to web-based maps
+        if let webMapsURL = URL(string: "https://maps.google.com/maps?daddr=\(encodedAddress)") {
+            UIApplication.shared.open(webMapsURL)
+            print("🗺️ Opening web maps for directions to: \(address)")
+        }
     }
 }
 
