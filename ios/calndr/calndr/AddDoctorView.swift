@@ -43,12 +43,12 @@ struct AddDoctorView: View {
                     
                     // Location Search Section
                     VStack(alignment: .leading, spacing: 16) {
-                        Text("Find Doctor by Location")
+                        Text("Find Medical Provider")
                             .font(.headline)
                             .foregroundColor(themeManager.currentTheme.textColor.color)
                         
                         HStack {
-                            TextField("Search by name, address, or zip code", text: $searchText)
+                            TextField("Search for doctors, pediatricians, clinics...", text: $searchText)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
                                 .onSubmit {
                                     searchLocations()
@@ -181,24 +181,101 @@ struct AddDoctorView: View {
         isSearching = true
         searchResults = []
         
-        let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = searchText
-        request.resultTypes = .pointOfInterest
+        // Medical provider search terms to include in the search
+        let medicalTerms = [
+            "pediatrician",
+            "primary care",
+            "family doctor",
+            "family physician",
+            "general practitioner",
+            "internal medicine",
+            "family practice",
+            "medical clinic",
+            "doctor office",
+            "physician",
+            "medical center",
+            "healthcare",
+            "medical practice"
+        ]
         
-        let search = MKLocalSearch(request: request)
-        search.start { response, error in
-            DispatchQueue.main.async {
-                isSearching = false
+        // Create multiple search requests with different medical terms
+        let searchGroup = DispatchGroup()
+        var allResults: [MKMapItem] = []
+        
+        for term in medicalTerms {
+            searchGroup.enter()
+            
+            let request = MKLocalSearch.Request()
+            // Combine the user's search text with medical terms
+            let searchQuery = "\(searchText) \(term)"
+            request.naturalLanguageQuery = searchQuery
+            request.resultTypes = .pointOfInterest
+            
+            let search = MKLocalSearch(request: request)
+            search.start { response, error in
+                defer { searchGroup.leave() }
                 
                 if let error = error {
-                    print("❌ Location search error: \(error.localizedDescription)")
+                    print("❌ Location search error for '\(searchQuery)': \(error.localizedDescription)")
                     return
                 }
                 
                 if let response = response {
-                    searchResults = response.mapItems
+                    DispatchQueue.main.async {
+                        allResults.append(contentsOf: response.mapItems)
+                    }
                 }
             }
+        }
+        
+        // Also do a direct search with the original text in case it's already medical-specific
+        searchGroup.enter()
+        let directRequest = MKLocalSearch.Request()
+        directRequest.naturalLanguageQuery = searchText
+        directRequest.resultTypes = .pointOfInterest
+        
+        let directSearch = MKLocalSearch(request: directRequest)
+        directSearch.start { response, error in
+            defer { searchGroup.leave() }
+            
+            if let error = error {
+                print("❌ Direct location search error: \(error.localizedDescription)")
+                return
+            }
+            
+            if let response = response {
+                DispatchQueue.main.async {
+                    allResults.append(contentsOf: response.mapItems)
+                }
+            }
+        }
+        
+        searchGroup.notify(queue: .main) {
+            self.isSearching = false
+            
+            // Remove duplicates and filter for medical-related results
+            let uniqueResults = Array(Set(allResults.map { $0.name ?? "" }))
+                .compactMap { name in
+                    allResults.first { $0.name == name }
+                }
+                .filter { item in
+                    // Filter for medical-related businesses
+                    let name = item.name?.lowercased() ?? ""
+                    let category = item.pointOfInterestCategory?.rawValue.lowercased() ?? ""
+                    
+                    return name.contains("doctor") || 
+                           name.contains("medical") || 
+                           name.contains("clinic") || 
+                           name.contains("health") || 
+                           name.contains("physician") || 
+                           name.contains("pediatric") || 
+                           name.contains("family") || 
+                           category.contains("medical") ||
+                           category.contains("health")
+                }
+            
+            self.searchResults = uniqueResults
+            print("🔍 Found \(uniqueResults.count) medical providers for search: '\(self.searchText)'")
         }
     }
     
