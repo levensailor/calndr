@@ -3811,5 +3811,43 @@ class APIService {
             completion(.success(()))
         }.resume()
     }
+    
+    func searchMedicalProviders(_ searchRequest: MedicalSearchRequest, completion: @escaping (Result<[MedicalSearchResult], Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/medical-providers/search")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(searchRequest)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                return
+            }
+            
+            do {
+                let results = try JSONDecoder().decode([MedicalSearchResult].self, from: data)
+                completion(.success(results))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
 
 } 

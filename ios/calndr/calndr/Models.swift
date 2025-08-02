@@ -1296,4 +1296,37 @@ struct MedicationUpdate: Codable {
         case notes
     }
 }
+
+// MARK: - Medical Search Models
+
+struct MedicalSearchResult: Codable, Identifiable {
+    let id: String
+    let name: String
+    let specialty: String?
+    let address: String
+    let phoneNumber: String?
+    let website: String?
+    let rating: Double?
+    let placeId: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name, specialty, address
+        case phoneNumber = "phone_number"
+        case website, rating
+        case placeId = "place_id"
+    }
+}
+
+struct MedicalSearchRequest: Codable {
+    let locationType: String
+    let zipcode: String?
+    let latitude: Double?
+    let longitude: Double?
+    let radius: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case locationType = "location_type"
+        case zipcode, latitude, longitude, radius
+    }
+}
  

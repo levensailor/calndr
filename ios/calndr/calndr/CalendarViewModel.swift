@@ -2148,6 +2148,21 @@ class CalendarViewModel: ObservableObject {
         }
     }
     
+    func searchMedicalProviders(_ searchRequest: MedicalSearchRequest, completion: @escaping (Result<[MedicalSearchResult], Error>) -> Void) {
+        APIService.shared.searchMedicalProviders(searchRequest) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let results):
+                    print("✅ Found \(results.count) medical providers")
+                    completion(.success(results))
+                case .failure(let error):
+                    print("❌ Error searching medical providers: \(error.localizedDescription)")
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+    
     func fetchUserThemePreference() {
         APIService.shared.fetchUserProfile { [weak self] result in
             DispatchQueue.main.async {

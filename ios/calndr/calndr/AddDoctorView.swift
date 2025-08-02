@@ -1,12 +1,12 @@
 import SwiftUI
 import CoreLocation
-import MapKit
 
 struct AddDoctorView: View {
     @EnvironmentObject var viewModel: CalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.dismiss) private var dismiss
     
+    @State private var showingSearch = false
     @State private var name = ""
     @State private var specialty = ""
     @State private var address = ""
@@ -14,343 +14,404 @@ struct AddDoctorView: View {
     @State private var email = ""
     @State private var website = ""
     @State private var notes = ""
-    @State private var zipCode = ""
-    @State private var searchText = ""
-    @State private var searchResults: [MKMapItem] = []
-    @State private var isSearching = false
-    @State private var selectedLocation: MKMapItem?
-    @State private var showingLocationPicker = false
-    
-    private let locationManager = CLLocationManager()
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    // Header
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Add Doctor")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                            .foregroundColor(themeManager.currentTheme.textColor.color)
-                        
-                        Text("Add a new doctor or medical provider")
-                            .font(.subheadline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
-                    }
-                    .padding(.horizontal)
-                    .padding(.top)
-                    
-                    // Location Search Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Find Medical Provider")
-                            .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color)
-                        
+            Form {
+                Section {
+                    Button(action: {
+                        showingSearch = true
+                    }) {
                         HStack {
-                            TextField("Search for doctors, pediatricians, clinics...", text: $searchText)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .onSubmit {
-                                    searchLocations()
-                                }
-                            
-                            Button(action: searchLocations) {
-                                Image(systemName: "magnifyingglass")
-                                    .foregroundColor(.white)
-                                    .padding(8)
-                                    .background(Color.red)
-                                    .cornerRadius(8)
-                            }
-                        }
-                        
-                        if isSearching {
-                            HStack {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                                Text("Searching...")
-                                    .font(.caption)
-                                    .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
-                            }
-                        }
-                        
-                        if !searchResults.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Search Results")
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(themeManager.currentTheme.textColor.color)
-                                
-                                ForEach(searchResults, id: \.self) { item in
-                                    Button(action: {
-                                        selectLocation(item)
-                                    }) {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(item.name ?? "Unknown")
-                                                .font(.subheadline)
-                                                .fontWeight(.medium)
-                                                .foregroundColor(themeManager.currentTheme.textColor.color)
-                                            
-                                            if let address = item.placemark.thoroughfare {
-                                                Text(address)
-                                                    .font(.caption)
-                                                    .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
-                                            }
-                                        }
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding()
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
-                                        )
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                }
-                            }
+                            Image(systemName: "magnifyingglass")
+                                .foregroundColor(.red)
+                            Text("Search for Medical Providers")
+                                .foregroundColor(.red)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.gray)
                         }
                     }
-                    .padding(.horizontal)
+                } header: {
+                    Text("Find Medical Provider")
+                } footer: {
+                    Text("Search for local medical providers or add your own manually")
+                }
+                
+                Section("Medical Provider Information") {
+                    FloatingLabelTextField(
+                        title: "Provider Name",
+                        text: $name,
+                        isSecure: false
+                    )
                     
-                    // Manual Entry Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Or Enter Details Manually")
-                            .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color)
-                        
-                        VStack(spacing: 16) {
-                            TextField("Doctor Name *", text: $name)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                            
-                            TextField("Specialty (e.g., Pediatrician, Cardiologist)", text: $specialty)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                            
-                            TextField("Address", text: $address)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                            
-                            TextField("Phone Number", text: $phone)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .keyboardType(.phonePad)
-                            
-                            TextField("Email", text: $email)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .keyboardType(.emailAddress)
-                                .autocapitalization(.none)
-                            
-                            TextField("Website", text: $website)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .autocapitalization(.none)
-                            
-                            TextField("Zip Code", text: $zipCode)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .keyboardType(.numberPad)
-                            
-                            TextField("Notes", text: $notes, axis: .vertical)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .lineLimit(3...6)
-                        }
-                    }
-                    .padding(.horizontal)
+                    FloatingLabelTextField(
+                        title: "Specialty (Optional)",
+                        text: $specialty,
+                        isSecure: false
+                    )
                     
-                    Spacer(minLength: 80)
+                    FloatingLabelTextField(
+                        title: "Address (Optional)",
+                        text: $address,
+                        isSecure: false
+                    )
+                    
+                    FloatingLabelTextField(
+                        title: "Phone Number (Optional)",
+                        text: $phone,
+                        isSecure: false
+                    )
+                    .keyboardType(.phonePad)
+                    
+                    FloatingLabelTextField(
+                        title: "Email (Optional)",
+                        text: $email,
+                        isSecure: false
+                    )
+                    .keyboardType(.emailAddress)
+                    .autocapitalization(.none)
+                    
+                    FloatingLabelTextField(
+                        title: "Website (Optional)",
+                        text: $website,
+                        isSecure: false
+                    )
+                    .keyboardType(.URL)
+                    .autocapitalization(.none)
+                    
+                    FloatingLabelTextField(
+                        title: "Notes (Optional)",
+                        text: $notes,
+                        isSecure: false
+                    )
                 }
             }
-            .scrollTargetBehavior(CustomVerticalPagingBehavior())
             .background(themeManager.currentTheme.mainBackgroundColor.color)
-        }
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button("Cancel") {
-                    dismiss()
-                }
-                .foregroundColor(themeManager.currentTheme.textColor.color)
-            }
-            
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Save") {
-                    saveDoctor()
-                }
-                .foregroundColor(.red)
-                .disabled(name.isEmpty)
-            }
-        }
-    }
-    
-    private func searchLocations() {
-        guard !searchText.isEmpty else { return }
-        
-        isSearching = true
-        searchResults = []
-        
-        // Medical provider search terms to include in the search
-        let medicalTerms = [
-            "pediatrician",
-            "primary care",
-            "family doctor",
-            "family physician",
-            "general practitioner",
-            "internal medicine",
-            "family practice",
-            "medical clinic",
-            "doctor office",
-            "physician",
-            "medical center",
-            "healthcare",
-            "medical practice"
-        ]
-        
-        // Create multiple search requests with different medical terms
-        let searchGroup = DispatchGroup()
-        var allResults: [MKMapItem] = []
-        
-        for term in medicalTerms {
-            searchGroup.enter()
-            
-            let request = MKLocalSearch.Request()
-            // Combine the user's search text with medical terms
-            let searchQuery = "\(searchText) \(term)"
-            request.naturalLanguageQuery = searchQuery
-            request.resultTypes = .pointOfInterest
-            
-            let search = MKLocalSearch(request: request)
-            search.start { response, error in
-                defer { searchGroup.leave() }
-                
-                if let error = error {
-                    print("❌ Location search error for '\(searchQuery)': \(error.localizedDescription)")
-                    return
-                }
-                
-                if let response = response {
-                    DispatchQueue.main.async {
-                        allResults.append(contentsOf: response.mapItems)
+            .navigationTitle("Add Medical Provider")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
                     }
                 }
-            }
-        }
-        
-        // Also do a direct search with the original text in case it's already medical-specific
-        searchGroup.enter()
-        let directRequest = MKLocalSearch.Request()
-        directRequest.naturalLanguageQuery = searchText
-        directRequest.resultTypes = .pointOfInterest
-        
-        let directSearch = MKLocalSearch(request: directRequest)
-        directSearch.start { response, error in
-            defer { searchGroup.leave() }
-            
-            if let error = error {
-                print("❌ Direct location search error: \(error.localizedDescription)")
-                return
-            }
-            
-            if let response = response {
-                DispatchQueue.main.async {
-                    allResults.append(contentsOf: response.mapItems)
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        saveMedicalProvider()
+                    }
+                    .disabled(name.isEmpty)
                 }
             }
-        }
-        
-        searchGroup.notify(queue: .main) {
-            self.isSearching = false
-            
-            // Remove duplicates and filter for medical-related results
-            let uniqueResults = Array(Set(allResults.map { $0.name ?? "" }))
-                .compactMap { name in
-                    allResults.first { $0.name == name }
-                }
-                .filter { item in
-                    // Filter for medical-related businesses
-                    let name = item.name?.lowercased() ?? ""
-                    let category = item.pointOfInterestCategory?.rawValue.lowercased() ?? ""
-                    
-                    return name.contains("doctor") || 
-                           name.contains("medical") || 
-                           name.contains("clinic") || 
-                           name.contains("health") || 
-                           name.contains("physician") || 
-                           name.contains("pediatric") || 
-                           name.contains("family") || 
-                           category.contains("medical") ||
-                           category.contains("health")
-                }
-            
-            self.searchResults = uniqueResults
-            print("🔍 Found \(uniqueResults.count) medical providers for search: '\(self.searchText)'")
+            .sheet(isPresented: $showingSearch) {
+                MedicalSearchView(
+                    onProviderSelected: { searchResult in
+                        populateFromSearchResult(searchResult)
+                        showingSearch = false
+                    }
+                )
+                .environmentObject(viewModel)
+                .environmentObject(themeManager)
+            }
         }
     }
     
-    private func selectLocation(_ item: MKMapItem) {
-        selectedLocation = item
-        
-        // Auto-fill the form with location data
-        name = item.name ?? ""
-        address = formatAddress(item.placemark)
-        
-        if let phoneNumber = item.phoneNumber {
-            phone = phoneNumber
-        }
-        
-        if let url = item.url {
-            website = url.absoluteString
-        }
-        
-        // Clear search results
-        searchResults = []
-        searchText = ""
-    }
-    
-    private func formatAddress(_ placemark: MKPlacemark) -> String {
-        var components: [String] = []
-        
-        if let thoroughfare = placemark.thoroughfare {
-            components.append(thoroughfare)
-        }
-        
-        if let subThoroughfare = placemark.subThoroughfare {
-            components.append(subThoroughfare)
-        }
-        
-        if let locality = placemark.locality {
-            components.append(locality)
-        }
-        
-        if let administrativeArea = placemark.administrativeArea {
-            components.append(administrativeArea)
-        }
-        
-        if let postalCode = placemark.postalCode {
-            components.append(postalCode)
-        }
-        
-        return components.joined(separator: ", ")
-    }
-    
-    private func saveDoctor() {
-        guard !name.isEmpty else { return }
-        
-        let doctorData = MedicalProviderCreate(
+    private func saveMedicalProvider() {
+        let provider = MedicalProviderCreate(
             name: name,
             specialty: specialty.isEmpty ? nil : specialty,
             address: address.isEmpty ? nil : address,
             phone: phone.isEmpty ? nil : phone,
             email: email.isEmpty ? nil : email,
             website: website.isEmpty ? nil : website,
-            latitude: selectedLocation?.placemark.coordinate.latitude,
-            longitude: selectedLocation?.placemark.coordinate.longitude,
-            zipCode: zipCode.isEmpty ? nil : zipCode,
+            latitude: nil,
+            longitude: nil,
+            zipCode: nil,
             notes: notes.isEmpty ? nil : notes
         )
         
-        viewModel.saveMedicalProvider(doctorData) { success in
-            DispatchQueue.main.async {
-                if success {
-                    print("✅ Successfully saved medical provider: \(name)")
-                    dismiss()
+        viewModel.saveMedicalProvider(provider) { success in
+            if success {
+                dismiss()
+            }
+        }
+    }
+    
+    private func populateFromSearchResult(_ result: MedicalSearchResult) {
+        name = result.name
+        specialty = result.specialty ?? ""
+        address = result.address
+        phone = result.phoneNumber ?? ""
+        email = ""
+        website = result.website ?? ""
+        notes = ""
+    }
+
+}
+}
+
+// MARK: - Medical Search View
+
+struct MedicalSearchView: View {
+    @EnvironmentObject var viewModel: CalendarViewModel
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.dismiss) private var dismiss
+    
+    let onProviderSelected: (MedicalSearchResult) -> Void
+    
+    @State private var searchType: SearchType = .currentLocation
+    @State private var zipCode = ""
+    @State private var searchResults: [MedicalSearchResult] = []
+    @State private var isSearching = false
+    @State private var errorMessage: String?
+    @State private var showingLocationPermissionAlert = false
+    
+    @StateObject private var locationManager = LocationManager.shared
+    
+    enum SearchType: String, CaseIterable {
+        case currentLocation = "current"
+        case zipCode = "zipcode"
+        
+        var displayName: String {
+            switch self {
+            case .currentLocation:
+                return "Current Location"
+            case .zipCode:
+                return "ZIP Code"
+            }
+        }
+    }
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                // Search Controls
+                VStack(spacing: 16) {
+                    // Search Type Picker
+                    Picker("Search Type", selection: $searchType) {
+                        ForEach(SearchType.allCases, id: \.self) { type in
+                            Text(type.displayName).tag(type)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    
+                    // ZIP Code Input (if needed)
+                    if searchType == .zipCode {
+                        HStack(spacing: 12) {
+                            FloatingLabelTextField(
+                                title: "ZIP Code",
+                                text: $zipCode,
+                                isSecure: false
+                            )
+                            .keyboardType(.numberPad)
+                            
+                            Button("Search") {
+                                searchMedicalProviders()
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(zipCode.isEmpty || isSearching)
+                        }
+                    } else {
+                        // Current Location Search
+                        Button(action: {
+                            searchMedicalProviders()
+                        }) {
+                            HStack {
+                                if isSearching {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .scaleEffect(0.8)
+                                } else {
+                                    Image(systemName: "location.fill")
+                                }
+                                Text(isSearching ? "Searching..." : "Search Near Me")
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.red)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                        }
+                        .disabled(isSearching)
+                    }
+                    
+                    // Error Message
+                    if let errorMessage = errorMessage {
+                        Text(errorMessage)
+                            .foregroundColor(.red)
+                            .font(.caption)
+                            .multilineTextAlignment(.center)
+                    }
+                }
+                .padding()
+                .background(themeManager.currentTheme.mainBackgroundColor.color)
+                
+                Divider()
+                
+                // Search Results
+                if searchResults.isEmpty && !isSearching {
+                    VStack(spacing: 16) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.largeTitle)
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.3))
+                        
+                        Text("Search for medical providers")
+                            .font(.headline)
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
+                        
+                        Text("Use your current location or enter a ZIP code to find nearby medical facilities")
+                            .font(.subheadline)
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.5))
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    print("❌ Failed to save medical provider: \(name)")
+                    List(searchResults) { result in
+                        MedicalSearchResultRow(result: result, onSelect: {
+                            onProviderSelected(result)
+                        })
+                    }
+                    .listStyle(PlainListStyle())
+                }
+            }
+            .background(themeManager.currentTheme.mainBackgroundColor.color)
+            .navigationTitle("Find Medical Provider")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+            .alert("Location Permission Required", isPresented: $showingLocationPermissionAlert) {
+                Button("Settings") {
+                    if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(settingsURL)
+                    }
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Please enable location access in Settings to search for nearby medical providers.")
+            }
+        }
+    }
+    
+    private func searchMedicalProviders() {
+        errorMessage = nil
+        isSearching = true
+        
+        if searchType == .currentLocation {
+            // Check location permission
+            if locationManager.authorizationStatus == .denied || locationManager.authorizationStatus == .restricted {
+                showingLocationPermissionAlert = true
+                isSearching = false
+                return
+            }
+            
+            // Request current location
+            locationManager.requestCurrentLocation { [self] location in
+                guard let location = location else {
+                    DispatchQueue.main.async {
+                        self.errorMessage = "Unable to get current location"
+                        self.isSearching = false
+                    }
+                    return
+                }
+                
+                let searchRequest = MedicalSearchRequest(
+                    locationType: "current",
+                    zipcode: nil,
+                    latitude: location.coordinate.latitude,
+                    longitude: location.coordinate.longitude,
+                    radius: 5000 // 5km radius
+                )
+                
+                performSearch(searchRequest)
+            }
+        } else {
+            // ZIP code search
+            let searchRequest = MedicalSearchRequest(
+                locationType: "zipcode",
+                zipcode: zipCode,
+                latitude: nil,
+                longitude: nil,
+                radius: 5000
+            )
+            
+            performSearch(searchRequest)
+        }
+    }
+    
+    private func performSearch(_ searchRequest: MedicalSearchRequest) {
+        viewModel.searchMedicalProviders(searchRequest) { result in
+            DispatchQueue.main.async {
+                self.isSearching = false
+                
+                switch result {
+                case .success(let results):
+                    self.searchResults = results
+                case .failure(let error):
+                    self.errorMessage = error.localizedDescription
                 }
             }
         }
+    }
+}
+
+// MARK: - Medical Search Result Row
+
+struct MedicalSearchResultRow: View {
+    let result: MedicalSearchResult
+    let onSelect: () -> Void
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    var body: some View {
+        Button(action: onSelect) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(result.name)
+                            .font(.headline)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
+                        
+                        if let specialty = result.specialty {
+                            Text(specialty)
+                                .font(.subheadline)
+                                .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    if let rating = result.rating {
+                        HStack {
+                            ForEach(1...5, id: \.self) { star in
+                                Image(systemName: star <= Int(rating) ? "star.fill" : "star")
+                                    .foregroundColor(.yellow)
+                                    .font(.caption)
+                            }
+                            Text(String(format: "%.1f", rating))
+                                .font(.caption)
+                                .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+                        }
+                    }
+                }
+                
+                Text(result.address)
+                    .font(.caption)
+                    .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
+                
+                if let phone = result.phoneNumber {
+                    Text(phone)
+                        .font(.caption)
+                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
+                }
+            }
+            .padding(.vertical, 4)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
