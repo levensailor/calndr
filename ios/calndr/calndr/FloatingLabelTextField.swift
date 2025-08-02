@@ -6,13 +6,14 @@ struct FloatingLabelTextField: View {
     let isSecure: Bool
     @EnvironmentObject var themeManager: ThemeManager
     @FocusState private var isFocused: Bool
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .leading) {
                 // Background and border
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(themeManager.currentTheme.isDarkMode ? themeManager.currentTheme.secondaryBackgroundColorSwiftUI : Color(white: 0.95))
+                    .fill(colorScheme == .dark ? themeManager.currentTheme.secondaryBackgroundColorSwiftUI : Color(white: 0.95))
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(isFocused ? Color.blue : themeManager.currentTheme.textColorSwiftUI.opacity(0.3), lineWidth: isFocused ? 2 : 1)
