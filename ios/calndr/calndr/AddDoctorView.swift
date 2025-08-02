@@ -146,8 +146,6 @@ struct AddDoctorView: View {
         website = result.website ?? ""
         notes = ""
     }
-
-}
 }
 
 // MARK: - Medical Search View
