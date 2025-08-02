@@ -47,7 +47,7 @@ struct MedicalView: View {
                                     .padding(.horizontal, 20)
                                     .padding(.vertical, 10)
                                     .background(themeManager.currentTheme.accentColor.color)
-                                    .foregroundColor(themeManager.currentTheme.textOnAccentColor.color)
+                                    .foregroundColor(.white)
                                     .cornerRadius(8)
                             }
                         }
@@ -102,7 +102,7 @@ struct MedicalView: View {
                                     .padding(.horizontal, 20)
                                     .padding(.vertical, 10)
                                     .background(themeManager.currentTheme.accentColor.color)
-                                    .foregroundColor(themeManager.currentTheme.textOnAccentColor.color)
+                                    .foregroundColor(.white)
                                     .cornerRadius(8)
                             }
                         }
