@@ -1,5 +1,31 @@
 # CHANGELOG
 
+## [2025-01-28 19:04 EST] - Enhance Medical Provider Functionality with Click-to-Call and Directions
+
+Major enhancement to medical provider functionality with improved user experience and automation:
+
+**Enhanced Search Results:**
+- Redesigned search result cards with clear visual hierarchy and 'Add' button
+- Added distance display for location-based searches (shows km from current location)
+- Auto-save functionality - clicking a search result immediately saves the provider to database
+- Clickable phone numbers that launch the phone app for instant calling
+- Clickable addresses that open maps app for turn-by-turn directions
+
+**Enhanced Saved Provider Cards:**
+- Added click-to-call functionality for existing saved provider phone numbers
+- Added click-for-directions for existing saved provider addresses
+- Smart maps integration with fallback chain: Apple Maps → Google Maps → Web Maps
+
+**Technical Improvements:**
+- Phone number cleaning and validation for reliable dialing
+- URL encoding for map address queries
+- Cross-platform maps support with graceful fallbacks
+- Proper error handling and detailed logging
+- Theme-aware UI with accent colors for interactive elements
+
+**Backend Implementation Guide:**
+Created comprehensive prompt file (BACKEND_MEDICAL_PROVIDER_IMPLEMENTATION_PROMPT.md) with complete instructions for backend chatbot to implement medical provider API endpoints, database schema, and Pydantic models following existing patterns.
+
 ## [2025-01-28 18:48 EST] - Fix Medical Provider Search Field Mapping
 
 Fixed remaining medical provider search JSON parsing error related to field name mapping. After fixing the response wrapper issue, discovered that backend returns camelCase field names (phoneNumber, placeId) while iOS model expected snake_case (phone_number, place_id). Updated CodingKeys mapping to match actual backend response format and added missing distance field. Medical provider search should now successfully parse all response fields and display search results correctly.
