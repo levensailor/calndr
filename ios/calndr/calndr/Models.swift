@@ -1308,12 +1308,14 @@ struct MedicalSearchResult: Codable, Identifiable {
     let website: String?
     let rating: Double?
     let placeId: String?
+    let distance: Double? // Distance in meters from search location
     
     enum CodingKeys: String, CodingKey {
         case id, name, specialty, address
-        case phoneNumber = "phone_number"
+        case phoneNumber // Backend returns camelCase
         case website, rating
-        case placeId = "place_id"
+        case placeId // Backend returns camelCase
+        case distance
     }
 }
 
