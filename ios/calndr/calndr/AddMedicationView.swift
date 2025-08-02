@@ -56,11 +56,17 @@ struct AddMedicationView: View {
                             .foregroundColor(themeManager.currentTheme.textColor.color)
                         
                         VStack(spacing: 16) {
-                            TextField("Medication Name *", text: $name)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                            FloatingLabelTextField(
+                                title: "Medication Name *",
+                                text: $name,
+                                isSecure: false
+                            )
                             
-                            TextField("Dosage (e.g., 500mg, 1 tablet)", text: $dosage)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                            FloatingLabelTextField(
+                                title: "Dosage (e.g., 500mg, 1 tablet)",
+                                text: $dosage,
+                                isSecure: false
+                            )
                             
                             Picker("Frequency", selection: $frequency) {
                                 Text("Select frequency").tag("")
@@ -73,11 +79,14 @@ struct AddMedicationView: View {
                             .padding()
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                                    .stroke(themeManager.currentTheme.textColor.color.opacity(0.3), lineWidth: 1)
                             )
                             
-                            TextField("Instructions (e.g., Take with food)", text: $instructions)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                            FloatingLabelTextField(
+                                title: "Instructions (e.g., Take with food)",
+                                text: $instructions,
+                                isSecure: false
+                            )
                         }
                     }
                     .padding(.horizontal)
@@ -149,9 +158,11 @@ struct AddMedicationView: View {
                             .font(.headline)
                             .foregroundColor(themeManager.currentTheme.textColor.color)
                         
-                        TextField("Notes (side effects, special instructions, etc.)", text: $notes, axis: .vertical)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .lineLimit(3...6)
+                        FloatingLabelTextField(
+                            title: "Notes (side effects, special instructions, etc.)",
+                            text: $notes,
+                            isSecure: false
+                        )
                     }
                     .padding(.horizontal)
                     
