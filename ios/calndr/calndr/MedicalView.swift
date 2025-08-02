@@ -5,54 +5,124 @@ import MapKit
 struct MedicalView: View {
     @EnvironmentObject var viewModel: CalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
-    @State private var selectedTab = 0
     @State private var showingAddDoctor = false
     @State private var showingAddMedication = false
     
     var body: some View {
-        NavigationView {
-            VStack(spacing: 0) {
-                // Header
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Medical")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .foregroundColor(themeManager.currentTheme.textColor.color)
+        ScrollView {
+            VStack(spacing: 24) {
+                // Medical Providers Section
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Text("Medical Providers")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
+                        
+                        Spacer()
+                        
+                        Button(action: {
+                            showingAddDoctor = true
+                        }) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(themeManager.currentTheme.accentColor.color)
+                        }
+                    }
                     
-                    Text("Manage doctors, medications, and health tracking")
-                        .font(.subheadline)
-                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+                    if viewModel.medicalProviders.isEmpty {
+                        VStack(spacing: 12) {
+                            Image(systemName: "cross.case.fill")
+                                .font(.largeTitle)
+                                .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.3))
+                            
+                            Text("No Medical Providers")
+                                .font(.headline)
+                                .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
+                            
+                            Button(action: {
+                                showingAddDoctor = true
+                            }) {
+                                Text("Add Provider")
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 10)
+                                    .background(themeManager.currentTheme.accentColor.color)
+                                    .foregroundColor(themeManager.currentTheme.textOnAccentColor.color)
+                                    .cornerRadius(8)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
+                        .cornerRadius(12)
+                    } else {
+                        ForEach(viewModel.medicalProviders) { provider in
+                            MedicalProviderCard(provider: provider)
+                        }
+                    }
                 }
                 .padding(.horizontal)
-                .padding(.top)
                 
-                // Tab Picker
-                Picker("Medical Section", selection: $selectedTab) {
-                    Text("Doctors").tag(0)
-                    Text("Medications").tag(1)
-                }
-                .pickerStyle(SegmentedPickerStyle())
-                .padding(.horizontal)
-                .padding(.top, 16)
+                Divider()
+                    .padding(.horizontal)
                 
-                // Tab Content
-                TabView(selection: $selectedTab) {
-                    // Doctors Tab
-                    DoctorsTabView(
-                        showingAddDoctor: $showingAddDoctor
-                    )
-                    .tag(0)
+                // Medications Section
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Text("Medications")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(themeManager.currentTheme.textColor.color)
+                        
+                        Spacer()
+                        
+                        Button(action: {
+                            showingAddMedication = true
+                        }) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(themeManager.currentTheme.accentColor.color)
+                        }
+                    }
                     
-                    // Medications Tab
-                    MedicationsTabView(
-                        showingAddMedication: $showingAddMedication
-                    )
-                    .tag(1)
+                    if viewModel.medications.isEmpty {
+                        VStack(spacing: 12) {
+                            Image(systemName: "pills.fill")
+                                .font(.largeTitle)
+                                .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.3))
+                            
+                            Text("No Medications")
+                                .font(.headline)
+                                .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
+                            
+                            Button(action: {
+                                showingAddMedication = true
+                            }) {
+                                Text("Add Medication")
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 10)
+                                    .background(themeManager.currentTheme.accentColor.color)
+                                    .foregroundColor(themeManager.currentTheme.textOnAccentColor.color)
+                                    .cornerRadius(8)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
+                        .cornerRadius(12)
+                    } else {
+                        ForEach(viewModel.medications) { medication in
+                            MedicationCard(medication: medication)
+                        }
+                    }
                 }
-                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                .padding(.horizontal)
             }
-            .background(themeManager.currentTheme.mainBackgroundColor.color)
+            .padding(.vertical)
         }
+        .background(themeManager.currentTheme.mainBackgroundColor.color)
+        .navigationTitle("Medical")
+        .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingAddDoctor) {
             AddDoctorView()
                 .environmentObject(viewModel)
@@ -66,127 +136,7 @@ struct MedicalView: View {
     }
 }
 
-// MARK: - Doctors Tab View
-struct DoctorsTabView: View {
-    @EnvironmentObject var viewModel: CalendarViewModel
-    @EnvironmentObject var themeManager: ThemeManager
-    @Binding var showingAddDoctor: Bool
-    
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                // Add Button
-                HStack {
-                    Spacer()
-                    Button(action: { showingAddDoctor = true }) {
-                        HStack {
-                            Image(systemName: "plus.circle.fill")
-                            Text("Add Doctor")
-                        }
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding()
-                        .background(Color.red)
-                        .cornerRadius(10)
-                    }
-                    Spacer()
-                }
-                .padding(.horizontal)
-                .padding(.top, 16)
-                
-                // Medical Providers List
-                if viewModel.medicalProviders.isEmpty {
-                    VStack(spacing: 16) {
-                        Image(systemName: "cross.case.fill")
-                            .font(.largeTitle)
-                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.3))
-                        
-                        Text("No doctors added yet")
-                            .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
-                        
-                        Text("Add your first doctor to get started")
-                            .font(.subheadline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.5))
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                } else {
-                    ForEach(viewModel.medicalProviders) { provider in
-                        MedicalProviderCard(provider: provider)
-                            .padding(.horizontal)
-                            .environmentObject(viewModel)
-                    }
-                }
-                
-                Spacer(minLength: 80)
-            }
-        }
-        .scrollTargetBehavior(CustomVerticalPagingBehavior())
-    }
-}
 
-// MARK: - Medications Tab View
-struct MedicationsTabView: View {
-    @EnvironmentObject var viewModel: CalendarViewModel
-    @EnvironmentObject var themeManager: ThemeManager
-    @Binding var showingAddMedication: Bool
-    
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                // Add Button
-                HStack {
-                    Spacer()
-                    Button(action: { showingAddMedication = true }) {
-                        HStack {
-                            Image(systemName: "plus.circle.fill")
-                            Text("Add Medication")
-                        }
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding()
-                        .background(Color.red)
-                        .cornerRadius(10)
-                    }
-                    Spacer()
-                }
-                .padding(.horizontal)
-                .padding(.top, 16)
-                
-                // Medications List
-                if viewModel.medications.isEmpty {
-                    VStack(spacing: 16) {
-                        Image(systemName: "pills.fill")
-                            .font(.largeTitle)
-                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.3))
-                        
-                        Text("No medications added yet")
-                            .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
-                        
-                        Text("Add your first medication to get started")
-                            .font(.subheadline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.5))
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                } else {
-                    ForEach(viewModel.medications) { medication in
-                        MedicationCard(medication: medication)
-                            .padding(.horizontal)
-                            .environmentObject(viewModel)
-                    }
-                }
-                
-                Spacer(minLength: 80)
-            }
-        }
-        .scrollTargetBehavior(CustomVerticalPagingBehavior())
-    }
-}
 
 // MARK: - Medical Provider Card
 struct MedicalProviderCard: View {
