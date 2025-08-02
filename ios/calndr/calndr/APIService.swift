@@ -3857,10 +3857,35 @@ class APIService {
                 return
             }
             
+            // Debug: Log the raw response for debugging
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("🏥 Medical Provider Search Response:")
+                print("Status Code: \(httpResponse.statusCode)")
+                print("Raw JSON Response:")
+                print(jsonString)
+                print("--- End Response ---")
+            }
+            
             do {
-                let results = try JSONDecoder().decode([MedicalSearchResult].self, from: data)
-                completion(.success(results))
+                let response = try JSONDecoder().decode(MedicalSearchResponse.self, from: data)
+                print("✅ Successfully decoded \(response.results.count) medical search results (total: \(response.total))")
+                completion(.success(response.results))
             } catch {
+                print("❌ JSON Decoding Error: \(error)")
+                if let decodingError = error as? DecodingError {
+                    switch decodingError {
+                    case .dataCorrupted(let context):
+                        print("❌ Data corrupted: \(context.debugDescription)")
+                    case .keyNotFound(let key, let context):
+                        print("❌ Key '\(key.stringValue)' not found: \(context.debugDescription)")
+                    case .typeMismatch(let type, let context):
+                        print("❌ Type mismatch for type \(type): \(context.debugDescription)")
+                    case .valueNotFound(let type, let context):
+                        print("❌ Value not found for type \(type): \(context.debugDescription)")
+                    @unknown default:
+                        print("❌ Unknown decoding error: \(error)")
+                    }
+                }
                 completion(.failure(error))
             }
         }.resume()

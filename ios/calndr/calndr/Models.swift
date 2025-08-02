@@ -1329,4 +1329,9 @@ struct MedicalSearchRequest: Codable {
         case zipcode, latitude, longitude, radius
     }
 }
+
+struct MedicalSearchResponse: Codable {
+    let results: [MedicalSearchResult]
+    let total: Int
+} 
  
