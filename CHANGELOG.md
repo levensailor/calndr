@@ -1,5 +1,28 @@
 # CHANGELOG
 
+## [2025-08-03 12:42 EST] - Fix iOS Medical Provider 401 Authentication Error
+
+Fixed critical 401 authentication error when saving medical providers from the iOS app:
+
+**Root Cause Analysis:**
+- iOS app was making POST requests to `/api/v1/medical-providers` (without trailing slash)
+- Backend/nginx was issuing 307 redirects to `/api/v1/medical-providers/` (with trailing slash)
+- During 307 redirects, the Authorization header was being lost, causing 401 unauthorized errors
+
+**iOS App Fixes:**
+- Updated medical provider API URLs to include trailing slashes: `/medical-providers/`, `/medications/`
+- Exception: Search endpoints use no trailing slash to match backend routing: `/medical-providers/search`
+- Prevents 307 redirects that lose authentication headers during POST requests
+
+**Backend Verification:**
+- Confirmed medical provider endpoints work correctly when called with proper URLs
+- All CRUD operations functional when authentication headers are preserved
+- Search functionality working with both legacy and new Google Places APIs
+
+**Testing:**
+- Backend logs now show direct 401 responses (expected with test tokens) instead of 307 redirects
+- Medical provider creation should now work properly in iOS app with valid authentication
+
 ## [2025-08-02 19:55 EST] - Fix Medical Provider and Medication API Data Format Inconsistencies
 
 Fixed critical issues in provider and medication endpoints that were preventing frontend-backend communication:
