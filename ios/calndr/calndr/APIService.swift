@@ -3567,7 +3567,7 @@ class APIService {
     // MARK: - Medical Provider Management
     
     func fetchMedicalProviders(completion: @escaping (Result<[MedicalProvider], Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/medical-providers")
+        let url = baseURL.appendingPathComponent("/medical-providers/")
         let request = createAuthenticatedRequest(url: url)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
@@ -3596,7 +3596,7 @@ class APIService {
     }
     
     func createMedicalProvider(_ provider: MedicalProviderCreate, completion: @escaping (Result<MedicalProvider, Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/medical-providers")
+        let url = baseURL.appendingPathComponent("/medical-providers/")
         var request = createAuthenticatedRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -3699,7 +3699,7 @@ class APIService {
     // MARK: - Medication Management
     
     func fetchMedications(completion: @escaping (Result<[Medication], Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/medications")
+        let url = baseURL.appendingPathComponent("/medications/")
         let request = createAuthenticatedRequest(url: url)
         
         URLSession.shared.dataTask(with: request) { data, response, error in
@@ -3728,7 +3728,7 @@ class APIService {
     }
     
     func createMedication(_ medication: MedicationCreate, completion: @escaping (Result<Medication, Error>) -> Void) {
-        let url = baseURL.appendingPathComponent("/medications")
+        let url = baseURL.appendingPathComponent("/medications/")
         var request = createAuthenticatedRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
