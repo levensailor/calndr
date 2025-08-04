@@ -1325,10 +1325,12 @@ struct MedicalSearchRequest: Codable {
     let latitude: Double?
     let longitude: Double?
     let radius: Int
+    let specialty: String?
+    let query: String?
     
     enum CodingKeys: String, CodingKey {
         case locationType = "location_type"
-        case zipcode, latitude, longitude, radius
+        case zipcode, latitude, longitude, radius, specialty, query
     }
 }
 

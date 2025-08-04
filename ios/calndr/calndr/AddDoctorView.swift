@@ -7,6 +7,7 @@ struct AddDoctorView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var showingManualEntry = false
+    @State private var showingEnhancedSearch = false
     @State private var name = ""
     @State private var specialty = ""
     @State private var address = ""
@@ -26,7 +27,22 @@ struct AddDoctorView: View {
             VStack(spacing: 0) {
                 // Search Controls
                 VStack(spacing: 16) {
-                    // Current Location Search
+                    // Enhanced Map Search
+                    Button(action: {
+                        showingEnhancedSearch = true
+                    }) {
+                        HStack {
+                            Image(systemName: "map.fill")
+                            Text("Search with Map")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(themeManager.currentTheme.accentColor.color)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                    }
+                    
+                    // Quick Search Near Me
                     Button(action: {
                         searchMedicalProviders()
                     }) {
@@ -38,12 +54,12 @@ struct AddDoctorView: View {
                             } else {
                                 Image(systemName: "location.fill")
                             }
-                            Text(isSearching ? "Searching..." : "Search Near Me")
+                            Text(isSearching ? "Quick Search Near Me" : "Quick Search Near Me")
                         }
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(themeManager.currentTheme.accentColor.color)
-                        .foregroundColor(.white)
+                        .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
                         .cornerRadius(10)
                     }
                     .disabled(isSearching)
@@ -124,7 +140,16 @@ struct AddDoctorView: View {
             } message: {
                 Text("Please enable location access in Settings to search for nearby medical providers.")
             }
-                        .sheet(isPresented: $showingManualEntry) {
+                        .sheet(isPresented: $showingEnhancedSearch) {
+                EnhancedMedicalSearchView { result in
+                    populateFromSearchResult(result)
+                    showingEnhancedSearch = false
+                    dismiss()
+                }
+                .environmentObject(viewModel)
+                .environmentObject(themeManager)
+            }
+            .sheet(isPresented: $showingManualEntry) {
                 NavigationView {
                     Form {
                         Section(header: Text("Medical Provider Information")
@@ -230,7 +255,9 @@ struct AddDoctorView: View {
                 zipcode: nil,
                 latitude: location.coordinate.latitude,
                 longitude: location.coordinate.longitude,
-                radius: 5000 // 5km radius
+                radius: 5000, // 5km radius
+                specialty: nil,
+                query: nil
             )
             
             viewModel.searchMedicalProviders(searchRequest) { result in
@@ -481,7 +508,9 @@ struct MedicalSearchView: View {
                     zipcode: nil,
                     latitude: location.coordinate.latitude,
                     longitude: location.coordinate.longitude,
-                    radius: 5000 // 5km radius
+                    radius: 5000, // 5km radius
+                    specialty: nil,
+                    query: nil
                 )
                 
                 performSearch(searchRequest)
@@ -493,7 +522,9 @@ struct MedicalSearchView: View {
                 zipcode: zipCode,
                 latitude: nil,
                 longitude: nil,
-                radius: 5000
+                radius: 5000,
+                specialty: nil,
+                query: nil
             )
             
             performSearch(searchRequest)
