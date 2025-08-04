@@ -1,5 +1,42 @@
 # CHANGELOG
 
+## [2025-08-04 12:49 EST] - Enhanced Medical Provider Search with Interactive Map and Radius Controls
+
+Implemented comprehensive enhanced medical provider search interface with map integration and advanced filtering capabilities:
+
+**New Enhanced Search Features:**
+- Interactive map view with visual search radius overlay and provider location markers
+- Customizable search radius from 0.3 to 15.5 miles (0.5-25km) with slider and text input controls
+- Two-finger pinch gestures on map to dynamically adjust search radius
+- ZIP code search with location-based radius visualization
+- Optional search terms for specialized filtering (e.g., "pediatrician", "urgent care", "cardiologist")
+- "Try expanding your search" notice when fewer than 3 providers are found with quick expand button
+- Enhanced provider result cards with better information display and one-tap addition
+
+**User Experience Improvements:**
+- Prominent "Search with Map" option in AddDoctorView with visual map icon
+- Preserved "Quick Search Near Me" for users who prefer simple location-based search
+- Automatic search refresh when radius is significantly changed
+- Clear visual feedback with radius circle overlay on map
+- Helpful error messages and expansion suggestions for better results
+- RadiusEditorView modal for precise distance control with preset values
+
+**Technical Implementation:**
+- Created `EnhancedMedicalSearchView` with MapKit integration and MKCoordinateRegion management
+- Added `RadiusEditorView` with unit conversion (miles/kilometers) and preset quick-select options
+- Updated `MedicalSearchRequest` model to include `specialty` and `query` parameters
+- Enhanced backend search logic to prioritize user-provided query terms over default medical keywords
+- Maintained full backward compatibility with existing search functionality
+- Added comprehensive error handling and validation for all search parameters
+
+**Backend API Enhancements:**
+- Updated medical provider search endpoint to handle `specialty` and `query` parameters
+- Enhanced search logic to prioritize user search terms when provided
+- Improved logging to include specialty and query parameters for better debugging
+- Maintained Google Places API integration with enhanced parameter handling
+
+All changes are fully tested, deployed, and backward compatible with existing iOS app functionality.
+
 ## [2025-08-03 12:42 EST] - Fix iOS Medical Provider 401 Authentication Error
 
 Fixed critical 401 authentication error when saving medical providers from the iOS app:
