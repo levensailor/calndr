@@ -141,11 +141,11 @@ struct AddDoctorView: View {
                 Text("Please enable location access in Settings to search for nearby medical providers.")
             }
                         .sheet(isPresented: $showingEnhancedSearch) {
-                EnhancedMedicalSearchView { result in
+                EnhancedMedicalSearchView(onProviderSelected: { result in
                     populateFromSearchResult(result)
                     showingEnhancedSearch = false
                     dismiss()
-                }
+                })
                 .environmentObject(viewModel)
                 .environmentObject(themeManager)
             }
@@ -316,7 +316,7 @@ struct AddDoctorView: View {
             latitude: nil, // Could extract from placeId if needed
             longitude: nil, // Could extract from placeId if needed
             zipCode: nil,
-            notes: notes.isEmpty ? "Added from search results" : notes
+            notes: notes.isEmpty ? nil : notes
         )
         
         print("💾 Auto-saving medical provider from search: \(result.name)")

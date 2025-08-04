@@ -43,6 +43,7 @@ class CalendarViewModel: ObservableObject {
     @Published var babysitters: [Babysitter] = []
     @Published var emergencyContacts: [EmergencyContact] = []
     @Published var medicalProviders: [MedicalProvider] = []
+    @Published var pharmacies: [MedicalProvider] = []
     @Published var medications: [Medication] = []
     @Published var reminders: [Reminder] = []
     @Published var journalEntries: [JournalEntry] = []
@@ -213,6 +214,7 @@ class CalendarViewModel: ObservableObject {
         reminders = []
         journalEntries = []
         medicalProviders = []
+        pharmacies = []
         medications = []
     }
 

@@ -7,7 +7,13 @@ struct EnhancedMedicalSearchView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.dismiss) private var dismiss
     
+    let defaultSearchTerms: String?
     let onProviderSelected: (MedicalSearchResult) -> Void
+    
+    init(defaultSearchTerms: String? = nil, onProviderSelected: @escaping (MedicalSearchResult) -> Void) {
+        self.defaultSearchTerms = defaultSearchTerms
+        self.onProviderSelected = onProviderSelected
+    }
     
     @State private var searchType: SearchType = .currentLocation
     @State private var zipCode = ""
@@ -370,6 +376,9 @@ struct EnhancedMedicalSearchView: View {
         }
         .onAppear {
             setupInitialLocation()
+            if let defaultTerms = defaultSearchTerms {
+                searchTerms = defaultTerms
+            }
         }
     }
     
@@ -848,9 +857,9 @@ struct EnhancedMedicalSearchView_Previews: PreviewProvider {
         let themeManager = ThemeManager()
         let calendarViewModel = CalendarViewModel(authManager: authManager, themeManager: themeManager)
         
-        EnhancedMedicalSearchView { _ in
+        EnhancedMedicalSearchView(onProviderSelected: { _ in
             // Preview provider selected callback
-        }
+        })
         .environmentObject(calendarViewModel)
         .environmentObject(themeManager)
     }

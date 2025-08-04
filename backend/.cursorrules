@@ -1,0 +1,22 @@
+# .cursorrules
+rules:
+  # Global rules
+  - name: "Project standards"
+    description: |
+      - Never use hardcoded names in code, use variables
+      - Always enable logging with line number, EST timestamp, and function name
+      - Use AM/PM instead of 24 hour time
+      - Commit and push code after every change with relevant commit message
+      - Use environment variables for configuration
+      - Add each user prompt to the CHANGELOG.md file with a timestamp and a description of the change
+    
+  # Python backend rules
+  - name: "Python backend"
+    globs: ["backend/**/*.py", "*.py"]
+    description: |
+      - Use FastAPI, Pydantic, uvicorn and python-dotenv
+      - Include proper error handling and logging
+      - Use type hints for all function parameters and return values
+      - Follow async/await patterns for database operations
+      - Never run the backend locally
+    

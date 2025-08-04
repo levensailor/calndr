@@ -1,72 +1,41 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-PYTHONPATH
-*.test
-# Virtual environments
-venv/
-env/
-ENV/
-.venv/
-.env/
-
 # Environment variables
 .env
-.env.local
-.env.*.local
 
-# Logs
-logs/
-*.log
-log_archive/
+# Python virtual environment
+venv/
+__pycache__/
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# Node dependencies
+node_modules/
 
-# OS
+# Build artifacts
+dist/
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
 
-# Database
+# SQLite
 *.db
-*.sqlite
-*.sqlite3
+*.db-journal 
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
 
-# Testing
-.coverage
-.pytest_cache/
-.tox/
-.coverage.*
-htmlcov/
+# Virtualenv
+/venv/
+/v/
+*.pyc
+__pycache__/
+.env
+AuthKey_4LZC88RV85.p8
+.env
+terraform/.terraform/providers/*
 
-# Temporary files
-*.tmp
-*.temp
-.cache/
+# Sensitive files
+*.pem
+*.p8
+
+# SSM Parameter setup scripts with actual credentials
+scripts/setup-ssm-parameters.sh
+
+*.tfvars
+terraform/staging.tfvars
