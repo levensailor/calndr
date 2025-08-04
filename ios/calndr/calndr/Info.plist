@@ -48,7 +48,7 @@
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>
 				<true/>
 				<key>NSExceptionMinimumTLSVersion</key>
-				<string>TLSv1.0</string>
+				<string>TLSv1.2</string>
 				<key>NSIncludesSubdomains</key>
 				<true/>
 			</dict>
