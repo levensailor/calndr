@@ -173,6 +173,12 @@ class CalendarViewModel: ObservableObject {
         print("📅 CalendarViewModel: Starting fetchJournalEntries()...")
         fetchJournalEntries() // Load journal entries
         
+        print("📅 CalendarViewModel: Starting fetchMedicalProviders()...")
+        fetchMedicalProviders() // Load medical providers
+        
+        print("📅 CalendarViewModel: Starting fetchMedications()...")
+        fetchMedications() // Load medications
+        
         // Fetch school events if enabled
         if showSchoolEvents && schoolEvents.isEmpty {
             print("📅 CalendarViewModel: Starting fetchSchoolEvents()...")
@@ -206,6 +212,8 @@ class CalendarViewModel: ObservableObject {
         emergencyContacts = []
         reminders = []
         journalEntries = []
+        medicalProviders = []
+        medications = []
     }
 
     func fetchHandoffsAndCustody() {
@@ -2134,6 +2142,21 @@ class CalendarViewModel: ObservableObject {
         }
     }
     
+    func fetchMedicalProviders() {
+        print("📋 CalendarViewModel: fetchMedicalProviders() called")
+        APIService.shared.fetchMedicalProviders { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let providers):
+                    self?.medicalProviders = providers
+                    print("✅ Successfully loaded \(providers.count) medical providers")
+                case .failure(let error):
+                    print("❌ Error fetching medical providers: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
     // MARK: - Medication Management
     
     func saveMedication(_ medication: MedicationCreate, completion: @escaping (Bool) -> Void) {
@@ -2181,6 +2204,21 @@ class CalendarViewModel: ObservableObject {
                 case .failure(let error):
                     print("❌ Error deleting medication: \(error.localizedDescription)")
                     completion(false)
+                }
+            }
+        }
+    }
+    
+    func fetchMedications() {
+        print("💊 CalendarViewModel: fetchMedications() called")
+        APIService.shared.fetchMedications { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let medications):
+                    self?.medications = medications
+                    print("✅ Successfully loaded \(medications.count) medications")
+                case .failure(let error):
+                    print("❌ Error fetching medications: \(error.localizedDescription)")
                 }
             }
         }
