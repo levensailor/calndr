@@ -24,6 +24,9 @@ struct EnhancedMedicalSearchView: View {
     @State private var currentLocation: CLLocationCoordinate2D?
     @State private var showingRadiusEditor = false
     
+    @FocusState private var isZipCodeFocused: Bool
+    @FocusState private var isSearchTermsFocused: Bool
+    
     @StateObject private var locationManager = LocationManager.shared
     
     enum SearchType: String, CaseIterable {
@@ -74,6 +77,14 @@ struct EnhancedMedicalSearchView: View {
                         TextField("e.g. pediatrician, cardiologist, urgent care", text: $searchTerms)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .font(.body)
+                            .focused($isSearchTermsFocused)
+                            .onSubmit {
+                                // Trigger search when return key is pressed
+                                if searchType == .currentLocation || !zipCode.isEmpty {
+                                    isSearchTermsFocused = false
+                                    searchMedicalProviders()
+                                }
+                            }
                     }
                     
                     // Location-specific controls
@@ -86,9 +97,19 @@ struct EnhancedMedicalSearchView: View {
                                 TextField("Enter ZIP code", text: $zipCode)
                                     .textFieldStyle(RoundedBorderTextFieldStyle())
                                     .keyboardType(.numberPad)
+                                    .focused($isZipCodeFocused)
+                                    .onChange(of: zipCode) { newValue in
+                                        // Auto-dismiss keyboard when ZIP code is complete (5 digits)
+                                        if newValue.count >= 5 {
+                                            isZipCodeFocused = false
+                                        }
+                                    }
                             }
                             
                             Button("Search") {
+                                // Dismiss keyboard first
+                                isZipCodeFocused = false
+                                isSearchTermsFocused = false
                                 searchMedicalProviders()
                             }
                             .buttonStyle(.borderedProminent)
@@ -97,6 +118,8 @@ struct EnhancedMedicalSearchView: View {
                     } else {
                         // Current Location Search Button
                         Button(action: {
+                            // Dismiss keyboard first
+                            isSearchTermsFocused = false
                             searchMedicalProviders()
                         }) {
                             HStack {
@@ -323,6 +346,11 @@ struct EnhancedMedicalSearchView: View {
             .background(themeManager.currentTheme.mainBackgroundColor.color)
             .navigationTitle("Find Medical Provider")
             .navigationBarTitleDisplayMode(.inline)
+            .onTapGesture {
+                // Dismiss keyboard when tapping outside text fields
+                isZipCodeFocused = false
+                isSearchTermsFocused = false
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
