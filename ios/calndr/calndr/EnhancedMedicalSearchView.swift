@@ -165,24 +165,14 @@ struct EnhancedMedicalSearchView: View {
                     ZStack {
                         Map(coordinateRegion: $mapRegion, annotationItems: searchResults) { result in
                             MapAnnotation(coordinate: coordinateForResult(result)) {
-                                VStack {
-                                    Image(systemName: "cross.case.fill")
-                                        .foregroundColor(.red)
-                                        .background(Circle().fill(.white))
-                                        .font(.caption)
-                                    Text(result.name)
-                                        .font(.caption2)
-                                        .foregroundColor(themeManager.currentTheme.textColor.color)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 4)
-                                                .fill(.white.opacity(0.9))
-                                                .shadow(radius: 2)
-                                        )
-                                        .lineLimit(1)
-                                }
-                                .onTapGesture {
-                                    onProviderSelected(result)
-                                }
+                                Image(systemName: "cross.case.fill")
+                                    .foregroundColor(.red)
+                                    .background(Circle().fill(.white))
+                                    .font(.title2)
+                                    .shadow(radius: 2)
+                                    .onTapGesture {
+                                        onProviderSelected(result)
+                                    }
                             }
                         }
                         .frame(height: 200)
