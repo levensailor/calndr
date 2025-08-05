@@ -27,6 +27,10 @@ struct EnhancedMedicalSearchView: View {
         center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
         span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
     )
+    @State private var mapPosition = MapCameraPosition.region(MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
+        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+    ))
     @State private var currentLocation: CLLocationCoordinate2D?
     @State private var showingRadiusEditor = false
     
@@ -104,9 +108,9 @@ struct EnhancedMedicalSearchView: View {
                                     .textFieldStyle(RoundedBorderTextFieldStyle())
                                     .keyboardType(.numberPad)
                                     .focused($isZipCodeFocused)
-                                    .onChange(of: zipCode) { newValue in
+                                    .onChange(of: zipCode) {
                                         // Auto-dismiss keyboard when ZIP code is complete (5 digits)
-                                        if newValue.count >= 5 {
+                                        if zipCode.count >= 5 {
                                             isZipCodeFocused = false
                                         }
                                     }
@@ -169,16 +173,18 @@ struct EnhancedMedicalSearchView: View {
                 VStack(spacing: 12) {
                     // Map with radius circle
                     ZStack {
-                        Map(coordinateRegion: $mapRegion, annotationItems: searchResults) { result in
-                            MapAnnotation(coordinate: coordinateForResult(result)) {
-                                Image(systemName: "cross.case.fill")
-                                    .foregroundColor(.red)
-                                    .background(Circle().fill(.white))
-                                    .font(.title2)
-                                    .shadow(radius: 2)
-                                    .onTapGesture {
-                                        onProviderSelected(result)
-                                    }
+                        Map(position: $mapPosition) {
+                            ForEach(searchResults) { result in
+                                Annotation("Medical Provider", coordinate: coordinateForResult(result)) {
+                                    Image(systemName: "cross.case.fill")
+                                        .foregroundColor(.red)
+                                        .background(Circle().fill(.white))
+                                        .font(.title2)
+                                        .shadow(radius: 2)
+                                        .onTapGesture {
+                                            onProviderSelected(result)
+                                        }
+                                }
                             }
                         }
                         .frame(height: 200)
@@ -390,10 +396,12 @@ struct EnhancedMedicalSearchView: View {
                 DispatchQueue.main.async {
                     if let location = location {
                         self.currentLocation = location.coordinate
-                        self.mapRegion = MKCoordinateRegion(
+                        let newRegion = MKCoordinateRegion(
                             center: location.coordinate,
                             span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
                         )
+                        self.mapRegion = newRegion
+                        self.mapPosition = .region(newRegion)
                         updateMapRegion()
                     }
                 }
@@ -406,13 +414,15 @@ struct EnhancedMedicalSearchView: View {
         
         // Calculate the span based on radius
         let radiusInDegrees = searchRadius / 111320.0 // Rough conversion from meters to degrees
-        mapRegion = MKCoordinateRegion(
+        let newRegion = MKCoordinateRegion(
             center: center,
             span: MKCoordinateSpan(
                 latitudeDelta: radiusInDegrees * 2.5,
                 longitudeDelta: radiusInDegrees * 2.5
             )
         )
+        mapRegion = newRegion
+        mapPosition = .region(newRegion)
     }
     
     private var radiusCircleSize: CGFloat {
@@ -821,7 +831,7 @@ struct RadiusEditorView: View {
         .onAppear {
             setupInitialValue()
         }
-        .onChange(of: unit) { _ in
+        .onChange(of: unit) {
             updateDisplayValue()
         }
     }
