@@ -902,14 +902,29 @@ struct ScheduleEditView: View {
     
     @State private var isLoading = true
     @State private var dataLoaded = false
-    @State private var scheduleName = ""
-    @State private var scheduleDescription = ""
-    @State private var patternType: SchedulePatternType = .weekly
-    @State private var weeklyPattern = WeeklySchedulePattern()
+    @State private var scheduleName: String
+    @State private var scheduleDescription: String
+    @State private var patternType: SchedulePatternType
+    @State private var weeklyPattern: WeeklySchedulePattern
     @State private var alternatingWeeksPattern: AlternatingWeeksPattern?
-    @State private var isActive = true
+    @State private var isActive: Bool
     @State private var showingAlert = false
     @State private var alertMessage = ""
+    
+    init(template: ScheduleTemplate) {
+        self.template = template
+        
+        // Initialize state with template data immediately to avoid empty fields
+        self._scheduleName = State(initialValue: template.name)
+        self._scheduleDescription = State(initialValue: template.description ?? "")
+        self._patternType = State(initialValue: template.patternType)
+        self._weeklyPattern = State(initialValue: template.weeklyPattern ?? WeeklySchedulePattern())
+        self._alternatingWeeksPattern = State(initialValue: template.alternatingWeeksPattern)
+        self._isActive = State(initialValue: template.isActive)
+        
+        print("🏗️ ScheduleEditView initialized with template: \(template.name)")
+        print("🏗️ Initial weekly pattern: \(template.weeklyPattern?.description ?? "nil")")
+    }
     
     private let daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
     
@@ -991,29 +1006,42 @@ struct ScheduleEditView: View {
     }
     
     private func loadTemplateDetails() {
+        print("🔄 Loading template details for template ID: \(template.id)")
+        print("📄 Initial template passed to view: \(template)")
+        
         viewModel.fetchScheduleTemplate(template.id) { result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let template):
-                    print("✅ Decoded schedule template: \(template)")
-                    self.scheduleName = template.name
-                    self.scheduleDescription = template.description ?? ""
-                    self.isActive = template.isActive
-                    self.patternType = template.patternType
+                case .success(let fetchedTemplate):
+                    print("✅ Successfully fetched detailed schedule template: \(fetchedTemplate)")
+                    print("📅 Template weekly pattern: \(fetchedTemplate.weeklyPattern?.description ?? "nil")")
                     
-                    if let weeklyPattern = template.weeklyPattern {
-                        print(" Wochenmuster geladen: \(weeklyPattern)")
+                    self.scheduleName = fetchedTemplate.name
+                    self.scheduleDescription = fetchedTemplate.description ?? ""
+                    self.isActive = fetchedTemplate.isActive
+                    self.patternType = fetchedTemplate.patternType
+                    
+                    if let weeklyPattern = fetchedTemplate.weeklyPattern {
+                        print("📅 Loading weekly pattern: \(weeklyPattern)")
+                        print("📅 Pattern details - Sunday: \(weeklyPattern.sunday ?? "nil"), Monday: \(weeklyPattern.monday ?? "nil"), Tuesday: \(weeklyPattern.tuesday ?? "nil"), Wednesday: \(weeklyPattern.wednesday ?? "nil"), Thursday: \(weeklyPattern.thursday ?? "nil"), Friday: \(weeklyPattern.friday ?? "nil"), Saturday: \(weeklyPattern.saturday ?? "nil")")
                         self.weeklyPattern = weeklyPattern
                     } else {
-                        print("Kein Wochenmuster gefunden.")
+                        print("❌ No weekly pattern found in fetched template")
+                        // Check if we can use the pattern from the initial template passed to the view
+                        if let initialPattern = self.template.weeklyPattern {
+                            print("🔄 Using initial template pattern as fallback: \(initialPattern)")
+                            self.weeklyPattern = initialPattern
+                        }
                     }
                     
-                    if let alternatingPattern = template.alternatingWeeksPattern {
+                    if let alternatingPattern = fetchedTemplate.alternatingWeeksPattern {
+                        print("📅 Loading alternating weeks pattern: \(alternatingPattern)")
                         self.alternatingWeeksPattern = alternatingPattern
                     }
                     
                     self.isLoading = false
                     self.dataLoaded = true
+                    print("✅ Template loading completed successfully")
                     
                 case .failure(let error):
                     print("❌ Failed to load schedule template: \(error)")

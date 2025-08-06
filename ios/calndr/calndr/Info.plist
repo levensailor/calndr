@@ -24,12 +24,6 @@
 				<string>calndr</string>
 			</array>
 		</dict>
-		<dict>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>fb-your_facebook_app_id</string>
-			</array>
-		</dict>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>
