@@ -1,5 +1,34 @@
 # CHANGELOG
 
+## [2025-01-26 21:18 EST] - Fix Schedule Editing Days Not Populating
+
+**✅ RESOLVED: Custom schedule editing interface not showing day assignments**
+
+Fixed issue where clicking "custom schedule" to edit would display empty day assignments instead of the existing schedule data:
+
+**Problem Identified:**
+- ScheduleEditView was initializing with empty WeeklySchedulePattern() instead of using template data
+- Days weren't being populated when editing existing custom schedules
+- Users saw blank day assignments even though schedule data existed in database
+
+**Root Cause Analysis:**
+- ScheduleEditView was using empty default initialization instead of template data
+- No fallback mechanism if API call to fetch detailed template failed
+- Missing proper State initialization with template data in init()
+
+**Solution Implemented:**
+- Added comprehensive initialization in ScheduleEditView to use template data immediately
+- Created custom init() that populates all State variables with template data
+- Added detailed debug logging to track template loading process
+- Added fallback logic to use initial template data if API fetch fails
+- Ensures days are populated even if there are API communication issues
+
+**Impact:**
+- Custom schedule editing now properly displays existing day assignments
+- Users can see and modify their current schedule setup immediately
+- Improved reliability with fallback data handling
+- Better debugging capabilities for future troubleshooting
+
 ## [2025-08-04 21:25 EST] - CRITICAL FIX: Database Schema Issue - Medical Tables Creation
 
 **✅ RESOLVED: column "google_place_id" of relation "medical_providers" does not exist**
