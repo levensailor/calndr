@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [2025-08-10 14:35 EST] - Fix stale handoff flags after custody edits
+
+- **Problem**: Changing a day's custodian sometimes left the prior handoff flag on the edited day, even when the handoff should shift to the following day (e.g., Monday P1, Tuesday P2 → handoff Tuesday; change Tuesday to P1 → handoff should move to Wednesday, but Tuesday remained marked as a handoff).
+- **Backend fix**: The custody update endpoint now recalculates adjacency-based handoff flags on every update:
+  - Derives the edited day's `handoff_day` from the previous day when the client doesn't explicitly set it, and sets sensible default time/location when enabling.
+  - Recomputes the next day's `handoff_day` based on the new ownership boundary; clears time/location if no longer a handoff, or sets defaults if enabling and none provided.
+  - Invalidates custody and handoff caches for affected months (current and potentially next month) to ensure the UI refreshes correctly.
+- **Impact**: Handoff markers no longer remain on the wrong day after custody changes; the marker shifts correctly to the next boundary.
+
 ## [2025-01-26 21:18 EST] - Fix Schedule Editing Days Not Populating
 
 **✅ RESOLVED: Custom schedule editing interface not showing day assignments**
