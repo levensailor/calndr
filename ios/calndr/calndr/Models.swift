@@ -1274,6 +1274,16 @@ struct MedicationCreate: Codable {
     }
 }
 
+// Presets
+struct MedicationPreset: Codable {
+    let name: String
+    let common_dosages: [String]
+    let common_frequencies: [String]
+    let default_dosage: String?
+    let default_frequency: String?
+    let aliases: [String]?
+}
+
 struct MedicationUpdate: Codable {
     let name: String?
     let dosage: String?

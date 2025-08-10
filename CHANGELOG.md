@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2025-08-10 15:02 EST] - Medication presets and reminders UX
+
+- Backend: Added `/api/v1/medications/presets` endpoint returning curated pediatric medication presets (Tylenol, Motrin, Zyrtec, Benadryl, Amoxicillin) with common dosages and frequencies; includes schema `MedicationPreset` and `MedicationPresetListResponse`.
+- iOS: Updated `AddMedicationView` to support selecting a preset (with dosage and frequency pickers populated from the preset) while still allowing custom entries. Added fetch via `APIService.fetchMedicationPresets()` and an automatic application of defaults. Reminder toggle remains and is validated by backend.
+- Note: Custom medications are still supported by choosing "Custom".
+
 ## [2025-08-10 14:41 EST] - Auto-sync backend changes to calndrclub
 
 - Added `scripts/sync-backend-to-calndrclub.sh` to mirror `backend/backend/` into `calndrclub/backend/` with rsync and push.

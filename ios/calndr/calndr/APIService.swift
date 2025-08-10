@@ -867,6 +867,30 @@ class APIService {
             }
         }.resume()
     }
+
+    // MARK: - Medical - Presets
+    func fetchMedicationPresets(completion: @escaping (Result<[MedicationPreset], Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/medications/presets")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "GET"
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            guard let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            do {
+                struct PresetList: Codable { let presets: [MedicationPreset] }
+                let decoded = try JSONDecoder().decode(PresetList.self, from: data)
+                completion(.success(decoded.presets))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
     
     private func createCustodyRecord(for date: String, custodianId: String, handoffDay: Bool? = nil, handoffTime: String? = nil, handoffLocation: String? = nil, completion: @escaping (Result<CustodyResponse, Error>) -> Void) {
         

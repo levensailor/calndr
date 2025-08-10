@@ -16,6 +16,8 @@ struct AddMedicationView: View {
     @State private var reminderTime = Date()
     @State private var notes = ""
     @State private var showingEndDatePicker = false
+    @State private var presets: [MedicationPreset] = []
+    @State private var selectedPresetIndex: Int? = nil
     
     // Predefined frequency options
     private let frequencyOptions = [
@@ -49,6 +51,33 @@ struct AddMedicationView: View {
                     .padding(.horizontal)
                     .padding(.top)
                     
+                    // Preset Picker
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Choose from common medications (or enter custom)")
+                            .font(.subheadline)
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+                        Picker("Medication Preset", selection: Binding(
+                            get: { selectedPresetIndex ?? -1 },
+                            set: { newValue in
+                                selectedPresetIndex = newValue == -1 ? nil : newValue
+                                applySelectedPreset()
+                            }
+                        )) {
+                            Text("Custom").tag(-1)
+                            ForEach(presets.indices, id: \.self) { idx in
+                                Text(presets[idx].name).tag(idx)
+                            }
+                        }
+                        .pickerStyle(MenuPickerStyle())
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(themeManager.currentTheme.textColor.color.opacity(0.3), lineWidth: 1)
+                        )
+                    }
+                    .padding(.horizontal)
+
                     // Basic Information
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Basic Information")
@@ -62,16 +91,41 @@ struct AddMedicationView: View {
                                 isSecure: false
                             )
                             
-                            FloatingLabelTextField(
-                                title: "Dosage (e.g., 500mg, 1 tablet)",
-                                text: $dosage,
-                                isSecure: false
-                            )
+                            if let idx = selectedPresetIndex, idx >= 0, idx < presets.count {
+                                Picker("Dosage", selection: $dosage) {
+                                    Text("Select dosage").tag("")
+                                    ForEach(presets[idx].common_dosages, id: \.self) { d in
+                                        Text(d).tag(d)
+                                    }
+                                }
+                                .pickerStyle(MenuPickerStyle())
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding()
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(themeManager.currentTheme.textColor.color.opacity(0.3), lineWidth: 1)
+                                )
+                            } else {
+                                FloatingLabelTextField(
+                                    title: "Dosage (e.g., 500mg, 1 tablet)",
+                                    text: $dosage,
+                                    isSecure: false
+                                )
+                            }
                             
-                            Picker("Frequency", selection: $frequency) {
-                                Text("Select frequency").tag("")
-                                ForEach(frequencyOptions, id: \.self) { option in
-                                    Text(option).tag(option)
+                            if let idx = selectedPresetIndex, idx >= 0, idx < presets.count {
+                                Picker("Frequency", selection: $frequency) {
+                                    Text("Select frequency").tag("")
+                                    ForEach(presets[idx].common_frequencies, id: \.self) { option in
+                                        Text(option).tag(option)
+                                    }
+                                }
+                            } else {
+                                Picker("Frequency", selection: $frequency) {
+                                    Text("Select frequency").tag("")
+                                    ForEach(frequencyOptions, id: \.self) { option in
+                                        Text(option).tag(option)
+                                    }
                                 }
                             }
                             .pickerStyle(MenuPickerStyle())
@@ -189,6 +243,9 @@ struct AddMedicationView: View {
                 .disabled(name.isEmpty)
             }
         }
+        .onAppear {
+            fetchPresets()
+        }
     }
     
     private func saveMedication() {
@@ -223,6 +280,27 @@ struct AddMedicationView: View {
                 }
             }
         }
+    }
+
+    private func fetchPresets() {
+        APIService.shared.fetchMedicationPresets { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let presetList):
+                    self.presets = presetList
+                case .failure(let error):
+                    print("❌ Failed to load medication presets: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    private func applySelectedPreset() {
+        guard let idx = selectedPresetIndex, idx >= 0, idx < presets.count else { return }
+        let preset = presets[idx]
+        if name.isEmpty { name = preset.name }
+        if dosage.isEmpty, let def = preset.default_dosage { dosage = def }
+        if frequency.isEmpty, let defF = preset.default_frequency { frequency = defF }
     }
 }
 
