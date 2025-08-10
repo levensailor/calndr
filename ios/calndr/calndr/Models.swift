@@ -847,175 +847,191 @@ struct SchedulePreset: Identifiable {
     let icon: String
     let isPopular: Bool
     
-    static let commonPresets: [SchedulePreset] = [
-        // Weekly patterns
-        SchedulePreset(
+    static let commonPresets: [SchedulePreset] = {
+        // Weekdays/Weekends
+        let wwPattern: WeeklySchedulePattern = WeeklySchedulePattern(
+            sunday: "parent2",
+            monday: "parent1",
+            tuesday: "parent1",
+            wednesday: "parent1",
+            thursday: "parent1",
+            friday: "parent1",
+            saturday: "parent2"
+        )
+        let weekdaysWeekends = SchedulePreset(
             id: "weekdays_weekends",
             name: "Weekdays/Weekends",
             description: "One parent has weekdays, other has weekends",
             patternType: .weekly,
-            weeklyPattern: WeeklySchedulePattern(
-                sunday: "parent2",
-                monday: "parent1",
-                tuesday: "parent1",
-                wednesday: "parent1",
-                thursday: "parent1",
-                friday: "parent1",
-                saturday: "parent2"
-            ),
+            weeklyPattern: wwPattern,
             alternatingWeeksPattern: nil,
             icon: "calendar.badge.clock",
             isPopular: true
-        ),
-        
-        SchedulePreset(
+        )
+
+        // Traditional Split
+        let tsPattern: WeeklySchedulePattern = WeeklySchedulePattern(
+            sunday: "parent2",
+            monday: "parent1",
+            tuesday: "parent1",
+            wednesday: "parent1",
+            thursday: "parent2",
+            friday: "parent2",
+            saturday: "parent2"
+        )
+        let traditionalSplit = SchedulePreset(
             id: "traditional_split",
             name: "Traditional Split",
             description: "Parent 1: Mon-Wed, Parent 2: Thu-Sun",
             patternType: .weekly,
-            weeklyPattern: WeeklySchedulePattern(
-                sunday: "parent2",
-                monday: "parent1",
-                tuesday: "parent1",
-                wednesday: "parent1",
-                thursday: "parent2",
-                friday: "parent2",
-                saturday: "parent2"
-            ),
+            weeklyPattern: tsPattern,
             alternatingWeeksPattern: nil,
             icon: "calendar.badge.clock",
             isPopular: true
-        ),
-        
-        // Alternating weeks
-        SchedulePreset(
+        )
+
+        // Alternating Weeks
+        let awWeekA: WeeklySchedulePattern = WeeklySchedulePattern(
+            sunday: "parent1",
+            monday: "parent1",
+            tuesday: "parent1",
+            wednesday: "parent1",
+            thursday: "parent1",
+            friday: "parent1",
+            saturday: "parent1"
+        )
+        let awWeekB: WeeklySchedulePattern = WeeklySchedulePattern(
+            sunday: "parent2",
+            monday: "parent2",
+            tuesday: "parent2",
+            wednesday: "parent2",
+            thursday: "parent2",
+            friday: "parent2",
+            saturday: "parent2"
+        )
+        let alternatingWeeks = SchedulePreset(
             id: "alternating_weeks",
             name: "Alternating Weeks",
             description: "Switch between parents every week",
             patternType: .alternatingWeeks,
             weeklyPattern: nil,
             alternatingWeeksPattern: AlternatingWeeksPattern(
-                weekAPattern: WeeklySchedulePattern(
-                    sunday: "parent1",
-                    monday: "parent1",
-                    tuesday: "parent1",
-                    wednesday: "parent1",
-                    thursday: "parent1",
-                    friday: "parent1",
-                    saturday: "parent1"
-                ),
-                weekBPattern: WeeklySchedulePattern(
-                    sunday: "parent2",
-                    monday: "parent2",
-                    tuesday: "parent2",
-                    wednesday: "parent2",
-                    thursday: "parent2",
-                    friday: "parent2",
-                    saturday: "parent2"
-                ),
+                weekAPattern: awWeekA,
+                weekBPattern: awWeekB,
                 startingWeek: "A",
-                referenceDate: "2024-01-01" // Monday
+                referenceDate: "2024-01-01"
             ),
             icon: "arrow.left.arrow.right",
             isPopular: true
-        ),
-        
-        SchedulePreset(
+        )
+
+        // 2-2-3 Schedule
+        let tttWeekA: WeeklySchedulePattern = WeeklySchedulePattern(
+            sunday: "parent1",
+            monday: "parent1",
+            tuesday: "parent2",
+            wednesday: "parent2",
+            thursday: "parent1",
+            friday: "parent1",
+            saturday: "parent1"
+        )
+        let tttWeekB: WeeklySchedulePattern = WeeklySchedulePattern(
+            sunday: "parent2",
+            monday: "parent2",
+            tuesday: "parent1",
+            wednesday: "parent1",
+            thursday: "parent2",
+            friday: "parent2",
+            saturday: "parent2"
+        )
+        let twoTwoThree = SchedulePreset(
             id: "two_two_three",
             name: "2-2-3 Schedule",
             description: "2 days, 2 days, 3 days alternating",
             patternType: .alternatingWeeks,
             weeklyPattern: nil,
             alternatingWeeksPattern: AlternatingWeeksPattern(
-                weekAPattern: WeeklySchedulePattern(
-                    sunday: "parent1",
-                    monday: "parent1",
-                    tuesday: "parent2",
-                    wednesday: "parent2",
-                    thursday: "parent1",
-                    friday: "parent1",
-                    saturday: "parent1"
-                ),
-                weekBPattern: WeeklySchedulePattern(
-                    sunday: "parent2",
-                    monday: "parent2",
-                    tuesday: "parent1",
-                    wednesday: "parent1",
-                    thursday: "parent2",
-                    friday: "parent2",
-                    saturday: "parent2"
-                ),
+                weekAPattern: tttWeekA,
+                weekBPattern: tttWeekB,
                 startingWeek: "A",
                 referenceDate: "2024-01-01"
             ),
             icon: "calendar.badge.clock",
             isPopular: true
-        ),
-        
-        SchedulePreset(
+        )
+
+        // 2-2-5-5 Schedule
+        let ttffWeekA: WeeklySchedulePattern = WeeklySchedulePattern(
+            sunday: "parent1",
+            monday: "parent1",
+            tuesday: "parent2",
+            wednesday: "parent2",
+            thursday: "parent1",
+            friday: "parent1",
+            saturday: "parent1"
+        )
+        let ttffWeekB: WeeklySchedulePattern = WeeklySchedulePattern(
+            sunday: "parent1",
+            monday: "parent1",
+            tuesday: "parent2",
+            wednesday: "parent2",
+            thursday: "parent2",
+            friday: "parent2",
+            saturday: "parent2"
+        )
+        let twoTwoFiveFive = SchedulePreset(
             id: "two_two_five_five",
             name: "2-2-5-5 Schedule",
             description: "2 weekdays, 2 weekdays, 5 days, 5 days",
             patternType: .alternatingWeeks,
             weeklyPattern: nil,
             alternatingWeeksPattern: AlternatingWeeksPattern(
-                weekAPattern: WeeklySchedulePattern(
-                    sunday: "parent1",
-                    monday: "parent1",
-                    tuesday: "parent2",
-                    wednesday: "parent2",
-                    thursday: "parent1",
-                    friday: "parent1",
-                    saturday: "parent1"
-                ),
-                weekBPattern: WeeklySchedulePattern(
-                    sunday: "parent1",
-                    monday: "parent1",
-                    tuesday: "parent2",
-                    wednesday: "parent2",
-                    thursday: "parent2",
-                    friday: "parent2",
-                    saturday: "parent2"
-                ),
+                weekAPattern: ttffWeekA,
+                weekBPattern: ttffWeekB,
                 startingWeek: "A",
                 referenceDate: "2024-01-01"
             ),
             icon: "calendar.badge.clock",
             isPopular: false
-        ),
-        
-        SchedulePreset(
+        )
+
+        // Every Other Day
+        let eodWeekA: WeeklySchedulePattern = WeeklySchedulePattern(
+            sunday: "parent1",
+            monday: "parent2",
+            tuesday: "parent1",
+            wednesday: "parent2",
+            thursday: "parent1",
+            friday: "parent2",
+            saturday: "parent1"
+        )
+        let eodWeekB: WeeklySchedulePattern = WeeklySchedulePattern(
+            sunday: "parent2",
+            monday: "parent1",
+            tuesday: "parent2",
+            wednesday: "parent1",
+            thursday: "parent2",
+            friday: "parent1",
+            saturday: "parent2"
+        )
+        let everyOtherDay = SchedulePreset(
             id: "every_other_day",
             name: "Every Other Day",
             description: "Alternate between parents daily",
             patternType: .alternatingDays,
             weeklyPattern: nil,
             alternatingWeeksPattern: AlternatingWeeksPattern(
-                weekAPattern: WeeklySchedulePattern(
-                    sunday: "parent1",
-                    monday: "parent2",
-                    tuesday: "parent1",
-                    wednesday: "parent2",
-                    thursday: "parent1",
-                    friday: "parent2",
-                    saturday: "parent1"
-                ),
-                weekBPattern: WeeklySchedulePattern(
-                    sunday: "parent2",
-                    monday: "parent1",
-                    tuesday: "parent2",
-                    wednesday: "parent1",
-                    thursday: "parent2",
-                    friday: "parent1",
-                    saturday: "parent2"
-                ),
+                weekAPattern: eodWeekA,
+                weekBPattern: eodWeekB,
                 startingWeek: "A",
                 referenceDate: "2024-01-01"
             ),
             icon: "arrow.left.arrow.right.circle",
             isPopular: false
         )
-    ]
+
+        return [weekdaysWeekends, traditionalSplit, alternatingWeeks, twoTwoThree, twoTwoFiveFive, everyOtherDay]
+    }()
 }
 
 // MARK: - Settings Section Models
