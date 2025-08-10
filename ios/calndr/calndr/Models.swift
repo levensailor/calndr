@@ -744,7 +744,7 @@ enum SchedulePatternType: String, Codable, CaseIterable {
     }
 }
 
-struct WeeklySchedulePattern: Codable {
+struct WeeklySchedulePattern: Codable, CustomStringConvertible {
     var sunday: String?
     var monday: String?
     var tuesday: String?
@@ -765,6 +765,20 @@ struct WeeklySchedulePattern: Codable {
         case 7: return saturday
         default: return nil
         }
+    }
+    
+    // Human-readable summary for debugging/logging
+    var description: String {
+        let parts: [String] = [
+            "Sun: \(sunday ?? "-")",
+            "Mon: \(monday ?? "-")",
+            "Tue: \(tuesday ?? "-")",
+            "Wed: \(wednesday ?? "-")",
+            "Thu: \(thursday ?? "-")",
+            "Fri: \(friday ?? "-")",
+            "Sat: \(saturday ?? "-")"
+        ]
+        return parts.joined(separator: ", ")
     }
 }
 
