@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2025-08-10 14:41 EST] - Auto-sync backend changes to calndrclub
+
+- Added `scripts/sync-backend-to-calndrclub.sh` to mirror `backend/backend/` into `calndrclub/backend/` with rsync and push.
+- Added `scripts/install-backend-sync-hook.sh` which installs local git hooks (`post-commit`, `post-merge`, `post-checkout`) to run the sync automatically whenever changes affect `backend/backend/`.
+- Usage: run `./scripts/install-backend-sync-hook.sh` once per local clone; hooks then keep the backend repo up to date automatically.
+
 ## [2025-08-10 14:35 EST] - Fix stale handoff flags after custody edits
 
 - **Problem**: Changing a day's custodian sometimes left the prior handoff flag on the edited day, even when the handoff should shift to the following day (e.g., Monday P1, Tuesday P2 → handoff Tuesday; change Tuesday to P1 → handoff should move to Wednesday, but Tuesday remained marked as a handoff).
