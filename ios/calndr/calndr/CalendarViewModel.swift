@@ -119,7 +119,7 @@ class CalendarViewModel: ObservableObject {
             .debounce(for: .milliseconds(200), scheduler: DispatchQueue.main) // Debounce rapid changes
             .receive(on: DispatchQueue.main)
             .sink { [weak self] isLoggedIn, familyId in
-                guard let self = self else { return }
+                guard let self else { return }
 
                 print("📱 CalendarViewModel: Auth state changed - isLoggedIn: \(isLoggedIn), familyId: \(familyId ?? "nil")")
                 print("📱 CalendarViewModel: Current isDataLoaded: \(self.isDataLoaded)")
@@ -314,7 +314,7 @@ class CalendarViewModel: ObservableObject {
 
         // When both are done, update the UI
         dispatchGroup.notify(queue: .main) { [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
 
             // Check if we have the essential data before flagging as ready
             if self.custodianOneId != nil && self.custodianTwoId != nil && !self.custodyRecords.isEmpty {
@@ -525,7 +525,7 @@ class CalendarViewModel: ObservableObject {
         // If we have cached data, update the UI immediately
         if !allCustodyRecords.isEmpty {
             DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
+                guard let self else { return }
                 self.custodyRecords = allCustodyRecords.sorted { $0.event_date < $1.event_date }
                 self.updateCustodyStreak()
                 self.updateCustodyPercentages()
@@ -590,7 +590,7 @@ class CalendarViewModel: ObservableObject {
         }
         
         dispatchGroup.notify(queue: .main) { [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
             
             // Merge new data with existing data instead of replacing entirely
             if !allCustodyRecords.isEmpty {
@@ -1875,7 +1875,7 @@ class CalendarViewModel: ObservableObject {
                 case .success(let members):
                     // Filter out the current logged-in user from the coparents list
                     let filteredMembers = members.filter { member in
-                        guard let self = self else { return true }
+                        guard let self else { return true }
                         guard let currentUserID = self.currentUserID else { return true }
                         return member.id != currentUserID
                     }
