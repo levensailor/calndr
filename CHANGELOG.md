@@ -6,6 +6,10 @@
 - Replaced `ForEach(0..<presets.count)` with `ForEach(presets.indices)` for safer indexing.
 - Result: Resolved "The compiler is unable to type-check this expression in reasonable time" error and improved readability/maintainability.
 
+### [2025-08-19 10:20 EST] - iOS: Replace deprecated onChange(of:) usage
+
+- Updated `AddMedicationView` to use the iOS 17 `onChange` zero-parameter closure form instead of the deprecated single-parameter variant for `selectedPresetIndex`.
+
 ## [2025-08-10 15:02 EST] - Medication presets and reminders UX
 
 - Backend: Added `/api/v1/medications/presets` endpoint returning curated pediatric medication presets (Tylenol, Motrin, Zyrtec, Benadryl, Amoxicillin) with common dosages and frequencies; includes schema `MedicationPreset` and `MedicationPresetListResponse`.

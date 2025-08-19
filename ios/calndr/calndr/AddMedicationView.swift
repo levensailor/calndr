@@ -105,7 +105,7 @@ struct AddMedicationView: View {
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(faintTextStrokeColor, lineWidth: 1)
             )
-            .onChange(of: selectedPresetIndex) { _ in
+            .onChange(of: selectedPresetIndex) {
                 applySelectedPreset()
             }
         }
