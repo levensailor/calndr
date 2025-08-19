@@ -284,12 +284,6 @@ struct AddPharmacyView: View {
         
         viewModel.saveMedicalProvider(provider) { success in
             if success {
-                // Add to pharmacies array as well
-                DispatchQueue.main.async {
-                    if let savedProvider = viewModel.medicalProviders.last {
-                        viewModel.pharmacies.append(savedProvider)
-                    }
-                }
                 dismiss()
             }
         }
@@ -321,10 +315,6 @@ struct AddPharmacyView: View {
         viewModel.saveMedicalProvider(provider) { success in
             DispatchQueue.main.async {
                 if success {
-                    // Add to pharmacies array as well
-                    if let savedProvider = viewModel.medicalProviders.last {
-                        viewModel.pharmacies.append(savedProvider)
-                    }
                     print("✅ Successfully auto-saved pharmacy: \(result.name)")
                 } else {
                     print("❌ Failed to auto-save pharmacy: \(result.name)")

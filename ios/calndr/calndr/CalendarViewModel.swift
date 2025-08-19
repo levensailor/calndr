@@ -2099,7 +2099,12 @@ class CalendarViewModel: ObservableObject {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let savedProvider):
-                    self?.medicalProviders.append(savedProvider)
+                    let isPharmacy = savedProvider.specialty?.lowercased() == "pharmacy"
+                    if isPharmacy {
+                        self?.pharmacies.append(savedProvider)
+                    } else {
+                        self?.medicalProviders.append(savedProvider)
+                    }
                     print("✅ Successfully saved medical provider: \(savedProvider.name)")
                     completion(true)
                 case .failure(let error):
@@ -2115,8 +2120,23 @@ class CalendarViewModel: ObservableObject {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let updatedProvider):
+                    let isPharmacy = updatedProvider.specialty?.lowercased() == "pharmacy"
                     if let index = self?.medicalProviders.firstIndex(where: { $0.id == id }) {
-                        self?.medicalProviders[index] = updatedProvider
+                        if isPharmacy {
+                            // Moved to pharmacy category
+                            let moved = self?.medicalProviders.remove(at: index)
+                            if let moved = moved { self?.pharmacies.append(moved) }
+                        } else {
+                            self?.medicalProviders[index] = updatedProvider
+                        }
+                    } else if let pIndex = self?.pharmacies.firstIndex(where: { $0.id == id }) {
+                        if isPharmacy {
+                            self?.pharmacies[pIndex] = updatedProvider
+                        } else {
+                            // Moved out of pharmacy category
+                            let moved = self?.pharmacies.remove(at: pIndex)
+                            if let moved = moved { self?.medicalProviders.append(moved) }
+                        }
                     }
                     print("✅ Successfully updated medical provider: \(updatedProvider.name)")
                     completion(true)
@@ -2134,6 +2154,7 @@ class CalendarViewModel: ObservableObject {
                 switch result {
                 case .success:
                     self?.medicalProviders.removeAll { $0.id == provider.id }
+                    self?.pharmacies.removeAll { $0.id == provider.id }
                     print("✅ Successfully deleted medical provider: \(provider.name)")
                     completion(true)
                 case .failure(let error):
@@ -2150,8 +2171,11 @@ class CalendarViewModel: ObservableObject {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let providers):
-                    self?.medicalProviders = providers
-                    print("✅ Successfully loaded \(providers.count) medical providers")
+                    let nonPharmacies = providers.filter { ($0.specialty?.lowercased() ?? "") != "pharmacy" }
+                    let pharmaciesOnly = providers.filter { ($0.specialty?.lowercased() ?? "") == "pharmacy" }
+                    self?.medicalProviders = nonPharmacies
+                    self?.pharmacies = pharmaciesOnly
+                    print("✅ Successfully loaded providers: \(nonPharmacies.count) providers, \(pharmaciesOnly.count) pharmacies")
                 case .failure(let error):
                     print("❌ Error fetching medical providers: \(error.localizedDescription)")
                 }

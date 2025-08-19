@@ -15,6 +15,13 @@
 - Updated `EnhancedMedicalSearchView` result rows to avoid nested `Button` in `List` rows which could swallow taps.
 - Made the "Add Provider" control an explicit `Button` and attached `.onTapGesture` to the row for consistent selection behavior.
 
+### [2025-08-19 10:39 EST] - iOS: Correct pharmacy categorization and deletion behavior
+
+- Partitioned providers into `medicalProviders` vs `pharmacies` in `CalendarViewModel.fetchMedicalProviders()` based on `specialty == "Pharmacy"`.
+- Updated `saveMedicalProvider`/`updateMedicalProvider` to insert/update in the correct array and move items when specialty changes.
+- Updated `deleteMedicalProvider` to remove from both arrays so deletions reflect in Pharmacies as well.
+- Removed redundant manual pharmacy append in `AddPharmacyView` to prevent duplicates.
+
 ## [2025-08-10 15:02 EST] - Medication presets and reminders UX
 
 - Backend: Added `/api/v1/medications/presets` endpoint returning curated pediatric medication presets (Tylenol, Motrin, Zyrtec, Benadryl, Amoxicillin) with common dosages and frequencies; includes schema `MedicationPreset` and `MedicationPresetListResponse`.
