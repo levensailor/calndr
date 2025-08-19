@@ -1,3 +1,11 @@
+### [2025-08-19 11:05 EST] - iOS: Simplified Add Medication UI with friendly presets and reminders
+
+- Overhauled `AddMedicationView` for a more user-friendly flow:
+  - Prepopulated dropdown with common meds: Acetaminophen (Tylenol), Ibuprofen (Motrin), Diphenhydramine (Dimetapp), Amoxicillin, Prednisone, Albuterol, Zyrtec, Allegra.
+  - Merged backend presets and a per-family custom list; users can add custom names to their family list locally.
+  - Simplified fields to Name, Dose, Frequency, Notes; removed Start/End Date and Instructions from UI.
+  - Added Reminders toggle with time picker.
+  - Kept backend payload compatible by sending nil for removed fields.
 # CHANGELOG
 
 ## [2025-08-19 10:15 EST] - iOS: Fix AddMedicationView type-checking timeout
