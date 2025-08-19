@@ -567,50 +567,50 @@ struct EnhancedMedicalSearchResultRow: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Main provider info - tappable to select/add
-            Button(action: onSelect) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(result.name)
-                            .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color)
-                            .multilineTextAlignment(.leading)
-                        
-                        if let specialty = result.specialty {
-                            Text(specialty)
-                                .font(.subheadline)
-                                .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+            // Main provider row
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(result.name)
+                        .font(.headline)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
+                        .multilineTextAlignment(.leading)
+                    
+                    if let specialty = result.specialty {
+                        Text(specialty)
+                            .font(.subheadline)
+                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+                    }
+                    
+                    if let distance = result.distance {
+                        HStack(spacing: 4) {
+                            Image(systemName: "location.circle")
+                                .foregroundColor(themeManager.currentTheme.accentColor.color)
+                                .font(.caption)
+                            Text(String(format: "%.1f km away", distance / 1000))
+                                .font(.caption)
+                                .foregroundColor(themeManager.currentTheme.accentColor.color)
                         }
-                        
-                        if let distance = result.distance {
-                            HStack(spacing: 4) {
-                                Image(systemName: "location.circle")
-                                    .foregroundColor(themeManager.currentTheme.accentColor.color)
-                                    .font(.caption)
-                                Text(String(format: "%.1f km away", distance / 1000))
-                                    .font(.caption)
-                                    .foregroundColor(themeManager.currentTheme.accentColor.color)
+                    }
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 8) {
+                    if let rating = result.rating {
+                        HStack(spacing: 2) {
+                            ForEach(1...5, id: \.self) { star in
+                                Image(systemName: star <= Int(rating) ? "star.fill" : "star")
+                                    .foregroundColor(.yellow)
+                                    .font(.caption2)
                             }
+                            Text(String(format: "%.1f", rating))
+                                .font(.caption2)
+                                .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                         }
                     }
                     
-                    Spacer()
-                    
-                    VStack(alignment: .trailing, spacing: 8) {
-                        if let rating = result.rating {
-                            HStack(spacing: 2) {
-                                ForEach(1...5, id: \.self) { star in
-                                    Image(systemName: star <= Int(rating) ? "star.fill" : "star")
-                                        .foregroundColor(.yellow)
-                                        .font(.caption2)
-                                }
-                                Text(String(format: "%.1f", rating))
-                                    .font(.caption2)
-                                    .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
-                            }
-                        }
-                        
-                        // Add button with better styling
+                    // Add button with better styling (explicit button to avoid nested Buttons in List)
+                    Button(action: onSelect) {
                         HStack(spacing: 6) {
                             Image(systemName: "plus.circle.fill")
                                 .foregroundColor(.white)
@@ -625,9 +625,11 @@ struct EnhancedMedicalSearchResultRow: View {
                         .background(themeManager.currentTheme.accentColor.color)
                         .cornerRadius(12)
                     }
+                    .buttonStyle(PlainButtonStyle())
                 }
             }
-            .buttonStyle(PlainButtonStyle())
+            .contentShape(Rectangle())
+            .onTapGesture { onSelect() }
             
             // Address and phone in a more compact layout
             VStack(alignment: .leading, spacing: 6) {

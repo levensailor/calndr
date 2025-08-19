@@ -10,6 +10,11 @@
 
 - Updated `AddMedicationView` to use the iOS 17 `onChange` zero-parameter closure form instead of the deprecated single-parameter variant for `selectedPresetIndex`.
 
+### [2025-08-19 10:28 EST] - iOS: Fix Pharmacy "Add Provider" tap not responding
+
+- Updated `EnhancedMedicalSearchView` result rows to avoid nested `Button` in `List` rows which could swallow taps.
+- Made the "Add Provider" control an explicit `Button` and attached `.onTapGesture` to the row for consistent selection behavior.
+
 ## [2025-08-10 15:02 EST] - Medication presets and reminders UX
 
 - Backend: Added `/api/v1/medications/presets` endpoint returning curated pediatric medication presets (Tylenol, Motrin, Zyrtec, Benadryl, Amoxicillin) with common dosages and frequencies; includes schema `MedicationPreset` and `MedicationPresetListResponse`.
