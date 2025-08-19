@@ -2,10 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>GIDClientID</key>
-	<string>427740229486-irmioidbvts681onsl3crtfghlmmsjhq.apps.googleusercontent.com</string>
-	<key>GOOGLE_PLACES_API_KEY</key>
-	<string>AIzaSyDmIvnSjIpXZAeUKCByHUmZmauE7vlW45k</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -25,14 +21,10 @@
 			</array>
 		</dict>
 	</array>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>remote-notification</string>
-	</array>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>A coparent on calndr is requesting your location.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>This app requires access to the camera to upload profile pictures.</string>
+	<key>GIDClientID</key>
+	<string>427740229486-irmioidbvts681onsl3crtfghlmmsjhq.apps.googleusercontent.com</string>
+	<key>GOOGLE_PLACES_API_KEY</key>
+	<string>AIzaSyDmIvnSjIpXZAeUKCByHUmZmauE7vlW45k</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSExceptionDomains</key>
@@ -46,16 +38,11 @@
 				<key>NSIncludesSubdomains</key>
 				<true/>
 			</dict>
-			<key>band.croatoa.live</key>
-			<dict>
-				<key>NSExceptionAllowsInsecureHTTPLoads</key>
-				<true/>
-				<key>NSExceptionMinimumTLSVersion</key>
-				<string>TLSv1.2</string>
-				<key>NSIncludesSubdomains</key>
-				<true/>
-			</dict>
 		</dict>
 	</dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 </dict>
 </plist>

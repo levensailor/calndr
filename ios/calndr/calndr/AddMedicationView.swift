@@ -38,212 +38,221 @@ struct AddMedicationView: View {
         NavigationView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    // Header
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Add Medication")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                            .foregroundColor(themeManager.currentTheme.textColor.color)
-                        
-                        Text("Add a new medication with tracking and reminders")
-                            .font(.subheadline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
-                    }
-                    .padding(.horizontal)
-                    .padding(.top)
-                    
-                    // Preset Picker
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Choose from common medications (or enter custom)")
-                            .font(.subheadline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
-                        Picker("Medication Preset", selection: $selectedPresetIndex) {
-                            Text("Custom").tag(-1)
-                            ForEach(0..<presets.count, id: \.self) { idx in
-                                Text(presets[idx].name).tag(idx)
-                            }
-                        }
-                        .pickerStyle(MenuPickerStyle())
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(themeManager.currentTheme.textColor.color.opacity(0.3), lineWidth: 1)
-                        )
-                        .onChange(of: selectedPresetIndex) { _ in
-                            applySelectedPreset()
-                        }
-                    }
-                    .padding(.horizontal)
-
-                    // Basic Information
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Basic Information")
-                            .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color)
-                        
-                        VStack(spacing: 16) {
-                            FloatingLabelTextField(
-                                title: "Medication Name *",
-                                text: $name,
-                                isSecure: false
-                            )
-                            
-                            if selectedPresetIndex >= 0 && selectedPresetIndex < presets.count {
-                                Picker("Dosage", selection: $dosage) {
-                                    Text("Select dosage").tag("")
-                                    ForEach(presets[selectedPresetIndex].common_dosages, id: \.self) { d in
-                                        Text(d).tag(d)
-                                    }
-                                }
-                                .pickerStyle(MenuPickerStyle())
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding()
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(themeManager.currentTheme.textColor.color.opacity(0.3), lineWidth: 1)
-                                )
-                            } else {
-                                FloatingLabelTextField(
-                                    title: "Dosage (e.g., 500mg, 1 tablet)",
-                                    text: $dosage,
-                                    isSecure: false
-                                )
-                            }
-                            
-                            if selectedPresetIndex >= 0 && selectedPresetIndex < presets.count {
-                                Picker("Frequency", selection: $frequency) {
-                                    Text("Select frequency").tag("")
-                                    ForEach(presets[selectedPresetIndex].common_frequencies, id: \.self) { option in
-                                        Text(option).tag(option)
-                                    }
-                                }
-                            } else {
-                                Picker("Frequency", selection: $frequency) {
-                                    Text("Select frequency").tag("")
-                                    ForEach(frequencyOptions, id: \.self) { option in
-                                        Text(option).tag(option)
-                                    }
-                                }
-                            }
-                            .pickerStyle(MenuPickerStyle())
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding()
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(themeManager.currentTheme.textColor.color.opacity(0.3), lineWidth: 1)
-                            )
-                            
-                            FloatingLabelTextField(
-                                title: "Instructions (e.g., Take with food)",
-                                text: $instructions,
-                                isSecure: false
-                            )
-                        }
-                    }
-                    .padding(.horizontal)
-                    
-                    // Schedule
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Schedule")
-                            .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color)
-                        
-                        VStack(spacing: 16) {
-                            DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
-                                .datePickerStyle(CompactDatePickerStyle())
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            
-                            HStack {
-                                Toggle("Set End Date", isOn: $showingEndDatePicker)
-                                    .foregroundColor(themeManager.currentTheme.textColor.color)
-                                
-                                Spacer()
-                            }
-                            
-                            if showingEndDatePicker {
-                                DatePicker("End Date", selection: $endDate, displayedComponents: .date)
-                                    .datePickerStyle(CompactDatePickerStyle())
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            
-                            HStack {
-                                Toggle("Active Medication", isOn: $isActive)
-                                    .foregroundColor(themeManager.currentTheme.textColor.color)
-                                
-                                Spacer()
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-                    
-                    // Reminders
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Reminders")
-                            .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color)
-                        
-                        VStack(spacing: 16) {
-                            HStack {
-                                Toggle("Enable Reminders", isOn: $reminderEnabled)
-                                    .foregroundColor(themeManager.currentTheme.textColor.color)
-                                
-                                Spacer()
-                            }
-                            
-                            if reminderEnabled {
-                                DatePicker("Reminder Time", selection: $reminderTime, displayedComponents: .hourAndMinute)
-                                    .datePickerStyle(CompactDatePickerStyle())
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                
-                                Text("You'll receive notifications at this time each day")
-                                    .font(.caption)
-                                    .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-                    
-                    // Notes
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Additional Notes")
-                            .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color)
-                        
-                        FloatingLabelTextField(
-                            title: "Notes (side effects, special instructions, etc.)",
-                            text: $notes,
-                            isSecure: false
-                        )
-                    }
-                    .padding(.horizontal)
-                    
+                    headerView
+                    presetPickerView
+                    basicInfoSection
+                    scheduleSection
+                    remindersSection
+                    notesSection
                     Spacer(minLength: 80)
                 }
             }
             .scrollTargetBehavior(CustomVerticalPagingBehavior())
-            .background(themeManager.currentTheme.mainBackgroundColor.color)
+            .background(mainBackgroundColor)
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                Button("Cancel") {
-                    dismiss()
-                }
-                .foregroundColor(themeManager.currentTheme.textColor.color)
+                Button("Cancel") { dismiss() }
+                    .foregroundColor(textColor)
             }
-            
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Save") {
-                    saveMedication()
-                }
-                .foregroundColor(.red)
-                .disabled(name.isEmpty)
+                Button("Save") { saveMedication() }
+                    .foregroundColor(.red)
+                    .disabled(name.isEmpty)
             }
         }
-        .onAppear {
-            fetchPresets()
+        .onAppear { fetchPresets() }
+    }
+
+    // MARK: - Computed Theme Colors
+    private var textColor: Color { themeManager.currentTheme.textColor.color }
+    private var subduedTextColor: Color { themeManager.currentTheme.textColor.color.opacity(0.7) }
+    private var faintTextStrokeColor: Color { themeManager.currentTheme.textColor.color.opacity(0.3) }
+    private var captionTextColor: Color { themeManager.currentTheme.textColor.color.opacity(0.6) }
+    private var mainBackgroundColor: Color { themeManager.currentTheme.mainBackgroundColor.color }
+
+    // MARK: - Subviews
+    private var headerView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Add Medication")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .foregroundColor(textColor)
+            Text("Add a new medication with tracking and reminders")
+                .font(.subheadline)
+                .foregroundColor(subduedTextColor)
         }
+        .padding(.horizontal)
+        .padding(.top)
+    }
+
+    private var presetPickerView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Choose from common medications (or enter custom)")
+                .font(.subheadline)
+                .foregroundColor(subduedTextColor)
+            Picker("Medication Preset", selection: $selectedPresetIndex) {
+                Text("Custom").tag(-1)
+                ForEach(presets.indices, id: \.self) { idx in
+                    Text(presets[idx].name).tag(idx)
+                }
+            }
+            .pickerStyle(MenuPickerStyle())
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(faintTextStrokeColor, lineWidth: 1)
+            )
+            .onChange(of: selectedPresetIndex) { _ in
+                applySelectedPreset()
+            }
+        }
+        .padding(.horizontal)
+    }
+
+    private var basicInfoSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Basic Information")
+                .font(.headline)
+                .foregroundColor(textColor)
+            VStack(spacing: 16) {
+                FloatingLabelTextField(
+                    title: "Medication Name *",
+                    text: $name,
+                    isSecure: false
+                )
+                dosageInput
+                frequencyInput
+                FloatingLabelTextField(
+                    title: "Instructions (e.g., Take with food)",
+                    text: $instructions,
+                    isSecure: false
+                )
+            }
+        }
+        .padding(.horizontal)
+    }
+
+    private var dosageInput: some View {
+        Group {
+            if selectedPresetIndex >= 0 && selectedPresetIndex < presets.count {
+                Picker("Dosage", selection: $dosage) {
+                    Text("Select dosage").tag("")
+                    ForEach(presets[selectedPresetIndex].common_dosages, id: \.self) { d in
+                        Text(d).tag(d)
+                    }
+                }
+                .pickerStyle(MenuPickerStyle())
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(faintTextStrokeColor, lineWidth: 1)
+                )
+            } else {
+                FloatingLabelTextField(
+                    title: "Dosage (e.g., 500mg, 1 tablet)",
+                    text: $dosage,
+                    isSecure: false
+                )
+            }
+        }
+    }
+
+    private var frequencyInput: some View {
+        Group {
+            if selectedPresetIndex >= 0 && selectedPresetIndex < presets.count {
+                Picker("Frequency", selection: $frequency) {
+                    Text("Select frequency").tag("")
+                    ForEach(presets[selectedPresetIndex].common_frequencies, id: \.self) { option in
+                        Text(option).tag(option)
+                    }
+                }
+            } else {
+                Picker("Frequency", selection: $frequency) {
+                    Text("Select frequency").tag("")
+                    ForEach(frequencyOptions, id: \.self) { option in
+                        Text(option).tag(option)
+                    }
+                }
+            }
+        }
+        .pickerStyle(MenuPickerStyle())
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(faintTextStrokeColor, lineWidth: 1)
+        )
+    }
+
+    private var scheduleSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Schedule")
+                .font(.headline)
+                .foregroundColor(textColor)
+            VStack(spacing: 16) {
+                DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
+                    .datePickerStyle(CompactDatePickerStyle())
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack {
+                    Toggle("Set End Date", isOn: $showingEndDatePicker)
+                        .foregroundColor(textColor)
+                    Spacer()
+                }
+                if showingEndDatePicker {
+                    DatePicker("End Date", selection: $endDate, displayedComponents: .date)
+                        .datePickerStyle(CompactDatePickerStyle())
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                HStack {
+                    Toggle("Active Medication", isOn: $isActive)
+                        .foregroundColor(textColor)
+                    Spacer()
+                }
+            }
+        }
+        .padding(.horizontal)
+    }
+
+    private var remindersSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Reminders")
+                .font(.headline)
+                .foregroundColor(textColor)
+            VStack(spacing: 16) {
+                HStack {
+                    Toggle("Enable Reminders", isOn: $reminderEnabled)
+                        .foregroundColor(textColor)
+                    Spacer()
+                }
+                if reminderEnabled {
+                    DatePicker("Reminder Time", selection: $reminderTime, displayedComponents: .hourAndMinute)
+                        .datePickerStyle(CompactDatePickerStyle())
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text("You'll receive notifications at this time each day")
+                        .font(.caption)
+                        .foregroundColor(captionTextColor)
+                }
+            }
+        }
+        .padding(.horizontal)
+    }
+
+    private var notesSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Additional Notes")
+                .font(.headline)
+                .foregroundColor(textColor)
+            FloatingLabelTextField(
+                title: "Notes (side effects, special instructions, etc.)",
+                text: $notes,
+                isSecure: false
+            )
+        }
+        .padding(.horizontal)
     }
     
     private func saveMedication() {
