@@ -5,9 +5,21 @@ import MapKit
 struct MedicalView: View {
     @EnvironmentObject var viewModel: CalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
-    @State private var showingAddDoctor = false
-    @State private var showingAddMedication = false
-    @State private var showingAddPharmacy = false
+    @State private var activeSheet: MedicalSheet?
+
+    enum MedicalSheet: Identifiable {
+        case doctor
+        case medication
+        case pharmacy
+
+        var id: String {
+            switch self {
+            case .doctor: return "doctor"
+            case .medication: return "medication"
+            case .pharmacy: return "pharmacy"
+            }
+        }
+    }
     
     var body: some View {
         ScrollView {
@@ -23,7 +35,7 @@ struct MedicalView: View {
                         Spacer()
                         
                         Button(action: {
-                            showingAddDoctor = true
+                            activeSheet = .doctor
                         }) {
                             Image(systemName: "plus.circle.fill")
                                 .font(.title2)
@@ -42,7 +54,7 @@ struct MedicalView: View {
                                 .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
                             
                             Button(action: {
-                                showingAddDoctor = true
+                                activeSheet = .doctor
                             }) {
                                 Text("Add Provider")
                                     .padding(.horizontal, 20)
@@ -78,7 +90,7 @@ struct MedicalView: View {
                         Spacer()
                         
                         Button(action: {
-                            showingAddMedication = true
+                            activeSheet = .medication
                         }) {
                             Image(systemName: "plus.circle.fill")
                                 .font(.title2)
@@ -97,7 +109,7 @@ struct MedicalView: View {
                                 .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
                             
                             Button(action: {
-                                showingAddMedication = true
+                                activeSheet = .medication
                             }) {
                                 Text("Add Medication")
                                     .padding(.horizontal, 20)
@@ -133,7 +145,7 @@ struct MedicalView: View {
                         Spacer()
                         
                         Button(action: {
-                            showingAddPharmacy = true
+                            activeSheet = .pharmacy
                         }) {
                             Image(systemName: "plus.circle.fill")
                                 .font(.title2)
@@ -152,7 +164,7 @@ struct MedicalView: View {
                                 .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
                             
                             Button(action: {
-                                showingAddPharmacy = true
+                                activeSheet = .pharmacy
                             }) {
                                 Text("Add Pharmacy")
                                     .padding(.horizontal, 20)
@@ -179,20 +191,21 @@ struct MedicalView: View {
         .background(themeManager.currentTheme.mainBackgroundColor.color)
         .navigationTitle("Medical")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showingAddDoctor) {
-            AddDoctorView()
-                .environmentObject(viewModel)
-                .environmentObject(themeManager)
-        }
-        .sheet(isPresented: $showingAddMedication) {
-            AddMedicationView()
-                .environmentObject(viewModel)
-                .environmentObject(themeManager)
-        }
-        .sheet(isPresented: $showingAddPharmacy) {
-            AddPharmacyView()
-                .environmentObject(viewModel)
-                .environmentObject(themeManager)
+        .sheet(item: $activeSheet) { item in
+            switch item {
+            case .doctor:
+                AddDoctorView()
+                    .environmentObject(viewModel)
+                    .environmentObject(themeManager)
+            case .medication:
+                AddMedicationView()
+                    .environmentObject(viewModel)
+                    .environmentObject(themeManager)
+            case .pharmacy:
+                AddPharmacyView()
+                    .environmentObject(viewModel)
+                    .environmentObject(themeManager)
+            }
         }
     }
 }

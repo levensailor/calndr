@@ -16,6 +16,7 @@
 - Made the "Add Provider" control an explicit `Button` and attached `.onTapGesture` to the row for consistent selection behavior.
 
 ### [2025-08-19 10:39 EST] - iOS: Correct pharmacy categorization and deletion behavior
+- Consolidated multiple `.sheet(isPresented:)` calls in `MedicalView` to a single `.sheet(item:)` with an enum to prevent presentation conflicts that could block the pharmacy sheet.
 
 - Partitioned providers into `medicalProviders` vs `pharmacies` in `CalendarViewModel.fetchMedicalProviders()` based on `specialty == "Pharmacy"`.
 - Updated `saveMedicalProvider`/`updateMedicalProvider` to insert/update in the correct array and move items when specialty changes.
