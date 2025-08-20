@@ -4,7 +4,7 @@
   - Prepopulated dropdown with common meds: Acetaminophen (Tylenol), Ibuprofen (Motrin), Diphenhydramine (Dimetapp), Amoxicillin, Prednisone, Albuterol, Zyrtec, Allegra.
   - Merged backend presets and a per-family custom list; users can add custom names to their family list locally.
   - Simplified fields to Name, Dose, Frequency, Notes; removed Start/End Date and Instructions from UI.
-  - Added Reminders toggle with time picker.
+  - Added Reminders toggle with time picker labeled "Next Dose" and copy updated to "You'll receive reminders for each dose". Implemented local dose-based scheduling that maps frequency to intervals and schedules from the next dose time.
   - Kept backend payload compatible by sending nil for removed fields.
 # CHANGELOG
 

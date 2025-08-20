@@ -265,10 +265,10 @@ struct AddMedicationView: View {
                     Spacer()
                 }
                 if reminderEnabled {
-                    DatePicker("Reminder Time", selection: $reminderTime, displayedComponents: .hourAndMinute)
+                    DatePicker("Next Dose", selection: $reminderTime, displayedComponents: .hourAndMinute)
                         .datePickerStyle(CompactDatePickerStyle())
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    Text("You'll receive notifications at this time each day")
+                    Text("You'll receive reminders for each dose")
                         .font(.caption)
                         .foregroundColor(captionTextColor)
                 }
@@ -317,6 +317,13 @@ struct AddMedicationView: View {
             DispatchQueue.main.async {
                 if success {
                     print("✅ Successfully saved medication: \(name)")
+                    if reminderEnabled {
+                        NotificationManager.shared.scheduleMedicationReminders(
+                            medicationName: name,
+                            nextDose: reminderTime,
+                            frequency: frequency
+                        )
+                    }
                     dismiss()
                 } else {
                     print("❌ Failed to save medication: \(name)")
