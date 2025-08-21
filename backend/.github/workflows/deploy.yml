@@ -1,5 +1,5 @@
 # Terraform configuration for Calndr Backend Infrastructure
-name: Deploy to AWS ECS
+name: Deploy to AWS ECS for Staging and Production
 
 on:
   push:
