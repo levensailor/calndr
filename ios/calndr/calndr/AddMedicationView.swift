@@ -223,8 +223,7 @@ struct AddMedicationView: View {
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
-                dosageInput
-                frequencyInput
+                combinedDosageFrequencyInput
             }
         }
         .padding(.horizontal)
@@ -450,24 +449,14 @@ struct AddMedicationView: View {
 
     // MARK: - Wheel helpers
     private func updateDosageFromWheel() {
-        dosage = "\(dosageNumberSelection) \(dosageUnitSelection)"
+        dosage = "\(dosageNumberSelection) mg"
     }
     private func updateFrequencyFromWheel() {
-        frequency = "Every \(frequencyNumberSelection) \(frequencyUnitSelection)"
+        frequency = "Every \(frequencyNumberSelection) hours"
     }
     private func parseDosageToWheel(_ value: String) {
         let parts = value.split(separator: " ")
-        if parts.count >= 2 {
-            dosageNumberSelection = String(parts[0])
-            dosageUnitSelection = String(parts[1]).lowercased()
-        } else {
-            // Try to split number+unit like 160mg
-            let digits = value.trimmingCharacters(in: .whitespaces)
-            let numberPart = digits.trimmingCharacters(in: CharacterSet.letters)
-            let unitPart = digits.trimmingCharacters(in: CharacterSet.decimalDigits.union(CharacterSet(charactersIn: ".,"))).lowercased()
-            if !numberPart.isEmpty { dosageNumberSelection = numberPart }
-            if !unitPart.isEmpty { dosageUnitSelection = unitPart }
-        }
+        if let first = parts.first { dosageNumberSelection = String(first) }
     }
     private func parseFrequencyToWheel(_ value: String) {
         let lower = value.lowercased().trimmingCharacters(in: .whitespaces)
@@ -476,18 +465,10 @@ struct AddMedicationView: View {
                 let middle = lower.dropFirst("every ".count).dropLast(" hours".count)
                 if let n = Int(middle.trimmingCharacters(in: .whitespaces)) {
                     frequencyNumberSelection = n
-                    frequencyUnitSelection = "hours"
-                }
-            } else if lower.hasSuffix(" days") {
-                let middle = lower.dropFirst("every ".count).dropLast(" days".count)
-                if let n = Int(middle.trimmingCharacters(in: .whitespaces)) {
-                    frequencyNumberSelection = n
-                    frequencyUnitSelection = "days"
                 }
             }
         } else if let n = Int(lower) {
             frequencyNumberSelection = n
-            frequencyUnitSelection = "hours"
         }
     }
 
