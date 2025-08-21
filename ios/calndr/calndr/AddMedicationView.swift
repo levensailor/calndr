@@ -322,7 +322,7 @@ struct AddMedicationView: View {
         let medicationData = MedicationCreate(
             name: name,
             dosage: dosage.isEmpty ? nil : dosage,
-            frequency: frequency.isEmpty ? nil : frequency,
+            frequency: normalizedFrequencyValue(from: frequency),
             instructions: nil,
             startDate: dateFormatter.string(from: startDate),
             endDate: nil,
@@ -371,6 +371,40 @@ struct AddMedicationView: View {
         if name.isEmpty { name = preset.name }
         if dosage.isEmpty, let def = preset.default_dosage { dosage = def }
         if frequency.isEmpty, let defF = preset.default_frequency { frequency = defF }
+    }
+
+    // MARK: - Frequency normalization
+    // Convert UI labels like "Every 6 hours" to numeric hour string expected by backend (e.g., "6").
+    // Returns nil for PRN/as-needed and when not set.
+    private func normalizedFrequencyValue(from uiLabel: String) -> String? {
+        let trimmed = uiLabel.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return nil }
+        let lower = trimmed.lowercased()
+        switch lower {
+        case "once daily":
+            return String(24)
+        case "twice daily":
+            return String(12)
+        case "three times daily":
+            return String(8)
+        case "as needed":
+            return nil
+        case "weekly":
+            return String(7 * 24)
+        case "monthly":
+            return String(30 * 24)
+        default:
+            // Parse patterns like "every X hours"
+            if lower.hasPrefix("every ") && lower.hasSuffix(" hours") {
+                let middle = lower.dropFirst("every ".count).dropLast(" hours".count)
+                if let hours = Int(middle.trimmingCharacters(in: .whitespaces)) {
+                    return String(hours)
+                }
+            }
+            // If preset provided plain number already, pass through
+            if let hours = Int(lower) { return String(hours) }
+            return nil
+        }
     }
 
     // MARK: - Family custom preset persistence (local, per-family)

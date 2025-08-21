@@ -8,6 +8,10 @@
   - Added a prominent sticky bottom "Add Medication" action for clearer submission.
 
 ### [2025-08-21 11:47 EST] - Backend: Verbose logging for medication creation
+### [2025-08-21 11:58 EST] - iOS: Normalize medication frequency and booleans
+
+- `AddMedicationView`: Convert UI labels like "Every 6 hours" to numeric hour strings (e.g., "6") for backend.
+- Ensure `is_active` and `reminder_enabled` always send explicit true/false (never null) via `MedicationCreate`.
 
 - Added detailed key/value logging (including types) in `create_medication` to show:
   - Incoming payload from client
