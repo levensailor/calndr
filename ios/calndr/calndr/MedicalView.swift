@@ -191,6 +191,14 @@ struct MedicalView: View {
         .background(themeManager.currentTheme.mainBackgroundColor.color)
         .navigationTitle("Medical")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if viewModel.medicalProviders.isEmpty {
+                viewModel.fetchMedicalProviders()
+            }
+            if viewModel.medications.isEmpty {
+                viewModel.fetchMedications()
+            }
+        }
         .sheet(item: $activeSheet) { item in
             switch item {
             case .doctor:
