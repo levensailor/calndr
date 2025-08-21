@@ -314,6 +314,8 @@ struct MedicalProviderCard: View {
                 .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
                 .shadow(color: themeManager.currentTheme.textColor.color.opacity(0.1), radius: 3, x: 0, y: 2)
         )
+        .contentShape(Rectangle())
+        .onTapGesture { showingEditView = true }
         .alert("Delete Doctor", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
@@ -468,6 +470,8 @@ struct MedicationCard: View {
                 .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
                 .shadow(color: themeManager.currentTheme.textColor.color.opacity(0.1), radius: 3, x: 0, y: 2)
         )
+        .contentShape(Rectangle())
+        .onTapGesture { showingEditView = true }
         .alert("Delete Medication", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
@@ -887,6 +891,8 @@ struct PharmacyCard: View {
                 .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
                 .shadow(color: themeManager.currentTheme.textColor.color.opacity(0.1), radius: 3, x: 0, y: 2)
         )
+        .contentShape(Rectangle())
+        .onTapGesture { showingEditView = true }
         .alert("Delete Pharmacy", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
