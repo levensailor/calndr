@@ -7,6 +7,7 @@ set -euo pipefail
 
 SRC_DIR="$(cd "$(dirname "$0")/.." && pwd)"  # monorepo root
 SRC_BACKEND_DIR="$SRC_DIR/backend/backend"
+SRC_WORKFLOWS_DIR="$SRC_DIR/backend/.github/workflows"
 
 # Allow override via env var; default to sibling directory
 TARGET_REPO_DIR="${CALNDRCLUB_DIR:-$HOME/Dev/calndrclub}"
@@ -19,6 +20,11 @@ echo "[sync] Target repo directory:    $TARGET_REPO_DIR"
 if [ ! -d "$SRC_BACKEND_DIR" ]; then
   echo "[sync] ERROR: Source backend dir not found: $SRC_BACKEND_DIR" >&2
   exit 1
+fi
+
+# Workflows are optional but useful to mirror
+if [ -d "$SRC_WORKFLOWS_DIR" ]; then
+  echo "[sync] Source workflows directory: $SRC_WORKFLOWS_DIR"
 fi
 
 # Clone calndrclub if missing
@@ -36,6 +42,7 @@ git pull --rebase origin main
 
 # Ensure backend dir exists
 mkdir -p "$TARGET_BACKEND_DIR"
+mkdir -p "$TARGET_REPO_DIR/.github/workflows"
 
 echo "[sync] Rsyncing files into $TARGET_BACKEND_DIR ..."
 rsync -av --delete \
@@ -47,12 +54,18 @@ rsync -av --delete \
   --exclude='logs' \
   "$SRC_BACKEND_DIR/" "$TARGET_BACKEND_DIR/"
 
+if [ -d "$SRC_WORKFLOWS_DIR" ]; then
+  echo "[sync] Rsyncing workflows into $TARGET_REPO_DIR/.github/workflows ..."
+  rsync -av --delete \
+    "$SRC_WORKFLOWS_DIR/" "$TARGET_REPO_DIR/.github/workflows/"
+fi
+
 # Commit if there are changes
 if ! git diff --quiet; then
   MONOREPO_HEAD_SHA=$(git -C "$SRC_DIR" rev-parse --short HEAD || echo "unknown")
   COMMIT_MSG="chore(sync): mirror backend from monorepo (calndr) @ $MONOREPO_HEAD_SHA"
   echo "[sync] Committing changes: $COMMIT_MSG"
-  git add backend
+  git add backend .github/workflows || true
   git commit -m "$COMMIT_MSG"
   echo "[sync] Pushing to origin/main ..."
   git push origin main
