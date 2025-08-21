@@ -91,6 +91,25 @@ struct AddMedicationView: View {
             }
             .scrollTargetBehavior(CustomVerticalPagingBehavior())
             .background(mainBackgroundColor)
+            // Sticky bottom submit bar for clear action
+            .safeAreaInset(edge: .bottom) {
+                HStack {
+                    Button(action: { saveMedication() }) {
+                        Text(name.isEmpty ? "Enter name to add" : "Add Medication")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                    }
+                    .disabled(name.isEmpty)
+                    .background((name.isEmpty ? Color.gray : themeManager.currentTheme.accentColor.color))
+                    .cornerRadius(12)
+                }
+                .padding(.horizontal)
+                .padding(.top, 8)
+                .padding(.bottom, 12)
+                .background(.ultraThinMaterial)
+            }
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
