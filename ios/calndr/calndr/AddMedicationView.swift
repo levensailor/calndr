@@ -76,6 +76,17 @@ struct AddMedicationView: View {
         guard selectedPresetIndex >= 0 && selectedPresetIndex < allPresetList.count else { return nil }
         return allPresetList[selectedPresetIndex]
     }
+
+    // Wheel options and selections for dosage
+    @State private var dosageNumberOptions: [String] = ["2.5","5","6.25","10","12.5","25","50","80","100","125","160","200","240","250","320","400","500"]
+    @State private var dosageUnitOptions: [String] = ["mg","ml","tablet","puff"]
+    @State private var dosageNumberSelection: String = "160"
+    @State private var dosageUnitSelection: String = "mg"
+
+    // Wheel options and selections for frequency (every X [hours|days])
+    @State private var frequencyNumberSelection: Int = 6
+    @State private var frequencyUnitOptions: [String] = ["hours","days"]
+    @State private var frequencyUnitSelection: String = "hours"
     
     var body: some View {
         NavigationView {
@@ -220,56 +231,73 @@ struct AddMedicationView: View {
     }
 
     private var dosageInput: some View {
-        Group {
-            if let preset = currentSelectedPreset, !preset.common_dosages.isEmpty {
-                Picker("Dosage", selection: $dosage) {
-                    Text("Select dosage").tag("")
-                    ForEach(preset.common_dosages, id: \.self) { d in
-                        Text(d).tag(d)
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Dosage")
+                .font(.subheadline)
+                .foregroundColor(subduedTextColor)
+            HStack(alignment: .center, spacing: 16) {
+                Picker("Dosage Number", selection: $dosageNumberSelection) {
+                    ForEach(dosageNumberOptions, id: \.self) { val in
+                        Text(val)
                     }
                 }
-                .pickerStyle(MenuPickerStyle())
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(faintTextStrokeColor, lineWidth: 1)
-                )
-            } else {
-                FloatingLabelTextField(
-                    title: "Dosage (e.g., 500mg, 1 tablet)",
-                    text: $dosage,
-                    isSecure: false
-                )
+                .pickerStyle(WheelPickerStyle())
+                .frame(maxWidth: .infinity)
+                .clipped()
+
+                Picker("Dosage Unit", selection: $dosageUnitSelection) {
+                    ForEach(dosageUnitOptions, id: \.self) { unit in
+                        Text(unit)
+                    }
+                }
+                .pickerStyle(WheelPickerStyle())
+                .frame(maxWidth: .infinity)
+                .clipped()
             }
+            .frame(height: 140)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(faintTextStrokeColor, lineWidth: 1)
+            )
         }
+        .onChange(of: dosageNumberSelection) { updateDosageFromWheel() }
+        .onChange(of: dosageUnitSelection) { updateDosageFromWheel() }
     }
 
     private var frequencyInput: some View {
-        Group {
-            if let preset = currentSelectedPreset, !preset.common_frequencies.isEmpty {
-                Picker("Frequency", selection: $frequency) {
-                    Text("Select frequency").tag("")
-                    ForEach(preset.common_frequencies, id: \.self) { option in
-                        Text(option).tag(option)
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Frequency")
+                .font(.subheadline)
+                .foregroundColor(subduedTextColor)
+            HStack(alignment: .center, spacing: 16) {
+                Text("Every")
+                    .foregroundColor(textColor)
+                Picker("Frequency Number", selection: $frequencyNumberSelection) {
+                    ForEach(1...24, id: \.self) { n in
+                        Text("\(n)")
                     }
                 }
-            } else {
-                Picker("Frequency", selection: $frequency) {
-                    Text("Select frequency").tag("")
-                    ForEach(frequencyOptions, id: \.self) { option in
-                        Text(option).tag(option)
+                .pickerStyle(WheelPickerStyle())
+                .frame(maxWidth: .infinity)
+                .clipped()
+
+                Picker("Frequency Unit", selection: $frequencyUnitSelection) {
+                    ForEach(frequencyUnitOptions, id: \.self) { unit in
+                        Text(unit)
                     }
                 }
+                .pickerStyle(WheelPickerStyle())
+                .frame(maxWidth: .infinity)
+                .clipped()
             }
+            .frame(height: 140)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(faintTextStrokeColor, lineWidth: 1)
+            )
         }
-        .pickerStyle(MenuPickerStyle())
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(faintTextStrokeColor, lineWidth: 1)
-        )
+        .onChange(of: frequencyNumberSelection) { updateFrequencyFromWheel() }
+        .onChange(of: frequencyUnitSelection) { updateFrequencyFromWheel() }
     }
 
     private var remindersSection: some View {
@@ -369,8 +397,14 @@ struct AddMedicationView: View {
     private func applySelectedPreset() {
         guard let preset = currentSelectedPreset else { return }
         if name.isEmpty { name = preset.name }
-        if dosage.isEmpty, let def = preset.default_dosage { dosage = def }
-        if frequency.isEmpty, let defF = preset.default_frequency { frequency = defF }
+        if dosage.isEmpty, let def = preset.default_dosage {
+            dosage = def
+            parseDosageToWheel(def)
+        }
+        if frequency.isEmpty, let defF = preset.default_frequency {
+            frequency = defF
+            parseFrequencyToWheel(defF)
+        }
     }
 
     // MARK: - Frequency normalization
@@ -401,9 +435,59 @@ struct AddMedicationView: View {
                     return String(hours)
                 }
             }
+            // Parse patterns like "every X days"
+            if lower.hasPrefix("every ") && lower.hasSuffix(" days") {
+                let middle = lower.dropFirst("every ".count).dropLast(" days".count)
+                if let days = Int(middle.trimmingCharacters(in: .whitespaces)) {
+                    return String(days * 24)
+                }
+            }
             // If preset provided plain number already, pass through
             if let hours = Int(lower) { return String(hours) }
             return nil
+        }
+    }
+
+    // MARK: - Wheel helpers
+    private func updateDosageFromWheel() {
+        dosage = "\(dosageNumberSelection) \(dosageUnitSelection)"
+    }
+    private func updateFrequencyFromWheel() {
+        frequency = "Every \(frequencyNumberSelection) \(frequencyUnitSelection)"
+    }
+    private func parseDosageToWheel(_ value: String) {
+        let parts = value.split(separator: " ")
+        if parts.count >= 2 {
+            dosageNumberSelection = String(parts[0])
+            dosageUnitSelection = String(parts[1]).lowercased()
+        } else {
+            // Try to split number+unit like 160mg
+            let digits = value.trimmingCharacters(in: .whitespaces)
+            let numberPart = digits.trimmingCharacters(in: CharacterSet.letters)
+            let unitPart = digits.trimmingCharacters(in: CharacterSet.decimalDigits.union(CharacterSet(charactersIn: ".,"))).lowercased()
+            if !numberPart.isEmpty { dosageNumberSelection = numberPart }
+            if !unitPart.isEmpty { dosageUnitSelection = unitPart }
+        }
+    }
+    private func parseFrequencyToWheel(_ value: String) {
+        let lower = value.lowercased().trimmingCharacters(in: .whitespaces)
+        if lower.hasPrefix("every ") {
+            if lower.hasSuffix(" hours") {
+                let middle = lower.dropFirst("every ".count).dropLast(" hours".count)
+                if let n = Int(middle.trimmingCharacters(in: .whitespaces)) {
+                    frequencyNumberSelection = n
+                    frequencyUnitSelection = "hours"
+                }
+            } else if lower.hasSuffix(" days") {
+                let middle = lower.dropFirst("every ".count).dropLast(" days".count)
+                if let n = Int(middle.trimmingCharacters(in: .whitespaces)) {
+                    frequencyNumberSelection = n
+                    frequencyUnitSelection = "days"
+                }
+            }
+        } else if let n = Int(lower) {
+            frequencyNumberSelection = n
+            frequencyUnitSelection = "hours"
         }
     }
 
