@@ -3743,8 +3743,9 @@ class APIService {
             }
             
             do {
-                let medications = try JSONDecoder().decode([Medication].self, from: data)
-                completion(.success(medications))
+                struct MedicationListEnvelope: Codable { let medications: [Medication] }
+                let envelope = try JSONDecoder().decode(MedicationListEnvelope.self, from: data)
+                completion(.success(envelope.medications))
             } catch {
                 completion(.failure(error))
             }
