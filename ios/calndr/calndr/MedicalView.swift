@@ -377,6 +377,7 @@ struct MedicationCard: View {
     @EnvironmentObject var themeManager: ThemeManager
     @EnvironmentObject var viewModel: CalendarViewModel
     @State private var showingDeleteAlert = false
+    @State private var showingEditView = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -404,6 +405,11 @@ struct MedicationCard: View {
                 Circle()
                     .fill(medication.isActive ? Color.green : Color.gray)
                     .frame(width: 12, height: 12)
+                
+                Button(action: { showingEditView = true }) {
+                    Image(systemName: "pencil")
+                        .foregroundColor(themeManager.currentTheme.accentColor.color)
+                }
                 
                 Button(action: { showingDeleteAlert = true }) {
                     Image(systemName: "trash")
@@ -468,6 +474,154 @@ struct MedicationCard: View {
         } message: {
             Text("Are you sure you want to delete \(medication.name)? This action cannot be undone.")
         }
+        .sheet(isPresented: $showingEditView) {
+            EditMedicationView(medication: medication)
+                .environmentObject(viewModel)
+                .environmentObject(themeManager)
+        }
+    }
+}
+
+// MARK: - Edit Medication View
+struct EditMedicationView: View {
+    let medication: Medication
+    @EnvironmentObject var viewModel: CalendarViewModel
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var name: String
+    @State private var dosage: String
+    @State private var frequency: String
+    @State private var reminderEnabled: Bool
+    @State private var reminderTime: Date
+    @State private var notes: String
+    @State private var isActive: Bool
+
+    init(medication: Medication) {
+        self.medication = medication
+        _name = State(initialValue: medication.name)
+        _dosage = State(initialValue: medication.dosage ?? "")
+        _frequency = State(initialValue: medication.frequency ?? "")
+        _reminderEnabled = State(initialValue: medication.reminderEnabled)
+        // Parse HH:mm into Date (today) if available; else now
+        if let hhmm = medication.reminderTime,
+           let date = EditMedicationView.parseHHMMToToday(hhmm) {
+            _reminderTime = State(initialValue: date)
+        } else {
+            _reminderTime = State(initialValue: Date())
+        }
+        _notes = State(initialValue: medication.notes ?? "")
+        _isActive = State(initialValue: medication.isActive)
+    }
+
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Medication Details")
+                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))) {
+                    FloatingLabelTextField(title: "Name", text: $name, isSecure: false)
+                    FloatingLabelTextField(title: "Dosage", text: $dosage, isSecure: false)
+                    FloatingLabelTextField(title: "Frequency", text: $frequency, isSecure: false)
+                    FloatingLabelTextField(title: "Notes", text: $notes, isSecure: false)
+                    Toggle("Active", isOn: $isActive)
+                        .tint(themeManager.currentTheme.accentColor.color)
+                }
+
+                Section(header: Text("Reminders")
+                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))) {
+                    Toggle("Enable Reminders", isOn: $reminderEnabled)
+                        .tint(themeManager.currentTheme.accentColor.color)
+                    if reminderEnabled {
+                        DatePicker("Next Dose", selection: $reminderTime, displayedComponents: .hourAndMinute)
+                            .datePickerStyle(CompactDatePickerStyle())
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
+            .preferredColorScheme(themeManager.currentTheme.preferredColorScheme)
+            .navigationTitle("Edit Medication")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") { saveChanges() }
+                        .foregroundColor(themeManager.currentTheme.accentColor.color)
+                        .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+
+    private func saveChanges() {
+        // Normalize reminder time HH:mm
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "HH:mm"
+        let reminderHHMM = reminderEnabled ? timeFormatter.string(from: reminderTime) : nil
+
+        // Normalize frequency to numeric hours where possible
+        let normalizedFreq = normalizedFrequencyValue(from: frequency)
+
+        let update = MedicationUpdate(
+            name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+            dosage: dosage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : dosage,
+            frequency: normalizedFreq,
+            instructions: nil,
+            startDate: nil,
+            endDate: nil,
+            isActive: isActive,
+            reminderEnabled: reminderEnabled,
+            reminderTime: reminderHHMM,
+            notes: notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : notes
+        )
+
+        viewModel.updateMedication(id: medication.id, medication: update) { success in
+            DispatchQueue.main.async {
+                if success {
+                    dismiss()
+                }
+            }
+        }
+    }
+
+    private func normalizedFrequencyValue(from uiLabel: String) -> String? {
+        let trimmed = uiLabel.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return nil }
+        let lower = trimmed.lowercased()
+        switch lower {
+        case "once daily": return String(24)
+        case "twice daily": return String(12)
+        case "three times daily": return String(8)
+        case "as needed": return nil
+        case "weekly": return String(7 * 24)
+        case "monthly": return String(30 * 24)
+        default:
+            if lower.hasPrefix("every ") && lower.hasSuffix(" hours") {
+                let middle = lower.dropFirst("every ".count).dropLast(" hours".count)
+                if let hours = Int(middle.trimmingCharacters(in: .whitespaces)) {
+                    return String(hours)
+                }
+            }
+            if let hours = Int(lower) { return String(hours) }
+            return nil
+        }
+    }
+
+    private static func parseHHMMToToday(_ hhmm: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        let calendar = Calendar.current
+        if let timeDate = formatter.date(from: hhmm) {
+            let comps = calendar.dateComponents([.hour, .minute], from: timeDate)
+            var today = calendar.dateComponents([.year, .month, .day], from: Date())
+            today.hour = comps.hour
+            today.minute = comps.minute
+            return calendar.date(from: today)
+        }
+        return nil
     }
 }
 
