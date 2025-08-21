@@ -6,6 +6,14 @@
   - Simplified fields to Name, Dose, Frequency, Notes; removed Start/End Date and Instructions from UI.
   - Added Reminders toggle with time picker labeled "Next Dose" and copy updated to "You'll receive reminders for each dose". Implemented local dose-based scheduling that maps frequency to intervals and schedules from the next dose time.
   - Added a prominent sticky bottom "Add Medication" action for clearer submission.
+
+### [2025-08-21 11:47 EST] - Backend: Verbose logging for medication creation
+
+- Added detailed key/value logging (including types) in `create_medication` to show:
+  - Incoming payload from client
+  - Current user family_id
+  - Final insert dictionary used for the database
+- Helps diagnose Pydantic validation mismatches (e.g., UUID vs string, datetime vs string).
   - Kept backend payload compatible by sending nil for removed fields.
 # CHANGELOG
 
