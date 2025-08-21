@@ -393,7 +393,7 @@ struct MedicationCard: View {
                         .foregroundColor(themeManager.currentTheme.textColor.color)
                     
                     if let dosage = medication.dosage {
-                        Text(dosage)
+                        Text(formattedDosage(dosage))
                             .font(.subheadline)
                             .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                     }
@@ -421,7 +421,7 @@ struct MedicationCard: View {
                 HStack {
                     Image(systemName: "clock")
                         .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.6))
-                    Text(frequency)
+                    Text(formattedFrequency(frequency))
                         .font(.caption)
                         .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.8))
                 }
@@ -479,6 +479,39 @@ struct MedicationCard: View {
                 .environmentObject(viewModel)
                 .environmentObject(themeManager)
         }
+    }
+}
+
+// MARK: - MedicationCard helpers
+extension MedicationCard {
+    private func formattedDosage(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lower = trimmed.lowercased()
+        // If dosage already includes units like mg/ml/g, return as-is
+        if lower.contains("mg") || lower.contains("ml") || lower.contains("g") {
+            return trimmed
+        }
+        // If it's purely numeric (optionally with decimal), append mg
+        let digits = lower.replacingOccurrences(of: " ", with: "")
+        if CharacterSet(charactersIn: digits).isSubset(of: CharacterSet(charactersIn: "+-0123456789.,")) {
+            return "\(trimmed) mg"
+        }
+        return "\(trimmed) mg"
+    }
+
+    private func formattedFrequency(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lower = trimmed.lowercased()
+        // If already includes hour wording, leave as-is
+        if lower.contains("hour") {
+            return trimmed
+        }
+        // If numeric hours like "6" or "8", append " hours"
+        if Int(lower) != nil {
+            return "\(trimmed) hours"
+        }
+        // Fallback: append hours
+        return "\(trimmed) hours"
     }
 }
 
