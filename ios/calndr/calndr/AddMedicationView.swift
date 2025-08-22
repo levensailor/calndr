@@ -299,6 +299,73 @@ struct AddMedicationView: View {
         .onChange(of: frequencyUnitSelection) { updateFrequencyFromWheel() }
     }
 
+    // Combined dosage + frequency wheels with assumed units (mg, hours)
+    private var combinedDosageFrequencyInput: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Dosage & Frequency")
+                    .font(.subheadline)
+                    .foregroundColor(subduedTextColor)
+                Spacer()
+                Text("mg / hours assumed")
+                    .font(.caption)
+                    .foregroundColor(captionTextColor)
+            }
+            HStack(alignment: .center, spacing: 16) {
+                // Dose number wheel
+                VStack {
+                    Text("Dose")
+                        .font(.caption)
+                        .foregroundColor(subduedTextColor)
+                    Picker("Dosage Number", selection: $dosageNumberSelection) {
+                        ForEach(dosageNumberOptions, id: \.self) { val in
+                            Text(val)
+                        }
+                    }
+                    .pickerStyle(WheelPickerStyle())
+                }
+                .frame(maxWidth: .infinity)
+                .clipped()
+
+                // Every hours wheel
+                VStack {
+                    Text("Every")
+                        .font(.caption)
+                        .foregroundColor(subduedTextColor)
+                    Picker("Frequency Number", selection: $frequencyNumberSelection) {
+                        ForEach(1...24, id: \.self) { n in
+                            Text("\(n)")
+                        }
+                    }
+                    .pickerStyle(WheelPickerStyle())
+                }
+                .frame(maxWidth: .infinity)
+                .clipped()
+            }
+            .frame(height: 140)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(faintTextStrokeColor, lineWidth: 1)
+            )
+            HStack(spacing: 16) {
+                Label("mg assumed", systemImage: "info.circle")
+                    .font(.caption)
+                    .foregroundColor(captionTextColor)
+                Label("hours assumed", systemImage: "info.circle")
+                    .font(.caption)
+                    .foregroundColor(captionTextColor)
+            }
+        }
+        .onChange(of: dosageNumberSelection) { updateDosageFromWheel() }
+        .onChange(of: frequencyNumberSelection) { updateFrequencyFromWheel() }
+        .onAppear {
+            if !dosage.isEmpty { parseDosageToWheel(dosage) }
+            if !frequency.isEmpty { parseFrequencyToWheel(frequency) }
+            updateDosageFromWheel()
+            updateFrequencyFromWheel()
+        }
+    }
+
     private var remindersSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Reminders")
