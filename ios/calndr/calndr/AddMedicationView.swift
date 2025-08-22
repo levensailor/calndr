@@ -302,15 +302,9 @@ struct AddMedicationView: View {
     // Combined dosage + frequency wheels with assumed units (mg, hours)
     private var combinedDosageFrequencyInput: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Dosage & Frequency")
-                    .font(.subheadline)
-                    .foregroundColor(subduedTextColor)
-                Spacer()
-                Text("mg / hours assumed")
-                    .font(.caption)
-                    .foregroundColor(captionTextColor)
-            }
+            Text("Dosage & Frequency")
+                .font(.subheadline)
+                .foregroundColor(subduedTextColor)
             HStack(alignment: .center, spacing: 16) {
                 // Dose number wheel
                 VStack {
@@ -342,19 +336,15 @@ struct AddMedicationView: View {
                 .frame(maxWidth: .infinity)
                 .clipped()
             }
-            .frame(height: 140)
+            .frame(height: 110)
             .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(faintTextStrokeColor, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(themeManager.currentTheme.accentColor.color.opacity(0.10))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(themeManager.currentTheme.accentColor.color.opacity(0.35), lineWidth: 1)
+                    )
             )
-            HStack(spacing: 16) {
-                Label("mg assumed", systemImage: "info.circle")
-                    .font(.caption)
-                    .foregroundColor(captionTextColor)
-                Label("hours assumed", systemImage: "info.circle")
-                    .font(.caption)
-                    .foregroundColor(captionTextColor)
-            }
         }
         .onChange(of: dosageNumberSelection) { updateDosageFromWheel() }
         .onChange(of: frequencyNumberSelection) { updateFrequencyFromWheel() }
