@@ -51,14 +51,16 @@ struct SignUpView: View {
                         FloatingLabelTextField(
                             title: "Password",
                             text: $viewModel.password,
-                            isSecure: true
+                            isSecure: true,
+                            disableAutofill: true
                         )
                         .frame(height: 56)
                         
                         FloatingLabelTextField(
                             title: "Confirm Password",
                             text: $viewModel.confirmPassword,
-                            isSecure: true
+                            isSecure: true,
+                            disableAutofill: true
                         )
                         .frame(height: 56)
                     }

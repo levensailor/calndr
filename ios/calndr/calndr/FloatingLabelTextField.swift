@@ -4,6 +4,7 @@ struct FloatingLabelTextField: View {
     let title: String
     @Binding var text: String
     let isSecure: Bool
+    var disableAutofill: Bool = false
     @EnvironmentObject var themeManager: ThemeManager
     @FocusState private var isFocused: Bool
     @Environment(\.colorScheme) private var colorScheme
@@ -35,9 +36,13 @@ struct FloatingLabelTextField: View {
                         if isSecure {
                             SecureField("", text: $text)
                                 .focused($isFocused)
+                                .textContentType(disableAutofill ? nil : .password)
+                                .autocorrectionDisabled(disableAutofill)
                         } else {
                             TextField("", text: $text)
                                 .focused($isFocused)
+                                .textContentType(disableAutofill ? nil : .username)
+                                .autocorrectionDisabled(disableAutofill)
                         }
                     }
                     .foregroundColor(themeManager.currentTheme.textColorSwiftUI)

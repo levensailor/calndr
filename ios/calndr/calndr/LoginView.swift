@@ -36,7 +36,8 @@ struct LoginView: View {
                     FloatingLabelTextField(
                         title: "Password",
                         text: $viewModel.password,
-                        isSecure: true
+                        isSecure: true,
+                        disableAutofill: true
                     )
                     .frame(height: 56)
                 }
