@@ -71,6 +71,14 @@ struct SignUpView: View {
                     }
                     .padding(.horizontal)
                     
+                    // SMS consent fine print
+                    Text("By providing your number, you agree to receive a one-time text message from Calndr Club for account verification. Message and data rates may apply.")
+                        .font(.caption2)
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 5)
+                    
                     if let errorMessage = viewModel.errorMessage {
                         Text(errorMessage)
                             .foregroundColor(.red)
