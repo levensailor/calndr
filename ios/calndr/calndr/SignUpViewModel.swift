@@ -11,45 +11,52 @@ class SignUpViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    func validateAndSendPin(completion: @escaping (Bool, String) -> Void) {
+    func validateBasicInfo() -> Bool {
         // Clear previous error
         errorMessage = nil
         
         // Validate inputs
         guard !firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             errorMessage = "First name is required"
-            return
+            return false
         }
         
         guard !lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             errorMessage = "Last name is required"
-            return
+            return false
         }
         
         guard !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             errorMessage = "Email is required"
-            return
+            return false
         }
         
         guard isValidEmail(email) else {
             errorMessage = "Please enter a valid email address"
-            return
+            return false
         }
         
         guard !password.isEmpty else {
             errorMessage = "Password is required"
-            return
+            return false
         }
         
         guard password.count >= 6 else {
             errorMessage = "Password must be at least 6 characters long"
-            return
+            return false
         }
         
         guard password == confirmPassword else {
             errorMessage = "Passwords do not match"
-            return
+            return false
         }
+        
+        return true
+    }
+    
+    func validateAndSendPin(completion: @escaping (Bool, String) -> Void) {
+        // Clear previous error
+        errorMessage = nil
         
         guard !phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             errorMessage = "Phone number is required"
@@ -58,8 +65,8 @@ class SignUpViewModel: ObservableObject {
         
         let cleanPhone = phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        // Validate phone number format
-        guard isValidPhoneNumber(cleanPhone) else {
+        // Validate phone number format and convert to E164
+        guard let e164Phone = formatToE164(cleanPhone) else {
             errorMessage = "Please enter a valid phone number"
             return
         }
@@ -67,14 +74,14 @@ class SignUpViewModel: ObservableObject {
         isLoading = true
         
         // Send verification PIN
-        APIService.shared.sendPhoneVerificationPin(phoneNumber: cleanPhone) { [weak self] result in
+        APIService.shared.sendPhoneVerificationPin(phoneNumber: e164Phone) { [weak self] result in
             DispatchQueue.main.async {
                 self?.isLoading = false
                 
                 switch result {
                 case .success(let response):
                     if response.success {
-                        completion(true, cleanPhone)
+                        completion(true, e164Phone)
                     } else {
                         self?.errorMessage = response.message
                         completion(false, "")
@@ -118,5 +125,22 @@ class SignUpViewModel: ObservableObject {
         
         // Should be 10 digits (US format) or 11 digits with country code
         return digits.count == 10 || (digits.count == 11 && digits.hasPrefix("1"))
+    }
+    
+    private func formatToE164(_ phone: String) -> String? {
+        // Remove all non-digit characters
+        let digits = phone.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+        
+        // Handle different formats
+        if digits.count == 10 {
+            // US number without country code, add +1
+            return "+1" + digits
+        } else if digits.count == 11 && digits.hasPrefix("1") {
+            // US number with country code, add +
+            return "+" + digits
+        } else {
+            // Invalid format
+            return nil
+        }
     }
 } 

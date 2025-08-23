@@ -6,6 +6,7 @@ struct SignUpView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.presentationMode) var presentationMode
     @State private var isOnboardingPresented = false
+    @State private var showingPhoneEntry = false
     @State private var showingPhoneVerification = false
     @State private var phoneToVerify = ""
     
@@ -60,24 +61,8 @@ struct SignUpView: View {
                             isSecure: true
                         )
                         .frame(height: 56)
-                        
-                        FloatingLabelTextField(
-                            title: "Phone Number",
-                            text: $viewModel.phoneNumber,
-                            isSecure: false
-                        )
-                        .frame(height: 56)
-                        .keyboardType(.phonePad)
                     }
                     .padding(.horizontal)
-                    
-                    // SMS consent fine print
-                    Text("By providing your number, you agree to receive a one-time text message from Calndr Club for account verification. Message and data rates may apply.")
-                        .font(.caption2)
-                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 20)
-                        .padding(.top, 5)
                     
                     if let errorMessage = viewModel.errorMessage {
                         Text(errorMessage)
@@ -88,12 +73,9 @@ struct SignUpView: View {
                     }
                     
                     Button(action: {
-                        // First validate phone number and send PIN
-                        viewModel.validateAndSendPin { success, phoneNumber in
-                            if success {
-                                phoneToVerify = phoneNumber
-                                showingPhoneVerification = true
-                            }
+                        // Validate basic info first
+                        if viewModel.validateBasicInfo() {
+                            showingPhoneEntry = true
                         }
                     }) {
                         HStack {
@@ -101,7 +83,7 @@ struct SignUpView: View {
                                 ProgressView()
                                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
                             } else {
-                                Text("Create Account")
+                                Text("Continue")
                             }
                         }
                         .font(.headline)
@@ -131,6 +113,14 @@ struct SignUpView: View {
             .onTapGesture {
                 // Dismiss keyboard when tapping outside
                 hideKeyboard()
+            }
+            .fullScreenCover(isPresented: $showingPhoneEntry) {
+                PhoneNumberEntryView(viewModel: viewModel) { phoneNumber in
+                    phoneToVerify = phoneNumber
+                    showingPhoneEntry = false
+                    showingPhoneVerification = true
+                }
+                .environmentObject(themeManager)
             }
             .fullScreenCover(isPresented: $showingPhoneVerification) {
                 PhoneVerificationView(phoneNumber: phoneToVerify) {

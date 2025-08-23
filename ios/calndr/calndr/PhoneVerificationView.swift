@@ -132,6 +132,34 @@ struct PhoneVerificationView: View {
                 
                 Spacer()
                 
+                // 10DLC compliant fine print for recurring messages
+                VStack(spacing: 12) {
+                    Text("By tapping Create Account below, you agree to receive recurring automated messages from Calndr Club at the number provided. Consent is not a condition of purchase. Msg frequency varies. Msg & data rates may apply. Reply HELP for help, STOP to cancel.")
+                        .font(.caption2)
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20)
+                    
+                    HStack(spacing: 4) {
+                        Text("View")
+                            .font(.caption2)
+                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
+                        
+                        Link("Terms of Service", destination: URL(string: "https://app.calndr.club/terms")!)
+                            .font(.caption2)
+                            .foregroundColor(themeManager.currentTheme.accentColorSwiftUI)
+                        
+                        Text("&")
+                            .font(.caption2)
+                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
+                        
+                        Link("Privacy Policy", destination: URL(string: "https://app.calndr.club/privacy")!)
+                            .font(.caption2)
+                            .foregroundColor(themeManager.currentTheme.accentColorSwiftUI)
+                    }
+                }
+                .padding(.bottom, 10)
+                
                 // Manual Verify Button (if needed)
                 if pin.count == pinLength && !isLoading {
                     Button(action: verifyPin) {
@@ -140,7 +168,7 @@ struct PhoneVerificationView: View {
                                 ProgressView()
                                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
                             } else {
-                                Text("Verify")
+                                Text("Create Account")
                             }
                         }
                         .font(.headline)
