@@ -15,6 +15,7 @@ struct EmailVerificationView: View {
     @State private var successMessage: String?
     @State private var resendCooldown = 0
     @State private var timer: Timer?
+    @FocusState private var isTextFieldFocused: Bool
     
     private let codeLength = 6
     
@@ -67,33 +68,49 @@ struct EmailVerificationView: View {
                     
                     // Code Input
                     VStack(spacing: 20) {
-                        HStack(spacing: 12) {
-                            ForEach(0..<codeLength, id: \.self) { index in
-                                CodeDigitView(
-                                    digit: index < verificationCode.count ? String(verificationCode[verificationCode.index(verificationCode.startIndex, offsetBy: index)]) : "",
-                                    isActive: index == verificationCode.count
-                                )
+                        ZStack {
+                            // Visible code digit boxes
+                            HStack(spacing: 12) {
+                                ForEach(0..<codeLength, id: \.self) { index in
+                                    CodeDigitView(
+                                        digit: index < verificationCode.count ? String(verificationCode[verificationCode.index(verificationCode.startIndex, offsetBy: index)]) : "",
+                                        isActive: index == verificationCode.count && isTextFieldFocused
+                                    )
+                                }
                             }
+                            
+                            // Hidden text field for input - covers the entire code area
+                            TextField("", text: $verificationCode)
+                                .keyboardType(.numberPad)
+                                .textContentType(.oneTimeCode)
+                                .focused($isTextFieldFocused)
+                                .onChange(of: verificationCode) { oldValue, newValue in
+                                    // Limit to code length and only digits
+                                    let filtered = String(newValue.prefix(codeLength).filter { $0.isNumber })
+                                    if filtered != newValue {
+                                        verificationCode = filtered
+                                    }
+                                    
+                                    // Auto-verify when code is complete
+                                    if verificationCode.count == codeLength {
+                                        verifyCode()
+                                    }
+                                }
+                                .opacity(0.01) // Nearly invisible but still interactive
+                                .frame(height: 60) // Match the height of code digit boxes
+                                .background(Color.clear)
+                        }
+                        .onTapGesture {
+                            isTextFieldFocused = true
                         }
                         
-                        // Hidden text field for input
-                        TextField("", text: $verificationCode)
-                            .keyboardType(.numberPad)
-                            .textContentType(.oneTimeCode)
-                            .onChange(of: verificationCode) { oldValue, newValue in
-                                // Limit to code length and only digits
-                                let filtered = String(newValue.prefix(codeLength).filter { $0.isNumber })
-                                if filtered != newValue {
-                                    verificationCode = filtered
-                                }
-                                
-                                // Auto-verify when code is complete
-                                if verificationCode.count == codeLength {
-                                    verifyCode()
-                                }
-                            }
-                            .opacity(0)
-                            .frame(width: 1, height: 1)
+                        // Instruction text
+                        if !isTextFieldFocused && verificationCode.isEmpty {
+                            Text("Tap above to enter your verification code")
+                                .font(.caption)
+                                .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.6))
+                                .padding(.top, 8)
+                        }
                     }
                     
                     // Messages
@@ -184,6 +201,10 @@ struct EmailVerificationView: View {
             sendVerificationCode()
             // Start resend cooldown
             startResendCooldown()
+            // Focus the text field to show keyboard
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isTextFieldFocused = true
+            }
         }
         .onDisappear {
             timer?.invalidate()
@@ -302,7 +323,7 @@ struct EmailVerificationView: View {
     }
     
     private func hideKeyboard() {
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        isTextFieldFocused = false
     }
 }
 
