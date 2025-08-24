@@ -52,7 +52,7 @@ Update your `.env` file with these new variables:
 AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=your_access_key_id
 AWS_SECRET_ACCESS_KEY=your_secret_access_key
-SES_SENDER_EMAIL=noreply@calndr.club
+SES_SENDER_EMAIL=no-reply@calndr.club
 SES_SENDER_NAME=Calndr Club
 
 # Remove old SMTP variables (no longer needed)
@@ -81,12 +81,12 @@ This script will:
 
 1. **Verify Sender Email**
    ```bash
-   aws ses verify-email-identity --email-address noreply@calndr.club --region us-east-1
+   aws ses verify-email-identity --email-address no-reply@calndr.club --region us-east-1
    ```
 
 2. **Check Verification Status**
    ```bash
-   aws ses get-identity-verification-attributes --identities noreply@calndr.club --region us-east-1
+   aws ses get-identity-verification-attributes --identities no-reply@calndr.club --region us-east-1
    ```
 
 3. **Request Production Access** (if needed)
