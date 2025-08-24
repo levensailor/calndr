@@ -151,9 +151,6 @@ struct AddMedicationView: View {
                 .font(.largeTitle)
                 .fontWeight(.bold)
                 .foregroundColor(textColor)
-            Text("Add a new medication with tracking and reminders")
-                .font(.subheadline)
-                .foregroundColor(subduedTextColor)
         }
         .padding(.horizontal)
         .padding(.top)
@@ -170,6 +167,7 @@ struct AddMedicationView: View {
                     Text(allPresetList[idx].name).tag(idx)
                 }
             }
+
             .pickerStyle(MenuPickerStyle())
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
@@ -181,16 +179,7 @@ struct AddMedicationView: View {
                 applySelectedPreset()
             }
             // Quick helper text for custom entries
-            if selectedPresetIndex == -1 {
-                HStack(spacing: 8) {
-                    Image(systemName: "info.circle")
-                        .foregroundColor(themeManager.currentTheme.accentColor.color)
-                    Text("Type a custom name below. You can add it to your family's list for future use.")
-                        .font(.caption)
-                        .foregroundColor(subduedTextColor)
-                }
-                .padding(.horizontal, 2)
-            }
+
         }
         .padding(.horizontal)
     }
@@ -223,6 +212,7 @@ struct AddMedicationView: View {
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
+                    
                 combinedDosageFrequencyInput
             }
         }
@@ -233,7 +223,7 @@ struct AddMedicationView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Dosage")
                 .font(.subheadline)
-                .foregroundColor(subduedTextColor)
+                .foregroundColor(.black)
             HStack(alignment: .center, spacing: 16) {
                 Picker("Dosage Number", selection: $dosageNumberSelection) {
                     ForEach(dosageNumberOptions, id: \.self) { val in
@@ -253,12 +243,15 @@ struct AddMedicationView: View {
                 .frame(maxWidth: .infinity)
                 .clipped()
             }
-            .frame(height: 140)
+//            .background(Color.white)
+            .frame(height: 180)
             .background(
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(faintTextStrokeColor, lineWidth: 1)
+                    .fill(themeManager.currentTheme.accentColor.color.opacity(0.034))
             )
         }
+        
         .onChange(of: dosageNumberSelection) { updateDosageFromWheel() }
         .onChange(of: dosageUnitSelection) { updateDosageFromWheel() }
     }
@@ -293,6 +286,7 @@ struct AddMedicationView: View {
             .background(
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(faintTextStrokeColor, lineWidth: 1)
+                    .fill(themeManager.currentTheme.accentColor.color.opacity(0.034))
             )
         }
         .onChange(of: frequencyNumberSelection) { updateFrequencyFromWheel() }
@@ -326,6 +320,7 @@ struct AddMedicationView: View {
                     Text("Every")
                         .font(.caption)
                         .foregroundColor(subduedTextColor)
+                        
                     Picker("Frequency Number", selection: $frequencyNumberSelection) {
                         ForEach(1...24, id: \.self) { n in
                             Text("\(n)")
@@ -336,10 +331,10 @@ struct AddMedicationView: View {
                 .frame(maxWidth: .infinity)
                 .clipped()
             }
-            .frame(height: 110)
+            .frame(height: 130)
             .background(
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(themeManager.currentTheme.accentColor.color.opacity(0.10))
+                    .fill(themeManager.currentTheme.accentColor.color.opacity(0.034))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
                             .stroke(themeManager.currentTheme.accentColor.color.opacity(0.35), lineWidth: 1)
@@ -358,9 +353,9 @@ struct AddMedicationView: View {
 
     private var remindersSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Reminders")
-                .font(.headline)
-                .foregroundColor(textColor)
+//            Text("Reminders")
+//                .font(.headline)
+//                .foregroundColor(textColor)
             VStack(spacing: 16) {
                 HStack {
                     Toggle("Enable Reminders", isOn: $reminderEnabled)

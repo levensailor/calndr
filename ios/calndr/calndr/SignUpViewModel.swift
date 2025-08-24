@@ -166,20 +166,5 @@ class SignUpViewModel: ObservableObject {
         return digits.count == 10 || (digits.count == 11 && digits.hasPrefix("1"))
     }
     
-    private func formatToE164(_ phone: String) -> String? {
-        // Remove all non-digit characters
-        let digits = phone.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
-        
-        // Handle different formats
-        if digits.count == 10 {
-            // US number without country code, add +1
-            return "+1" + digits
-        } else if digits.count == 11 && digits.hasPrefix("1") {
-            // US number with country code, add +
-            return "+" + digits
-        } else {
-            // Invalid format
-            return nil
-        }
-    }
+
 } 
