@@ -74,13 +74,7 @@ struct SignUpView: View {
                     }
                     .padding(.horizontal)
                     
-                    // Phone number explanation
-                    Text("Your phone number will be shared with your co-parent and babysitters for group messaging.")
-                        .font(.caption2)
-                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 20)
-                        .padding(.top, 5)
+
                     
                     if let errorMessage = viewModel.errorMessage {
                         Text(errorMessage)
@@ -137,10 +131,6 @@ struct SignUpView: View {
             }
             .scrollTargetBehavior(CustomVerticalPagingBehavior())
             .navigationBarHidden(true)
-            .onTapGesture {
-                // Dismiss keyboard when tapping outside
-                hideKeyboard()
-            }
             .fullScreenCover(isPresented: $showingEmailVerification) {
                 EmailVerificationView(email: userEmail) {
                     // After email verification, proceed to family enrollment
@@ -165,9 +155,5 @@ struct SignUpView: View {
                     .environmentObject(authManager)
             }
         }
-    }
-    
-    private func hideKeyboard() {
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
