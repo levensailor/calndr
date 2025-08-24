@@ -16,6 +16,7 @@ struct EmailVerificationView: View {
     @State private var resendCooldown = 0
     @State private var timer: Timer?
     @FocusState private var isTextFieldFocused: Bool
+    @State private var isVerificationComplete = false
     
     private let codeLength = 6
     
@@ -245,9 +246,12 @@ struct EmailVerificationView: View {
                 switch result {
                 case .success(let response):
                     if response.success {
-                        successMessage = response.message
-                        // Login the user after successful verification
-                        loginAfterVerification()
+                        successMessage = "Email verified successfully! Please login with your credentials."
+                        isVerificationComplete = true
+                        // Auto-dismiss after 2 seconds to show login screen
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            onVerificationComplete()
+                        }
                     } else {
                         errorMessage = response.message
                         // Clear code on error
@@ -261,27 +265,7 @@ struct EmailVerificationView: View {
         }
     }
     
-    private func loginAfterVerification() {
-        APIService.shared.loginAfterVerification(email: email) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let response):
-                    // Save the token (response is a tuple)
-                    authManager.authToken = response.access_token
-                    let saved = KeychainManager.shared.save(token: response.access_token, for: "currentUser")
-                    if !saved {
-                        print("⚠️ Failed to save token to keychain after email verification")
-                    }
-                    
-                    // Complete verification
-                    onVerificationComplete()
-                    
-                case .failure(let error):
-                    errorMessage = "Login failed: \(error.localizedDescription)"
-                }
-            }
-        }
-    }
+
     
     private func resendCode() {
         guard !isResending else { return }

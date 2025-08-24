@@ -8,6 +8,8 @@ struct LoginView: View {
     @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var themeManager: ThemeManager
     @State private var showingSignUp = false
+    @State private var showingFamilyEnrollment = false
+    @State private var isOnboardingPresented = false
 
     var body: some View {
         ZStack {
@@ -52,7 +54,21 @@ struct LoginView: View {
                 }
                 
                 Button(action: {
-                    viewModel.login(authManager: authManager)
+                    // Clear error message and start login
+                    viewModel.errorMessage = nil
+                    viewModel.isLoading = true
+                    
+                    authManager.login(email: viewModel.email, password: viewModel.password) { [self] result in
+                        DispatchQueue.main.async {
+                            viewModel.isLoading = false
+                            if result {
+                                // Login successful - check if user needs enrollment
+                                checkEnrollmentStatus()
+                            } else {
+                                viewModel.errorMessage = "Invalid email or password. Please try again."
+                            }
+                        }
+                    }
                 }) {
                     HStack {
                         if viewModel.isLoading {
@@ -146,6 +162,29 @@ struct LoginView: View {
                 }
             }
         }
+        .fullScreenCover(isPresented: $showingFamilyEnrollment) {
+            FamilyEnrollmentView(viewModel: SignUpViewModel()) { success in
+                if success {
+                    showingFamilyEnrollment = false
+                    isOnboardingPresented = true
+                } else {
+                    showingFamilyEnrollment = false
+                }
+            }
+            .environmentObject(themeManager)
+            .environmentObject(authManager)
+        }
+        .fullScreenCover(isPresented: $isOnboardingPresented) {
+            OnboardingView(isOnboardingComplete: $isOnboardingPresented)
+                .environmentObject(authManager)
+        }
+    }
+    
+    private func checkEnrollmentStatus() {
+        // Check if user has completed enrollment by checking if they have a family
+        // For now, we'll assume all users need enrollment unless they explicitly skip
+        // You can add API call here to check user's enrollment status
+        showingFamilyEnrollment = true
     }
 
     private func hideKeyboard() {

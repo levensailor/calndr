@@ -133,9 +133,9 @@ struct SignUpView: View {
             .navigationBarHidden(true)
             .fullScreenCover(isPresented: $showingEmailVerification) {
                 EmailVerificationView(email: userEmail) {
-                    // After email verification, proceed to family enrollment
+                    // After email verification, go back to login screen
                     showingEmailVerification = false
-                    showingFamilyEnrollment = true
+                    presentationMode.wrappedValue.dismiss()
                 }
                 .environmentObject(themeManager)
                 .environmentObject(authManager)

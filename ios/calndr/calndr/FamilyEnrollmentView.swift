@@ -120,6 +120,32 @@ struct FamilyEnrollmentView: View {
                                 )
                             }
                             .padding(.horizontal)
+                            
+                            // Skip Option
+                            Button(action: {
+                                // Skip enrollment and proceed to onboarding
+                                onEnrollmentComplete(true)
+                            }) {
+                                VStack(spacing: 8) {
+                                    Text("Skip for Now")
+                                        .font(.headline)
+                                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
+                                    
+                                    Text("I'll set this up later")
+                                        .font(.caption)
+                                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.5))
+                                }
+                                .padding(16)
+                                .frame(maxWidth: .infinity)
+                                .background(Color.clear)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(themeManager.currentTheme.textColorSwiftUI.opacity(0.3), lineWidth: 1)
+                                        .background(Color.clear)
+                                )
+                            }
+                            .padding(.horizontal)
+                            .padding(.top, 10)
                         }
                     }
                     
