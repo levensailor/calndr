@@ -47,10 +47,16 @@ struct UserRegistrationResponse: Codable {
     let token_type: String
     let message: String
     let should_skip_onboarding: Bool?
+    let requires_email_verification: Bool?
     
     // Computed property to provide default value
     var shouldSkipOnboarding: Bool {
         return should_skip_onboarding ?? false
+    }
+    
+    // Computed property to provide default value
+    var requiresEmailVerification: Bool {
+        return requires_email_verification ?? false
     }
 }
 

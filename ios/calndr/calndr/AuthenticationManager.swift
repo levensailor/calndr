@@ -106,13 +106,13 @@ class AuthenticationManager: ObservableObject {
             switch result {
             case .success(let response):
                 // Check if email verification is required
-                if response.shouldSkipOnboarding == false && response.access_token.isEmpty {
+                if response.requiresEmailVerification {
                     // Email verification required - don't save token yet
                     completion(false, true) // success=false, requiresEmailVerification=true
                 } else {
                     // Normal signup flow - save token
-                    self?.authToken = response.token
-                    let saved = KeychainManager.shared.save(token: response.token, for: "currentUser")
+                    self?.authToken = response.access_token
+                    let saved = KeychainManager.shared.save(token: response.access_token, for: "currentUser")
                     if !saved {
                         print("⚠️ AuthenticationManager: Failed to save token to keychain during signup")
                     }
