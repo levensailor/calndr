@@ -131,6 +131,26 @@ class SignUpViewModel: ObservableObject {
         }
     }
     
+    func completeSignUp(authManager: AuthenticationManager, completion: @escaping (Bool, Bool) -> Void) {
+        isLoading = true
+        
+        authManager.signUp(
+            firstName: firstName.trimmingCharacters(in: .whitespacesAndNewlines),
+            lastName: lastName.trimmingCharacters(in: .whitespacesAndNewlines),
+            email: email.trimmingCharacters(in: .whitespacesAndNewlines),
+            password: password,
+            phoneNumber: phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+        ) { [weak self] result, requiresEmailVerification in
+            DispatchQueue.main.async {
+                self?.isLoading = false
+                if !result && !requiresEmailVerification {
+                    self?.errorMessage = "Registration failed. Please check your information and try again."
+                }
+                completion(result, requiresEmailVerification)
+            }
+        }
+    }
+    
     func completeSignUpWithFamily(authManager: AuthenticationManager, completion: @escaping (Bool) -> Void) {
         isLoading = true
         

@@ -7,6 +7,8 @@ struct SignUpView: View {
     @Environment(\.presentationMode) var presentationMode
     @State private var isOnboardingPresented = false
     @State private var showingFamilyEnrollment = false
+    @State private var showingEmailVerification = false
+    @State private var userEmail = ""
     
     var body: some View {
         ZStack {
@@ -91,7 +93,16 @@ struct SignUpView: View {
                     Button(action: {
                         // Validate all info including phone number
                         if viewModel.validateAllInfo() {
-                            showingFamilyEnrollment = true
+                            // First complete signup, which may require email verification
+                            viewModel.completeSignUp(authManager: authManager) { success, requiresEmailVerification in
+                                if requiresEmailVerification {
+                                    userEmail = viewModel.email
+                                    showingEmailVerification = true
+                                } else if success {
+                                    showingFamilyEnrollment = true
+                                }
+                                // If neither success nor requiresEmailVerification, error is shown in viewModel
+                            }
                         }
                     }) {
                         HStack {
@@ -129,6 +140,15 @@ struct SignUpView: View {
             .onTapGesture {
                 // Dismiss keyboard when tapping outside
                 hideKeyboard()
+            }
+            .fullScreenCover(isPresented: $showingEmailVerification) {
+                EmailVerificationView(email: userEmail) {
+                    // After email verification, proceed to family enrollment
+                    showingEmailVerification = false
+                    showingFamilyEnrollment = true
+                }
+                .environmentObject(themeManager)
+                .environmentObject(authManager)
             }
             .fullScreenCover(isPresented: $showingFamilyEnrollment) {
                 FamilyEnrollmentView(viewModel: viewModel) { success in

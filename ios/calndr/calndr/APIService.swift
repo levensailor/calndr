@@ -92,6 +92,13 @@ struct EnrollmentCodeResponse: Codable {
     }
 }
 
+struct EmailVerificationResponse: Codable {
+    let success: Bool
+    let message: String
+    let expires_in: Int?
+    let user_id: String?
+}
+
 struct ChildCreateRequest: Codable {
     let first_name: String
     let last_name: String
@@ -3246,6 +3253,197 @@ class APIService {
             do {
                 let response = try JSONDecoder().decode(PhoneVerificationResponse.self, from: data)
                 completion(.success(response))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    // MARK: - Email Verification
+    
+    func sendEmailVerificationCode(email: String, completion: @escaping (Result<EmailVerificationResponse, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/email-verification/send-code")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body = ["email": email]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                // Try to parse error message
+                if let errorData = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let detail = errorData["detail"] as? String {
+                    completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: detail])))
+                } else {
+                    completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                }
+                return
+            }
+            
+            do {
+                let response = try JSONDecoder().decode(EmailVerificationResponse.self, from: data)
+                completion(.success(response))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func verifyEmailCode(email: String, code: String, completion: @escaping (Result<EmailVerificationResponse, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/email-verification/verify-code")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body = ["email": email, "code": code]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                // Try to parse error message
+                if let errorData = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let detail = errorData["detail"] as? String {
+                    completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: detail])))
+                } else {
+                    completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                }
+                return
+            }
+            
+            do {
+                let response = try JSONDecoder().decode(EmailVerificationResponse.self, from: data)
+                completion(.success(response))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func resendEmailVerificationCode(email: String, completion: @escaping (Result<EmailVerificationResponse, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/email-verification/resend-code")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body = ["email": email]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                // Try to parse error message
+                if let errorData = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let detail = errorData["detail"] as? String {
+                    completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: detail])))
+                } else {
+                    completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                }
+                return
+            }
+            
+            do {
+                let response = try JSONDecoder().decode(EmailVerificationResponse.self, from: data)
+                completion(.success(response))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func loginAfterVerification(email: String, completion: @escaping (Result<(access_token: String, shouldSkipOnboarding: Bool), Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/auth/login-after-verification")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body = ["email": email]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                // Try to parse error message
+                if let errorData = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let detail = errorData["detail"] as? String {
+                    completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: detail])))
+                } else {
+                    completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                }
+                return
+            }
+            
+            do {
+                if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let accessToken = jsonResponse["access_token"] as? String,
+                   let shouldSkipOnboarding = jsonResponse["shouldSkipOnboarding"] as? Bool {
+                    completion(.success((access_token: accessToken, shouldSkipOnboarding: shouldSkipOnboarding)))
+                } else {
+                    completion(.failure(APIError.invalidResponse))
+                }
             } catch {
                 completion(.failure(error))
             }

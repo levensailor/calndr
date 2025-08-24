@@ -92,7 +92,7 @@ class AuthenticationManager: ObservableObject {
         email: String,
         password: String,
         phoneNumber: String?,
-        completion: @escaping (Bool) -> Void
+        completion: @escaping (Bool, Bool) -> Void
     ) {
         APIService.shared.signUp(
             firstName: firstName,
@@ -105,26 +105,32 @@ class AuthenticationManager: ObservableObject {
         ) { [weak self] result in
             switch result {
             case .success(let response):
-                // Save the token
-                self?.authToken = response.token
-                let saved = KeychainManager.shared.save(token: response.token, for: "currentUser")
-                if !saved {
-                    print("⚠️ AuthenticationManager: Failed to save token to keychain during signup")
+                // Check if email verification is required
+                if response.shouldSkipOnboarding == false && response.access_token.isEmpty {
+                    // Email verification required - don't save token yet
+                    completion(false, true) // success=false, requiresEmailVerification=true
+                } else {
+                    // Normal signup flow - save token
+                    self?.authToken = response.token
+                    let saved = KeychainManager.shared.save(token: response.token, for: "currentUser")
+                    if !saved {
+                        print("⚠️ AuthenticationManager: Failed to save token to keychain during signup")
+                    }
+                    
+                    // Set onboarding state based on backend response
+                    self?.hasCompletedOnboarding = response.shouldSkipOnboarding
+                    UserDefaults.standard.set(response.shouldSkipOnboarding, forKey: "hasCompletedOnboarding")
+                    
+                    // If they should skip onboarding, mark as authenticated immediately
+                    if response.shouldSkipOnboarding {
+                        self?.isAuthenticated = true
+                    }
+                    
+                    completion(true, false) // success=true, requiresEmailVerification=false
                 }
-                
-                // Set onboarding state based on backend response
-                self?.hasCompletedOnboarding = response.shouldSkipOnboarding
-                UserDefaults.standard.set(response.shouldSkipOnboarding, forKey: "hasCompletedOnboarding")
-                
-                // If they should skip onboarding, mark as authenticated immediately
-                if response.shouldSkipOnboarding {
-                    self?.isAuthenticated = true
-                }
-                
-                completion(true)
             case .failure(let error):
                 print("Sign up failure:", error)
-                completion(false)
+                completion(false, false) // success=false, requiresEmailVerification=false
             }
         }
     }
