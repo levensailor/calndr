@@ -152,7 +152,7 @@ def main():
     verified_emails = list_verified_emails(ses_client)
     
     # Check for required sender email
-    sender_email = os.getenv('SES_SENDER_EMAIL', 'noreply@calndr.club')
+    sender_email = os.getenv('SES_SENDER_EMAIL', 'no-reply@calndr.club')
     print(f"\n3️⃣  Checking Sender Email: {sender_email}")
     
     if sender_email not in verified_emails:
