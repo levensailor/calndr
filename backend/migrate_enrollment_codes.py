@@ -15,14 +15,13 @@ from datetime import datetime
 load_dotenv()
 
 # Database configuration
-DB_USER="calndr_user"
-DB_PASSWORD="MChksLq[i2W4OEkxAC8dPKVNzPpaNgI!"
-DB_HOST="calndr-staging-db.cjy8vmu6rtrc.us-east-1.rds.amazonaws.com"
-DB_PORT="5432"
-DB_NAME="calndr"
-DATABASE_URL=f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT", "5432")
+DB_NAME = os.getenv("DB_NAME")
 
-# DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 database = databases.Database(DATABASE_URL)
 metadata = sqlalchemy.MetaData()
