@@ -14,10 +14,10 @@ fi
 # Activate virtual environment if it exists
 if [ -d "venv" ]; then
     echo "📦 Activating virtual environment..."
-    source venv/bin/activate
-elif [ -d "../venv" ]; then
+    source v/bin/activate
+elif [ -d "../v" ]; then
     echo "📦 Activating virtual environment..."
-    source ../venv/bin/activate
+    source ../v/bin/activate
 fi
 
 # Install dependencies if needed
