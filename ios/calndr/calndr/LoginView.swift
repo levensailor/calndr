@@ -130,6 +130,22 @@ struct LoginView: View {
                 .environmentObject(authManager)
                 .environmentObject(themeManager)
         }
+        .fullScreenCover(isPresented: $showingFamilyEnrollment) {
+            FamilyEnrollmentView(viewModel: SignUpViewModel()) { success in
+                if success {
+                    showingFamilyEnrollment = false
+                    isOnboardingPresented = true
+                } else {
+                    showingFamilyEnrollment = false
+                }
+            }
+            .environmentObject(themeManager)
+            .environmentObject(authManager)
+        }
+        .fullScreenCover(isPresented: $isOnboardingPresented) {
+            OnboardingView(isOnboardingComplete: $isOnboardingPresented)
+                .environmentObject(authManager)
+        }
     }
     
     private func handleGoogleSignIn() {
@@ -161,22 +177,6 @@ struct LoginView: View {
                     }
                 }
             }
-        }
-        .fullScreenCover(isPresented: $showingFamilyEnrollment) {
-            FamilyEnrollmentView(viewModel: SignUpViewModel()) { success in
-                if success {
-                    showingFamilyEnrollment = false
-                    isOnboardingPresented = true
-                } else {
-                    showingFamilyEnrollment = false
-                }
-            }
-            .environmentObject(themeManager)
-            .environmentObject(authManager)
-        }
-        .fullScreenCover(isPresented: $isOnboardingPresented) {
-            OnboardingView(isOnboardingComplete: $isOnboardingPresented)
-                .environmentObject(authManager)
         }
     }
     
