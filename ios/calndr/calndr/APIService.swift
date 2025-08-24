@@ -3474,7 +3474,7 @@ class APIService {
         request.httpMethod = "GET"
         
         // Add authorization header
-        if let token = authToken {
+        if let token = KeychainManager.shared.loadToken(for: "currentUser") {
             request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         
