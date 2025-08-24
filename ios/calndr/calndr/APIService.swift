@@ -105,6 +105,14 @@ struct EmailVerificationResponse: Codable {
     let user_id: String?
 }
 
+struct EnrollmentStatusResponse: Codable {
+    let enrolled: Bool
+    let coparent_enrolled: Bool
+    let coparent_invited: Bool
+    let next_step: String?
+    let family_id: String?
+}
+
 struct ChildCreateRequest: Codable {
     let first_name: String
     let last_name: String
@@ -3452,6 +3460,49 @@ class APIService {
                 } else {
                     completion(.failure(APIError.invalidResponse))
                 }
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    // MARK: - Enrollment Status
+    
+    func getEnrollmentStatus(completion: @escaping (Result<EnrollmentStatusResponse, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/enrollment-flow/status")
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        
+        // Add authorization header
+        if let token = authToken {
+            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                // Try to parse error message
+                if let errorData = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let detail = errorData["detail"] as? String {
+                    completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: detail])))
+                } else {
+                    completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                }
+                return
+            }
+            
+            do {
+                let response = try JSONDecoder().decode(EnrollmentStatusResponse.self, from: data)
+                completion(.success(response))
             } catch {
                 completion(.failure(error))
             }

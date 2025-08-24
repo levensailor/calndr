@@ -181,10 +181,25 @@ struct LoginView: View {
     }
     
     private func checkEnrollmentStatus() {
-        // Check if user has completed enrollment by checking if they have a family
-        // For now, we'll assume all users need enrollment unless they explicitly skip
-        // You can add API call here to check user's enrollment status
-        showingFamilyEnrollment = true
+        // Check if user has completed enrollment via API
+        APIService.shared.getEnrollmentStatus { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let status):
+                    if !status.enrolled {
+                        // User needs to complete enrollment
+                        showingFamilyEnrollment = true
+                    } else {
+                        // User is enrolled, proceed to main app
+                        // The AuthenticationManager will handle this automatically
+                    }
+                case .failure(let error):
+                    print("Failed to get enrollment status: \(error)")
+                    // Default to showing enrollment if we can't determine status
+                    showingFamilyEnrollment = true
+                }
+            }
+        }
     }
 
     private func hideKeyboard() {
