@@ -89,6 +89,12 @@ struct FamilyEnrollmentView: View {
                             Button(action: {
                                 selectedOption = .createCode
                                 showingCodeCreation = true
+                                // Immediately generate the code when option is selected
+                                viewModel.createEnrollmentCode { success, code in
+                                    if success, let code = code {
+                                        generatedCode = code
+                                    }
+                                }
                             }) {
                                 VStack(spacing: 12) {
                                     Image(systemName: "plus.circle")
@@ -246,58 +252,60 @@ struct FamilyEnrollmentView: View {
                                 .disabled(viewModel.isLoading)
                                 
                             } else {
-                                Text("Create Enrollment Code")
-                                    .font(.title2)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
-                                
-                                Text("Generate a code for your co-parent to join your family")
-                                    .font(.body)
-                                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal)
-                                
-                                if let errorMessage = viewModel.errorMessage {
-                                    Text(errorMessage)
-                                        .foregroundColor(.red)
-                                        .font(.footnote)
-                                        .multilineTextAlignment(.center)
-                                        .padding(.horizontal)
-                                }
-                                
-                                Button(action: {
-                                    viewModel.createEnrollmentCode { success, code in
-                                        if success, let code = code {
-                                            generatedCode = code
+                                // Loading state while generating code
+                                VStack(spacing: 20) {
+                                    Text("Creating Enrollment Code")
+                                        .font(.title2)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+                                    
+                                    if viewModel.isLoading {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: themeManager.currentTheme.accentColorSwiftUI))
+                                            .scaleEffect(1.5)
+                                        
+                                        Text("Generating your enrollment code...")
+                                            .font(.body)
+                                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
+                                            .multilineTextAlignment(.center)
+                                            .padding(.horizontal)
+                                    }
+                                    
+                                    if let errorMessage = viewModel.errorMessage {
+                                        Text(errorMessage)
+                                            .foregroundColor(.red)
+                                            .font(.footnote)
+                                            .multilineTextAlignment(.center)
+                                            .padding(.horizontal)
+                                        
+                                        Button(action: {
+                                            viewModel.createEnrollmentCode { success, code in
+                                                if success, let code = code {
+                                                    generatedCode = code
+                                                }
+                                            }
+                                        }) {
+                                            Text("Try Again")
+                                                .font(.headline)
+                                                .foregroundColor(.white)
+                                                .padding()
+                                                .frame(maxWidth: .infinity)
+                                                .background(themeManager.currentTheme.accentColorSwiftUI)
+                                                .cornerRadius(10)
+                                                .padding(.horizontal)
                                         }
                                     }
-                                }) {
-                                    HStack {
-                                        if viewModel.isLoading {
-                                            ProgressView()
-                                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                        } else {
-                                            Text("Generate Code")
-                                        }
+                                    
+                                    Button(action: {
+                                        selectedOption = nil
+                                        showingCodeCreation = false
+                                        generatedCode = nil
+                                        viewModel.errorMessage = nil
+                                    }) {
+                                        Text("Back to Options")
+                                            .font(.footnote)
+                                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
                                     }
-                                    .font(.headline)
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .frame(maxWidth: .infinity)
-                                    .background(themeManager.currentTheme.accentColorSwiftUI)
-                                    .cornerRadius(10)
-                                    .padding(.horizontal)
-                                }
-                                .disabled(viewModel.isLoading)
-                                
-                                Button(action: {
-                                    selectedOption = nil
-                                    showingCodeCreation = false
-                                    viewModel.errorMessage = nil
-                                }) {
-                                    Text("Back to Options")
-                                        .font(.footnote)
-                                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
                                 }
                             }
                         }
