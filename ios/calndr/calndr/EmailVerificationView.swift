@@ -245,7 +245,7 @@ struct EmailVerificationView: View {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let response):
-                    // Save the token
+                    // Save the token (response is a tuple)
                     authManager.authToken = response.access_token
                     let saved = KeychainManager.shared.save(token: response.access_token, for: "currentUser")
                     if !saved {

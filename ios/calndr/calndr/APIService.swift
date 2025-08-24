@@ -1293,7 +1293,9 @@ class APIService {
             
             do {
                 let registrationResponse = try JSONDecoder().decode(UserRegistrationResponse.self, from: data)
-                completion(.success((token: registrationResponse.access_token, shouldSkipOnboarding: registrationResponse.shouldSkipOnboarding)))
+                // If email verification is required, return empty token
+                let token = registrationResponse.requiresEmailVerification ? "" : registrationResponse.access_token
+                completion(.success((token: token, shouldSkipOnboarding: registrationResponse.shouldSkipOnboarding)))
             } catch {
                 completion(.failure(error))
             }
