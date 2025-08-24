@@ -129,6 +129,51 @@ class AuthenticationManager: ObservableObject {
         }
     }
     
+    func signUpWithFamily(
+        firstName: String,
+        lastName: String,
+        email: String,
+        password: String,
+        phoneNumber: String?,
+        enrollmentCode: String,
+        familyId: Int?,
+        completion: @escaping (Bool) -> Void
+    ) {
+        APIService.shared.signUpWithFamily(
+            firstName: firstName,
+            lastName: lastName,
+            email: email,
+            password: password,
+            phoneNumber: phoneNumber,
+            enrollmentCode: enrollmentCode,
+            familyId: familyId
+        ) { [weak self] result in
+            switch result {
+            case .success(let response):
+                // Save the token
+                self?.authToken = response.token
+                let saved = KeychainManager.shared.save(token: response.token, for: "currentUser")
+                if !saved {
+                    print("⚠️ AuthenticationManager: Failed to save token to keychain during family signup")
+                }
+                
+                // Set onboarding state based on backend response
+                self?.hasCompletedOnboarding = response.shouldSkipOnboarding
+                UserDefaults.standard.set(response.shouldSkipOnboarding, forKey: "hasCompletedOnboarding")
+                
+                // If they should skip onboarding, mark as authenticated immediately
+                if response.shouldSkipOnboarding {
+                    self?.isAuthenticated = true
+                }
+                
+                completion(true)
+            case .failure(let error):
+                print("Family sign up failure:", error)
+                completion(false)
+            }
+        }
+    }
+    
     func completeOnboarding() {
         hasCompletedOnboarding = true
         UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")

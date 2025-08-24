@@ -10,6 +10,8 @@ class SignUpViewModel: ObservableObject {
     @Published var phoneNumber = ""
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var enrollmentCode = ""
+    @Published var familyId: Int?
     
     func validateBasicInfo() -> Bool {
         // Clear previous error
@@ -54,55 +56,92 @@ class SignUpViewModel: ObservableObject {
         return true
     }
     
-    func validateAndSendPin(completion: @escaping (Bool, String) -> Void) {
-        // Clear previous error
-        errorMessage = nil
+    func validateAllInfo() -> Bool {
+        // First validate basic info
+        guard validateBasicInfo() else {
+            return false
+        }
         
+        // Then validate phone number
         guard !phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             errorMessage = "Phone number is required"
-            return
+            return false
         }
         
         let cleanPhone = phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        // Validate phone number format and convert to E164
-        guard let e164Phone = formatToE164(cleanPhone) else {
+        // Validate phone number format
+        guard isValidPhoneNumber(cleanPhone) else {
             errorMessage = "Please enter a valid phone number"
-            return
+            return false
         }
         
+        return true
+    }
+    
+    func createEnrollmentCode(completion: @escaping (Bool, String?) -> Void) {
         isLoading = true
+        errorMessage = nil
         
-        // Send verification PIN
-        APIService.shared.sendPhoneVerificationPin(phoneNumber: e164Phone) { [weak self] result in
+        APIService.shared.createEnrollmentCode { [weak self] result in
+            DispatchQueue.main.async {
+                self?.isLoading = false
+                
+                switch result {
+                case .success(let response):
+                    if response.success, let code = response.enrollmentCode {
+                        self?.enrollmentCode = code
+                        self?.familyId = response.familyId
+                        completion(true, code)
+                    } else {
+                        self?.errorMessage = response.message ?? "Failed to create enrollment code"
+                        completion(false, nil)
+                    }
+                case .failure(let error):
+                    self?.errorMessage = error.localizedDescription
+                    completion(false, nil)
+                }
+            }
+        }
+    }
+    
+    func validateEnrollmentCode(_ code: String, completion: @escaping (Bool) -> Void) {
+        isLoading = true
+        errorMessage = nil
+        
+        APIService.shared.validateEnrollmentCode(code: code) { [weak self] result in
             DispatchQueue.main.async {
                 self?.isLoading = false
                 
                 switch result {
                 case .success(let response):
                     if response.success {
-                        completion(true, e164Phone)
+                        self?.enrollmentCode = code
+                        self?.familyId = response.familyId
+                        completion(true)
                     } else {
-                        self?.errorMessage = response.message
-                        completion(false, "")
+                        self?.errorMessage = response.message ?? "Invalid enrollment code"
+                        completion(false)
                     }
                 case .failure(let error):
                     self?.errorMessage = error.localizedDescription
-                    completion(false, "")
+                    completion(false)
                 }
             }
         }
     }
     
-    func completeSignUp(authManager: AuthenticationManager, completion: @escaping (Bool) -> Void) {
+    func completeSignUpWithFamily(authManager: AuthenticationManager, completion: @escaping (Bool) -> Void) {
         isLoading = true
         
-        authManager.signUp(
+        authManager.signUpWithFamily(
             firstName: firstName.trimmingCharacters(in: .whitespacesAndNewlines),
             lastName: lastName.trimmingCharacters(in: .whitespacesAndNewlines),
             email: email.trimmingCharacters(in: .whitespacesAndNewlines),
             password: password,
-            phoneNumber: phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+            phoneNumber: phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines),
+            enrollmentCode: enrollmentCode,
+            familyId: familyId
         ) { [weak self] result in
             DispatchQueue.main.async {
                 self?.isLoading = false

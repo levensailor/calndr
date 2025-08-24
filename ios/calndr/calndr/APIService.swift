@@ -78,6 +78,20 @@ struct PhoneVerificationResponse: Codable {
     let retry_after: Int?
 }
 
+struct EnrollmentCodeResponse: Codable {
+    let success: Bool
+    let message: String?
+    let enrollmentCode: String?
+    let familyId: Int?
+    
+    enum CodingKeys: String, CodingKey {
+        case success
+        case message
+        case enrollmentCode = "enrollment_code"
+        case familyId = "family_id"
+    }
+}
+
 struct ChildCreateRequest: Codable {
     let first_name: String
     let last_name: String
@@ -1261,6 +1275,74 @@ class APIService {
             
             guard (200...299).contains(httpResponse.statusCode) else {
                 completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Registration failed"])))
+                return
+            }
+            
+            do {
+                let registrationResponse = try JSONDecoder().decode(UserRegistrationResponse.self, from: data)
+                completion(.success((token: registrationResponse.access_token, shouldSkipOnboarding: registrationResponse.shouldSkipOnboarding)))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func signUpWithFamily(
+        firstName: String,
+        lastName: String,
+        email: String,
+        password: String,
+        phoneNumber: String?,
+        enrollmentCode: String,
+        familyId: Int?,
+        completion: @escaping (Result<(token: String, shouldSkipOnboarding: Bool), Error>) -> Void
+    ) {
+        let url = baseURL.appendingPathComponent("/auth/register-with-family")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any?] = [
+            "first_name": firstName,
+            "last_name": lastName,
+            "email": email,
+            "password": password,
+            "phone_number": phoneNumber,
+            "enrollment_code": enrollmentCode,
+            "family_id": familyId
+        ]
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            if httpResponse.statusCode == 409 {
+                completion(.failure(NSError(domain: "APIService", code: 409, userInfo: [NSLocalizedDescriptionKey: "User with this email already exists"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                // Try to parse error message
+                if let errorData = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let detail = errorData["detail"] as? String {
+                    completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: detail])))
+                } else {
+                    completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Family registration failed"])))
+                }
                 return
             }
             
@@ -3163,6 +3245,91 @@ class APIService {
             
             do {
                 let response = try JSONDecoder().decode(PhoneVerificationResponse.self, from: data)
+                completion(.success(response))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    // MARK: - Family Enrollment
+    
+    func createEnrollmentCode(completion: @escaping (Result<EnrollmentCodeResponse, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/enrollment/create-code")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                // Try to parse error message
+                if let errorData = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let detail = errorData["detail"] as? String {
+                    completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: detail])))
+                } else {
+                    completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                }
+                return
+            }
+            
+            do {
+                let response = try JSONDecoder().decode(EnrollmentCodeResponse.self, from: data)
+                completion(.success(response))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
+    func validateEnrollmentCode(code: String, completion: @escaping (Result<EnrollmentCodeResponse, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/enrollment/validate-code")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body = ["code": code]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                // Try to parse error message
+                if let errorData = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let detail = errorData["detail"] as? String {
+                    completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: detail])))
+                } else {
+                    completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                }
+                return
+            }
+            
+            do {
+                let response = try JSONDecoder().decode(EnrollmentCodeResponse.self, from: data)
                 completion(.success(response))
             } catch {
                 completion(.failure(error))

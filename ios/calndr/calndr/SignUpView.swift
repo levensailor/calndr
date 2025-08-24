@@ -6,9 +6,7 @@ struct SignUpView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.presentationMode) var presentationMode
     @State private var isOnboardingPresented = false
-    @State private var showingPhoneEntry = false
-    @State private var showingPhoneVerification = false
-    @State private var phoneToVerify = ""
+    @State private var showingFamilyEnrollment = false
     
     var body: some View {
         ZStack {
@@ -63,8 +61,24 @@ struct SignUpView: View {
                             disableAutofill: true
                         )
                         .frame(height: 56)
+                        
+                        FloatingLabelTextField(
+                            title: "Phone Number",
+                            text: $viewModel.phoneNumber,
+                            isSecure: false
+                        )
+                        .frame(height: 56)
+                        .keyboardType(.phonePad)
                     }
                     .padding(.horizontal)
+                    
+                    // Phone number explanation
+                    Text("Your phone number will be shared with your co-parent and babysitters for group messaging.")
+                        .font(.caption2)
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 5)
                     
                     if let errorMessage = viewModel.errorMessage {
                         Text(errorMessage)
@@ -75,9 +89,9 @@ struct SignUpView: View {
                     }
                     
                     Button(action: {
-                        // Validate basic info first
-                        if viewModel.validateBasicInfo() {
-                            showingPhoneEntry = true
+                        // Validate all info including phone number
+                        if viewModel.validateAllInfo() {
+                            showingFamilyEnrollment = true
                         }
                     }) {
                         HStack {
@@ -116,25 +130,15 @@ struct SignUpView: View {
                 // Dismiss keyboard when tapping outside
                 hideKeyboard()
             }
-            .fullScreenCover(isPresented: $showingPhoneEntry) {
-                PhoneNumberEntryView(viewModel: viewModel) { phoneNumber in
-                    phoneToVerify = phoneNumber
-                    showingPhoneEntry = false
-                    showingPhoneVerification = true
-                }
-                .environmentObject(themeManager)
-            }
-            .fullScreenCover(isPresented: $showingPhoneVerification) {
-                PhoneVerificationView(phoneNumber: phoneToVerify) {
-                    // Phone verified, now complete signup
-                    viewModel.completeSignUp(authManager: authManager) { success in
-                        if success {
-                            showingPhoneVerification = false
-                            isOnboardingPresented = true
-                        }
+            .fullScreenCover(isPresented: $showingFamilyEnrollment) {
+                FamilyEnrollmentView(viewModel: viewModel) { success in
+                    if success {
+                        showingFamilyEnrollment = false
+                        isOnboardingPresented = true
                     }
                 }
                 .environmentObject(themeManager)
+                .environmentObject(authManager)
             }
             .fullScreenCover(isPresented: $isOnboardingPresented) {
                 OnboardingView(isOnboardingComplete: $isOnboardingPresented)
