@@ -9,6 +9,15 @@ struct FloatingLabelTextField: View {
     @FocusState private var isFocused: Bool
     @Environment(\.colorScheme) private var colorScheme
     
+    // Cache theme colors to reduce lookups during animations
+    private var textColor: Color {
+        themeManager.currentTheme.textColorSwiftUI
+    }
+    
+    private var backgroundColor: Color {
+        themeManager.currentTheme.mainBackgroundColorSwiftUI
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .leading) {
@@ -25,7 +34,7 @@ struct FloatingLabelTextField: View {
                     HStack {
                         Text(title)
                             .font(.caption)
-                            .foregroundColor(isFocused ? Color.blue : themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
+                            .foregroundColor(isFocused ? Color.blue : textColor.opacity(0.7))
                         Spacer()
                     }
                     .padding(.top, 8)
@@ -38,20 +47,32 @@ struct FloatingLabelTextField: View {
                                 .focused($isFocused)
                                 .textContentType(disableAutofill ? nil : .password)
                                 .autocorrectionDisabled(disableAutofill)
+                                .onTapGesture {
+                                    // Immediate focus response
+                                    if !isFocused {
+                                        isFocused = true
+                                    }
+                                }
                         } else {
                             TextField("", text: $text)
                                 .focused($isFocused)
                                 .textContentType(disableAutofill ? nil : .username)
                                 .autocorrectionDisabled(disableAutofill)
+                                .onTapGesture {
+                                    // Immediate focus response
+                                    if !isFocused {
+                                        isFocused = true
+                                    }
+                                }
                         }
                     }
-                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+                    .foregroundColor(textColor)
                     .padding(.horizontal, 16)
                     .padding(.top, 2)
                     .padding(.bottom, 16)
                 }
             }
         }
-        .animation(.easeInOut(duration: 0.15), value: isFocused)
+        .animation(.easeInOut(duration: 0.1), value: isFocused)
     }
 } 

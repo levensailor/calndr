@@ -102,6 +102,9 @@ struct EmailVerificationView: View {
                                 .background(Color.clear)
                         }
                         .onTapGesture {
+                            // Immediate focus with haptic feedback
+                            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                            impactFeedback.impactOccurred()
                             isTextFieldFocused = true
                         }
                         
@@ -202,8 +205,8 @@ struct EmailVerificationView: View {
             sendVerificationCode()
             // Start resend cooldown
             startResendCooldown()
-            // Focus the text field to show keyboard
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            // Focus the text field to show keyboard - reduced delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 isTextFieldFocused = true
             }
         }

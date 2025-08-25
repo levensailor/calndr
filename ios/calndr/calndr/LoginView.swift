@@ -15,10 +15,6 @@ struct LoginView: View {
         ZStack {
             themeManager.currentTheme.mainBackgroundColorSwiftUI
                 .ignoresSafeArea()
-                .onTapGesture {
-                    // Dismiss keyboard when tapping outside
-                    hideKeyboard()
-                }
             
             VStack(spacing: 20) {
                 Text("calndr")
