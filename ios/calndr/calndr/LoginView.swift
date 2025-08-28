@@ -177,24 +177,17 @@ struct LoginView: View {
     }
     
     private func checkEnrollmentStatus() {
-        // Check if user has completed enrollment via API
-        APIService.shared.getEnrollmentStatus { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let status):
-                    if !status.enrolled {
-                        // User needs to complete enrollment
-                        showingFamilyEnrollment = true
-                    } else {
-                        // User is enrolled, proceed to main app
-                        // The AuthenticationManager will handle this automatically
-                    }
-                case .failure(let error):
-                    print("Failed to get enrollment status: \(error)")
-                    // Default to showing enrollment if we can't determine status
-                    showingFamilyEnrollment = true
-                }
-            }
+        guard let user = authManager.userProfile else {
+            // If profile is not available, default to showing enrollment
+            showingFamilyEnrollment = true
+            return
+        }
+        
+        if let enrolled = user.enrolled, !enrolled {
+            showingFamilyEnrollment = true
+        } else {
+            // User is enrolled, proceed to main app
+            // The AuthenticationManager will handle this automatically by setting isAuthenticated
         }
     }
 

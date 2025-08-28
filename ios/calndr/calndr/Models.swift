@@ -195,10 +195,19 @@ struct UserProfile: Codable {
     let created_at: String?
     let profile_photo_url: String?
     let selected_theme_id: String?
-    
+    let enrolled: Bool?
+    let coparent_enrolled: Bool?
+    let coparent_invited: Bool?
+
     enum CodingKeys: String, CodingKey {
-        case id, first_name, last_name, email, phone_number, subscription_type, subscription_status, created_at, profile_photo_url, selected_theme_id
+        case id, first_name, last_name, email, phone_number, subscription_type, subscription_status, created_at, profile_photo_url, selected_theme_id, enrolled, coparent_enrolled, coparent_invited
     }
+}
+
+struct LoginResponse: Codable {
+    let access_token: String
+    let token_type: String
+    let user: UserProfile
 }
 
 struct FamilyMemberEmail: Codable {

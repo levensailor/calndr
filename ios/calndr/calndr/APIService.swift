@@ -1,5 +1,7 @@
 import Foundation
 import UIKit
+import Combine
+import SwiftUI
 
 enum APIError: Error, LocalizedError, Equatable {
     case unauthorized
@@ -129,6 +131,17 @@ struct ChildResponse: Codable {
 
 struct TokenResponse: Codable {
     let access_token: String
+}
+
+// Represents the response from the login endpoint
+struct LoginResponse: Codable {
+    let access_token: String
+    let token_type: String
+    let user: UserProfile
+
+    enum CodingKeys: String, CodingKey {
+        case access_token, token_type, user
+    }
 }
 
 class APIService {
@@ -1222,7 +1235,7 @@ class APIService {
 
     // MARK: - Authentication
     
-    func login(email: String, password: String, completion: @escaping (Result<String, Error>) -> Void) {
+    func login(email: String, password: String, completion: @escaping (Result<(UserProfile, String), Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/auth/token")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -1249,8 +1262,8 @@ class APIService {
             }
             
             do {
-                let tokenResponse = try JSONDecoder().decode(AuthTokenResponse.self, from: data)
-                completion(.success(tokenResponse.access_token))
+                let loginResponse = try JSONDecoder().decode(LoginResponse.self, from: data)
+                completion(.success((loginResponse.user, loginResponse.access_token)))
             } catch {
                 completion(.failure(error))
             }

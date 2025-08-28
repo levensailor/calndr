@@ -4,8 +4,7 @@ import Combine
 class AuthenticationManager: ObservableObject {
     @Published var isAuthenticated: Bool = false
     @Published var isLoading: Bool = true
-    @Published var username: String?
-    @Published var userID: String?
+    @Published var userProfile: UserProfile?
     @Published var hasCompletedOnboarding: Bool = true // Default to true for existing users
     @Published var authToken: String?
     
@@ -55,20 +54,17 @@ class AuthenticationManager: ObservableObject {
         APIService.shared.login(email: email, password: password) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let token):
+                case .success(let (profile, token)):
                     print("🔐 AuthenticationManager: Login API success, saving token...")
+                    
                     let saved = KeychainManager.shared.save(token: token, for: "currentUser")
                     if saved {
                         print("🔐 AuthenticationManager: Token saved successfully")
-                        let decodedToken = self?.decode(jwtToken: token) ?? [:]
-                        print("🔐 AuthenticationManager: Decoded login token: \(decodedToken)")
-                        
                         self?.isAuthenticated = true
                         self?.isLoading = false
-                        self?.username = decodedToken["name"] as? String
-                        self?.userID = decodedToken["sub"] as? String
+                        self?.userProfile = profile
                         
-                        print("🔐 AuthenticationManager: Login complete - isAuthenticated = true, username = \(self?.username ?? "nil"), userID = \(self?.userID ?? "nil")")
+                        print("🔐 AuthenticationManager: Login complete - isAuthenticated = true, userProfile = \(profile)")
                         completion(true)
                     } else {
                         print("🔐❌ AuthenticationManager: Error - Could not save token to keychain")
