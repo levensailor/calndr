@@ -335,7 +335,7 @@ class ThemeManager: ObservableObject {
     
     // Get current user ID
     var currentUserID: String? {
-        authManager?.userID
+        authManager?.userProfile?.id
     }
     
     // Filtered themes (public or created by current user)

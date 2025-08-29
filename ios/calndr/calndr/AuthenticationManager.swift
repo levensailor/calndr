@@ -20,12 +20,22 @@ class AuthenticationManager: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             if let token = KeychainManager.shared.loadToken(for: "currentUser") {
                 print("🔐 AuthenticationManager: Found token in keychain")
-                let decodedToken = self.decode(jwtToken: token)
-                print("🔐 AuthenticationManager: Decoded token: \(decodedToken)")
-                
                 self.isAuthenticated = true
-                self.username = decodedToken["name"] as? String
-                self.userID = decodedToken["sub"] as? String
+                
+                // Fetch user profile to ensure data is up-to-date
+                APIService.shared.getUserProfile { result in
+                    DispatchQueue.main.async {
+                        switch result {
+                        case .success(let profile):
+                            self.userProfile = profile
+                            print("🔐 AuthenticationManager: Successfully fetched user profile.")
+                        case .failure(let error):
+                            print("🔐❌ AuthenticationManager: Failed to fetch user profile: \(error.localizedDescription)")
+                            // Handle failure, maybe logout user
+                            self.logout()
+                        }
+                    }
+                }
                 
                 // Check if user has completed onboarding
                 // If the key doesn't exist, assume true for existing users
@@ -35,12 +45,10 @@ class AuthenticationManager: ObservableObject {
                     self.hasCompletedOnboarding = true // Default to true for existing users
                 }
                 
-                print("🔐 AuthenticationManager: Set isAuthenticated = true, username = \(self.username ?? "nil"), userID = \(self.userID ?? "nil")")
             } else {
                 print("🔐 AuthenticationManager: No token found in keychain")
                 self.isAuthenticated = false
-                self.username = nil
-                self.userID = nil
+                self.userProfile = nil
                 self.hasCompletedOnboarding = true // Reset for new users
                 print("🔐 AuthenticationManager: Set isAuthenticated = false")
             }
@@ -197,8 +205,7 @@ class AuthenticationManager: ObservableObject {
             print("🔐❌ AuthenticationManager: Clearing authentication state...")
             self.isAuthenticated = false
             self.isLoading = false
-            self.username = nil
-            self.userID = nil
+            self.userProfile = nil
             self.hasCompletedOnboarding = true // Reset for next user
             UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
             print("🔐❌ AuthenticationManager: Logout complete - isAuthenticated = false")
@@ -206,17 +213,19 @@ class AuthenticationManager: ObservableObject {
     }
 
     func loginWithApple(authorizationCode: String, completion: @escaping (Bool) -> Void) {
-        APIService.shared.loginWithApple(code: authorizationCode) { result in
-            switch result {
-            case .success(let token):
-                let saved = KeychainManager.shared.save(token: token, for: "currentUser")
-                DispatchQueue.main.async {
-                    self.isAuthenticated = saved
-                    completion(saved)
-                }
-            case .failure(let err):
-                print("Apple login failure", err)
-                DispatchQueue.main.async {
+        APIService.shared.loginWithApple(code: authorizationCode) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let token):
+                    let saved = KeychainManager.shared.save(token: token, for: "currentUser")
+                    if saved {
+                        // After saving the token, fetch the user profile
+                        self?.fetchProfileAfterSocialLogin(completion: completion)
+                    } else {
+                        completion(false)
+                    }
+                case .failure(let err):
+                    print("Apple login failure", err)
                     completion(false)
                 }
             }
@@ -224,25 +233,43 @@ class AuthenticationManager: ObservableObject {
     }
 
     func loginWithGoogle(idToken: String, completion: @escaping (Bool) -> Void) {
-        APIService.shared.loginWithGoogle(idToken: idToken) { result in
-            switch result {
-            case .success(let token):
-                let saved = KeychainManager.shared.save(token: token, for: "currentUser")
-                DispatchQueue.main.async {
-                    self.isAuthenticated = saved
-                    completion(saved)
-                }
-            case .failure(let err):
-                print("Google login failure", err)
-                DispatchQueue.main.async {
+        APIService.shared.loginWithGoogle(idToken: idToken) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let token):
+                    let saved = KeychainManager.shared.save(token: token, for: "currentUser")
+                    if saved {
+                        // After saving the token, fetch the user profile
+                        self?.fetchProfileAfterSocialLogin(completion: completion)
+                    } else {
+                        completion(false)
+                    }
+                case .failure(let err):
+                    print("Google login failure", err)
                     completion(false)
                 }
             }
         }
     }
-
-
     
+    private func fetchProfileAfterSocialLogin(completion: @escaping (Bool) -> Void) {
+        APIService.shared.getUserProfile { [weak self] profileResult in
+            DispatchQueue.main.async {
+                switch profileResult {
+                case .success(let profile):
+                    self?.userProfile = profile
+                    self?.isAuthenticated = true
+                    completion(true)
+                case .failure(let profileErr):
+                    print("Failed to fetch profile after social login:", profileErr)
+                    // Even if profile fetch fails, we have a token, so we can consider user authenticated
+                    self?.isAuthenticated = true
+                    completion(true)
+                }
+            }
+        }
+    }
+
     private func decode(jwtToken jwt: String) -> [String: Any] {
         let segments = jwt.components(separatedBy: ".")
         guard segments.count > 1 else { return [:] }

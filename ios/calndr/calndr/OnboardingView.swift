@@ -30,7 +30,7 @@ struct OnboardingView: View {
                 .environmentObject(themeManager)
             } else if currentStep == 3 {
                 OnboardingStepThreeView(
-                    primaryParentName: authManager.username ?? "You",
+                    primaryParentName: authManager.userProfile?.first_name ?? "You",
                     coparentName: coparentName.isEmpty ? nil : coparentName,
                     onComplete: {
                         // Complete onboarding and transition to main app

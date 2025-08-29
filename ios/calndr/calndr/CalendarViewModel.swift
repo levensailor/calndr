@@ -80,8 +80,10 @@ class CalendarViewModel: ObservableObject {
     
     // Track in-flight custody updates to prevent duplicates
     private var inFlightCustodyUpdates: Set<String> = []
+    
+    // Computed property to get current user ID
     var currentUserID: String? {
-        authManager.userID
+        authManager.userProfile?.id
     }
     
     let isoDateFormatter: DateFormatter = {

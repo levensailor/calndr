@@ -133,17 +133,6 @@ struct TokenResponse: Codable {
     let access_token: String
 }
 
-// Represents the response from the login endpoint
-struct LoginResponse: Codable {
-    let access_token: String
-    let token_type: String
-    let user: UserProfile
-
-    enum CodingKeys: String, CodingKey {
-        case access_token, token_type, user
-    }
-}
-
 class APIService {
     static let shared = APIService()
     private let baseURL = URL(string: "https://staging.calndr.club/api/v1")!
@@ -4353,4 +4342,39 @@ class APIService {
         }.resume()
     }
 
+    func getUserProfile(completion: @escaping (Result<UserProfile, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/users/profile")
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        
+        // Add authorization token
+        if let token = KeychainManager.shared.loadToken(for: "currentUser") {
+            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from server"])))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Failed to fetch profile"])))
+                return
+            }
+            
+            do {
+                let userProfile = try JSONDecoder().decode(UserProfile.self, from: data)
+                completion(.success(userProfile))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
 } 

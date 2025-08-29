@@ -183,7 +183,8 @@ struct LoginView: View {
             return
         }
         
-        if let enrolled = user.enrolled, !enrolled {
+        // If enrolled is false or nil, show the enrollment view
+        if user.enrolled != true {
             showingFamilyEnrollment = true
         } else {
             // User is enrolled, proceed to main app
