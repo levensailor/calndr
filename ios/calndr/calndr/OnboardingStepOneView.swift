@@ -12,6 +12,7 @@ struct OnboardingStepOneView: View {
 
     var onNext: (String) -> Void  // Pass coparent first name
     var onSkip: () -> Void
+    var generatedCode: String? // Optional enrollment code to display
 
     var body: some View {
         ZStack {
@@ -22,6 +23,46 @@ struct OnboardingStepOneView: View {
                     .font(.largeTitle)
                     .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                     .padding()
+                
+                // Display enrollment code if available
+                if let code = generatedCode {
+                    VStack(spacing: 8) {
+                        Text("Your Enrollment Code")
+                            .font(.headline)
+                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+                        
+                        Text(code)
+                            .font(.system(size: 32, weight: .bold, design: .monospaced))
+                            .foregroundColor(themeManager.currentTheme.accentColorSwiftUI)
+                            .padding(10)
+                            .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
+                            .cornerRadius(8)
+                        
+                        Text("Share this code with your co-parent")
+                            .font(.subheadline)
+                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
+                        
+                        Button(action: {
+                            UIPasteboard.general.string = code
+                        }) {
+                            HStack {
+                                Image(systemName: "doc.on.doc")
+                                Text("Copy Code")
+                            }
+                            .font(.footnote)
+                            .foregroundColor(themeManager.currentTheme.accentColorSwiftUI)
+                        }
+                        .padding(.bottom, 10)
+                    }
+                    .padding()
+                    .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(themeManager.currentTheme.accentColorSwiftUI.opacity(0.3), lineWidth: 1)
+                    )
+                    .padding(.horizontal)
+                }
             
             VStack(spacing: 15) {
                 FloatingLabelTextField(title: "First Name", text: $coparentFirstName, isSecure: false)

@@ -279,23 +279,34 @@ class CalendarViewModel: ObservableObject {
                 switch result {
                 case .success(let custodians):
                     print("🏠✅ CalendarViewModel: Custodian names fetch success - received \(custodians.count) custodians")
-                    if custodians.count >= 2 {
-                        self?.custodianOneName = custodians[0].first_name
-                        self?.custodianTwoName = custodians[1].first_name
-                        self?.custodianOneId = custodians[0].id
-                        self?.custodianTwoId = custodians[1].id
-                        self?.custodiansLastFetched = Date() // Cache timestamp
-                        self?.custodiansReady = true // Progressive loading flag
-                        print("🏠✅ CalendarViewModel: Successfully set custodian names: \(custodians[0].first_name), \(custodians[1].first_name)")
-                        print("🏠✅ CalendarViewModel: Custodian IDs: \(custodians[0].id), \(custodians[1].id)")
-                    } else {
-                        print("🏠❌ CalendarViewModel: Error: Not enough custodians in response (found \(custodians.count))")
+                    if let self = self {
+                        if custodians.count >= 2 {
+                            self.custodianOneName = custodians[0].first_name
+                            self.custodianTwoName = custodians[1].first_name
+                            self.custodianOneId = custodians[0].id
+                            self.custodianTwoId = custodians[1].id
+                            print("🏠✅ CalendarViewModel: Successfully set custodian names: \(self.custodianOneName), \(self.custodianTwoName)")
+                        } else if let firstCustodian = custodians.first {
+                            self.custodianOneName = firstCustodian.first_name
+                            self.custodianTwoName = "Parent 2"
+                            self.custodianOneId = firstCustodian.id
+                            print("🏠✅ CalendarViewModel: Set one custodian name: \(self.custodianOneName)")
+                        } else {
+                            // Fallback if no custodians are returned
+                            self.custodianOneName = self.authManager.userProfile?.first_name ?? "Parent 1"
+                            self.custodianTwoName = "Parent 2"
+                            print("🏠⚠️ CalendarViewModel: No custodians returned, using fallback names.")
+                        }
+                        self.custodiansLastFetched = Date()
+                        self.custodiansReady = true
                     }
                 case .failure(let error):
                     print("🏠❌ CalendarViewModel: Error fetching custodian names: \(error.localizedDescription)")
-                    print("🏠❌ CalendarViewModel: Error code: \((error as NSError).code)")
-                    if (error as NSError).code == 401 {
-                        print("🏠❌🔐 CalendarViewModel: 401 error in custodian fetch - this will likely trigger logout")
+                    if let self = self {
+                        print("🏠❌ CalendarViewModel: Error code: \((error as NSError).code)")
+                        if (error as NSError).code == 401 {
+                            print("🏠❌🔐 CalendarViewModel: 401 error in custodian fetch - this will likely trigger logout")
+                        }
                     }
                 }
             }

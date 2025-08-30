@@ -13,6 +13,10 @@ class SignUpViewModel: ObservableObject {
     @Published var enrollmentCode = ""
     @Published var familyId: Int?
     
+    // Track whether a code was entered or generated
+    @Published var enteredValidCode = false
+    @Published var generatedCode: String? = nil
+    
     func validateBasicInfo() -> Bool {
         // Clear previous error
         errorMessage = nil
@@ -92,6 +96,7 @@ class SignUpViewModel: ObservableObject {
                     if response.success, let code = response.enrollmentCode {
                         self?.enrollmentCode = code
                         self?.familyId = response.familyId
+                        self?.generatedCode = code
                         completion(true, code)
                     } else {
                         self?.errorMessage = response.message ?? "Failed to create enrollment code"
@@ -118,13 +123,16 @@ class SignUpViewModel: ObservableObject {
                     if response.success {
                         self?.enrollmentCode = code
                         self?.familyId = response.familyId
+                        self?.enteredValidCode = true
                         completion(true)
                     } else {
                         self?.errorMessage = response.message ?? "Invalid enrollment code"
+                        self?.enteredValidCode = false
                         completion(false)
                     }
                 case .failure(let error):
                     self?.errorMessage = error.localizedDescription
+                    self?.enteredValidCode = false
                     completion(false)
                 }
             }
@@ -186,5 +194,14 @@ class SignUpViewModel: ObservableObject {
         return digits.count == 10 || (digits.count == 11 && digits.hasPrefix("1"))
     }
     
-
+    func emailEnrollmentCode(to coparentName: String, code: String) {
+        // This would typically call an API endpoint to send an email with the enrollment code
+        // For now, we'll just print to the console
+        print("📧 Would send enrollment code \(code) to co-parent \(coparentName)")
+        
+        // In a real implementation, you would call an API endpoint like this:
+        // APIService.shared.sendEnrollmentCodeEmail(to: coparentEmail, name: coparentName, code: code) { result in
+        //     // Handle success/failure
+        // }
+    }
 } 

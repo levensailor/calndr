@@ -1,41 +1,33 @@
--- Enrollment Codes Migration SQL
--- Run this directly on your PostgreSQL database to create the enrollment_codes table
+-- enrollment_codes_migration.sql
+-- SQL migration for creating the enrollment_codes table
 
--- Create the enrollment_codes table
-CREATE TABLE IF NOT EXISTS enrollment_codes (
-    id SERIAL PRIMARY KEY,
-    code VARCHAR(6) UNIQUE NOT NULL,
-    family_id UUID REFERENCES families(id) ON DELETE CASCADE,
-    created_by_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    is_used BOOLEAN DEFAULT FALSE,
-    used_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    expires_at TIMESTAMP WITH TIME ZONE DEFAULT (NOW() + INTERVAL '7 days'),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_enrollment_codes_code ON enrollment_codes(code);
-CREATE INDEX IF NOT EXISTS idx_enrollment_codes_family_id ON enrollment_codes(family_id);
-CREATE INDEX IF NOT EXISTS idx_enrollment_codes_created_by ON enrollment_codes(created_by_user_id);
-CREATE INDEX IF NOT EXISTS idx_enrollment_codes_expires_at ON enrollment_codes(expires_at);
-CREATE INDEX IF NOT EXISTS idx_enrollment_codes_is_used ON enrollment_codes(is_used);
-
--- Create trigger function to update updated_at timestamp
-CREATE OR REPLACE FUNCTION update_enrollment_codes_updated_at()
-RETURNS TRIGGER AS $$
+-- Check if the table already exists
+DO $$
 BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
+    IF NOT EXISTS (SELECT 1 FROM pg_tables WHERE tablename = 'enrollment_codes') THEN
+        -- Create the enrollment_codes table
+        CREATE TABLE enrollment_codes (
+            id SERIAL PRIMARY KEY,
+            family_id UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+            code VARCHAR(6) UNIQUE NOT NULL,
+            created_by_user_id UUID NOT NULL REFERENCES users(id),
+            coparent_first_name VARCHAR(100),
+            coparent_last_name VARCHAR(100),
+            coparent_email VARCHAR(255),
+            coparent_phone VARCHAR(20),
+            invitation_sent BOOLEAN NOT NULL DEFAULT FALSE,
+            invitation_sent_at TIMESTAMP,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        );
 
--- Create trigger
-DROP TRIGGER IF EXISTS update_enrollment_codes_updated_at ON enrollment_codes;
-CREATE TRIGGER update_enrollment_codes_updated_at
-    BEFORE UPDATE ON enrollment_codes
-    FOR EACH ROW
-    EXECUTE FUNCTION update_enrollment_codes_updated_at();
-
--- Verify the table was created
-SELECT 'enrollment_codes table created successfully' as status;
+        -- Create indexes for performance
+        CREATE INDEX idx_enrollment_codes_family_id ON enrollment_codes(family_id);
+        CREATE INDEX idx_enrollment_codes_code ON enrollment_codes(code);
+        CREATE INDEX idx_enrollment_codes_created_by_user_id ON enrollment_codes(created_by_user_id);
+        
+        RAISE NOTICE 'Successfully created enrollment_codes table and indexes';
+    ELSE
+        RAISE NOTICE 'Table enrollment_codes already exists, skipping creation';
+    END IF;
+END
+$$;

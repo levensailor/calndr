@@ -20,7 +20,7 @@ class AuthenticationManager: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             if let token = KeychainManager.shared.loadToken(for: "currentUser") {
                 print("🔐 AuthenticationManager: Found token in keychain")
-                self.isAuthenticated = true
+                // Don't set isAuthenticated yet, wait for profile fetch
                 
                 // Fetch user profile to ensure data is up-to-date
                 APIService.shared.getUserProfile { result in
@@ -29,6 +29,15 @@ class AuthenticationManager: ObservableObject {
                         case .success(let profile):
                             self.userProfile = profile
                             print("🔐 AuthenticationManager: Successfully fetched user profile.")
+                            
+                            // Only set isAuthenticated to true if the user is enrolled
+                            if profile.enrolled == true {
+                                self.isAuthenticated = true
+                                print("🔐 AuthenticationManager: User is enrolled, setting isAuthenticated = true")
+                            } else {
+                                self.isAuthenticated = false
+                                print("🔐 AuthenticationManager: User is not enrolled, setting isAuthenticated = false")
+                            }
                         case .failure(let error):
                             print("🔐❌ AuthenticationManager: Failed to fetch user profile: \(error.localizedDescription)")
                             // Handle failure, maybe logout user
@@ -68,11 +77,18 @@ class AuthenticationManager: ObservableObject {
                     let saved = KeychainManager.shared.save(token: token, for: "currentUser")
                     if saved {
                         print("🔐 AuthenticationManager: Token saved successfully")
-                        self?.isAuthenticated = true
                         self?.isLoading = false
                         self?.userProfile = profile
                         
-                        print("🔐 AuthenticationManager: Login complete - isAuthenticated = true, userProfile = \(profile)")
+                        // Only set isAuthenticated to true if the user is enrolled
+                        if profile.enrolled == true {
+                            self?.isAuthenticated = true
+                            print("🔐 AuthenticationManager: User is enrolled, setting isAuthenticated = true")
+                        } else {
+                            print("🔐 AuthenticationManager: User is not enrolled, keeping isAuthenticated = false")
+                        }
+                        
+                        print("🔐 AuthenticationManager: Login complete - userProfile = \(profile)")
                         completion(true)
                     } else {
                         print("🔐❌ AuthenticationManager: Error - Could not save token to keychain")
@@ -258,12 +274,20 @@ class AuthenticationManager: ObservableObject {
                 switch profileResult {
                 case .success(let profile):
                     self?.userProfile = profile
-                    self?.isAuthenticated = true
+                    
+                    // Only set isAuthenticated to true if the user is enrolled
+                    if profile.enrolled == true {
+                        self?.isAuthenticated = true
+                        print("🔐 AuthenticationManager: User is enrolled, setting isAuthenticated = true")
+                    } else {
+                        print("🔐 AuthenticationManager: User is not enrolled, keeping isAuthenticated = false")
+                    }
+                    
                     completion(true)
                 case .failure(let profileErr):
                     print("Failed to fetch profile after social login:", profileErr)
-                    // Even if profile fetch fails, we have a token, so we can consider user authenticated
-                    self?.isAuthenticated = true
+                    // If profile fetch fails, we can't determine enrollment status
+                    // Default to not authenticated so user goes through onboarding
                     completion(true)
                 }
             }

@@ -9,6 +9,7 @@ enum APIError: Error, LocalizedError, Equatable {
     case requestFailed(statusCode: Int)
     case themeNotFound
     case invalidURL
+    case notAuthenticated
 
     var errorDescription: String? {
         switch self {
@@ -22,6 +23,8 @@ enum APIError: Error, LocalizedError, Equatable {
             return "The selected theme is no longer available."
         case .invalidURL:
             return "The URL provided was invalid."
+        case .notAuthenticated:
+            return "Not authenticated: Please log in and try again."
         }
     }
 }
@@ -3519,6 +3522,14 @@ class APIService {
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         
+        // Add authentication token
+        if let token = KeychainManager.shared.loadToken(for: "currentUser") {
+            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        } else {
+            completion(.failure(APIError.notAuthenticated))
+            return
+        }
+        
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 completion(.failure(error))
@@ -3555,6 +3566,14 @@ class APIService {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // Add authentication token
+        if let token = KeychainManager.shared.loadToken(for: "currentUser") {
+            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        } else {
+            completion(.failure(APIError.notAuthenticated))
+            return
+        }
         
         let body = ["code": code]
         

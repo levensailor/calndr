@@ -8,7 +8,6 @@ struct LoginView: View {
     @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var themeManager: ThemeManager
     @State private var showingSignUp = false
-    @State private var showingFamilyEnrollment = false
     @State private var isOnboardingPresented = false
 
     var body: some View {
@@ -126,21 +125,10 @@ struct LoginView: View {
                 .environmentObject(authManager)
                 .environmentObject(themeManager)
         }
-        .fullScreenCover(isPresented: $showingFamilyEnrollment) {
-            FamilyEnrollmentView(viewModel: SignUpViewModel()) { success in
-                if success {
-                    showingFamilyEnrollment = false
-                    isOnboardingPresented = true
-                } else {
-                    showingFamilyEnrollment = false
-                }
-            }
-            .environmentObject(themeManager)
-            .environmentObject(authManager)
-        }
         .fullScreenCover(isPresented: $isOnboardingPresented) {
             OnboardingView(isOnboardingComplete: $isOnboardingPresented)
                 .environmentObject(authManager)
+                .environmentObject(themeManager)
         }
     }
     
@@ -178,14 +166,15 @@ struct LoginView: View {
     
     private func checkEnrollmentStatus() {
         guard let user = authManager.userProfile else {
-            // If profile is not available, default to showing enrollment
-            showingFamilyEnrollment = true
+            // If profile is not available, default to showing onboarding
+            isOnboardingPresented = true
             return
         }
         
-        // If enrolled is false or nil, show the enrollment view
+        // If enrolled is false or nil, show the onboarding view
+        // The onboarding view now starts with FamilyEnrollmentView as the first step
         if user.enrolled != true {
-            showingFamilyEnrollment = true
+            isOnboardingPresented = true
         } else {
             // User is enrolled, proceed to main app
             // The AuthenticationManager will handle this automatically by setting isAuthenticated

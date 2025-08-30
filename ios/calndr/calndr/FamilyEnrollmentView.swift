@@ -93,6 +93,7 @@ struct FamilyEnrollmentView: View {
                                 viewModel.createEnrollmentCode { success, code in
                                     if success, let code = code {
                                         generatedCode = code
+                                        viewModel.generatedCode = code
                                     }
                                 }
                             }) {
@@ -183,6 +184,7 @@ struct FamilyEnrollmentView: View {
                             Button(action: {
                                 viewModel.validateEnrollmentCode(enteredCode) { success in
                                     if success {
+                                        viewModel.enteredValidCode = true
                                         completeSignUp()
                                     }
                                 }
