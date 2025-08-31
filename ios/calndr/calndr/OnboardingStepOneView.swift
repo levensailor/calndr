@@ -302,7 +302,7 @@ struct CustomTextField: View {
     @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
-        FloatingLabelTextField(title: title, text: $text, isSecure: false)
+        FloatingLabelTextField(title: title, text: $text, isSecure: false, disableAutofill: true)
             .focused($isFocused)
             .onChange(of: isFocused) { oldValue, newValue in
                 if newValue {
