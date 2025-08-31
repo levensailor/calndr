@@ -30,7 +30,7 @@ struct OnboardingStepOneView: View {
             backgroundColor.ignoresSafeArea()
             
             // Use ScrollView with ScrollViewReader to programmatically scroll to active field
-            ScrollView {
+            ScrollView(.vertical, showsIndicators: true) {
                 ScrollViewReader { proxy in
                     // Store the proxy for later use
                     if scrollProxy == nil {
