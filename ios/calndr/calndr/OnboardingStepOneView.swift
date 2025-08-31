@@ -23,12 +23,15 @@ struct OnboardingStepOneView: View {
     var generatedCode: String? // Optional enrollment code to display
 
     var body: some View {
+        // Extract the background color to simplify the expression
+        let backgroundColor = themeManager.currentTheme.mainBackgroundColorSwiftUI
+        
         ZStack {
-            themeManager.currentTheme.mainBackgroundColorSwiftUI.ignoresSafeArea()
+            backgroundColor.ignoresSafeArea()
             
             // Use ScrollView with ScrollViewReader to programmatically scroll to active field
             ScrollView {
-                ScrollViewProxy { proxy in
+                ScrollViewReader { proxy in
                     // Store the proxy for later use
                     if scrollProxy == nil {
                         DispatchQueue.main.async {
@@ -43,90 +46,11 @@ struct OnboardingStepOneView: View {
                     
                     // Display enrollment code if available
                     if let code = generatedCode {
-                        VStack(spacing: 8) {
-                            Text("Your Enrollment Code")
-                                .font(.headline)
-                                .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
-                            
-                            Text(code)
-                                .font(.system(size: 32, weight: .bold, design: .monospaced))
-                                .foregroundColor(themeManager.currentTheme.accentColorSwiftUI)
-                                .padding(10)
-                                .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
-                                .cornerRadius(8)
-                            
-                            Text("Share this code with your co-parent")
-                                .font(.subheadline)
-                                .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
-                            
-                            Button(action: {
-                                UIPasteboard.general.string = code
-                            }) {
-                                HStack {
-                                    Image(systemName: "doc.on.doc")
-                                    Text("Copy Code")
-                                }
-                                .font(.footnote)
-                                .foregroundColor(themeManager.currentTheme.accentColorSwiftUI)
-                            }
-                            .padding(.bottom, 10)
-                        }
-                        .padding()
-                        .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(themeManager.currentTheme.accentColorSwiftUI.opacity(0.3), lineWidth: 1)
-                        )
-                        .padding(.horizontal)
+                        enrollmentCodeView(code: code)
                     }
                 
-                    VStack(spacing: 15) {
-                        // First Name field with ID for scrolling
-                        CustomTextField(title: "First Name", text: $coparentFirstName, field: .firstName, activeField: $activeField)
-                            .id(Field.firstName)
-                            .frame(height: 56)
-                            .autocapitalization(.words)
-                            .onChange(of: activeField) { oldValue, newValue in
-                                if newValue == .firstName {
-                                    scrollToField(.firstName)
-                                }
-                            }
-                        
-                        // Last Name field with ID for scrolling
-                        CustomTextField(title: "Last Name", text: $coparentLastName, field: .lastName, activeField: $activeField)
-                            .id(Field.lastName)
-                            .frame(height: 56)
-                            .autocapitalization(.words)
-                            .onChange(of: activeField) { oldValue, newValue in
-                                if newValue == .lastName {
-                                    scrollToField(.lastName)
-                                }
-                            }
-                        
-                        // Email field with ID for scrolling
-                        CustomTextField(title: "Email", text: $coparentEmail, field: .email, activeField: $activeField)
-                            .id(Field.email)
-                            .frame(height: 56)
-                            .keyboardType(.emailAddress)
-                            .autocapitalization(.none)
-                            .onChange(of: activeField) { oldValue, newValue in
-                                if newValue == .email {
-                                    scrollToField(.email)
-                                }
-                            }
-                        
-                        // Phone field with ID for scrolling
-                        CustomTextField(title: "Phone Number", text: $coparentPhone, field: .phone, activeField: $activeField)
-                            .id(Field.phone)
-                            .frame(height: 56)
-                            .keyboardType(.phonePad)
-                            .onChange(of: activeField) { oldValue, newValue in
-                                if newValue == .phone {
-                                    scrollToField(.phone)
-                                }
-                            }
-                    }
+                    // Form fields
+                    formFieldsView()
                     .padding(.horizontal)
                     
                     if let errorMessage = errorMessage {
@@ -141,39 +65,7 @@ struct OnboardingStepOneView: View {
                     Spacer(minLength: 80)
                     
                     // Navigation buttons
-                    HStack {
-                        Button(action: onSkip) {
-                            Text("Skip")
-                                .padding()
-                        }
-                        
-                        Spacer()
-                        
-                        Button(action: {
-                            // Dismiss keyboard when button is tapped
-                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                            
-                            if allFieldsFilled() {
-                                inviteCoParent()
-                            } else {
-                                onNext("")
-                            }
-                        }) {
-                            HStack {
-                                if isLoading {
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                } else {
-                                    Text(allFieldsFilled() ? "Invite & Next" : "Next")
-                                }
-                            }
-                            .padding()
-                            .background(themeManager.currentTheme.accentColorSwiftUI)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                        }
-                        .disabled(isLoading)
-                    }
+                    navigationButtonsView()
                     .padding()
                 }
                 .padding()
@@ -192,21 +84,7 @@ struct OnboardingStepOneView: View {
         // Adjust for keyboard
         .ignoresSafeArea(.keyboard, edges: .bottom)
         // Add keyboard observer
-        .onAppear {
-            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
-                if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
-                    keyboardHeight = keyboardFrame.height
-                    // Scroll to active field when keyboard appears
-                    if let field = activeField {
-                        scrollToField(field)
-                    }
-                }
-            }
-            
-            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
-                keyboardHeight = 0
-            }
-        }
+        .onAppear(perform: setupKeyboardObservers)
         .onDisappear {
             NotificationCenter.default.removeObserver(self)
         }
@@ -258,6 +136,160 @@ struct OnboardingStepOneView: View {
             scrollProxy?.scrollTo(field, anchor: .center)
         }
     }
+    
+    // Extract enrollment code view to reduce complexity
+    @ViewBuilder
+    private func enrollmentCodeView(code: String) -> some View {
+        let textColor = themeManager.currentTheme.textColorSwiftUI
+        let accentColor = themeManager.currentTheme.accentColorSwiftUI
+        let backgroundColor = themeManager.currentTheme.mainBackgroundColorSwiftUI
+        let secondaryBackgroundColor = themeManager.currentTheme.secondaryBackgroundColorSwiftUI
+        
+        VStack(spacing: 8) {
+            Text("Your Enrollment Code")
+                .font(.headline)
+                .foregroundColor(textColor)
+            
+            Text(code)
+                .font(.system(size: 32, weight: .bold, design: .monospaced))
+                .foregroundColor(accentColor)
+                .padding(10)
+                .background(secondaryBackgroundColor)
+                .cornerRadius(8)
+            
+            Text("Share this code with your co-parent")
+                .font(.subheadline)
+                .foregroundColor(textColor.opacity(0.7))
+            
+            Button(action: {
+                UIPasteboard.general.string = code
+            }) {
+                HStack {
+                    Image(systemName: "doc.on.doc")
+                    Text("Copy Code")
+                }
+                .font(.footnote)
+                .foregroundColor(accentColor)
+            }
+            .padding(.bottom, 10)
+        }
+        .padding()
+        .background(backgroundColor)
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(accentColor.opacity(0.3), lineWidth: 1)
+        )
+        .padding(.horizontal)
+    }
+    
+    // Extract form fields view to reduce complexity
+    @ViewBuilder
+    private func formFieldsView() -> some View {
+        VStack(spacing: 15) {
+            // First Name field with ID for scrolling
+            CustomTextField(title: "First Name", text: $coparentFirstName, field: .firstName, activeField: $activeField)
+                .id(Field.firstName)
+                .frame(height: 56)
+                .autocapitalization(.words)
+                .onChange(of: activeField) { oldValue, newValue in
+                    if newValue == .firstName {
+                        scrollToField(.firstName)
+                    }
+                }
+            
+            // Last Name field with ID for scrolling
+            CustomTextField(title: "Last Name", text: $coparentLastName, field: .lastName, activeField: $activeField)
+                .id(Field.lastName)
+                .frame(height: 56)
+                .autocapitalization(.words)
+                .onChange(of: activeField) { oldValue, newValue in
+                    if newValue == .lastName {
+                        scrollToField(.lastName)
+                    }
+                }
+            
+            // Email field with ID for scrolling
+            CustomTextField(title: "Email", text: $coparentEmail, field: .email, activeField: $activeField)
+                .id(Field.email)
+                .frame(height: 56)
+                .keyboardType(.emailAddress)
+                .autocapitalization(.none)
+                .onChange(of: activeField) { oldValue, newValue in
+                    if newValue == .email {
+                        scrollToField(.email)
+                    }
+                }
+            
+            // Phone field with ID for scrolling
+            CustomTextField(title: "Phone Number", text: $coparentPhone, field: .phone, activeField: $activeField)
+                .id(Field.phone)
+                .frame(height: 56)
+                .keyboardType(.phonePad)
+                .onChange(of: activeField) { oldValue, newValue in
+                    if newValue == .phone {
+                        scrollToField(.phone)
+                    }
+                }
+        }
+        .padding(.horizontal)
+    }
+    
+    // Extract navigation buttons view to reduce complexity
+    @ViewBuilder
+    private func navigationButtonsView() -> some View {
+        HStack {
+            Button(action: onSkip) {
+                Text("Skip")
+                    .padding()
+            }
+            
+            Spacer()
+            
+            Button(action: {
+                // Dismiss keyboard when button is tapped
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                
+                if allFieldsFilled() {
+                    inviteCoParent()
+                } else {
+                    onNext("")
+                }
+            }) {
+                HStack {
+                    if isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    } else {
+                        Text(allFieldsFilled() ? "Invite & Next" : "Next")
+                    }
+                }
+                .padding()
+                .background(themeManager.currentTheme.accentColorSwiftUI)
+                .foregroundColor(.white)
+                .cornerRadius(8)
+            }
+            .disabled(isLoading)
+        }
+        .padding()
+    }
+    
+    // Setup keyboard observers
+    private func setupKeyboardObservers() {
+        NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
+            if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                keyboardHeight = keyboardFrame.height
+                // Scroll to active field when keyboard appears
+                if let field = activeField {
+                    scrollToField(field)
+                }
+            }
+        }
+        
+        NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
+            keyboardHeight = 0
+        }
+    }
 }
 
 // Custom TextField that tracks focus state
@@ -278,5 +310,4 @@ struct CustomTextField: View {
                 }
             }
     }
-}
 }
