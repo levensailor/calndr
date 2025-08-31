@@ -171,7 +171,7 @@ class AuthenticationManager: ObservableObject {
         password: String,
         phoneNumber: String?,
         enrollmentCode: String,
-        familyId: Int?,
+        familyId: String?,
         completion: @escaping (Bool) -> Void
     ) {
         APIService.shared.signUpWithFamily(

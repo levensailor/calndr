@@ -11,7 +11,7 @@ class SignUpViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var enrollmentCode = ""
-    @Published var familyId: Int?
+    @Published var familyId: String?
     
     // Track whether a code was entered or generated
     @Published var enteredValidCode = false
@@ -87,22 +87,37 @@ class SignUpViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         
-        APIService.shared.createEnrollmentCode { [weak self] result in
+        // Print debug info
+        print("📱 Creating enrollment code...")
+        
+        // Use the debug version of the API call
+        APIService.shared.debugCreateEnrollmentCode { [weak self] result in
             DispatchQueue.main.async {
                 self?.isLoading = false
                 
                 switch result {
                 case .success(let response):
-                    if response.success, let code = response.enrollmentCode {
+                    // Debug the full response
+                    print("📱 Enrollment code response: success=\(response.success), message=\(response.message ?? "nil"), code=\(response.enrollmentCode ?? "nil"), familyId=\(response.familyId ?? "nil")")
+                    
+                    // The backend returns success=true with the message "Enrollment code created successfully"
+                    // and includes the enrollmentCode and familyId
+                    if let code = response.enrollmentCode {
+                        print("📱 Successfully created enrollment code: \(code)")
                         self?.enrollmentCode = code
+                        
+                        // Store familyId directly as String
                         self?.familyId = response.familyId
+                        
                         self?.generatedCode = code
                         completion(true, code)
                     } else {
+                        print("📱 Failed to create enrollment code: \(response.message ?? "Unknown error")")
                         self?.errorMessage = response.message ?? "Failed to create enrollment code"
                         completion(false, nil)
                     }
                 case .failure(let error):
+                    print("📱 Error creating enrollment code: \(error.localizedDescription)")
                     self?.errorMessage = error.localizedDescription
                     completion(false, nil)
                 }

@@ -93,13 +93,13 @@ struct EnrollmentCodeResponse: Codable {
     let success: Bool
     let message: String?
     let enrollmentCode: String?
-    let familyId: Int?
+    let familyId: String?
     
     enum CodingKeys: String, CodingKey {
         case success
         case message
-        case enrollmentCode = "enrollment_code"
-        case familyId = "family_id"
+        case enrollmentCode
+        case familyId
     }
 }
 
@@ -1322,7 +1322,7 @@ class APIService {
         password: String,
         phoneNumber: String?,
         enrollmentCode: String,
-        familyId: Int?,
+        familyId: String?,
         completion: @escaping (Result<(token: String, shouldSkipOnboarding: Bool), Error>) -> Void
     ) {
         let url = baseURL.appendingPathComponent("/auth/register-with-family")

@@ -90,8 +90,11 @@ struct FamilyEnrollmentView: View {
                                 selectedOption = .createCode
                                 showingCodeCreation = true
                                 // Immediately generate the code when option is selected
+                                print("📱 Selected create code option")
                                 viewModel.createEnrollmentCode { success, code in
+                                    print("📱 Code generation callback - success: \(success), code: \(code ?? "nil")")
                                     if success, let code = code {
+                                        print("📱 Setting generated code: \(code)")
                                         generatedCode = code
                                         viewModel.generatedCode = code
                                     }
@@ -224,39 +227,9 @@ struct FamilyEnrollmentView: View {
                     if showingCodeCreation {
                         VStack(spacing: 20) {
                             if let code = generatedCode {
-                                Text("Your Enrollment Code")
-                                    .font(.title2)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
-                                
-                                Text("Share this code with your co-parent")
-                                    .font(.body)
-                                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal)
-                                
-                                // Display the code prominently
-                                Text(code)
-                                    .font(.system(size: 48, weight: .bold, design: .monospaced))
-                                    .foregroundColor(themeManager.currentTheme.accentColorSwiftUI)
-                                    .padding(20)
-                                    .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
-                                    .cornerRadius(16)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 16)
-                                            .stroke(themeManager.currentTheme.accentColorSwiftUI.opacity(0.3), lineWidth: 2)
-                                    )
-                                
-                                Button(action: {
-                                    UIPasteboard.general.string = code
-                                }) {
-                                    HStack {
-                                        Image(systemName: "doc.on.doc")
-                                        Text("Copy Code")
-                                    }
-                                    .font(.footnote)
-                                    .foregroundColor(themeManager.currentTheme.accentColorSwiftUI)
-                                }
+                                // Use the new EnrollmentCodeDisplayView
+                                EnrollmentCodeDisplayView(code: code)
+                                    .environmentObject(themeManager)
                                 
                                 Button(action: {
                                     completeSignUp()
