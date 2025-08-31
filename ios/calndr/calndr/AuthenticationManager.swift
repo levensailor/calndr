@@ -239,8 +239,15 @@ class AuthenticationManager: ObservableObject {
     func completeEnrollment(familyId: String?, enrollmentCode: String?, completion: @escaping (Bool) -> Void) {
         print("🔐 AuthenticationManager: Completing enrollment with familyId: \(familyId ?? "nil") and code: \(enrollmentCode ?? "nil")")
         
-        // If we already have a token, just update enrollment status
-        if authToken != nil, let userId = userProfile?.id {
+        // Check for token in keychain directly
+        let token = KeychainManager.shared.loadToken(for: "currentUser")
+        print("🔐 AuthenticationManager: Token from keychain: \(token != nil ? "found" : "not found")")
+        
+        // If we have a token and user profile, update enrollment status
+        if token != nil, let userId = userProfile?.id {
+            // Store the token in the authToken property
+            self.authToken = token
+            
             APIService.shared.updateUserEnrollmentStatus(userId: userId, enrolled: true) { [weak self] success in
                 DispatchQueue.main.async {
                     if success {
@@ -263,7 +270,13 @@ class AuthenticationManager: ObservableObject {
             }
         } else {
             // This shouldn't happen, but handle it gracefully
-            print("🔐❌ AuthenticationManager: Cannot complete enrollment - no authentication token")
+            print("🔐❌ AuthenticationManager: Cannot complete enrollment - no authentication token or user ID")
+            if token == nil {
+                print("🔐❌ AuthenticationManager: Token is nil")
+            }
+            if userProfile?.id == nil {
+                print("🔐❌ AuthenticationManager: User ID is nil")
+            }
             completion(false)
         }
     }
