@@ -72,7 +72,7 @@ struct OnboardingStepOneView: View {
                 }
             }
             // Add keyboard toolbar with Done button
-            .toolbar {
+            .toolbar(.visible, for: .keyboard) {
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
                     Button("Done") {
