@@ -326,7 +326,9 @@ struct FamilyEnrollmentView: View {
     }
     
     private func completeSignUp() {
+        print("📱 FamilyEnrollmentView: Completing signup/enrollment")
         viewModel.completeSignUpWithFamily(authManager: authManager) { success in
+            print("📱 FamilyEnrollmentView: Signup/enrollment completed with success=\(success)")
             onEnrollmentComplete(success)
         }
     }

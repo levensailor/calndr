@@ -177,21 +177,38 @@ class SignUpViewModel: ObservableObject {
     func completeSignUpWithFamily(authManager: AuthenticationManager, completion: @escaping (Bool) -> Void) {
         isLoading = true
         
-        authManager.signUpWithFamily(
-            firstName: firstName.trimmingCharacters(in: .whitespacesAndNewlines),
-            lastName: lastName.trimmingCharacters(in: .whitespacesAndNewlines),
-            email: email.trimmingCharacters(in: .whitespacesAndNewlines),
-            password: password,
-            phoneNumber: phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines),
-            enrollmentCode: enrollmentCode,
-            familyId: familyId
-        ) { [weak self] result in
-            DispatchQueue.main.async {
-                self?.isLoading = false
-                if !result {
-                    self?.errorMessage = "Registration failed. Please check your information and try again."
+        // Check if the user is already authenticated but just needs to complete enrollment
+        if authManager.isAuthenticated {
+            print("📱 User is already authenticated, just completing enrollment")
+            // Just update the enrollment status
+            authManager.completeEnrollment(familyId: familyId, enrollmentCode: enrollmentCode) { [weak self] result in
+                DispatchQueue.main.async {
+                    self?.isLoading = false
+                    if !result {
+                        self?.errorMessage = "Failed to complete enrollment. Please try again."
+                    }
+                    completion(result)
                 }
-                completion(result)
+            }
+        } else {
+            // Full signup for new users
+            print("📱 New user signup with family")
+            authManager.signUpWithFamily(
+                firstName: firstName.trimmingCharacters(in: .whitespacesAndNewlines),
+                lastName: lastName.trimmingCharacters(in: .whitespacesAndNewlines),
+                email: email.trimmingCharacters(in: .whitespacesAndNewlines),
+                password: password,
+                phoneNumber: phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines),
+                enrollmentCode: enrollmentCode,
+                familyId: familyId
+            ) { [weak self] result in
+                DispatchQueue.main.async {
+                    self?.isLoading = false
+                    if !result {
+                        self?.errorMessage = "Registration failed. Please check your information and try again."
+                    }
+                    completion(result)
+                }
             }
         }
     }

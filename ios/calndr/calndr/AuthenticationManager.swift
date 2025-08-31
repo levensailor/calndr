@@ -236,6 +236,38 @@ class AuthenticationManager: ObservableObject {
         }
     }
     
+    func completeEnrollment(familyId: String?, enrollmentCode: String?, completion: @escaping (Bool) -> Void) {
+        print("🔐 AuthenticationManager: Completing enrollment with familyId: \(familyId ?? "nil") and code: \(enrollmentCode ?? "nil")")
+        
+        // If we already have a token, just update enrollment status
+        if authToken != nil, let userId = userProfile?.id {
+            APIService.shared.updateUserEnrollmentStatus(userId: userId, enrolled: true) { [weak self] success in
+                DispatchQueue.main.async {
+                    if success {
+                        print("🔐 AuthenticationManager: Successfully updated enrollment status")
+                        // Update local user profile
+                        if var updatedProfile = self?.userProfile {
+                            updatedProfile.enrolled = true
+                            self?.userProfile = updatedProfile
+                        }
+                        
+                        // Mark enrollment as complete and transition to the main app
+                        self?.showEnrollment = false
+                        self?.isAuthenticated = true
+                        completion(true)
+                    } else {
+                        print("🔐❌ AuthenticationManager: Failed to update enrollment status")
+                        completion(false)
+                    }
+                }
+            }
+        } else {
+            // This shouldn't happen, but handle it gracefully
+            print("🔐❌ AuthenticationManager: Cannot complete enrollment - no authentication token")
+            completion(false)
+        }
+    }
+    
     func logout() {
         print("🔐❌ AuthenticationManager: LOGOUT CALLED")
         print("🔐❌ AuthenticationManager: Call stack:")
