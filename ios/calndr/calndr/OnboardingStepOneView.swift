@@ -71,15 +71,13 @@ struct OnboardingStepOneView: View {
                 .padding()
                 }
             }
-            // Add keyboard toolbar with Done button
-            .toolbar {
-                ToolbarItemGroup(placement: .bottomBar) {
-                    Spacer()
-                    Button("Done") {
+            // Add tap gesture to dismiss keyboard instead of using toolbar
+            .gesture(
+                TapGesture()
+                    .onEnded { _ in
                         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     }
-                }
-            }
+            )
         }
         // Adjust for keyboard
         .ignoresSafeArea(.keyboard, edges: .bottom)
