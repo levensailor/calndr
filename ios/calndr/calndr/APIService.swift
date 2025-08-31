@@ -1409,6 +1409,41 @@ class APIService {
         }.resume()
     }
 
+    func updateUserEnrollmentStatus(userId: String, enrolled: Bool, completion: @escaping (Bool) -> Void) {
+        let url = baseURL.appendingPathComponent("/users/profile")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "PUT"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // Create a simple update object with just the enrolled field
+        let updateData = ["enrolled": enrolled]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: updateData)
+        } catch {
+            print("Error encoding enrollment update: \(error)")
+            completion(false)
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("Error updating enrollment status: \(error)")
+                completion(false)
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("Invalid response from server when updating enrollment")
+                completion(false)
+                return
+            }
+            
+            let success = (200...299).contains(httpResponse.statusCode)
+            completion(success)
+        }.resume()
+    }
+    
     func updateUserProfile(userUpdate: UserProfileUpdate, completion: @escaping (Result<UserProfile, Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/users/profile")
         var request = createAuthenticatedRequest(url: url)

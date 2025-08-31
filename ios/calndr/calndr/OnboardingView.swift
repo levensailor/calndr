@@ -9,6 +9,12 @@ struct OnboardingView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @StateObject private var signUpViewModel = SignUpViewModel()
     @State private var generatedCode: String? = nil
+    
+    // Initialize with the first step as family enrollment when coming from authenticated state
+    init(isOnboardingComplete: Binding<Bool>) {
+        self._isOnboardingComplete = isOnboardingComplete
+        self._currentStep = State(initialValue: 0) // Always start with family enrollment
+    }
 
     var body: some View {
         VStack {

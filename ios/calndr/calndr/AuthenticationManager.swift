@@ -7,6 +7,7 @@ class AuthenticationManager: ObservableObject {
     @Published var userProfile: UserProfile?
     @Published var hasCompletedOnboarding: Bool = true // Default to true for existing users
     @Published var authToken: String?
+    @Published var showEnrollment: Bool = false // Flag to indicate enrollment flow should be shown
     
     private var cancellables = Set<AnyCancellable>()
 
@@ -30,13 +31,16 @@ class AuthenticationManager: ObservableObject {
                             self.userProfile = profile
                             print("🔐 AuthenticationManager: Successfully fetched user profile.")
                             
-                            // Only set isAuthenticated to true if the user is enrolled
+                            // Set authentication state based on enrollment status
                             if profile.enrolled == true {
                                 self.isAuthenticated = true
+                                self.showEnrollment = false
                                 print("🔐 AuthenticationManager: User is enrolled, setting isAuthenticated = true")
                             } else {
-                                self.isAuthenticated = false
-                                print("🔐 AuthenticationManager: User is not enrolled, setting isAuthenticated = false")
+                                // User is authenticated but not enrolled - show enrollment flow
+                                self.isAuthenticated = true
+                                self.showEnrollment = true
+                                print("🔐 AuthenticationManager: User is authenticated but not enrolled, showing enrollment flow")
                             }
                         case .failure(let error):
                             print("🔐❌ AuthenticationManager: Failed to fetch user profile: \(error.localizedDescription)")
@@ -80,12 +84,16 @@ class AuthenticationManager: ObservableObject {
                         self?.isLoading = false
                         self?.userProfile = profile
                         
-                        // Only set isAuthenticated to true if the user is enrolled
+                        // Set authentication state based on enrollment status
                         if profile.enrolled == true {
                             self?.isAuthenticated = true
+                            self?.showEnrollment = false
                             print("🔐 AuthenticationManager: User is enrolled, setting isAuthenticated = true")
                         } else {
-                            print("🔐 AuthenticationManager: User is not enrolled, keeping isAuthenticated = false")
+                            // User is authenticated but not enrolled - show enrollment flow
+                            self?.isAuthenticated = true
+                            self?.showEnrollment = true
+                            print("🔐 AuthenticationManager: User is authenticated but not enrolled, showing enrollment flow")
                         }
                         
                         print("🔐 AuthenticationManager: Login complete - userProfile = \(profile)")
@@ -205,7 +213,24 @@ class AuthenticationManager: ObservableObject {
         hasCompletedOnboarding = true
         UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
         
-        // Now set isAuthenticated to true to transition to the main app
+        // Update user profile to mark enrollment as complete
+        if let userId = userProfile?.id {
+            APIService.shared.updateUserEnrollmentStatus(userId: userId, enrolled: true) { [weak self] success in
+                if success {
+                    print("🔐 AuthenticationManager: Successfully updated enrollment status")
+                    // Update local user profile
+                    if var updatedProfile = self?.userProfile {
+                        updatedProfile.enrolled = true
+                        self?.userProfile = updatedProfile
+                    }
+                } else {
+                    print("🔐❌ AuthenticationManager: Failed to update enrollment status")
+                }
+            }
+        }
+        
+        // Mark enrollment as complete and transition to the main app
+        showEnrollment = false
         if authToken != nil {
             isAuthenticated = true
         }
@@ -223,6 +248,7 @@ class AuthenticationManager: ObservableObject {
             self.isLoading = false
             self.userProfile = nil
             self.hasCompletedOnboarding = true // Reset for next user
+            self.showEnrollment = false
             UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
             print("🔐❌ AuthenticationManager: Logout complete - isAuthenticated = false")
         }
@@ -275,12 +301,16 @@ class AuthenticationManager: ObservableObject {
                 case .success(let profile):
                     self?.userProfile = profile
                     
-                    // Only set isAuthenticated to true if the user is enrolled
+                    // Set authentication state based on enrollment status
                     if profile.enrolled == true {
                         self?.isAuthenticated = true
+                        self?.showEnrollment = false
                         print("🔐 AuthenticationManager: User is enrolled, setting isAuthenticated = true")
                     } else {
-                        print("🔐 AuthenticationManager: User is not enrolled, keeping isAuthenticated = false")
+                        // User is authenticated but not enrolled - show enrollment flow
+                        self?.isAuthenticated = true
+                        self?.showEnrollment = true
+                        print("🔐 AuthenticationManager: User is authenticated but not enrolled, showing enrollment flow")
                     }
                     
                     completion(true)

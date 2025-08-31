@@ -12,6 +12,13 @@ struct ContentView: View {
                     .onAppear {
                         print("🖼️ ContentView: Showing SplashScreenView (isLoading = true)")
                     }
+            } else if authManager.isAuthenticated && authManager.showEnrollment {
+                // User is authenticated but needs to complete enrollment
+                OnboardingView(isOnboardingComplete: .constant(false))
+                    .transition(.opacity)
+                    .onAppear {
+                        print("🖼️ ContentView: Showing OnboardingView for enrollment (isAuthenticated = true, showEnrollment = true)")
+                    }
             } else if authManager.isAuthenticated {
                 MainTabView(calendarViewModel: CalendarViewModel(authManager: authManager, themeManager: themeManager))
                     .transition(.opacity)
@@ -28,6 +35,7 @@ struct ContentView: View {
         }
         .animation(.easeInOut(duration: 0.5), value: authManager.isLoading)
         .animation(.easeInOut(duration: 0.5), value: authManager.isAuthenticated)
+        .animation(.easeInOut(duration: 0.5), value: authManager.showEnrollment)
         .environmentObject(authManager)
         .environmentObject(themeManager)
         .onAppear {
