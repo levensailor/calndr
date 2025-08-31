@@ -18,116 +18,135 @@ struct OnboardingStepOneView: View {
         ZStack {
             themeManager.currentTheme.mainBackgroundColorSwiftUI.ignoresSafeArea()
             
-            VStack {
-                Text("Add Your Co-Parent")
-                    .font(.largeTitle)
-                    .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
-                    .padding()
+            // Use ScrollView to allow scrolling when keyboard appears
+            ScrollView {
+                VStack(spacing: 20) {
+                    Text("Add Your Co-Parent")
+                        .font(.largeTitle)
+                        .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+                        .padding()
+                    
+                    // Display enrollment code if available
+                    if let code = generatedCode {
+                        VStack(spacing: 8) {
+                            Text("Your Enrollment Code")
+                                .font(.headline)
+                                .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+                            
+                            Text(code)
+                                .font(.system(size: 32, weight: .bold, design: .monospaced))
+                                .foregroundColor(themeManager.currentTheme.accentColorSwiftUI)
+                                .padding(10)
+                                .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
+                                .cornerRadius(8)
+                            
+                            Text("Share this code with your co-parent")
+                                .font(.subheadline)
+                                .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
+                            
+                            Button(action: {
+                                UIPasteboard.general.string = code
+                            }) {
+                                HStack {
+                                    Image(systemName: "doc.on.doc")
+                                    Text("Copy Code")
+                                }
+                                .font(.footnote)
+                                .foregroundColor(themeManager.currentTheme.accentColorSwiftUI)
+                            }
+                            .padding(.bottom, 10)
+                        }
+                        .padding()
+                        .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(themeManager.currentTheme.accentColorSwiftUI.opacity(0.3), lineWidth: 1)
+                        )
+                        .padding(.horizontal)
+                    }
                 
-                // Display enrollment code if available
-                if let code = generatedCode {
-                    VStack(spacing: 8) {
-                        Text("Your Enrollment Code")
-                            .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
+                    VStack(spacing: 15) {
+                        FloatingLabelTextField(title: "First Name", text: $coparentFirstName, isSecure: false)
+                            .frame(height: 56)
+                            .autocapitalization(.words)
                         
-                        Text(code)
-                            .font(.system(size: 32, weight: .bold, design: .monospaced))
-                            .foregroundColor(themeManager.currentTheme.accentColorSwiftUI)
-                            .padding(10)
-                            .background(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
-                            .cornerRadius(8)
+                        FloatingLabelTextField(title: "Last Name", text: $coparentLastName, isSecure: false)
+                            .frame(height: 56)
+                            .autocapitalization(.words)
                         
-                        Text("Share this code with your co-parent")
-                            .font(.subheadline)
-                            .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
+                        FloatingLabelTextField(title: "Email", text: $coparentEmail, isSecure: false)
+                            .frame(height: 56)
+                            .keyboardType(.emailAddress)
+                            .autocapitalization(.none)
+                        
+                        FloatingLabelTextField(title: "Phone Number", text: $coparentPhone, isSecure: false)
+                            .frame(height: 56)
+                            .keyboardType(.phonePad)
+                    }
+                    .padding(.horizontal)
+                    
+                    if let errorMessage = errorMessage {
+                        Text(errorMessage)
+                            .foregroundColor(.red)
+                            .font(.footnote)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    }
+
+                    // Add spacer to push content up when keyboard appears
+                    Spacer(minLength: 80)
+                    
+                    // Navigation buttons
+                    HStack {
+                        Button(action: onSkip) {
+                            Text("Skip")
+                                .padding()
+                        }
+                        
+                        Spacer()
                         
                         Button(action: {
-                            UIPasteboard.general.string = code
+                            // Dismiss keyboard when button is tapped
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                            
+                            if allFieldsFilled() {
+                                inviteCoParent()
+                            } else {
+                                onNext("")
+                            }
                         }) {
                             HStack {
-                                Image(systemName: "doc.on.doc")
-                                Text("Copy Code")
+                                if isLoading {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                } else {
+                                    Text(allFieldsFilled() ? "Invite & Next" : "Next")
+                                }
                             }
-                            .font(.footnote)
-                            .foregroundColor(themeManager.currentTheme.accentColorSwiftUI)
+                            .padding()
+                            .background(themeManager.currentTheme.accentColorSwiftUI)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
                         }
-                        .padding(.bottom, 10)
+                        .disabled(isLoading)
                     }
                     .padding()
-                    .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(themeManager.currentTheme.accentColorSwiftUI.opacity(0.3), lineWidth: 1)
-                    )
-                    .padding(.horizontal)
                 }
-            
-            VStack(spacing: 15) {
-                FloatingLabelTextField(title: "First Name", text: $coparentFirstName, isSecure: false)
-                    .frame(height: 56)
-                    .autocapitalization(.words)
-                
-                FloatingLabelTextField(title: "Last Name", text: $coparentLastName, isSecure: false)
-                    .frame(height: 56)
-                    .autocapitalization(.words)
-                
-                FloatingLabelTextField(title: "Email", text: $coparentEmail, isSecure: false)
-                    .frame(height: 56)
-                    .keyboardType(.emailAddress)
-                    .autocapitalization(.none)
-                
-                FloatingLabelTextField(title: "Phone Number", text: $coparentPhone, isSecure: false)
-                    .frame(height: 56)
-                    .keyboardType(.phonePad)
+                .padding()
             }
-            .padding(.horizontal)
-            
-            if let errorMessage = errorMessage {
-                Text(errorMessage)
-                    .foregroundColor(.red)
-                    .font(.footnote)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-            }
-
-            HStack {
-                Button(action: onSkip) {
-                    Text("Skip")
-                        .padding()
-                }
-                
-                Spacer()
-                
-                Button(action: {
-                    if allFieldsFilled() {
-                        inviteCoParent()
-                    } else {
-                        onNext("")
+            // Add keyboard toolbar with Done button
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     }
-                }) {
-                    HStack {
-                        if isLoading {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        } else {
-                            Text(allFieldsFilled() ? "Invite & Next" : "Next")
-                        }
-                    }
-                    .padding()
-                    .background(themeManager.currentTheme.accentColorSwiftUI)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
                 }
-                .disabled(isLoading)
             }
-            .padding()
-            
-            Spacer()
-            }
-            .padding()
         }
+        // Adjust for keyboard
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .alert("Invitation Result", isPresented: $showingAlert) {
             Button("OK") {
                 onNext(coparentFirstName.trimmingCharacters(in: .whitespacesAndNewlines))
