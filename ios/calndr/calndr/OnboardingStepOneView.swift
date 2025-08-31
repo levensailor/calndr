@@ -8,7 +8,15 @@ struct OnboardingStepOneView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var showingAlert = false
+    @State private var activeField: Field? = nil
+    @State private var scrollProxy: ScrollViewProxy? = nil
+    @State private var keyboardHeight: CGFloat = 0
     @EnvironmentObject var themeManager: ThemeManager
+    
+    // Enum to track which field is active
+    enum Field: Int, Hashable {
+        case firstName, lastName, email, phone
+    }
 
     var onNext: (String) -> Void  // Pass coparent first name
     var onSkip: () -> Void
@@ -18,8 +26,15 @@ struct OnboardingStepOneView: View {
         ZStack {
             themeManager.currentTheme.mainBackgroundColorSwiftUI.ignoresSafeArea()
             
-            // Use ScrollView to allow scrolling when keyboard appears
+            // Use ScrollView with ScrollViewReader to programmatically scroll to active field
             ScrollView {
+                ScrollViewProxy { proxy in
+                    // Store the proxy for later use
+                    if scrollProxy == nil {
+                        DispatchQueue.main.async {
+                            scrollProxy = proxy
+                        }
+                    }
                 VStack(spacing: 20) {
                     Text("Add Your Co-Parent")
                         .font(.largeTitle)
@@ -67,22 +82,50 @@ struct OnboardingStepOneView: View {
                     }
                 
                     VStack(spacing: 15) {
-                        FloatingLabelTextField(title: "First Name", text: $coparentFirstName, isSecure: false)
+                        // First Name field with ID for scrolling
+                        CustomTextField(title: "First Name", text: $coparentFirstName, field: .firstName, activeField: $activeField)
+                            .id(Field.firstName)
                             .frame(height: 56)
                             .autocapitalization(.words)
+                            .onChange(of: activeField) { oldValue, newValue in
+                                if newValue == .firstName {
+                                    scrollToField(.firstName)
+                                }
+                            }
                         
-                        FloatingLabelTextField(title: "Last Name", text: $coparentLastName, isSecure: false)
+                        // Last Name field with ID for scrolling
+                        CustomTextField(title: "Last Name", text: $coparentLastName, field: .lastName, activeField: $activeField)
+                            .id(Field.lastName)
                             .frame(height: 56)
                             .autocapitalization(.words)
+                            .onChange(of: activeField) { oldValue, newValue in
+                                if newValue == .lastName {
+                                    scrollToField(.lastName)
+                                }
+                            }
                         
-                        FloatingLabelTextField(title: "Email", text: $coparentEmail, isSecure: false)
+                        // Email field with ID for scrolling
+                        CustomTextField(title: "Email", text: $coparentEmail, field: .email, activeField: $activeField)
+                            .id(Field.email)
                             .frame(height: 56)
                             .keyboardType(.emailAddress)
                             .autocapitalization(.none)
+                            .onChange(of: activeField) { oldValue, newValue in
+                                if newValue == .email {
+                                    scrollToField(.email)
+                                }
+                            }
                         
-                        FloatingLabelTextField(title: "Phone Number", text: $coparentPhone, isSecure: false)
+                        // Phone field with ID for scrolling
+                        CustomTextField(title: "Phone Number", text: $coparentPhone, field: .phone, activeField: $activeField)
+                            .id(Field.phone)
                             .frame(height: 56)
                             .keyboardType(.phonePad)
+                            .onChange(of: activeField) { oldValue, newValue in
+                                if newValue == .phone {
+                                    scrollToField(.phone)
+                                }
+                            }
                     }
                     .padding(.horizontal)
                     
@@ -134,6 +177,7 @@ struct OnboardingStepOneView: View {
                     .padding()
                 }
                 .padding()
+                }
             }
             // Add keyboard toolbar with Done button
             .toolbar {
@@ -147,6 +191,25 @@ struct OnboardingStepOneView: View {
         }
         // Adjust for keyboard
         .ignoresSafeArea(.keyboard, edges: .bottom)
+        // Add keyboard observer
+        .onAppear {
+            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
+                if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                    keyboardHeight = keyboardFrame.height
+                    // Scroll to active field when keyboard appears
+                    if let field = activeField {
+                        scrollToField(field)
+                    }
+                }
+            }
+            
+            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
+                keyboardHeight = 0
+            }
+        }
+        .onDisappear {
+            NotificationCenter.default.removeObserver(self)
+        }
         .alert("Invitation Result", isPresented: $showingAlert) {
             Button("OK") {
                 onNext(coparentFirstName.trimmingCharacters(in: .whitespacesAndNewlines))
@@ -188,4 +251,32 @@ struct OnboardingStepOneView: View {
             }
         }
     }
+    
+    // Function to scroll to the active field
+    private func scrollToField(_ field: Field) {
+        withAnimation {
+            scrollProxy?.scrollTo(field, anchor: .center)
+        }
+    }
+}
+
+// Custom TextField that tracks focus state
+struct CustomTextField: View {
+    let title: String
+    @Binding var text: String
+    let field: OnboardingStepOneView.Field
+    @Binding var activeField: OnboardingStepOneView.Field?
+    @FocusState private var isFocused: Bool
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    var body: some View {
+        FloatingLabelTextField(title: title, text: $text, isSecure: false)
+            .focused($isFocused)
+            .onChange(of: isFocused) { oldValue, newValue in
+                if newValue {
+                    activeField = field
+                }
+            }
+    }
+}
 }
