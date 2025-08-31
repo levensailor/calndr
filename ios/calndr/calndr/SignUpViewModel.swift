@@ -179,13 +179,13 @@ class SignUpViewModel: ObservableObject {
         
         // Check if the user is already authenticated but just needs to complete enrollment
         if authManager.isAuthenticated {
-            print("📱 User is already authenticated, just completing enrollment")
-            // Just update the enrollment status
+            print("📱 User is already authenticated, just continuing with enrollment")
+            // Don't mark as fully enrolled yet, just associate with family
             authManager.completeEnrollment(familyId: familyId, enrollmentCode: enrollmentCode) { [weak self] result in
                 DispatchQueue.main.async {
                     self?.isLoading = false
                     if !result {
-                        self?.errorMessage = "Failed to complete enrollment. Please try again."
+                        self?.errorMessage = "Failed to continue enrollment. Please try again."
                     }
                     completion(result)
                 }

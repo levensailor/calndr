@@ -248,26 +248,18 @@ class AuthenticationManager: ObservableObject {
             // Store the token in the authToken property
             self.authToken = token
             
-            APIService.shared.updateUserEnrollmentStatus(userId: userId, enrolled: true) { [weak self] success in
-                DispatchQueue.main.async {
-                    if success {
-                        print("🔐 AuthenticationManager: Successfully updated enrollment status")
-                        // Update local user profile
-                        if var updatedProfile = self?.userProfile {
-                            updatedProfile.enrolled = true
-                            self?.userProfile = updatedProfile
-                        }
-                        
-                        // Mark enrollment as complete and transition to the main app
-                        self?.showEnrollment = false
-                        self?.isAuthenticated = true
-                        completion(true)
-                    } else {
-                        print("🔐❌ AuthenticationManager: Failed to update enrollment status")
-                        completion(false)
-                    }
-                }
+            // For enrollment, we don't mark the user as fully enrolled yet
+            // We'll just update the family ID and continue with onboarding
+            // The enrolled flag will be set to true after completing all onboarding steps
+            
+            // We're just associating the user with the family at this point
+            if let familyId = familyId {
+                print("🔐 AuthenticationManager: Associating user with family ID: \(familyId)")
+                // Here we could update the user's family_id in the backend if needed
             }
+            
+            // Return success to continue with onboarding
+            completion(true)
         } else {
             // This shouldn't happen, but handle it gracefully
             print("🔐❌ AuthenticationManager: Cannot complete enrollment - no authentication token or user ID")
