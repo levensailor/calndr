@@ -944,3 +944,4 @@ GET /api/v1/events/daycare/?start_date=2025-07-01&end_date=2025-07-31
 - Updated `FocusedDayView.swift` to use `TextEditor` instead of multiple `TextField` components
 - Modified `CalendarViewModel.swift` methods to work without position dependency
 - Updated event filtering across `DayView`, `ThreeDayView`, and `2025-08-31 12:22:36 AM: Added feature to direct users to enrollment flow when authenticated but not enrolled
+2025-08-31 11:08:07 AM: Fixed import error in enrollment.py by using relative imports instead of absolute imports
