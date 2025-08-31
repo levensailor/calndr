@@ -33,11 +33,11 @@ struct OnboardingStepOneView: View {
             ScrollView(.vertical, showsIndicators: true) {
                 ScrollViewReader { proxy in
                     // Store the proxy for later use
-                    if scrollProxy == nil {
-                        DispatchQueue.main.async {
+                    // Use onAppear instead of direct assignment to avoid View builder issues
+                    Color.clear
+                        .onAppear {
                             scrollProxy = proxy
                         }
-                    }
                 VStack(spacing: 20) {
                     Text("Add Your Co-Parent")
                         .font(.largeTitle)
