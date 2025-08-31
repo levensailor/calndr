@@ -4,6 +4,9 @@ set -euo pipefail
 # Sync backend code from this monorepo to the dedicated backend repo (calndrclub)
 # - Source:   <monorepo>/backend/backend/
 # - Target:   <calndrclub_repo>/backend/
+#
+# This script ensures that only backend files are tracked in the calndrclub repository
+# and that frontend code from calndr is not included.
 
 SRC_DIR="$(cd "$(dirname "$0")/.." && pwd)"  # monorepo root
 SRC_BACKEND_DIR="$SRC_DIR/backend/backend"
@@ -44,6 +47,9 @@ git pull --rebase origin main
 mkdir -p "$TARGET_BACKEND_DIR"
 mkdir -p "$TARGET_REPO_DIR/.github/workflows"
 
+# Clear any frontend files that might have been accidentally synced
+find "$TARGET_REPO_DIR" -type f -not -path "*/\.*" -not -path "*/backend/*" -not -path "*/.github/workflows/*" -not -name "README.md" -not -name "CHANGELOG.md" -not -name "LICENSE" | grep -v -E '(deploy|setup|terraform|nginx)' | xargs rm -f 2>/dev/null || true
+
 echo "[sync] Rsyncing files into $TARGET_BACKEND_DIR ..."
 rsync -av --delete \
   --exclude='.git' \
@@ -52,6 +58,9 @@ rsync -av --delete \
   --exclude='venv' \
   --exclude='.venv' \
   --exclude='logs' \
+  --exclude='frontend' \
+  --exclude='vue-app' \
+  --exclude='ios' \
   "$SRC_BACKEND_DIR/" "$TARGET_BACKEND_DIR/"
 
 if [ -d "$SRC_WORKFLOWS_DIR" ]; then
@@ -65,10 +74,18 @@ if ! git diff --quiet; then
   MONOREPO_HEAD_SHA=$(git -C "$SRC_DIR" rev-parse --short HEAD || echo "unknown")
   COMMIT_MSG="chore(sync): mirror backend from monorepo (calndr) @ $MONOREPO_HEAD_SHA"
   echo "[sync] Committing changes: $COMMIT_MSG"
+  
+  # Only add backend files and workflows, not frontend files
   git add backend .github/workflows || true
-  git commit -m "$COMMIT_MSG"
-  echo "[sync] Pushing to origin/main ..."
-  git push origin main
+  
+  # Check if there are any staged changes
+  if git diff --cached --quiet; then
+    echo "[sync] No backend changes to commit."
+  else
+    git commit -m "$COMMIT_MSG"
+    echo "[sync] Pushing to origin/main ..."
+    git push origin main
+  fi
 else
   echo "[sync] No changes to commit."
 fi
