@@ -72,8 +72,8 @@ struct OnboardingStepOneView: View {
                 }
             }
             // Add keyboard toolbar with Done button
-            .toolbar(.visible, for: .keyboard) {
-                ToolbarItemGroup(placement: .keyboard) {
+            .toolbar {
+                ToolbarItemGroup(placement: .bottomBar) {
                     Spacer()
                     Button("Done") {
                         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
