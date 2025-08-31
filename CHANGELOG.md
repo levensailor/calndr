@@ -946,3 +946,4 @@ GET /api/v1/events/daycare/?start_date=2025-07-01&end_date=2025-07-31
 - Updated event filtering across `DayView`, `ThreeDayView`, and `2025-08-31 12:22:36 AM: Added feature to direct users to enrollment flow when authenticated but not enrolled
 2025-08-31 11:08:07 AM: Fixed import error in enrollment.py by using relative imports instead of absolute imports
 2025-08-31 11:51:40 AM: Fixed absolute import in schemas/enrollment.py causing 500 error in enrollment code creation
+2025-08-31 12:09:02 PM: Fixed enrollment.py to use database object directly instead of get_db dependency
