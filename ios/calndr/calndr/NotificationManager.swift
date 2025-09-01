@@ -33,6 +33,53 @@ class NotificationManager {
                 print("Successfully sent device token to server.")
             case .failure(let error):
                 print("Error sending device token to server: \(error.localizedDescription)")
+                
+                // Check if this is the specific endpoint already exists error
+                if let deviceError = error as? APIService.DeviceRegistrationError {
+                    switch deviceError {
+                    case .endpointAlreadyExists(let endpointArn):
+                        self.handleExistingEndpoint(endpointArn: endpointArn, token: tokenString)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func handleExistingEndpoint(endpointArn: String, token: String) {
+        DispatchQueue.main.async {
+            // Show an alert to the user
+            let alertController = UIAlertController(
+                title: "Device Already Registered",
+                message: "It looks like this device is already enrolled for Apple push notifications. Do you wish to enroll this account instead?",
+                preferredStyle: .alert
+            )
+            
+            alertController.addAction(UIAlertAction(title: "Yes", style: .default) { _ in
+                // User wants to update the endpoint to use their account
+                self.updateExistingEndpoint(endpointArn: endpointArn, token: token)
+            })
+            
+            alertController.addAction(UIAlertAction(title: "No", style: .cancel))
+            
+            // Find the top-most view controller to present the alert
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let rootViewController = windowScene.windows.first?.rootViewController {
+                var topController = rootViewController
+                while let presentedController = topController.presentedViewController {
+                    topController = presentedController
+                }
+                topController.present(alertController, animated: true)
+            }
+        }
+    }
+    
+    private func updateExistingEndpoint(endpointArn: String, token: String) {
+        apiService.updateExistingDeviceEndpoint(endpointArn: endpointArn, token: token) { result in
+            switch result {
+            case .success:
+                print("Successfully updated existing endpoint to use current account.")
+            case .failure(let error):
+                print("Error updating existing endpoint: \(error.localizedDescription)")
             }
         }
     }
@@ -147,4 +194,4 @@ class NotificationManager {
             return nil
         }
     }
-} 
+}
