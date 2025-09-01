@@ -71,6 +71,8 @@ struct OnboardingView: View {
                     coparentName: coparentName.isEmpty ? nil : coparentName,
                     onComplete: {
                         // Complete onboarding and transition to main app
+                        // Note: The custody records are already created in OnboardingStepThreeView
+                        // before this callback is triggered
                         authManager.completeOnboarding()
                         isOnboardingComplete = true
                     }

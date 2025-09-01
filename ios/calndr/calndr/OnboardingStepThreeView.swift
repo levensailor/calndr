@@ -365,15 +365,20 @@ struct OnboardingStepThreeView: View {
                 isLoading = false
                 
                 switch result {
-                case .success(let response):
-                    print("✅ Bulk custody creation successful: \(response.message)")
-                    print("✅ Created \(response.records_created) custody records")
-                    onComplete()
-                case .failure(let error):
-                    print("❌ Bulk custody creation failed: \(error.localizedDescription)")
-                    errorMessage = "Failed to save custody schedule. Please try again or set up your schedule manually later."
-                    // Still complete onboarding even if bulk save failed
-                    onComplete()
+                                                case .success(let response):
+                                    print("✅ Bulk custody creation successful: \(response.message)")
+                                    print("✅ Created \(response.records_created) custody records")
+                                    // Ensure records are created before transitioning to main app
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                        onComplete()
+                                    }
+                                case .failure(let error):
+                                    print("❌ Bulk custody creation failed: \(error.localizedDescription)")
+                                    errorMessage = "Failed to save custody schedule. Please try again or set up your schedule manually later."
+                                    // Still complete onboarding even if bulk save failed, but with a delay
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                                        onComplete()
+                                    }
                 }
             }
         }
