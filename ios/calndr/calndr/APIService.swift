@@ -138,12 +138,12 @@ struct TokenResponse: Codable {
 
 class APIService {
     static let shared = APIService()
-    private let baseURL = URL(string: "https://staging.calndr.club/api/v1")!
+    let baseURL = URL(string: "https://staging.calndr.club/api/v1")!
 
     private init() {}
 
     // Helper function to create an authenticated request
-    private func createAuthenticatedRequest(url: URL) -> URLRequest {
+    func createAuthenticatedRequest(url: URL) -> URLRequest {
         var request = URLRequest(url: url)
         print("🔐 APIService: Creating authenticated request for: \(url.path)")
         
@@ -1513,6 +1513,25 @@ class APIService {
             if httpResponse.statusCode == 401 {
                 completion(.failure(APIError.unauthorized))
                 return
+            }
+
+            // Check for the specific 500 error with InvalidParameter about endpoint already existing
+            if httpResponse.statusCode == 500, let data = data {
+                if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let detail = errorJson["detail"] as? String,
+                   detail.contains("InvalidParameter") && detail.contains("Endpoint already exists") {
+                    
+                    // Extract the endpoint ARN if available
+                    let pattern = "arn:aws:sns:[^\\s]*"
+                    if let regex = try? NSRegularExpression(pattern: pattern),
+                       let match = regex.firstMatch(in: detail, range: NSRange(detail.startIndex..., in: detail)) {
+                        let endpointArn = String(detail[Range(match.range, in: detail)!])
+                        completion(.failure(DeviceRegistrationError.endpointAlreadyExists(endpointArn: endpointArn)))
+                    } else {
+                        completion(.failure(DeviceRegistrationError.endpointAlreadyExists(endpointArn: "")))
+                    }
+                    return
+                }
             }
 
             guard (200...299).contains(httpResponse.statusCode) else {
