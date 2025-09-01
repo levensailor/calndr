@@ -20,6 +20,7 @@ struct OnboardingStepOneView: View {
 
     var onNext: (String) -> Void  // Pass coparent first name
     var onSkip: () -> Void
+    var onBack: () -> Void  // Go back to previous step
     var generatedCode: String? // Optional enrollment code to display
 
     var body: some View {
@@ -237,6 +238,16 @@ struct OnboardingStepOneView: View {
     @ViewBuilder
     private func navigationButtonsView() -> some View {
         HStack {
+            Button(action: onBack) {
+                HStack {
+                    Image(systemName: "chevron.left")
+                    Text("Back")
+                }
+                .padding()
+            }
+            
+            Spacer()
+            
             Button(action: onSkip) {
                 Text("Skip")
                     .padding()

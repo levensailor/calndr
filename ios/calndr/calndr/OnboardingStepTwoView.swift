@@ -10,6 +10,7 @@ struct OnboardingStepTwoView: View {
 
     var onNext: () -> Void
     var onSkip: () -> Void
+    var onBack: () -> Void
 
     var body: some View {
         ZStack {
@@ -65,6 +66,16 @@ struct OnboardingStepTwoView: View {
             }
 
             HStack {
+                Button(action: onBack) {
+                    HStack {
+                        Image(systemName: "chevron.left")
+                        Text("Back")
+                    }
+                    .padding()
+                }
+                
+                Spacer()
+                
                 Button(action: onSkip) {
                     Text("Skip")
                         .padding()

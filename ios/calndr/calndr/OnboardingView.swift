@@ -10,6 +10,13 @@ struct OnboardingView: View {
     @StateObject private var signUpViewModel = SignUpViewModel()
     @State private var generatedCode: String? = nil
     
+    // Function to go back to the previous step
+    private func goBack() {
+        if currentStep > 0 {
+            currentStep -= 1
+        }
+    }
+    
     // Initialize with the first step as family enrollment when coming from authenticated state
     init(isOnboardingComplete: Binding<Bool>) {
         self._isOnboardingComplete = isOnboardingComplete
@@ -53,6 +60,7 @@ struct OnboardingView: View {
                         coparentName = ""
                         currentStep = 2
                     },
+                    onBack: goBack,
                     generatedCode: generatedCode
                 )
                 .environmentObject(themeManager)
@@ -62,7 +70,7 @@ struct OnboardingView: View {
                     currentStep = 3
                 }, onSkip: {
                     currentStep = 3
-                })
+                }, onBack: goBack)
                 .environmentObject(themeManager)
             } else if currentStep == 3 {
                 // Step 3: Final step (original step 3)
@@ -75,7 +83,8 @@ struct OnboardingView: View {
                         // before this callback is triggered
                         authManager.completeOnboarding()
                         isOnboardingComplete = true
-                    }
+                    },
+                    onBack: goBack
                 )
                 .environmentObject(themeManager)
             }

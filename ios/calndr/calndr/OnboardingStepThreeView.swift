@@ -23,11 +23,13 @@ struct OnboardingStepThreeView: View {
     let primaryParentName: String
     let coparentName: String?
     var onComplete: () -> Void
+    var onBack: () -> Void
     
-    init(primaryParentName: String, coparentName: String?, onComplete: @escaping () -> Void) {
+    init(primaryParentName: String, coparentName: String?, onComplete: @escaping () -> Void, onBack: @escaping () -> Void) {
         self.primaryParentName = primaryParentName
         self.coparentName = coparentName
         self.onComplete = onComplete
+        self.onBack = onBack
         
         // Initialize parent names based on the provided data
         self._parentNames = State(initialValue: [
@@ -46,6 +48,18 @@ struct OnboardingStepThreeView: View {
             
             ScrollView {
                 VStack(spacing: 20) {
+                        HStack {
+                        Button(action: onBack) {
+                            HStack {
+                                Image(systemName: "chevron.left")
+                                Text("Back")
+                            }
+                        }
+                        
+                        Spacer()
+                    }
+                    .padding(.horizontal)
+                    
                     Text("Set Your Custody Schedule")
                         .font(.largeTitle)
                         .fontWeight(.bold)
