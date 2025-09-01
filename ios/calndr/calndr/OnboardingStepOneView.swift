@@ -99,31 +99,70 @@ struct OnboardingStepOneView: View {
     private func allFieldsFilled() -> Bool {
         return !coparentFirstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
                !coparentLastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-               !coparentEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+               !coparentEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+               !coparentPhone.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
     
     private func inviteCoParent() {
         isLoading = true
         errorMessage = nil
         
-        let phoneNumber = coparentPhone.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : coparentPhone.trimmingCharacters(in: .whitespacesAndNewlines)
+        // First, update the enrollment code with coparent information
+        if let code = generatedCode {
+            // Update the enrollment code with coparent information
+            let firstName = coparentFirstName.trimmingCharacters(in: .whitespacesAndNewlines)
+            let lastName = coparentLastName.trimmingCharacters(in: .whitespacesAndNewlines)
+            let email = coparentEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+            let phone = coparentPhone.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // Create a new enrollment code with coparent information
+            SignUpViewModel().createEnrollmentCode(
+                coparentFirstName: firstName,
+                coparentLastName: lastName,
+                coparentEmail: email,
+                coparentPhone: phone
+            ) { success, newCode in
+                if success {
+                    // Now send the invitation
+                    self.sendInvitation(firstName: firstName, lastName: lastName, email: email, phone: phone)
+                } else {
+                    DispatchQueue.main.async {
+                        self.isLoading = false
+                        self.errorMessage = "Failed to update enrollment information"
+                        self.showingAlert = true
+                    }
+                }
+            }
+        } else {
+            // No code generated yet, just send the invitation
+            let firstName = coparentFirstName.trimmingCharacters(in: .whitespacesAndNewlines)
+            let lastName = coparentLastName.trimmingCharacters(in: .whitespacesAndNewlines)
+            let email = coparentEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+            let phone = coparentPhone.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            sendInvitation(firstName: firstName, lastName: lastName, email: email, phone: phone)
+        }
+    }
+    
+    private func sendInvitation(firstName: String, lastName: String, email: String, phone: String?) {
+        let phoneNumber = phone?.isEmpty == true ? nil : phone
         
         APIService.shared.inviteCoParent(
-            firstName: coparentFirstName.trimmingCharacters(in: .whitespacesAndNewlines),
-            lastName: coparentLastName.trimmingCharacters(in: .whitespacesAndNewlines),
-            email: coparentEmail.trimmingCharacters(in: .whitespacesAndNewlines),
+            firstName: firstName,
+            lastName: lastName,
+            email: email,
             phoneNumber: phoneNumber
         ) { result in
             DispatchQueue.main.async {
-                isLoading = false
+                self.isLoading = false
                 
                 switch result {
                 case .success(_):
-                    errorMessage = nil
-                    showingAlert = true
+                    self.errorMessage = nil
+                    self.showingAlert = true
                 case .failure(let error):
-                    errorMessage = error.localizedDescription
-                    showingAlert = true
+                    self.errorMessage = error.localizedDescription
+                    self.showingAlert = true
                 }
             }
         }
@@ -248,12 +287,7 @@ struct OnboardingStepOneView: View {
             
             Spacer()
             
-            Button(action: onSkip) {
-                Text("Skip")
-                    .padding()
-            }
-            
-            Spacer()
+            // Remove Skip button - coparent information is now required
             
             Button(action: {
                 // Dismiss keyboard when button is tapped
@@ -262,7 +296,8 @@ struct OnboardingStepOneView: View {
                 if allFieldsFilled() {
                     inviteCoParent()
                 } else {
-                    onNext("")
+                    // Show error message if fields are not filled
+                    errorMessage = "Please fill in all required fields"
                 }
             }) {
                 HStack {
@@ -270,15 +305,15 @@ struct OnboardingStepOneView: View {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                     } else {
-                        Text(allFieldsFilled() ? "Invite & Next" : "Next")
+                        Text("Invite & Next")
                     }
                 }
                 .padding()
-                .background(themeManager.currentTheme.accentColorSwiftUI)
+                .background(allFieldsFilled() ? themeManager.currentTheme.accentColorSwiftUI : themeManager.currentTheme.accentColorSwiftUI.opacity(0.5))
                 .foregroundColor(.white)
                 .cornerRadius(8)
             }
-            .disabled(isLoading)
+            .disabled(isLoading || !allFieldsFilled())
         }
         .padding()
     }

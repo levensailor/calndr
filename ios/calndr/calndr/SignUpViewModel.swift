@@ -83,7 +83,7 @@ class SignUpViewModel: ObservableObject {
         return true
     }
     
-    func createEnrollmentCode(completion: @escaping (Bool, String?) -> Void) {
+    func createEnrollmentCode(coparentFirstName: String? = nil, coparentLastName: String? = nil, coparentEmail: String? = nil, coparentPhone: String? = nil, completion: @escaping (Bool, String?) -> Void) {
         isLoading = true
         errorMessage = nil
         
@@ -91,7 +91,12 @@ class SignUpViewModel: ObservableObject {
         print("📱 Creating enrollment code...")
         
         // Use the debug version of the API call
-        APIService.shared.debugCreateEnrollmentCode { [weak self] result in
+        APIService.shared.debugCreateEnrollmentCode(
+            coparentFirstName: coparentFirstName,
+            coparentLastName: coparentLastName,
+            coparentEmail: coparentEmail,
+            coparentPhone: coparentPhone
+        ) { [weak self] result in
             DispatchQueue.main.async {
                 self?.isLoading = false
                 

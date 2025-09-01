@@ -3570,7 +3570,7 @@ class APIService {
     
     // MARK: - Family Enrollment
     
-    func createEnrollmentCode(completion: @escaping (Result<EnrollmentCodeResponse, Error>) -> Void) {
+    func createEnrollmentCode(coparentFirstName: String? = nil, coparentLastName: String? = nil, coparentEmail: String? = nil, coparentPhone: String? = nil, completion: @escaping (Result<EnrollmentCodeResponse, Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/enrollment/create-code")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -3582,6 +3582,34 @@ class APIService {
         } else {
             completion(.failure(APIError.notAuthenticated))
             return
+        }
+        
+        // Add coparent information to the request body if provided
+        if coparentFirstName != nil || coparentLastName != nil || coparentEmail != nil || coparentPhone != nil {
+            var body: [String: Any] = [:]
+            
+            if let firstName = coparentFirstName {
+                body["coparent_first_name"] = firstName
+            }
+            
+            if let lastName = coparentLastName {
+                body["coparent_last_name"] = lastName
+            }
+            
+            if let email = coparentEmail {
+                body["coparent_email"] = email
+            }
+            
+            if let phone = coparentPhone {
+                body["coparent_phone"] = phone
+            }
+            
+            do {
+                request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            } catch {
+                completion(.failure(error))
+                return
+            }
         }
         
         URLSession.shared.dataTask(with: request) { data, response, error in
