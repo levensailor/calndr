@@ -52,7 +52,9 @@ struct OnboardingView: View {
                         coparentName = coparentFirstName
                         // Email the code to co-parent if we have one
                         if let code = generatedCode {
-                            signUpViewModel.emailEnrollmentCode(to: coparentFirstName, code: code)
+                            // Get the email from OnboardingStepOneView
+                            let email = (parent.viewController?.view.viewWithTag(1001) as? UITextField)?.text ?? ""
+                            signUpViewModel.emailEnrollmentCode(to: coparentFirstName, code: code, email: email)
                         }
                         currentStep = 2
                     }, 

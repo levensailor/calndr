@@ -22,6 +22,9 @@ struct OnboardingStepOneView: View {
     var onSkip: () -> Void
     var onBack: () -> Void  // Go back to previous step
     var generatedCode: String? // Optional enrollment code to display
+    
+    // Store a reference to the SignUpViewModel to update coparentEmail
+    @EnvironmentObject var signUpViewModel: SignUpViewModel
 
     var body: some View {
         // Extract the background color to simplify the expression
@@ -115,8 +118,11 @@ struct OnboardingStepOneView: View {
             let email = coparentEmail.trimmingCharacters(in: .whitespacesAndNewlines)
             let phone = coparentPhone.trimmingCharacters(in: .whitespacesAndNewlines)
             
+            // Update the SignUpViewModel's coparentEmail
+            signUpViewModel.coparentEmail = email
+            
             // Create a new enrollment code with coparent information
-            SignUpViewModel().createEnrollmentCode(
+            signUpViewModel.createEnrollmentCode(
                 coparentFirstName: firstName,
                 coparentLastName: lastName,
                 coparentEmail: email,
@@ -139,6 +145,9 @@ struct OnboardingStepOneView: View {
             let lastName = coparentLastName.trimmingCharacters(in: .whitespacesAndNewlines)
             let email = coparentEmail.trimmingCharacters(in: .whitespacesAndNewlines)
             let phone = coparentPhone.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // Update the SignUpViewModel's coparentEmail
+            signUpViewModel.coparentEmail = email
             
             sendInvitation(firstName: firstName, lastName: lastName, email: email, phone: phone)
         }

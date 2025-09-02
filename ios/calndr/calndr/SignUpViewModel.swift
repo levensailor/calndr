@@ -231,23 +231,28 @@ class SignUpViewModel: ObservableObject {
         return digits.count == 10 || (digits.count == 11 && digits.hasPrefix("1"))
     }
     
-    func emailEnrollmentCode(to coparentName: String, code: String) {
-        guard let coparentEmail = self.coparentEmail.trimmingCharacters(in: .whitespacesAndNewlines),
-              !coparentEmail.isEmpty else {
+    // Add coparent email property to store email address for sending invitation
+    @Published var coparentEmail: String = ""
+    
+    func emailEnrollmentCode(to coparentName: String, code: String, email: String? = nil) {
+        // Use provided email or stored coparentEmail
+        let emailToUse = email ?? coparentEmail
+        
+        guard !emailToUse.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty else {
             print("📧❌ Cannot send enrollment code email: no email address provided")
             return
         }
         
         isLoading = true
-        print("📧 Sending enrollment code \(code) to co-parent \(coparentName) at \(coparentEmail)")
+        print("📧 Sending enrollment code \(code) to co-parent \(coparentName) at \(emailToUse)")
         
-        APIService.shared.sendEnrollmentCodeEmail(to: coparentEmail, name: coparentName, code: code) { [weak self] result in
+        APIService.shared.sendEnrollmentCodeEmail(to: emailToUse, name: coparentName, code: code) { [weak self] result in
             DispatchQueue.main.async {
                 self?.isLoading = false
                 
                 switch result {
                 case .success:
-                    print("📧✅ Successfully sent enrollment code email to \(coparentName) at \(coparentEmail)")
+                    print("📧✅ Successfully sent enrollment code email to \(coparentName) at \(emailToUse)")
                 case .failure(let error):
                     print("📧❌ Failed to send enrollment code email: \(error.localizedDescription)")
                     self?.errorMessage = "Failed to send invitation email: \(error.localizedDescription)"
