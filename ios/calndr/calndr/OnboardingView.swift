@@ -52,9 +52,7 @@ struct OnboardingView: View {
                         coparentName = coparentFirstName
                         // Email the code to co-parent if we have one
                         if let code = generatedCode {
-                            // Get the email from OnboardingStepOneView
-                            let email = (parent.viewController?.view.viewWithTag(1001) as? UITextField)?.text ?? ""
-                            signUpViewModel.emailEnrollmentCode(to: coparentFirstName, code: code, email: email)
+                            signUpViewModel.emailEnrollmentCode(to: coparentFirstName, code: code)
                         }
                         currentStep = 2
                     }, 
@@ -66,6 +64,7 @@ struct OnboardingView: View {
                     generatedCode: generatedCode
                 )
                 .environmentObject(themeManager)
+                .environmentObject(signUpViewModel)
             } else if currentStep == 2 {
                 // Step 2: Schedule setup (original step 2)
                 OnboardingStepTwoView(onNext: {
