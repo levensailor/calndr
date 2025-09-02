@@ -3570,6 +3570,52 @@ class APIService {
     
     // MARK: - Family Enrollment
     
+    func sendEnrollmentCodeEmail(to email: String, name: String, code: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        let url = baseURL.appendingPathComponent("/enrollment/send-code-email")
+        var request = createAuthenticatedRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: String] = [
+            "email": email,
+            "name": name,
+            "code": code
+        ]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(APIError.invalidResponse))
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                // Try to parse error message
+                if let data = data,
+                   let errorData = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let detail = errorData["detail"] as? String {
+                    completion(.failure(NSError(domain: "APIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: detail])))
+                } else {
+                    completion(.failure(APIError.requestFailed(statusCode: httpResponse.statusCode)))
+                }
+                return
+            }
+            
+            completion(.success(()))
+        }.resume()
+    }
+    
     func createEnrollmentCode(coparentFirstName: String? = nil, coparentLastName: String? = nil, coparentEmail: String? = nil, coparentPhone: String? = nil, completion: @escaping (Result<EnrollmentCodeResponse, Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/enrollment/create-code")
         var request = URLRequest(url: url)

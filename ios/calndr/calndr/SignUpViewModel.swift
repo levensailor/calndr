@@ -232,13 +232,27 @@ class SignUpViewModel: ObservableObject {
     }
     
     func emailEnrollmentCode(to coparentName: String, code: String) {
-        // This would typically call an API endpoint to send an email with the enrollment code
-        // For now, we'll just print to the console
-        print("📧 Would send enrollment code \(code) to co-parent \(coparentName)")
+        guard let coparentEmail = self.coparentEmail.trimmingCharacters(in: .whitespacesAndNewlines),
+              !coparentEmail.isEmpty else {
+            print("📧❌ Cannot send enrollment code email: no email address provided")
+            return
+        }
         
-        // In a real implementation, you would call an API endpoint like this:
-        // APIService.shared.sendEnrollmentCodeEmail(to: coparentEmail, name: coparentName, code: code) { result in
-        //     // Handle success/failure
-        // }
+        isLoading = true
+        print("📧 Sending enrollment code \(code) to co-parent \(coparentName) at \(coparentEmail)")
+        
+        APIService.shared.sendEnrollmentCodeEmail(to: coparentEmail, name: coparentName, code: code) { [weak self] result in
+            DispatchQueue.main.async {
+                self?.isLoading = false
+                
+                switch result {
+                case .success:
+                    print("📧✅ Successfully sent enrollment code email to \(coparentName) at \(coparentEmail)")
+                case .failure(let error):
+                    print("📧❌ Failed to send enrollment code email: \(error.localizedDescription)")
+                    self?.errorMessage = "Failed to send invitation email: \(error.localizedDescription)"
+                }
+            }
+        }
     }
 } 
