@@ -200,13 +200,9 @@ struct PreferencesView: View {
         .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
         .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
         .scrollContentBackground(.hidden)
-        .animateThemeChanges(themeManager)
+        .themeable(themeManager)
         .onChange(of: allowPastCustodyEditing) { oldValue, newValue in
             UserDefaults.standard.set(newValue, forKey: "allowPastCustodyEditing")
-        }
-        .onAppear {
-            // Configure form appearance for current theme
-            UITableView.appearance().backgroundColor = UIColor(themeManager.currentTheme.mainBackgroundColorSwiftUI)
         }
     }
     
