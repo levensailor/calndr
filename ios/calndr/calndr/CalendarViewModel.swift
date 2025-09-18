@@ -2214,19 +2214,17 @@ class CalendarViewModel: ObservableObject {
         }
     }
     
-    func updateMedication(id: Int, medication: MedicationUpdate, completion: @escaping (Bool) -> Void) {
+    func updateMedication(id: Int, medication: MedicationUpdate) {
         APIService.shared.updateMedication(id: id, medication: medication) { [weak self] result in
             DispatchQueue.main.async {
+                guard let self = self else { return }
                 switch result {
                 case .success(let updatedMedication):
-                    if let index = self?.medications.firstIndex(where: { $0.id == id }) {
-                        self?.medications[index] = updatedMedication
+                    if let index = self.medications.firstIndex(where: { $0.id == id }) {
+                        self.medications[index] = updatedMedication
                     }
-                    print("✅ Successfully updated medication: \(updatedMedication.name)")
-                    completion(true)
                 case .failure(let error):
-                    print("❌ Error updating medication: \(error.localizedDescription)")
-                    completion(false)
+                    print("Error updating medication: \(error.localizedDescription)")
                 }
             }
         }
@@ -2235,9 +2233,10 @@ class CalendarViewModel: ObservableObject {
     func deleteMedication(_ medication: Medication, completion: @escaping (Bool) -> Void) {
         APIService.shared.deleteMedication(id: medication.id) { [weak self] result in
             DispatchQueue.main.async {
+                guard let self = self else { return }
                 switch result {
                 case .success:
-                    self?.medications.removeAll { $0.id == medication.id }
+                    self.medications.removeAll { $0.id == medication.id }
                     print("✅ Successfully deleted medication: \(medication.name)")
                     completion(true)
                 case .failure(let error):
@@ -2249,7 +2248,6 @@ class CalendarViewModel: ObservableObject {
     }
     
     func fetchMedications() {
-        print("💊 CalendarViewModel: fetchMedications() called")
         APIService.shared.fetchMedications { [weak self] result in
             DispatchQueue.main.async {
                 switch result {

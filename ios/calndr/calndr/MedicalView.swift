@@ -623,13 +623,7 @@ struct EditMedicationView: View {
             notes: notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : notes
         )
 
-        viewModel.updateMedication(id: medication.id, medication: update) { success in
-            DispatchQueue.main.async {
-                if success {
-                    dismiss()
-                }
-            }
-        }
+        viewModel.updateMedication(id: Int(medication.id) ?? 0, medication: update)
     }
 
     private func normalizedFrequencyValue(from uiLabel: String) -> String? {
