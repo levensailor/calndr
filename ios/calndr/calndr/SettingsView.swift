@@ -96,12 +96,13 @@ struct SettingsView: View {
             .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
             .preferredColorScheme(themeManager.currentTheme.preferredColorScheme)
             .navigationBarTitleDisplayMode(.inline)
+            .themeable(themeManager)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }
-                    .foregroundColor(themeManager.currentTheme.textColor.color)
+                    .foregroundColor(themeManager.currentTheme.smartTextColor)
                 }
             }
         }

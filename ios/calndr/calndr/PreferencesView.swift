@@ -201,6 +201,10 @@ struct PreferencesView: View {
         .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
         .scrollContentBackground(.hidden)
         .themeable(themeManager)
+        .onAppear {
+            // Force navigation bar appearance update
+            themeManager.refreshTheme()
+        }
         .onChange(of: allowPastCustodyEditing) { oldValue, newValue in
             UserDefaults.standard.set(newValue, forKey: "allowPastCustodyEditing")
         }

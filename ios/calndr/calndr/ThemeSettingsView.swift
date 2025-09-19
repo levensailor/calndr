@@ -44,12 +44,16 @@ struct ThemeSettingsView: View {
                 showThemeCreator = true
             }) {
                 Image(systemName: "plus")
-                    .foregroundColor(themeManager.currentTheme.accentColorSwiftUI)
+                    .foregroundColor(themeManager.currentTheme.smartTextColor)
             }
             )
             .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
             .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
             .themeable(themeManager)
+            .onAppear {
+                // Force navigation bar appearance update
+                themeManager.refreshTheme()
+            }
             .sheet(isPresented: $showThemeCreator) {
                 ThemeCreatorView(
                     theme: $themeToEdit,

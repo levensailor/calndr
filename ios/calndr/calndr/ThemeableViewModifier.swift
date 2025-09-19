@@ -15,11 +15,16 @@ struct ThemeableViewModifier: ViewModifier {
         let theme = themeManager.currentTheme
         let appearance = UINavigationBarAppearance()
 
-        // Configure background and shadow
+        // Configure appearance based on theme
+        appearance.configureWithOpaqueBackground()
+        
+        // Set the background color based on the theme's main background color
         appearance.backgroundColor = UIColor(theme.mainBackgroundColorSwiftUI)
-        appearance.shadowColor = .clear // Optional: for a flatter look
-
-        // Configure title text attributes
+        
+        // Remove shadow
+        appearance.shadowColor = .clear
+        
+        // Configure title text attributes with smart contrast
         appearance.titleTextAttributes = [
             .foregroundColor: UIColor(theme.smartHeaderTextColor)
         ]
@@ -27,18 +32,27 @@ struct ThemeableViewModifier: ViewModifier {
             .foregroundColor: UIColor(theme.smartHeaderTextColor)
         ]
 
-        // Configure button appearance
+        // Configure button appearance with proper contrast
         let buttonAppearance = UIBarButtonItemAppearance()
         buttonAppearance.normal.titleTextAttributes = [
-            .foregroundColor: UIColor(theme.accentColorSwiftUI)
+            .foregroundColor: UIColor(theme.smartTextColor)
         ]
         appearance.buttonAppearance = buttonAppearance
         appearance.backButtonAppearance = buttonAppearance
-
-        // Apply the appearance to all navigation bar states
+        
+        // Apply to all navigation bar states
         UINavigationBar.appearance().standardAppearance = appearance
         UINavigationBar.appearance().compactAppearance = appearance
         UINavigationBar.appearance().scrollEdgeAppearance = appearance
+        
+        // Also update tab bar appearance for consistency
+        let tabBarAppearance = UITabBarAppearance()
+        tabBarAppearance.configureWithOpaqueBackground()
+        tabBarAppearance.backgroundColor = UIColor(theme.mainBackgroundColorSwiftUI)
+        UITabBar.appearance().standardAppearance = tabBarAppearance
+        if #available(iOS 15.0, *) {
+            UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
+        }
     }
 }
 
