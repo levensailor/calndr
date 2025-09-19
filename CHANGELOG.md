@@ -948,3 +948,4 @@ GET /api/v1/events/daycare/?start_date=2025-07-01&end_date=2025-07-31
 2025-08-31 11:51:40 AM: Fixed absolute import in schemas/enrollment.py causing 500 error in enrollment code creation
 2025-08-31 12:09:02 PM: Fixed enrollment.py to use database object directly instead of get_db dependency
 2025-08-31 12:58:15 PM: Fixed SQLAlchemy select syntax in enrollment.py to resolve database query errors
+2025-09-18 22:45:56 - Fixed dark theme navigation bar inconsistency in settings views
