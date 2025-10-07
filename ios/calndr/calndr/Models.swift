@@ -194,13 +194,16 @@ struct UserProfile: Codable {
     let subscription_status: String?
     let created_at: String?
     let profile_photo_url: String?
-    let selected_theme_id: String?
+    let selected_theme_id: Int?
     var enrolled: Bool? // Changed to var to allow modification
     var coparent_enrolled: Bool? // Changed to var to allow modification
     var coparent_invited: Bool? // Changed to var to allow modification
+    let status: String?
+    let last_signed_in: String?
+    let family_id: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, first_name, last_name, email, phone_number, subscription_type, subscription_status, created_at, profile_photo_url, selected_theme_id, enrolled, coparent_enrolled, coparent_invited
+        case id, first_name, last_name, email, phone_number, subscription_type, subscription_status, created_at, profile_photo_url, selected_theme_id, enrolled, coparent_enrolled, coparent_invited, status, last_signed_in, family_id
     }
 }
 

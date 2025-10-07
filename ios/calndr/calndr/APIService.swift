@@ -136,6 +136,12 @@ struct TokenResponse: Codable {
     let access_token: String
 }
 
+struct GoogleLoginResponse: Codable {
+    let access_token: String
+    let token_type: String
+    let user: UserProfile
+}
+
 class APIService {
     static let shared = APIService()
     let baseURL = URL(string: "https://staging.calndr.club/api/v1")!
@@ -4108,7 +4114,7 @@ class APIService {
         }.resume()
     }
 
-    func loginWithGoogle(idToken: String, completion: @escaping (Result<String, Error>) -> Void) {
+    func loginWithGoogle(idToken: String, completion: @escaping (Result<(String, UserProfile), Error>) -> Void) {
         let url = baseURL.appendingPathComponent("/auth/google/ios-login")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -4123,10 +4129,16 @@ class APIService {
                 completion(.failure(NSError(domain: "APIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data"])))
                 return
             }
+            
             do {
-                let tokenResp = try JSONDecoder().decode(TokenResponse.self, from: data)
-                completion(.success(tokenResp.access_token))
+                let googleResponse = try JSONDecoder().decode(GoogleLoginResponse.self, from: data)
+                completion(.success((googleResponse.access_token, googleResponse.user)))
             } catch {
+                // Add enhanced error logging
+                if let dataString = String(data: data, encoding: .utf8) {
+                    print("📬 [loginWithGoogle] Failed to decode response: \(dataString)")
+                }
+                print("📬 [loginWithGoogle] Decoding error: \(error)")
                 completion(.failure(error))
             }
         }.resume()

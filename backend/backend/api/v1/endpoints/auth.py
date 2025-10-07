@@ -763,7 +763,8 @@ async def create_social_user(email: str, first_name: str, last_name: str, apple_
             "google_user_id": google_user_id,
             "status": "active",
             "enrolled": False,
-            "created_at": datetime.utcnow()
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
         }
         await database.execute(users.insert().values(**user_values))
         logger.info(f"Created new user with ID: {user_id} for email: {email}")

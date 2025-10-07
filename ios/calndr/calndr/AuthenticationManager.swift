@@ -19,7 +19,7 @@ class AuthenticationManager: ObservableObject {
         print("🔐 AuthenticationManager: Starting authentication check...")
         // Show splash screen for at least 2 seconds for better UX
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            if let token = KeychainManager.shared.loadToken(for: "currentUser") {
+            if let _ = KeychainManager.shared.loadToken(for: "currentUser") {
                 print("🔐 AuthenticationManager: Found token in keychain")
                 // Don't set isAuthenticated yet, wait for profile fetch
                 
@@ -263,9 +263,12 @@ class AuthenticationManager: ObservableObject {
         } else {
             // This shouldn't happen, but handle it gracefully
             print("🔐❌ AuthenticationManager: Cannot complete enrollment - no authentication token or user ID")
-            if token == nil {
+            
+            // Check why enrollment failed
+            if KeychainManager.shared.loadToken(for: "currentUser") == nil {
                 print("🔐❌ AuthenticationManager: Token is nil")
             }
+            
             if userProfile?.id == nil {
                 print("🔐❌ AuthenticationManager: User ID is nil")
             }
@@ -315,11 +318,25 @@ class AuthenticationManager: ObservableObject {
         APIService.shared.loginWithGoogle(idToken: idToken) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let token):
+                case .success(let (token, userProfile)):
                     let saved = KeychainManager.shared.save(token: token, for: "currentUser")
                     if saved {
-                        // After saving the token, fetch the user profile
-                        self?.fetchProfileAfterSocialLogin(completion: completion)
+                        // User profile is now received on login, so we can set it directly
+                        self?.userProfile = userProfile
+                        
+                        // Set authentication state based on enrollment status
+                        if userProfile.enrolled == true {
+                            self?.isAuthenticated = true
+                            self?.showEnrollment = false
+                            print("🔐 AuthenticationManager: User is enrolled, setting isAuthenticated = true")
+                        } else {
+                            // User is authenticated but not enrolled - show enrollment flow
+                            self?.isAuthenticated = true
+                            self?.showEnrollment = true
+                            print("🔐 AuthenticationManager: User is authenticated but not enrolled, showing enrollment flow")
+                        }
+                        
+                        completion(true)
                     } else {
                         completion(false)
                     }

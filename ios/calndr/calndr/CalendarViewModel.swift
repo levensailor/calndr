@@ -302,7 +302,7 @@ class CalendarViewModel: ObservableObject {
                     }
                 case .failure(let error):
                     print("🏠❌ CalendarViewModel: Error fetching custodian names: \(error.localizedDescription)")
-                    if let self = self {
+                    if let _ = self {
                         print("🏠❌ CalendarViewModel: Error code: \((error as NSError).code)")
                         if (error as NSError).code == 401 {
                             print("🏠❌🔐 CalendarViewModel: 401 error in custodian fetch - this will likely trigger logout")
@@ -1098,7 +1098,7 @@ class CalendarViewModel: ObservableObject {
              self?.updateCustodyStreak()
              
              // Update last signin time when app becomes active
-             self?.updateLastSigninTime()
+             self?.updateLastSignInTime()
          }
      }
     
@@ -1106,7 +1106,7 @@ class CalendarViewModel: ObservableObject {
         return isoDateFormatter.string(from: date)
     }
     
-    private func updateLastSigninTime() {
+    private func updateLastSignInTime() {
         print("🕐 updateLastSigninTime called")
         
         // Only update if user is authenticated
@@ -1914,7 +1914,7 @@ class CalendarViewModel: ObservableObject {
                     
                     // Cache the family members data
                     // We need to also fetch the user profile to cache both together
-                    APIService.shared.fetchUserProfile { [weak self] userResult in
+                    APIService.shared.fetchUserProfile { userResult in
                         DispatchQueue.main.async {
                             switch userResult {
                             case .success(let userProfile):
@@ -2281,7 +2281,7 @@ class CalendarViewModel: ObservableObject {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let userProfile):
-                    if let savedThemeId = userProfile.selected_theme_id, let themeUUID = UUID(uuidString: savedThemeId) {
+                    if let savedThemeId = userProfile.selected_theme_id, let themeUUID = UUID(uuidString: String(savedThemeId)) {
                         print("🎨 Found saved theme ID in database: \(savedThemeId)")
                         // Apply the theme if it exists in available themes
                         if let theme = self?.themeManager.themes.first(where: { $0.id == themeUUID }) {
