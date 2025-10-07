@@ -21,6 +21,9 @@
   - Kept backend payload compatible by sending nil for removed fields.
 # CHANGELOG
 
+## October 7, 2025 10:14 AM EST
+- Troubleshooting Xcode codesign error with systematic approach: clean build/derived data, keychain access fix, certificate verification
+
 ## [2025-08-19 10:15 EST] - iOS: Fix AddMedicationView type-checking timeout
 
 - Refactored `ios/calndr/calndr/AddMedicationView.swift` to split the large `body` into smaller subviews and added computed color properties to simplify expressions.
