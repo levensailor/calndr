@@ -23,6 +23,7 @@
 
 ## October 7, 2025 10:14 AM EST
 - Troubleshooting Xcode codesign error with systematic approach: clean build/derived data, keychain access fix, certificate verification
+- Fixed Swift linter warnings: replaced unused variable definitions with boolean tests and removed unnecessary nil coalescing operator
 
 ## [2025-08-19 10:15 EST] - iOS: Fix AddMedicationView type-checking timeout
 

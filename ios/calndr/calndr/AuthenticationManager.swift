@@ -240,11 +240,11 @@ class AuthenticationManager: ObservableObject {
         print("🔐 AuthenticationManager: Completing enrollment with familyId: \(familyId ?? "nil") and code: \(enrollmentCode ?? "nil")")
         
         // Check for token in keychain directly
-        let token = KeychainManager.shared.loadToken(for: "currentUser")
-        print("🔐 AuthenticationManager: Token from keychain: \(token != nil ? "found" : "not found")")
+        let hasToken = KeychainManager.shared.loadToken(for: "currentUser") != nil
+        print("🔐 AuthenticationManager: Token from keychain: \(hasToken ? "found" : "not found")")
         
         // If we have a token and user profile, update enrollment status
-        if token != nil, let userId = userProfile?.id {
+        if let token = KeychainManager.shared.loadToken(for: "currentUser"), userProfile?.id != nil {
             // Store the token in the authToken property
             self.authToken = token
             

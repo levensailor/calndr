@@ -111,7 +111,7 @@ struct OnboardingStepOneView: View {
         errorMessage = nil
         
         // First, update the enrollment code with coparent information
-        if let code = generatedCode {
+        if generatedCode != nil {
             // Update the enrollment code with coparent information
             let firstName = coparentFirstName.trimmingCharacters(in: .whitespacesAndNewlines)
             let lastName = coparentLastName.trimmingCharacters(in: .whitespacesAndNewlines)
