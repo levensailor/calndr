@@ -157,7 +157,9 @@ async def register_user(registration_data: UserRegistration):
             
             family_values = {
                 "id": family_id,
-                "name": family_name
+                "name": family_name,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
             }
             
             await database.execute(families.insert().values(**family_values))
@@ -747,7 +749,12 @@ async def create_social_user(email: str, first_name: str, last_name: str, apple_
         # Create a new family for the user
         family_id = uuid.uuid4()
         family_name = f"{first_name}'s Family" if first_name else "New Family"
-        family_values = {"id": family_id, "name": family_name}
+        family_values = {
+            "id": family_id,
+            "name": family_name,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }
         await database.execute(families.insert().values(**family_values))
         logger.info(f"Created new family: {family_name} with ID: {family_id}")
 
