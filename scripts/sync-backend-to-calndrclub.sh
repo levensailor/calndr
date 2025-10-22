@@ -40,7 +40,7 @@ cd "$TARGET_REPO_DIR"
 
 # Ensure on main branch and up to date
 git fetch origin --prune
-git checkout main
+git checkout 
 git pull --rebase origin main
 
 # Ensure backend dir exists
