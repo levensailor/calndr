@@ -10,6 +10,7 @@ set -euo pipefail
 
 SRC_DIR="$(cd "$(dirname "$0")/.." && pwd)"  # monorepo root
 SRC_BACKEND_DIR="$SRC_DIR/backend/backend"
+SRC_BACKEND_ROOT="$SRC_DIR/backend"
 SRC_WORKFLOWS_DIR="$SRC_DIR/backend/.github/workflows"
 
 # Allow override via env var; default to sibling directory
@@ -62,6 +63,11 @@ rsync -av --delete \
   --exclude='vue-app' \
   --exclude='ios' \
   "$SRC_BACKEND_DIR/" "$TARGET_BACKEND_DIR/"
+
+# Copy Dockerfile and other root backend files
+echo "[sync] Copying Dockerfile and other root backend files..."
+cp "$SRC_BACKEND_ROOT/Dockerfile" "$TARGET_REPO_DIR/backend/" 2>/dev/null || true
+cp "$SRC_BACKEND_ROOT/requirements.txt" "$TARGET_REPO_DIR/backend/" 2>/dev/null || true
 
 if [ -d "$SRC_WORKFLOWS_DIR" ]; then
   echo "[sync] Rsyncing workflows into $TARGET_REPO_DIR/.github/workflows ..."
