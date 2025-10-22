@@ -1,0 +1,28 @@
+name: Sync Backend Repositories
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/sync-backend.yml'
+
+jobs:
+  sync-backend:
+    name: Sync Backend to calndrclub
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Sync backend to calndrclub repository
+      env:
+        GH_PAT: ${{ secrets.CALNDRCLUB_PAT }}
+      run: |
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
+        # Configure git to use PAT for authentication
+        git config --global url."https://$GH_PAT@github.com/".insteadOf "https://github.com/"
+        chmod +x ./scripts/sync-backend-to-calndrclub.sh
+        CALNDRCLUB_DIR="$GITHUB_WORKSPACE/calndrclub" ./scripts/sync-backend-to-calndrclub.sh
