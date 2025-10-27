@@ -397,7 +397,7 @@ struct OnboardingStepThreeView: View {
             print("🗓️ Created \(recordsToCreate.count) custody records starting from today")
             
             // Save records to backend
-            saveCustodyRecords(recordsToCreate)
+            update(recordsToCreate)
         }
         
     private func selectTemplate(_ template: ScheduleTemplate) {
