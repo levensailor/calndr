@@ -109,64 +109,149 @@ struct OnboardingStepThreeView: View {
                             .font(.headline)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 16) {
-                                // Weekly Schedule Template
-                                Button(action: { selectTemplate(.weekly) }) {
-                                    VStack(alignment: .leading) {
-                                        Image(systemName: "calendar")
-                                            .font(.title)
-                                            .foregroundColor(themeManager.currentTheme.accentColorSwiftUI)
-                                        Text("Weekly Schedule")
-                                            .font(.headline)
-                                        Text("Same schedule every week")
-                                            .font(.caption)
-                                            .foregroundColor(.gray)
-                                    }
-                                    .padding()
-                                    .frame(width: 160, height: 120)
-                                    .background(Color.gray.opacity(0.1))
-                                    .cornerRadius(12)
+                        // Grid of schedule templates
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 2), spacing: 16) {
+                            // Traditional Split
+                            Button(action: { selectTemplate(.weekly) }) {
+                                VStack(alignment: .leading) {
+                                    Image(systemName: "calendar.badge.clock")
+                                        .font(.title)
+                                        .foregroundColor(themeManager.currentTheme.accentColorSwiftUI)
+                                    Text("Traditional Split")
+                                        .font(.headline)
+                                    Text("Parent 1: Mon-Wed, Parent 2: Thu-Sun")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                        .lineLimit(2)
                                 }
-                                
-                                // Alternating Weeks Template
-                                Button(action: { selectTemplate(.alternatingWeeks) }) {
-                                    VStack(alignment: .leading) {
-                                        Image(systemName: "calendar.badge.clock")
-                                            .font(.title)
-                                            .foregroundColor(themeManager.currentTheme.accentColorSwiftUI)
-                                        Text("Alternating Weeks")
-                                            .font(.headline)
-                                        Text("Switch every week")
-                                            .font(.caption)
-                                            .foregroundColor(.gray)
-                                    }
-                                    .padding()
-                                    .frame(width: 160, height: 120)
-                                    .background(Color.gray.opacity(0.1))
-                                    .cornerRadius(12)
-                                }
-                                
-                                // Custom Schedule Template
-                                Button(action: { selectTemplate(.custom) }) {
-                                    VStack(alignment: .leading) {
-                                        Image(systemName: "slider.horizontal.3")
-                                            .font(.title)
-                                            .foregroundColor(themeManager.currentTheme.accentColorSwiftUI)
-                                        Text("Custom Schedule")
-                                            .font(.headline)
-                                        Text("Set your own pattern")
-                                            .font(.caption)
-                                            .foregroundColor(.gray)
-                                    }
-                                    .padding()
-                                    .frame(width: 160, height: 120)
-                                    .background(Color.gray.opacity(0.1))
-                                    .cornerRadius(12)
-                                }
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 120)
+                                .background(Color.gray.opacity(0.1))
+                                .cornerRadius(12)
                             }
-                            .padding(.horizontal)
+                            
+                            // Weekdays/Weekends
+                            Button(action: { selectTemplate(.weekly) }) {
+                                VStack(alignment: .leading) {
+                                    Image(systemName: "calendar")
+                                        .font(.title)
+                                        .foregroundColor(themeManager.currentTheme.accentColorSwiftUI)
+                                    Text("Weekdays/Weekends")
+                                        .font(.headline)
+                                    Text("One parent weekdays, other weekends")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                        .lineLimit(2)
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 120)
+                                .background(Color.gray.opacity(0.1))
+                                .cornerRadius(12)
+                            }
+                            
+                            // Alternating Weeks
+                            Button(action: { selectTemplate(.alternatingWeeks) }) {
+                                VStack(alignment: .leading) {
+                                    Image(systemName: "arrow.left.arrow.right")
+                                        .font(.title)
+                                        .foregroundColor(themeManager.currentTheme.accentColorSwiftUI)
+                                    Text("Alternating Weeks")
+                                        .font(.headline)
+                                    Text("Switch between parents every week")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                        .lineLimit(2)
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 120)
+                                .background(Color.gray.opacity(0.1))
+                                .cornerRadius(12)
+                            }
+                            
+                            // 2-2-3 Schedule
+                            Button(action: { selectTemplate(.alternatingWeeks) }) {
+                                VStack(alignment: .leading) {
+                                    Image(systemName: "calendar.badge.clock")
+                                        .font(.title)
+                                        .foregroundColor(themeManager.currentTheme.accentColorSwiftUI)
+                                    Text("2-2-3 Schedule")
+                                        .font(.headline)
+                                    Text("2 days, 2 days, 3 days alternating")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                        .lineLimit(2)
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 120)
+                                .background(Color.gray.opacity(0.1))
+                                .cornerRadius(12)
+                            }
+                            
+                            // 2-2-5-5 Schedule
+                            Button(action: { selectTemplate(.alternatingWeeks) }) {
+                                VStack(alignment: .leading) {
+                                    Image(systemName: "calendar.badge.clock")
+                                        .font(.title)
+                                        .foregroundColor(themeManager.currentTheme.accentColorSwiftUI)
+                                    Text("2-2-5-5 Schedule")
+                                        .font(.headline)
+                                    Text("2 weekdays, 2 weekdays, 5 days, 5 days")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                        .lineLimit(2)
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 120)
+                                .background(Color.gray.opacity(0.1))
+                                .cornerRadius(12)
+                            }
+                            
+                            // Every Other Day
+                            Button(action: { selectTemplate(.alternatingDays) }) {
+                                VStack(alignment: .leading) {
+                                    Image(systemName: "arrow.left.arrow.right.circle")
+                                        .font(.title)
+                                        .foregroundColor(themeManager.currentTheme.accentColorSwiftUI)
+                                    Text("Every Other Day")
+                                        .font(.headline)
+                                    Text("Alternate between parents daily")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                        .lineLimit(2)
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 120)
+                                .background(Color.gray.opacity(0.1))
+                                .cornerRadius(12)
+                            }
+                            
+                            // Custom Schedule
+                            Button(action: { selectTemplate(.custom) }) {
+                                VStack(alignment: .leading) {
+                                    Image(systemName: "slider.horizontal.3")
+                                        .font(.title)
+                                        .foregroundColor(themeManager.currentTheme.accentColorSwiftUI)
+                                    Text("Custom Schedule")
+                                        .font(.headline)
+                                    Text("Set your own pattern")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                        .lineLimit(2)
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 120)
+                                .background(Color.gray.opacity(0.1))
+                                .cornerRadius(12)
+                            }
                         }
+                        .padding(.horizontal)
                     }
                     .padding(.vertical)
                     
@@ -397,7 +482,7 @@ struct OnboardingStepThreeView: View {
             print("🗓️ Created \(recordsToCreate.count) custody records starting from today")
             
             // Save records to backend
-            update(recordsToCreate)
+            saveCustodyRecords(recordsToCreate)
         }
         
     private func selectTemplate(_ template: ScheduleTemplate) {

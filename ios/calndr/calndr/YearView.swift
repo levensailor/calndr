@@ -68,8 +68,8 @@ struct YearView: View {
                     }
                 }
                 .padding(.horizontal, 20)
-                .padding(.top)
-                .padding(.bottom, 10)
+                .padding(.top, 8)
+                .padding(.bottom, 4)
                 
                 // 4x3 grid of months
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 16) {
