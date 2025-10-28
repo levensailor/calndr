@@ -116,12 +116,22 @@ struct MainTabView: View {
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                 .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
                 .onChange(of: currentView) { oldValue, newValue in
+                    print("🔄 === VIEW CHANGED ===")
+                    print("🔄 From: \(oldValue) → To: \(newValue)")
+                    
                     // Fetch appropriate data when view changes
                     if newValue == .year {
+                        print("🔄 Switching to YEAR view - fetching yearly data")
                         calendarViewModel.fetchCustodyRecordsForYear()
+                        // Update percentages for yearly view
+                        calendarViewModel.updateCustodyPercentages(forYear: true)
                     } else {
+                        print("🔄 Switching to \(newValue) view - fetching monthly data")
                         calendarViewModel.fetchEvents()
+                        // Update percentages for monthly view
+                        calendarViewModel.updateCustodyPercentages(forYear: false)
                     }
+                    print("🔄 === END VIEW CHANGE ===\n")
                 }
                 .gesture(
                     DragGesture()
@@ -386,6 +396,7 @@ struct MainTabView: View {
             if let newDate = calendar.date(byAdding: .month, value: amount, to: calendarViewModel.currentDate) {
                 calendarViewModel.currentDate = newDate
                 calendarViewModel.fetchEvents()
+                calendarViewModel.updateCustodyPercentages(forYear: false)
             }
             
             // Immediately start the fly-in animation
@@ -424,6 +435,7 @@ struct MainTabView: View {
             if let newDate = calendar.date(byAdding: .year, value: amount, to: calendarViewModel.currentDate) {
                 calendarViewModel.currentDate = newDate
                 calendarViewModel.fetchCustodyRecordsForYear()
+                calendarViewModel.updateCustodyPercentages(forYear: true)
             }
         }
         
@@ -470,8 +482,10 @@ struct MainTabView: View {
             // Fetch appropriate data based on current view
             if viewType == .year {
                 calendarViewModel.fetchCustodyRecordsForYear()
+                calendarViewModel.updateCustodyPercentages(forYear: true)
             } else {
                 calendarViewModel.fetchEvents()
+                calendarViewModel.updateCustodyPercentages(forYear: false)
             }
         }
     }

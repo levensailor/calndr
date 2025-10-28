@@ -4,6 +4,7 @@ struct OnboardingStepThreeView: View {
     enum ScheduleTemplate: String, Codable {
         case weekly = "weekly"
         case alternatingWeeks = "alternating_weeks"
+        case alternatingDays = "alternating_days"
         case custom = "custom"
     }
     
@@ -477,6 +478,18 @@ struct OnboardingStepThreeView: View {
                     
                     currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? currentDate
                 }
+            case .alternatingDays:
+                // Generate alternating days schedule
+                var isParentOneDay = true  // Start with parent one
+                while currentDate <= endDate {
+                    let dateString = dateFormatter.string(from: currentDate)
+                    let custodianId = isParentOneDay ? custodianOne.id : custodianTwo.id
+                    recordsToCreate.append((date: dateString, custodianId: custodianId))
+                    
+                    // Move to next day and alternate parent
+                    currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? currentDate
+                    isParentOneDay.toggle()
+                }
             }
             
             print("🗓️ Created \(recordsToCreate.count) custody records starting from today")
@@ -505,6 +518,11 @@ struct OnboardingStepThreeView: View {
                 
             case .custom:
                 // Reset all days
+                for day in daysOfWeek {
+                    selectedDays[day] = 0
+                }
+            case .alternatingDays:
+                // Set initial day to parent 1, alternating pattern will be handled in generateCustodyRecords
                 for day in daysOfWeek {
                     selectedDays[day] = 0
                 }

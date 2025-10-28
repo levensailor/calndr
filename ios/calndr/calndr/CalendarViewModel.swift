@@ -701,25 +701,40 @@ class CalendarViewModel: ObservableObject {
         var custodianOneDays = 0
         var custodianTwoDays = 0
         
+        print("📅 === YEARLY CUSTODY TOTALS CALCULATION ===")
+        print("📅 Calculating for year: \(year)")
+        
         // Calculate for the entire year
         for month in 1...12 {
             guard let monthDate = calendar.date(from: DateComponents(year: year, month: month)),
                   let monthInterval = calendar.dateInterval(of: .month, for: monthDate),
                   let daysInMonth = calendar.dateComponents([.day], from: monthInterval.start, to: monthInterval.end).day else {
+                print("📅 WARNING: Skipping month \(month) - could not calculate interval")
                 continue
             }
+            
+            var monthCustodianOneDays = 0
+            var monthCustodianTwoDays = 0
             
             for dayOffset in 0..<daysInMonth {
                 if let date = calendar.date(byAdding: .day, value: dayOffset, to: monthInterval.start) {
                     let owner = getCustodyInfo(for: date).owner
                     if owner == self.custodianOneId {
                         custodianOneDays += 1
+                        monthCustodianOneDays += 1
                     } else if owner == self.custodianTwoId {
                         custodianTwoDays += 1
+                        monthCustodianTwoDays += 1
                     }
                 }
             }
+            
+            let monthName = DateFormatter().monthSymbols[month - 1]
+            print("📅 \(monthName): \(custodianOneName)=\(monthCustodianOneDays), \(custodianTwoName)=\(monthCustodianTwoDays)")
         }
+        
+        print("📅 YEARLY TOTALS: \(custodianOneName)=\(custodianOneDays), \(custodianTwoName)=\(custodianTwoDays)")
+        print("📅 === END YEARLY CUSTODY TOTALS ===\n")
         
         return (custodianOneDays, custodianTwoDays)
     }
@@ -798,42 +813,20 @@ class CalendarViewModel: ObservableObject {
         let dateString = isoDateString(from: date)
         
         // Special debugging for Monday the 21st issue
-        if dateString.contains("-21") {
-            print("🔍 DEBUG: getCustodyInfo called for Monday 21st (\(dateString))")
-            print("🔍 DEBUG: isHandoffDataReady = \(isHandoffDataReady)")
-            print("🔍 DEBUG: custodyRecords.count = \(custodyRecords.count)")
-            print("🔍 DEBUG: custodianOneId = '\(custodianOneId ?? "nil")', custodianTwoId = '\(custodianTwoId ?? "nil")'")
-            print("🔍 DEBUG: custodianOneName = '\(custodianOneName)', custodianTwoName = '\(custodianTwoName)'")
-        }
+
         
         // If custodian data isn't loaded yet, return empty info to avoid race conditions
         guard isHandoffDataReady else {
-            if dateString.contains("-21") {
-                print("🔍 DEBUG: Monday 21st - Data not ready, returning empty")
-            }
             return ("", "")
         }
         
         // NEW: Check custody records first (from dedicated custody API)
         if let custodyRecord = custodyRecords.first(where: { $0.event_date == dateString }) {
-            if dateString.contains("-21") {
-                print("🔍 DEBUG: Monday 21st - Found custody record:")
-                print("   - Record ID: \(custodyRecord.id)")
-                print("   - Record custodian_id: '\(custodyRecord.custodian_id)'")
-                print("   - Record content: '\(custodyRecord.content)'")
-                print("   - Record handoff_day: \(custodyRecord.handoff_day ?? false)")
-            }
             
             // CORRECTED: Compare the custodian_id directly
             if custodyRecord.custodian_id == self.custodianOneId {
-                if dateString.contains("-21") {
-                    print("🔍 DEBUG: Monday 21st - Returning custodian ONE (Jeff): '\(self.custodianOneName)'")
-                }
                 return (self.custodianOneId ?? "", self.custodianOneName)
             } else if custodyRecord.custodian_id == self.custodianTwoId {
-                if dateString.contains("-21") {
-                    print("🔍 DEBUG: Monday 21st - Returning custodian TWO (Deanna): '\(self.custodianTwoName)'")
-                }
                 return (self.custodianTwoId ?? "", self.custodianTwoName)
             } else {
                 print("⚠️ getCustodyInfo(\(dateString)): Custody record found but custodian_id doesn't match known IDs")
@@ -842,16 +835,7 @@ class CalendarViewModel: ObservableObject {
                 print("   Custodian two ID: '\(self.custodianTwoId ?? "nil")'")
             }
         } else {
-            if dateString.contains("-21") {
-                print("🔍 DEBUG: Monday 21st - No custody record found in custodyRecords array")
-                print("🔍 DEBUG: Available custody records:")
-                for record in custodyRecords.prefix(5) {
-                    print("   - \(record.event_date): \(record.content) (ID: \(record.custodian_id))")
-                }
-                if custodyRecords.count > 5 {
-                    print("   - ... and \(custodyRecords.count - 5) more records")
-                }
-            }
+
         }
         
         // LEGACY: Check for old custody events in events array (position 4) for backward compatibility
@@ -940,37 +924,80 @@ class CalendarViewModel: ObservableObject {
         return (defaultHour, 0, defaultLocation)
     }
 
-    func updateCustodyPercentages() {
+    func updateCustodyPercentages(forYear: Bool = false) {
         let calendar = Calendar.current
-        guard let monthInterval = calendar.dateInterval(of: .month, for: currentDate),
-              let daysInMonth = calendar.dateComponents([.day], from: monthInterval.start, to: monthInterval.end).day else {
-            self.custodianOnePercentage = 0
-            self.custodianTwoPercentage = 0
-            return
-        }
-        
         var custodianOneDays = 0
         var custodianTwoDays = 0
         
-        for dayOffset in 0..<daysInMonth {
-            if let date = calendar.date(byAdding: .day, value: dayOffset, to: monthInterval.start) {
-                let owner = getCustodyInfo(for: date).owner
-                if owner == self.custodianOneId {
-                    custodianOneDays += 1
-                } else if owner == self.custodianTwoId {
-                    custodianTwoDays += 1
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "MMMM yyyy"
+        let currentDateString = dateFormatter.string(from: currentDate)
+        
+        print("📊 === CUSTODY PERCENTAGE CALCULATION ===")
+        print("📊 Current Date: \(currentDateString)")
+        print("📊 Calculation Type: \(forYear ? "YEARLY" : "MONTHLY")")
+        print("📊 Custodian 1 ID: \(custodianOneId ?? "nil") (\(custodianOneName))")
+        print("📊 Custodian 2 ID: \(custodianTwoId ?? "nil") (\(custodianTwoName))")
+        
+        if forYear {
+            // Calculate for the entire year
+            let year = calendar.component(.year, from: currentDate)
+            print("📊 Calculating for YEAR: \(year)")
+            
+            let yearlyTotals = getYearlyCustodyTotals()
+            custodianOneDays = yearlyTotals.custodianOneDays
+            custodianTwoDays = yearlyTotals.custodianTwoDays
+            
+            print("📊 Year \(year) Totals:")
+            print("📊   - Custodian 1 (\(custodianOneName)): \(custodianOneDays) days")
+            print("📊   - Custodian 2 (\(custodianTwoName)): \(custodianTwoDays) days")
+            print("📊   - Total custody days: \(custodianOneDays + custodianTwoDays)")
+            
+        } else {
+            // Calculate for current month only
+            guard let monthInterval = calendar.dateInterval(of: .month, for: currentDate),
+                  let daysInMonth = calendar.dateComponents([.day], from: monthInterval.start, to: monthInterval.end).day else {
+                print("📊 ERROR: Could not calculate month interval")
+                self.custodianOnePercentage = 0
+                self.custodianTwoPercentage = 0
+                return
+            }
+            
+            print("📊 Calculating for MONTH: \(currentDateString)")
+            print("📊 Days in month: \(daysInMonth)")
+            
+            for dayOffset in 0..<daysInMonth {
+                if let date = calendar.date(byAdding: .day, value: dayOffset, to: monthInterval.start) {
+                    let owner = getCustodyInfo(for: date).owner
+                    if owner == self.custodianOneId {
+                        custodianOneDays += 1
+                    } else if owner == self.custodianTwoId {
+                        custodianTwoDays += 1
+                    }
                 }
             }
+            
+            print("📊 Month Totals:")
+            print("📊   - Custodian 1 (\(custodianOneName)): \(custodianOneDays) days")
+            print("📊   - Custodian 2 (\(custodianTwoName)): \(custodianTwoDays) days")
+            print("📊   - Total custody days: \(custodianOneDays + custodianTwoDays)")
         }
         
         let totalDays = Double(custodianOneDays + custodianTwoDays)
         if totalDays > 0 {
             self.custodianOnePercentage = (Double(custodianOneDays) / totalDays) * 100
             self.custodianTwoPercentage = (Double(custodianTwoDays) / totalDays) * 100
+            
+            print("📊 FINAL PERCENTAGES:")
+            print("📊   - \(custodianOneName): \(String(format: "%.1f", custodianOnePercentage))%")
+            print("📊   - \(custodianTwoName): \(String(format: "%.1f", custodianTwoPercentage))%")
         } else {
             self.custodianOnePercentage = 0
             self.custodianTwoPercentage = 0
+            print("📊 WARNING: No custody days found, setting percentages to 0%")
         }
+        
+        print("📊 === END CUSTODY PERCENTAGE CALCULATION ===\n")
     }
 
     private func updateCustodyStreak() {

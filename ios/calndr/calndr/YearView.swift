@@ -10,9 +10,14 @@ struct YearView: View {
     ]
     
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
                 // Custody legend with yearly totals on single line
                 let totals = viewModel.getYearlyCustodyTotals()
+                // Calculate percentages
+                let totalDays = totals.custodianOneDays + totals.custodianTwoDays
+                let parentOnePercent = totalDays > 0 ? Int((Double(totals.custodianOneDays) / Double(totalDays)) * 100) : 0
+                let parentTwoPercent = totalDays > 0 ? Int((Double(totals.custodianTwoDays) / Double(totalDays)) * 100) : 0
+                
                 HStack {
                     // First parent (far left)
                     VStack(spacing: 8) {
@@ -36,7 +41,6 @@ struct YearView: View {
                                     .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                             }
                         }
-                        
                     }
                     
                     Spacer()
@@ -63,13 +67,11 @@ struct YearView: View {
                                     .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
                             }
                         }
-                        
-
                     }
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 8)
-                .padding(.bottom, 4)
+                .padding(.top, 16)
+                .padding(.bottom, 16)
                 
                 // 4x3 grid of months
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 16) {
@@ -85,7 +87,7 @@ struct YearView: View {
                 }
                 .padding(.horizontal)
                 
-                Spacer(minLength: 50)
+                Spacer(minLength: 30)
             }
         .background(themeManager.currentTheme.mainBackgroundColorSwiftUI)
         .animateThemeChanges(themeManager)
