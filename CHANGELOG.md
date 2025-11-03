@@ -1,3 +1,9 @@
+## [2025-11-03] - iOS: Enrollment code input now supports alphanumeric
+
+- Updated `FamilyEnrollmentView` to use an alphanumeric keyboard for enrollment code entry.
+- Changed helper text to "6-character" instead of "6-digit" to match alphanumeric codes.
+- Disabled autocorrection and capitalization on the input to prevent unintended changes.
+
 ### [2025-08-19 11:05 EST] - iOS: Simplified Add Medication UI with friendly presets and reminders
 
 - Overhauled `AddMedicationView` for a more user-friendly flow:

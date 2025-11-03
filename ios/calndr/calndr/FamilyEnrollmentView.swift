@@ -161,7 +161,7 @@ struct FamilyEnrollmentView: View {
                                 .fontWeight(.semibold)
                                 .foregroundColor(themeManager.currentTheme.textColorSwiftUI)
                             
-                            Text("Enter the 6-digit code provided by your co-parent")
+                            Text("Enter the 6-character code provided by your co-parent")
                                 .font(.body)
                                 .foregroundColor(themeManager.currentTheme.textColorSwiftUI.opacity(0.7))
                                 .multilineTextAlignment(.center)
@@ -173,7 +173,9 @@ struct FamilyEnrollmentView: View {
                                 isSecure: false
                             )
                             .frame(height: 56)
-                            .keyboardType(.numberPad)
+                            .keyboardType(.asciiCapable)
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
                             .padding(.horizontal)
                             
                             if let errorMessage = viewModel.errorMessage {
