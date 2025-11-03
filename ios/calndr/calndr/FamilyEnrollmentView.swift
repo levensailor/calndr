@@ -176,6 +176,9 @@ struct FamilyEnrollmentView: View {
                             .keyboardType(.asciiCapable)
                             .autocapitalization(.none)
                             .disableAutocorrection(true)
+                            .onChange(of: enteredCode) { newValue in
+                                enteredCode = newValue.uppercased()
+                            }
                             .padding(.horizontal)
                             
                             if let errorMessage = viewModel.errorMessage {
