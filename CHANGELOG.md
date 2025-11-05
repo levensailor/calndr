@@ -1,3 +1,9 @@
+## [2025-11-05] - SQL: Script to purge all records for a family_id
+
+- Added `scripts/delete_family_records.sql` to delete all rows across public tables with a `family_id` column matching a specified UUID, then delete the `families` row last.
+- Includes pre-deletion counts and detailed notices; wraps operations in a single transaction.
+- Default family_id set to `5006b3f2-7dff-49a6-a168-741f0adce6e1` per request; can be changed via the `\set family_uuid` line.
+
 ## [2025-11-03] - iOS: Enrollment code input now supports alphanumeric
 
 - Updated `FamilyEnrollmentView` to use an alphanumeric keyboard for enrollment code entry.
