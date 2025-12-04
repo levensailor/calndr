@@ -833,6 +833,21 @@ class CalendarViewModel: ObservableObject {
                 print("   Record custodian_id: '\(custodyRecord.custodian_id)'")
                 print("   Custodian one ID: '\(self.custodianOneId ?? "nil")'")
                 print("   Custodian two ID: '\(self.custodianTwoId ?? "nil")'")
+                
+                // Fallback: Use the custodian name from the record if available
+                // This allows the app to continue functioning even with data inconsistencies
+                if !custodyRecord.content.isEmpty {
+                    // Try to match by name as a fallback
+                    if custodyRecord.content.lowercased() == self.custodianOneName.lowercased() {
+                        return (self.custodianOneId ?? "", self.custodianOneName)
+                    } else if custodyRecord.content.lowercased() == self.custodianTwoName.lowercased() {
+                        return (self.custodianTwoId ?? "", self.custodianTwoName)
+                    } else {
+                        // Last resort: return what we have even if IDs don't match
+                        // This prevents the app from showing "No custody assigned"
+                        return (custodyRecord.custodian_id, custodyRecord.content)
+                    }
+                }
             }
         } else {
 
