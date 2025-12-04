@@ -194,7 +194,7 @@ struct UserProfile: Codable {
     let subscription_status: String?
     let created_at: String?
     let profile_photo_url: String?
-    let selected_theme_id: Int?
+    let selected_theme_id: String? // Changed from Int? to String? to match UUID from backend
     var enrolled: Bool? // Changed to var to allow modification
     var coparent_enrolled: Bool? // Changed to var to allow modification
     var coparent_invited: Bool? // Changed to var to allow modification

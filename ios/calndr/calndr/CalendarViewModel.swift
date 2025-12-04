@@ -2308,7 +2308,7 @@ class CalendarViewModel: ObservableObject {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let userProfile):
-                    if let savedThemeId = userProfile.selected_theme_id, let themeUUID = UUID(uuidString: String(savedThemeId)) {
+                    if let savedThemeId = userProfile.selected_theme_id, let themeUUID = UUID(uuidString: savedThemeId) {
                         print("🎨 Found saved theme ID in database: \(savedThemeId)")
                         // Apply the theme if it exists in available themes
                         if let theme = self?.themeManager.themes.first(where: { $0.id == themeUUID }) {
