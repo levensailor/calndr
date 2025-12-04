@@ -233,6 +233,7 @@ struct ScheduleTemplateCard: View {
     @EnvironmentObject var viewModel: CalendarViewModel
     @State private var showingDeleteAlert = false
     @State private var showingEditModal = false
+    @State private var showingApplyConfirmation = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -269,7 +270,7 @@ struct ScheduleTemplateCard: View {
                     
                     HStack(spacing: 8) {
                         Button(action: {
-                            applyTemplate()
+                            showingApplyConfirmation = true
                         }) {
                             Text("Apply")
                                 .font(.caption)
@@ -319,6 +320,14 @@ struct ScheduleTemplateCard: View {
         } message: {
             Text("Are you sure you want to delete '\(template.name)'? This action cannot be undone.")
         }
+        .alert("Apply Schedule Template", isPresented: $showingApplyConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Apply") {
+                applyTemplate()
+            }
+        } message: {
+            Text("This will apply '\(template.name)' to all future dates starting tomorrow. Past custody events will not be changed. The schedule will automatically extend as you view future months.")
+        }
         .sheet(isPresented: $showingEditModal) {
             ScheduleEditView(template: template)
                 .environmentObject(viewModel)
@@ -327,16 +336,17 @@ struct ScheduleTemplateCard: View {
     }
     
     private func applyTemplate() {
-        // Apply template to the next 3 months by default
-        let startDate = Date()
-        let endDate = Calendar.current.date(byAdding: .month, value: 3, to: startDate) ?? startDate
+        // Templates now apply to all future dates automatically (next 90 days initially)
+        // The backend will auto-generate more as needed when scrolling to future months
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+        let endDate = Calendar.current.date(byAdding: .day, value: 90, to: tomorrow) ?? tomorrow
         
         let dateFormatter = ISO8601DateFormatter()
         dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         
         let application = ScheduleApplication(
             templateId: template.id,
-            startDate: dateFormatter.string(from: startDate),
+            startDate: dateFormatter.string(from: tomorrow),
             endDate: dateFormatter.string(from: endDate),
             overwriteExisting: false
         )
@@ -344,6 +354,7 @@ struct ScheduleTemplateCard: View {
         viewModel.applyScheduleTemplate(application) { success, message in
             if success {
                 print("✅ Successfully applied template '\(template.name)': \(message ?? "No message")")
+                print("📅 Template will apply to all future dates as you scroll")
             } else {
                 print("❌ Failed to apply template '\(template.name)': \(message ?? "Unknown error")")
             }
@@ -520,7 +531,6 @@ struct ScheduleBuilderView: View {
         
         print("🚀 Saving schedule: \(scheduleName)")
         print("📅 Pattern type: \(patternType)")
-        print("📆 Date range: \(startDate) to \(endDate)")
         
         // Save template first
         viewModel.createScheduleTemplate(templateData) { success in
@@ -535,20 +545,25 @@ struct ScheduleBuilderView: View {
                 return
             }
             
-            // Apply the schedule
+            // Apply the schedule to future dates (next 90 days)
+            // The backend will auto-generate more as needed
+            let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+            let futureEndDate = Calendar.current.date(byAdding: .day, value: 90, to: tomorrow) ?? tomorrow
+            
             let dateFormatter = ISO8601DateFormatter()
             dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
             
             let application = ScheduleApplication(
                 templateId: newTemplate.id,
-                startDate: dateFormatter.string(from: startDate),
-                endDate: dateFormatter.string(from: endDate),
+                startDate: dateFormatter.string(from: tomorrow),
+                endDate: dateFormatter.string(from: futureEndDate),
                 overwriteExisting: overwriteExisting
             )
             
             viewModel.applyScheduleTemplate(application) { success, message in
                 if success {
                     print("✅ Successfully applied schedule: \(message ?? "No message")")
+                    print("📅 Schedule will automatically extend as you view future months")
                 } else {
                     print("❌ Failed to apply schedule: \(message ?? "Unknown error")")
                 }
@@ -864,28 +879,31 @@ struct ApplicationSettingsSection: View {
                 .font(.headline)
                 .foregroundColor(themeManager.currentTheme.textColor.color)
             
-            VStack(spacing: 12) {
-                Button(action: { showingDatePicker = true }) {
-                    HStack {
-                        Text("Date Range")
-                            .font(.subheadline)
-                            .foregroundColor(themeManager.currentTheme.textColor.color)
-                        
-                        Spacer()
-                        
-                        Text("\(startDate, formatter: dateFormatter) - \(endDate, formatter: dateFormatter)")
-                            .font(.subheadline)
-                            .foregroundColor(.blue)
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
-                    )
+            VStack(alignment: .leading, spacing: 12) {
+                // Information about automatic application
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Applies to all future dates", systemImage: "calendar.badge.plus")
+                        .font(.subheadline)
+                        .foregroundColor(themeManager.currentTheme.textColor.color)
+                    
+                    Text("Schedule will start tomorrow and automatically extend as you view future months")
+                        .font(.caption)
+                        .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+                        .padding(.leading, 28)
                 }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(themeManager.currentTheme.secondaryBackgroundColorSwiftUI)
+                )
                 
-                Toggle("Overwrite Existing Schedule", isOn: $overwriteExisting)
+                Toggle("Overwrite Future Schedule", isOn: $overwriteExisting)
                     .foregroundColor(themeManager.currentTheme.textColor.color)
+                
+                Text("Past custody events are always protected")
+                    .font(.caption)
+                    .foregroundColor(themeManager.currentTheme.textColor.color.opacity(0.7))
+                    .padding(.leading, 28)
             }
         }
         .padding(.horizontal)
